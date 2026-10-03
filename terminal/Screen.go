@@ -86,12 +86,12 @@
 // # ScreenCursorStyle
 //
 // Zig: `pub const CursorStyle = @import("cursor.zig").Style;`, an alias of
-// the one enum cursor.zig declares. cursor.zig has no Go file yet. The
-// project lead named this declaration `ScreenCursorStyle`, so the enum and
-// its four values are declared here under that name. When cursor.go is
-// written it declares the enum itself and this becomes an alias
+// the one enum cursor.zig declares. cursor.go declares the enum
+// (`CursorStyle`), its four values and its String method. The project lead
+// named this declaration `ScreenCursorStyle`, so it is an alias here
 // (`type ScreenCursorStyle = CursorStyle`), as `HyperlinkId` is an alias in
-// hyperlink.go.
+// hyperlink.go, and the four values keep constant aliases under the
+// `ScreenCursorStyle...` names because Zig code names them through Screen.
 //
 // # Omitted
 //
@@ -163,31 +163,19 @@ package terminal
 import "errors"
 
 // ScreenCursorStyle is Screen.CursorStyle, which is cursor.Style
-// (src/terminal/cursor.zig). See the file header.
-//
-// The visual style of the cursor. Whether or not it blinks
-// is determined by mode 12 (modes.zig). This mode is synchronized
-// with CSI q, the same as xterm.
-//
-// Zig: enum { bar, block, underline, block_hollow }, values numbered from
-// zero in the order listed.
-type ScreenCursorStyle uint8
+// (src/terminal/cursor.zig): an alias of CursorStyle (cursor.go), where the
+// enum, its values and its String method are declared. See the file header.
+type ScreenCursorStyle = CursorStyle
 
+// The values of Screen.CursorStyle, for Zig code that names them through
+// Screen (`CursorStyle.block` inside Screen.zig, `Screen.CursorStyle` in
+// stream_readonly.zig). Each is the CursorStyle constant of the same value.
 const (
-	ScreenCursorStyleBar       ScreenCursorStyle = iota // DECSCUSR 5, 6
-	ScreenCursorStyleBlock                              // DECSCUSR 1, 2
-	ScreenCursorStyleUnderline                          // DECSCUSR 3, 4
-
-	// The cursor styles below aren't known by DESCUSR and are custom
-	// implemented in Ghostty. They are reported as some standard style
-	// if requested, though.
-	// Hollow block cursor. This is a block cursor with the center empty.
-	// Reported as DECSCUSR 1 or 2 (block).
-	ScreenCursorStyleBlockHollow
+	ScreenCursorStyleBar         = CursorStyleBar
+	ScreenCursorStyleBlock       = CursorStyleBlock
+	ScreenCursorStyleUnderline   = CursorStyleUnderline
+	ScreenCursorStyleBlockHollow = CursorStyleBlockHollow
 )
-
-// String returns the Zig tag name (@tagName).
-func (self ScreenCursorStyle) String() string { panic(notImplemented) }
 
 // Screen is the file-level struct of Screen.zig.
 //

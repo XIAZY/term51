@@ -668,7 +668,7 @@ func TestStyle_term51_Style_eql_flag_padding_participates(t *testing.T) {
 	expect(t, !b.Default(), "!b.default()")
 }
 
-// Not translated (pending: waits for the page wireframe, Cell type): see scripts/not-translated-sm3.txt.
+// Style.bg and Style.bgCell tests: see style_bg_test.go.
 //   Zig: test "term51: Style.bg: cell content tag decides the source"
 //   Zig: test "term51: Style.bg: palette boundaries"
 //   Zig: test "term51: Style.bg: flags and other colors do not matter"
@@ -700,7 +700,7 @@ func TestStyle_term51_Style_underlineColor_each_tag(t *testing.T) {
 	expectEqual(t, None[ColorRGB](), other.UnderlineColor(&pal))
 }
 
-// Not translated (pending: waits for the page wireframe, Cell type): see scripts/not-translated-sm3.txt.
+// Style.bg and Style.bgCell tests: see style_bg_test.go.
 //   Zig: test "term51: Style.bgCell: no bg"
 //   Zig: test "term51: Style.bgCell: palette bg"
 //   Zig: test "term51: Style.bgCell: rgb bg"

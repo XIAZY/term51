@@ -63,11 +63,5 @@ terminal/size.zig | term51: OffsetBuf.rebase: merges the offset into a new zero-
 terminal/modes.zig | (unnamed, modes.zig:79) | layout test: only checks @sizeOf(ModePacked) == 8 (ModePacked is an ordinary struct in Go)
 terminal/modes.zig | (unnamed, modes.zig:235) | `_ = Mode; _ = ModePacked;` only makes the Zig compiler analyse the generated types; Go always compiles them
 terminal/ref_counted_set.zig | term51: RefCountedSet: layout item and table element sizes | only checks @sizeOf/@alignOf of Item (byte layout); no counts
-terminal/style.zig | term51: Style.bg: cell content tag decides the source | pending: waits for the page wireframe (Cell type)
-terminal/style.zig | term51: Style.bg: palette boundaries | pending: waits for the page wireframe (Cell type)
-terminal/style.zig | term51: Style.bg: flags and other colors do not matter | pending: waits for the page wireframe (Cell type)
-terminal/style.zig | term51: Style.bgCell: no bg | pending: waits for the page wireframe (Cell type)
-terminal/style.zig | term51: Style.bgCell: palette bg | pending: waits for the page wireframe (Cell type)
-terminal/style.zig | term51: Style.bgCell: rgb bg | pending: waits for the page wireframe (Cell type)
 terminal/style.zig | (unnamed, style.zig:2739) | `_ = term51FFgTests;` only makes the Zig compiler analyse the struct that holds the Style.fg tests; the 8 tests in it are translated individually
 terminal/style.zig | term51: Style.hash: dump exact data when TERM51_SET_DUMP_DIR is set | only produces data/sets/capacities.txt and data/sets/style_hash.txt; corpus_style_test.go (TestStyle_corpus_hash) compares style_hash.txt

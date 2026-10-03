@@ -19,14 +19,6 @@
 // Declarations appear in the same order as in style.zig; the stand-ins for
 // config.zig are at the end.
 //
-// BLOCKED on the page wireframe (page.zig has no Go file yet, and no
-// stand-in for `page.Cell` is invented here). To be added to this file with
-// it, at their place in the Zig order:
-//   - style.zig line 109, after `eql`:
-//     pub fn bg(self: Style, cell: *const page.Cell, palette: *const color.Palette) ?color.RGB
-//   - style.zig line 204, after `underlineColor`:
-//     pub fn bgCell(self: Style) ?page.Cell
-//
 // Go-memory rule (docs/mapping.md, governing rule 3): the unused imports
 // `Offset` and `OffsetBuf` have no counterpart. `Set` takes no buffer; see
 // ref_counted_set.go.
@@ -139,8 +131,18 @@ func (self Style) Default() bool { panic(notImplemented) }
 // Eql is style.Style.eql: true if the style is equal to another style.
 func (self Style) Eql(other Style) bool { panic(notImplemented) }
 
-// style.Style.bg (style.zig line 109) belongs here. Blocked on page.Cell;
-// see the file header.
+// Bg is style.Style.bg: returns the bg color for a cell with this style
+// given the cell that has this style and the palette to use.
+//
+// Note that generally if a cell is a color-only cell, it SHOULD
+// only have the default style, but this is meant to work with the
+// default style as well.
+//
+// Zig: cell is *const page.Cell, palette is *const color.Palette; returns
+// ?color.RGB.
+func (self Style) Bg(cell *PageCell, palette *ColorPalette) Optional[ColorRGB] {
+	panic(notImplemented)
+}
 
 // StyleFg is style.Style.Fg: the options of Style.fg.
 type StyleFg struct {
@@ -171,8 +173,11 @@ func (self Style) UnderlineColor(palette *ColorPalette) Optional[ColorRGB] {
 	panic(notImplemented)
 }
 
-// style.Style.bgCell (style.zig line 204) belongs here. Blocked on
-// page.Cell; see the file header.
+// BgCell is style.Style.bgCell: returns a bg-color only cell from this
+// style, if it exists.
+//
+// Zig: returns ?page.Cell.
+func (self Style) BgCell() Optional[PageCell] { panic(notImplemented) }
 
 // Format is style.Style.format: formatting to make debug logs easier to
 // read by only including non-default attributes.

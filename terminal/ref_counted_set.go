@@ -25,7 +25,8 @@
 //     `RefCountedSetItemMetadata[Id, Ref]`, `Layout` is
 //     `RefCountedSetLayout[Id]`; each takes only the parameters it uses.
 //   - `Layout.init(cap)` is the generic function
-//     `RefCountedSetLayoutInit[Id](cap)`.
+//     `RefCountedSetLayoutInit[Id](cap, sizes)`; `sizes` is explained under
+//     "Byte arithmetic" below.
 //   - `init(base, l, context)` is the generic function
 //     `RefCountedSetInit[T, Id, Ref, C](l, context)`. Go cannot infer `T`
 //     and `Ref` from the arguments, so a caller writes all four.
@@ -43,24 +44,42 @@
 // implement (as StreamHandlerVtRaw in stream.go). See the comments on both
 // for the receiver.
 //
-// # Go-memory rule
+// # Go-memory rule, option A
 //
-// (docs/mapping.md, governing rule 3.) Zig stores the hash table and the
-// items at byte offsets from a `base` pointer that every method takes. The
-// Go set owns two Go slices instead:
+// (docs/mapping.md, governing rule 3, as refined with the page wireframe:
+// ordinary Go memory, but upstream's byte arithmetic is kept.) Zig stores
+// the hash table and the items at byte offsets from a `base` pointer that
+// every method takes. The Go set owns two Go slices instead:
 //   - field `table: Offset(Id)` is `table []Id`;
 //   - field `items: Offset(Item)` is `items []RefCountedSetItem[T, Id, Ref]`;
 //   - EVERY method drops its `base` parameter and otherwise keeps its Zig
 //     name, order, parameters and results;
 //   - `init` drops its `base: OffsetBuf` parameter.
 //
-// Omitted under the Go-memory rule, because they exist only to compute a
-// byte layout:
-//   - `base_align`;
-//   - `Layout.table_start`, `Layout.items_start`, `Layout.total_size`.
+// Omitted under the Go-memory rule:
+//   - `base_align` (alignment of the base pointer).
 //
-// `Layout.cap`, `Layout.table_cap` and `Layout.table_mask` are counts that
-// drive behaviour and are kept.
+// # Byte arithmetic
+//
+// `Layout` keeps every Zig field. `cap`, `table_cap` and `table_mask` are
+// counts that drive behaviour. `table_start`, `items_start` and `total_size`
+// are byte positions: no Go memory is laid out by them, but Page.layout adds
+// `total_size` into the page's byte size, against which the scrollback limit
+// is counted, so the numbers must equal Zig's.
+//
+// `Layout.init` reads three numbers from types at compile time:
+// @sizeOf(Id), @alignOf(Item) and @sizeOf(Item). @sizeOf(Id) follows from
+// the type argument `Id` (1, 2 or 4 bytes; Go's width equals Zig's).
+// @sizeOf(Item) and @alignOf(Item) are those of the ZIG item, which Go
+// cannot derive; they are passed in as refCountedSetItemSizes, the one
+// declaration in this file that is not a Zig declaration. The values for the
+// two instantiations the page uses are in page.go (styleSetItemSizes,
+// hyperlinkSetItemSizes).
+//
+// Widths: every byte size and byte offset is a `uint64`, whatever the
+// platform word size, because the reference is the recorded 64-bit data and
+// the target is 32-bit. Counts, indexes and lengths stay `uint` or their
+// fixed Zig width.
 //
 // The file has no C ABI declarations.
 
@@ -256,14 +275,26 @@ type RefCountedSet[T any, Id RefCountedSetInt, Ref RefCountedSetInt, C RefCounte
 	context C
 }
 
+// refCountedSetItemSizes is NOT a Zig declaration. It carries what Zig reads
+// from the item type at compile time in Layout.init: @sizeOf(Item) and
+// @alignOf(Item), in bytes. See the file header.
+type refCountedSetItemSizes struct {
+	item_size  uint64
+	item_align uint64
+}
+
 // RefCountedSetLayout is RefCountedSet.Layout.
 //
-// Zig's `table_start`, `items_start` and `total_size` are byte positions and
-// are omitted; see the file header.
+// `cap` and `table_cap` are counts (Zig: usize). `table_start`,
+// `items_start` and `total_size` are byte positions (Zig: usize) and are
+// uint64; see the file header.
 type RefCountedSetLayout[Id RefCountedSetInt] struct {
-	cap        uint
-	table_cap  uint
-	table_mask Id
+	cap         uint
+	table_cap   uint
+	table_mask  Id
+	table_start uint64
+	items_start uint64
+	total_size  uint64
 }
 
 // RefCountedSetLayoutInit is RefCountedSet.Layout.init.
@@ -285,10 +316,12 @@ type RefCountedSetLayout[Id RefCountedSetInt] struct {
 // of items that the set can actually store, since ID 0 is reserved.
 //
 // Zig: `Layout.init(cap: usize) Layout`, a function of the set type. Of the
-// set's type parameters it uses only `Id` (the assertion
-// `cap <= maxInt(Id) + 1` and the type of `table_mask`), so it is a generic
-// function over `Id` alone, called as `RefCountedSetLayoutInit[uint16](16)`.
-func RefCountedSetLayoutInit[Id RefCountedSetInt](cap uint) RefCountedSetLayout[Id] {
+// set's type parameters it uses `Id` (the assertion
+// `cap <= maxInt(Id) + 1`, the type of `table_mask` and @sizeOf(Id)) and the
+// size and alignment of `Item`, which `sizes` stands for; see the file
+// header. So it is a generic function over `Id` alone, called as
+// `RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)`.
+func RefCountedSetLayoutInit[Id RefCountedSetInt](cap uint, sizes refCountedSetItemSizes) RefCountedSetLayout[Id] {
 	panic(notImplemented)
 }
 

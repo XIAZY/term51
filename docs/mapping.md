@@ -129,3 +129,21 @@ what Zig's `@tagName` yields and what the recorded corpus contains.
   which changes the last bit. When implemented, wrap each product in an
   explicit `float32(...)`; `data/colors/*.txt` in the corpus catches any
   difference.
+
+## Requirements the wireframe tests impose on the implementation
+
+(Accepted by the project lead; recorded so they are not lost.)
+
+- Strings that Zig returns as NUL-terminated slices (`[:0]const u8`) must be
+  sub-slices of the parser's buffer with spare capacity covering the
+  terminating zero byte: about eight OSC tests read the byte after the slice
+  (`s[:len+1][len]`).
+- A null result is the zero value of `Optional[T]`.
+- `oscWriter`/`oscWriterAllocating` behave like Zig's `std.Io.Writer` fixed
+  and allocating writers: a zero-value allocating writer grows on demand.
+- The integrity check gets the same deferral as the corpus's candidate B at one
+  place (inside `resize`, the "viewport pin has enough rows" check), with a
+  comment pointing at `docs/upstream-findings.md` and
+  `docs/deliberate-fixes.md` entry 3. No behaviour fix during the port.
+- `Stream.nextSliceCapped` must not abort on input such as `FF ESC [ 1 A`: it
+  returns what `nextSlice` returns for the same bytes (`parser/nextslicecapped_inputs`).

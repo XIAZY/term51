@@ -163,9 +163,6 @@
 //   - `diagram` (line 4049) and the `lt` function nested in it: the body
 //     does not compile with this Zig version (0.15.2) and so is never
 //     referenced by any build; the tests only quote its output in comments.
-// Waiting for another wireframe (see the note at its place in the file):
-//   - `highlightSemanticContent` (line 4252) returns `?highlight.Untracked`
-//     and there is no highlight.go yet. The type is not invented here.
 // Aliases and imports with nothing to declare:
 //   - `std_capacity` (`pagepkg.std_capacity`): use `PageStdCapacity`;
 //     `Capacity`, `Page`, `Row`, `OffsetBuf`; `color` and `fastmem`
@@ -1449,14 +1446,7 @@ func (self *PageList) GetCell(pt Point) Optional[PageListCell] { panic(notImplem
 
 // PageList.diagram (line 4049) is omitted; see the file header.
 
-// PageList.highlightSemanticContent (line 4252) is NOT YET DECLARED: it
-// returns `?highlight.Untracked` and highlight.zig has no Go file. When
-// highlight.go exists, the stub to add here is
-//
-//	func (self *PageList) HighlightSemanticContent(
-//		at PageListPin,
-//		content PageCellSemanticContent,
-//	) Optional[HighlightUntracked] { panic(notImplemented) }
+// HighlightSemanticContent is PageList.highlightSemanticContent.
 //
 // Returns the boundaries of the given semantic content type for
 // the prompt at the given pin. The pin row MUST be the first row
@@ -1471,6 +1461,16 @@ func (self *PageList) GetCell(pt Point) Optional[PageListCell] { panic(notImplem
 // Note that some semantic content type such as "input" is usually
 // nested within prompt boundaries, so the returned boundaries may include
 // prompt text.
+//
+// Zig: pub fn highlightSemanticContent(self: *const PageList, at: Pin,
+// content: pagepkg.Cell.SemanticContent) ?highlight.Untracked.
+// HighlightUntracked is in highlight.go.
+func (self *PageList) HighlightSemanticContent(
+	at PageListPin,
+	content PageCellSemanticContent,
+) Optional[HighlightUntracked] {
+	panic(notImplemented)
+}
 
 // PageListDirection is PageList.Direction: direction that iterators can
 // move.

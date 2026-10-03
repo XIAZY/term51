@@ -19,11 +19,8 @@ type KittyColorOSC struct {
 	// We must reply with the same string terminator (ST) as used in the
 	// request.
 	//
-	// Zig: osc.Terminator, default .st. The type is declared with the
-	// wireframe or port of osc.zig; until then this field is commented out
-	// so the file compiles.
-	//
-	// terminator OSCTerminator
+	// Zig: osc.Terminator, default .st (the zero value).
+	terminator OSCTerminator
 }
 
 // KittyColorOSCRequestTag is the tag of kitty.color.OSC.Request.

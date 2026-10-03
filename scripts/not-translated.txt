@@ -23,3 +23,14 @@ terminal/osc/parsers/kitty_clipboard_protocol.zig | term51: Option.Type: result 
 terminal/osc/parsers/semantic_prompt.zig | term51: Option.Type: result type of every option | checks the compile-time result types of Option.Type, a comptime type function with no Go counterpart (its Go counterpart is the struct OSCParsersSemanticPromptOptionValue)
 terminal/osc/parsers/kitty_color.zig | term51: parse: allocation failure drops the request | uses std.testing.FailingAllocator (no Go counterpart)
 terminal/osc/parsers/kitty_text_sizing.zig | term51: OSC.cval: returns void | cval (C binding helper) is not ported; also checks the compile-time type OSC.C == void
+terminal/stream.zig | Action | `test Action { _ = Action.C; }` only forces the C type (Action.C) to be reified; the C bindings are not ported
+terminal/stream.zig | term51: Action.Print.cval: widens the codepoint to u32 | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.DeviceStatus.cval: is the packed request tag | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.Mode.cval: is the packed mode tag | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.KittyKeyboardFlags.cval: is the flag bit set | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.WindowTitle.cval: borrows the title | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.ReportPwd.cval: borrows the url | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.ShowDesktopNotification.cval: borrows title and body | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.StartHyperlink.cval: a missing id becomes an empty string | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.ClipboardContents.cval: kind and borrowed data | cval/C (C binding helper) is not ported
+terminal/stream.zig | term51: Action.ColorOperation.cval: is void | cval/C (C binding helper) is not ported

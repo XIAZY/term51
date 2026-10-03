@@ -219,6 +219,14 @@ func (self ModesModeTag) Int() ModesModeTagBacking { panic(notImplemented) }
 // ModesModeFromInt is modes.modeFromInt.
 func ModesModeFromInt(v uint16, ansi bool) Optional[ModesMode] { panic(notImplemented) }
 
+// ModesModeTagFromInt stands for Zig's `@bitCast` from the backing integer
+// (ModeTag.Backing, a u16) to a ModeTag: the reverse of ModesModeTag.Int.
+func ModesModeTagFromInt(v ModesModeTagBacking) ModesModeTag { panic(notImplemented) }
+
+// ModesModeValues stands for Zig's `std.enums.values(Mode)`: every mode, in
+// the order of `entries`.
+func ModesModeValues() []ModesMode { panic(notImplemented) }
+
 // modesEntryForMode is modes.entryForMode.
 //
 // Zig: `mode` is a comptime parameter; an unknown mode is `unreachable`.

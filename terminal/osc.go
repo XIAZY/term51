@@ -378,6 +378,11 @@ func OSCTerminatorInit(ch Optional[uint8]) OSCTerminator { panic(notImplemented)
 // tag name; it returns []uint8 like every other `[]const u8`.
 func (self OSCTerminator) String() []uint8 { panic(notImplemented) }
 
+// TagName returns the Zig tag name (@tagName): "st" or "bel". Every other
+// enum uses String() for this; here String is taken by Zig's own `string`
+// function above, which returns the terminator bytes.
+func (self OSCTerminator) TagName() string { panic(notImplemented) }
+
 // Format is osc.Terminator.format: writes the terminator bytes. Per
 // docs/mapping.md a Zig `format` method becomes `Format() string` with
 // output identical to Zig's.

@@ -23,6 +23,11 @@ var ErrNoDefaultValue = errors.New("NoDefaultValue")
 // helpers).
 var ErrInvalidFormat = errors.New("InvalidFormat")
 
+// ErrNoSpaceLeft is Zig's error.NoSpaceLeft, returned by fixed-buffer
+// writers and std.fmt.bufPrint when the buffer is too small. It is declared
+// here with the other shared error values of the wireframe.
+var ErrNoSpaceLeft = errors.New("NoSpaceLeft")
+
 // ColorDefault is color.default: the default palette.
 //
 // Zig computes it at compile time: the 16 named colors from Name.default,
@@ -211,6 +216,9 @@ const (
 // Osc4 is color.Special.osc4: the palette length added to the value.
 func (self ColorSpecial) Osc4() uint16 { panic(notImplemented) }
 
+// String returns the Zig tag name (@tagName).
+func (self ColorSpecial) String() string { panic(notImplemented) }
+
 // ColorDynamic is color.Dynamic: the "dynamic colors" as denoted by xterm.
 // These can be set via OSC 10 through 19.
 //
@@ -237,6 +245,9 @@ const (
 // "Each successive parameter changes the next color in the list.  The
 // value of Ps tells the starting point in the list."
 func (self ColorDynamic) Next() Optional[ColorDynamic] { panic(notImplemented) }
+
+// String returns the Zig tag name (@tagName).
+func (self ColorDynamic) String() string { panic(notImplemented) }
 
 // ColorRGB is color.RGB: RGB.
 //

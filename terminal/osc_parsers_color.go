@@ -171,6 +171,12 @@ type OSCParsersColorList struct {
 	items []OSCParsersColorRequest
 }
 
+// append is std.SegmentedList.append: add one request at the end. Zig
+// returns Allocator.Error!void.
+func (self *OSCParsersColorList) append(item OSCParsersColorRequest) error {
+	panic(notImplemented)
+}
+
 // count is std.SegmentedList.count: the number of requests.
 func (self OSCParsersColorList) count() int { panic(notImplemented) }
 

@@ -24,6 +24,17 @@ func None[T any]() Optional[T] {
 	return Optional[T]{}
 }
 
+// assert is Zig's assert (quirks.inlineAssert, std.debug.assert): it stops
+// the program when cond is false. Zig also traps on out-of-range indexes,
+// integer overflow and `unreachable`; wherever Go would silently continue in
+// one of those situations the ported code calls assert (or panics with
+// "unreachable") so that the port stops exactly where upstream would.
+func assert(cond bool) {
+	if !cond {
+		panic("assertion failed")
+	}
+}
+
 // StaticBitSet24 is std.StaticBitSet(24): a fixed-size bit set backed by one
 // integer. Only the methods the ported code uses are provided, with Zig's
 // names.
@@ -42,17 +53,13 @@ func StaticBitSet24InitEmpty() StaticBitSet24 {
 // isSet reports whether the bit at index is set. Like Zig's, it requires
 // index < bit_length.
 func (self StaticBitSet24) isSet(index int) bool {
-	if index < 0 || index >= StaticBitSet24BitLength {
-		panic("StaticBitSet24.isSet: index out of range")
-	}
+	assert(index >= 0 && index < StaticBitSet24BitLength)
 	return self.mask&(1<<uint(index)) != 0
 }
 
 // set sets the bit at index.
 func (self *StaticBitSet24) set(index int) {
-	if index < 0 || index >= StaticBitSet24BitLength {
-		panic("StaticBitSet24.set: index out of range")
-	}
+	assert(index >= 0 && index < StaticBitSet24BitLength)
 	self.mask |= 1 << uint(index)
 }
 

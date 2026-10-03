@@ -20,22 +20,14 @@
 //     per-test note.
 //   - `@as(?T, null)` comparisons are `!x.Valid`: Optional of a slice is not
 //     comparable with ==.
-//   - `@bitCast(u64)` of a Cell is PageCell.bitCast. The reverse conversion
-//     (`@bitCast` of a u64 into a Cell, term51IRaw) has no wireframe name: it
-//     is the test helper pg3IRaw, which fills the fields from the bit layout
-//     documented on PageCell. The 24 bits of Cell.content are all kept in
-//     content.codepoint (and, as the other views of the same bits, in
-//     color_palette and color_rgb), so the three bits of the content union
-//     that a Zig u21 codepoint does not use (bits 23 to 25 of the cell)
-//     survive the round trip through bitCast; Codepoint and HasText have to
-//     look at the low 21 bits only.
+//   - `@bitCast` of a Cell into a u64 is PageCell.bitCast; `@bitCast` of a u64
+//     into a Cell (term51IRaw) is pageCellFromBits. Likewise PageRow.bitCast
+//     and pageRowFromBits for a Row.
 //   - Zig-only: lines that compare pointers into page memory with the memory
 //     range (`@intFromPtr(p) >= base` and the like) have no Go counterpart and
 //     are dropped with a comment. Pointer identity between two slices of the
 //     same page (`cps.ptr == ptr`) is kept as the identity of their first
 //     elements.
-//   - The Row bit-layout test needs `@bitCast` of a Row; the wireframe has no
-//     PageRow.bitCast, so those lines are marked "NEEDS PageRow.bitCast".
 
 package terminal
 
@@ -229,27 +221,9 @@ func pg3IZeroMeta() PageCapacity {
 // hyperlink_bytes is converted to a count of set items with this size.
 const pg3IItem = hyperlinkSetItemSizeOf
 
-// pg3IRaw is term51IRaw: a cell from its 64 bits (see the file header).
+// pg3IRaw is term51IRaw: `@bitCast` of a u64 to a Cell.
 func pg3IRaw(bits uint64) PageCell {
-	content := uint32(bits>>2) & 0xFFFFFF
-	return PageCell{
-		content_tag: PageCellContentTag(bits & 3),
-		content: PageCellContent{
-			codepoint:     content,
-			color_palette: uint8(content),
-			color_rgb: PageCellRGB{
-				r: uint8(content),
-				g: uint8(content >> 8),
-				b: uint8(content >> 16),
-			},
-		},
-		style_id:         StyleId(bits >> 26),
-		wide:             PageCellWide((bits >> 42) & 3),
-		protected:        (bits>>44)&1 != 0,
-		hyperlink:        (bits>>45)&1 != 0,
-		semantic_content: PageCellSemanticContent((bits >> 46) & 3),
-		_padding:         uint16(bits >> 48),
-	}
+	return pageCellFromBits(bits)
 }
 
 // pg3IBits is term51IBits.
@@ -1216,56 +1190,50 @@ func TestPg3_Row_managedMemory_layout_of_Row_bit_fields(t *testing.T) {
 	expectEqual(t, uint8(2), uint8(PageRowSemanticPromptPromptContinuation))
 
 	base := PageRow{cells: 0}
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 0), @as(u64, @bitCast(base)));
+	expectEqual(t, uint64(0), base.bitCast())
 
 	// Writing every field sets exactly its bits.
 	r := base
 	r.cells = 0xFFFFFFFF
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 0xFFFFFFFF), @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(0xFFFFFFFF), r.bitCast())
 	r = base
 	r.wrap = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 32, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<32, r.bitCast())
 	r = base
 	r.wrap_continuation = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 33, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<33, r.bitCast())
 	r = base
 	r.grapheme = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 34, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<34, r.bitCast())
 	r = base
 	r.styled = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 35, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<35, r.bitCast())
 	r = base
 	r.hyperlink = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 36, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<36, r.bitCast())
 	r = base
 	r.semantic_prompt = PageRowSemanticPromptPrompt
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 37, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<37, r.bitCast())
 	r.semantic_prompt = PageRowSemanticPromptPromptContinuation
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 2) << 37, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(2)<<37, r.bitCast())
 	r = base
 	r.kitty_virtual_placeholder = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 39, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<39, r.bitCast())
 	r = base
 	r.dirty = true
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 1) << 40, @as(u64, @bitCast(r)));
+	expectEqual(t, uint64(1)<<40, r.bitCast())
 	r = base
 	r._padding = 0x7FFFFF
-	// NEEDS PageRow.bitCast: try term51Itesting.expectEqual(@as(u64, 0x7FFFFF) << 41, @as(u64, @bitCast(r)));
-	_ = r
+	expectEqual(t, uint64(0x7FFFFF)<<41, r.bitCast())
 
 	// Reading fields out of raw bits.
-	// NEEDS a conversion of a u64 into a PageRow (no wireframe name):
-	//   const rr: Row = @bitCast(@as(u64, 0x12345678) | (@as(u64, 1) << 34) | (@as(u64, 1) << 40));
-	//   try term51Itesting.expectEqual(@as(size.OffsetInt, 0x12345678), rr.cells.offset);
-	//   try term51Itesting.expect(rr.grapheme);
-	//   try term51Itesting.expect(rr.dirty);
-	//   try term51Itesting.expect(!rr.wrap);
-	//   try term51Itesting.expect(!rr.styled);
-	//   try term51Itesting.expect(!rr.hyperlink);
-
-	// The assertions above that need PageRow.bitCast cannot be written
-	// against the wireframe: fail loudly instead of passing without them.
-	t.Fatalf("incomplete: needs PageRow.bitCast, which the wireframe lacks (see the NEEDS comments)")
+	rr := pageRowFromBits(uint64(0x12345678) | (uint64(1) << 34) | (uint64(1) << 40))
+	expectEqual(t, uint32(0x12345678), uint32(rr.cells))
+	expect(t, rr.grapheme, "rr.grapheme")
+	expect(t, rr.dirty, "rr.dirty")
+	expect(t, !rr.wrap, "!rr.wrap")
+	expect(t, !rr.styled, "!rr.styled")
+	expect(t, !rr.hyperlink, "!rr.hyperlink")
 }
 
 // Zig: test "term51: Row.managedMemory: styled, hyperlink or grapheme"

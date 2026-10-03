@@ -147,3 +147,26 @@ what Zig's `@tagName` yields and what the recorded corpus contains.
   `docs/deliberate-fixes.md` entry 3. No behaviour fix during the port.
 - `Stream.nextSliceCapped` must not abort on input such as `FF ESC [ 1 A`: it
   returns what `nextSlice` returns for the same bytes (`parser/nextslicecapped_inputs`).
+
+## Naming rules settled with the small-file wireframes (project lead)
+
+- A declaration with the same name as its file is not doubled: `Style`,
+  `Point`, like `MouseShape`; so `point.Coordinate` is `PointCoordinate`.
+- Private file-level constants and tables take the file prefix, like private
+  functions: `tabstopsUnitBits`, `tabstopsPreallocColumns`,
+  `tabstopsPreallocCount`, `tabstopsMasks`.
+- `Tabstops.Deinit` is kept as a stub because every test calls it.
+- `Stream[H]` holds its handler by pointer. A handler "passed by value" in
+  Zig therefore cannot be told apart from one passed by pointer in Go; two
+  tests that check this are translated with a pointer handler and lose that
+  distinction (a Go limitation, accepted).
+- The reference-counted set is generic over all four of Zig's parameters, has
+  no memory base, keeps `cap`, `table_cap` and `table_mask` as counts (the
+  byte offsets are dropped), treats a zero-capacity set as empty (lookups find
+  nothing, adds return `ErrOutOfMemory`), and uses integer arithmetic that must
+  reproduce `data/sets/capacities.txt` (every capacity 0 to 65,536).
+- Hashes (`Style.hash`, `PageEntry.hash`) must reproduce
+  `data/sets/style_hash.txt` and `data/sets/hyperlink_hash.txt`: they decide
+  when a set reports that it is full and so drive page growth. `Style.hash`
+  needs Zig's `std.hash.int`; `PageEntry.hash` needs Wyhash with `autoHash`
+  semantics, neither of which the Go standard library has.

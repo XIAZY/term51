@@ -34,3 +34,40 @@ terminal/stream.zig | term51: Action.ShowDesktopNotification.cval: borrows title
 terminal/stream.zig | term51: Action.StartHyperlink.cval: a missing id becomes an empty string | cval/C (C binding helper) is not ported
 terminal/stream.zig | term51: Action.ClipboardContents.cval: kind and borrowed data | cval/C (C binding helper) is not ported
 terminal/stream.zig | term51: Action.ColorOperation.cval: is void | cval/C (C binding helper) is not ported
+terminal/Tabstops.zig | Tabstops: resize alloc failure preserves state | injects an allocation failure through the tripwire (resize_tw.errorAlways); the Go port has no allocator and no tripwire
+terminal/Tabstops.zig | term51: Tabstops.init: out of memory when dynamic storage is needed | injects allocation failures (std.testing.FailingAllocator has no Go counterpart)
+terminal/Tabstops.zig | term51: Tabstops.resize: allocation failure on growth preserves state and data | injects an allocation failure (std.testing.FailingAllocator has no Go counterpart)
+terminal/Tabstops.zig | term51: Tabstops.resize: failure when growing from the preallocated range | injects an allocation failure (std.testing.FailingAllocator has no Go counterpart)
+terminal/size.zig | Offset ptr u8 | Offset(T).ptr: Offset is a byte offset from a base address and has no Go counterpart (Go-memory rule)
+terminal/size.zig | Offset ptr structural | Offset(T).ptr: Offset is a byte offset from a base address and has no Go counterpart (Go-memory rule)
+terminal/size.zig | getOffset bytes | getOffset: computes a byte offset between two addresses; no Go counterpart (Go-memory rule)
+terminal/size.zig | getOffset structs | getOffset: computes a byte offset between two addresses; no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset: default offset is zero and the largest offset is representable | Offset(T) and Offset(T).Slice have no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.ptr: zero offset returns the base address for every base kind | Offset(T).ptr has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.ptr: adds the offset to the base for every base kind | Offset(T).ptr has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.ptr: an OffsetBuf base contributes only its true base, not its offset | Offset(T).ptr and OffsetBuf have no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.ptr: typed offsets for wider element types | Offset(T).ptr has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.Slice.slice: default slice is empty | Offset(T).Slice has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.Slice.slice: applies offset and length for byte elements | Offset(T).Slice has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.Slice.slice: element type scales the length but not the offset | Offset(T).Slice has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: Offset.Slice.slice: accepts every base kind | Offset(T).Slice has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: getOffset: base kinds and boundary elements | getOffset has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: getOffset: round trips through Offset.ptr | getOffset and Offset(T).ptr have no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: intFromBase: every supported base type yields the address | intFromBase has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: OffsetBuf.init: zero offset from every base kind | OffsetBuf has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: OffsetBuf.initOffset: stores base and offset | OffsetBuf has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: OffsetBuf.start: base plus offset | OffsetBuf has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: OffsetBuf.member: offset is the buffer offset plus the byte length | OffsetBuf has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: OffsetBuf.add: accumulates offsets and keeps the base | OffsetBuf has no Go counterpart (Go-memory rule)
+terminal/size.zig | term51: OffsetBuf.rebase: merges the offset into a new zero-offset base | OffsetBuf has no Go counterpart (Go-memory rule)
+terminal/modes.zig | (unnamed, modes.zig:79) | layout test: only checks @sizeOf(ModePacked) == 8 (ModePacked is an ordinary struct in Go)
+terminal/modes.zig | (unnamed, modes.zig:235) | `_ = Mode; _ = ModePacked;` only makes the Zig compiler analyse the generated types; Go always compiles them
+terminal/ref_counted_set.zig | term51: RefCountedSet: layout item and table element sizes | only checks @sizeOf/@alignOf of Item (byte layout); no counts
+terminal/style.zig | term51: Style.bg: cell content tag decides the source | pending: waits for the page wireframe (Cell type)
+terminal/style.zig | term51: Style.bg: palette boundaries | pending: waits for the page wireframe (Cell type)
+terminal/style.zig | term51: Style.bg: flags and other colors do not matter | pending: waits for the page wireframe (Cell type)
+terminal/style.zig | term51: Style.bgCell: no bg | pending: waits for the page wireframe (Cell type)
+terminal/style.zig | term51: Style.bgCell: palette bg | pending: waits for the page wireframe (Cell type)
+terminal/style.zig | term51: Style.bgCell: rgb bg | pending: waits for the page wireframe (Cell type)
+terminal/style.zig | (unnamed, style.zig:2739) | `_ = term51FFgTests;` only makes the Zig compiler analyse the struct that holds the Style.fg tests; the 8 tests in it are translated individually
+terminal/style.zig | term51: Style.hash: dump exact data when TERM51_SET_DUMP_DIR is set | only produces data/sets/capacities.txt and data/sets/style_hash.txt; corpus_style_test.go (TestStyle_corpus_hash) compares style_hash.txt

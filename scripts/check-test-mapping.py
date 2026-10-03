@@ -46,19 +46,40 @@ def go_tests(paths):
     return out
 
 
+def not_translated():
+    """scripts/not-translated.txt: '<zig file> | <title> | <reason>' lines."""
+    out = {}
+    p = os.path.join(ROOT, "scripts", "not-translated.txt")
+    if os.path.exists(p):
+        for line in open(p):
+            if line.strip() and not line.startswith("#"):
+                f, title, reason = [x.strip() for x in line.split("|", 2)]
+                out.setdefault(f, {})[title] = reason
+    return out
+
+
 def main():
     zig_dir = sys.argv[1]
+    skipped = not_translated()
     ok = True
     total = 0
     for rel in sys.argv[2:]:
         base = os.path.splitext(os.path.basename(rel))[0]
         pkg = os.path.join(ROOT, os.path.dirname(rel))
+        # A Zig file in a subdirectory (terminal/kitty/color.zig) lives in the
+        # same Go package as its parent, named <subdir>_<file> (kitty_color).
+        parts = rel.split("/")
+        if len(parts) > 2:
+            base = "_".join(parts[1:-1] + [os.path.splitext(parts[-1])[0]])
+            pkg = os.path.join(ROOT, parts[0])
         go_files = sorted(glob.glob(os.path.join(pkg, base + "_test.go")) + glob.glob(os.path.join(pkg, base + "_*_test.go")))
         want = zig_tests(os.path.join(zig_dir, rel))
         got = go_tests(go_files)
         got_names = [g[0] for g in got]
         total += len(want)
-        missing = [w for w in want if got_names.count(w) == 0]
+        listed = skipped.get(rel, {})
+        missing = [w for w in want if got_names.count(w) == 0 and w.strip('"') not in listed]
+        n_listed = sum(1 for w in want if w.strip('"') in listed and got_names.count(w) == 0)
         dupes = sorted({g for g in got_names if got_names.count(g) > 1})
         extra = [g for g in got_names if g not in want]
         # order is checked within each Go file
@@ -70,7 +91,7 @@ def main():
                 order_ok = False
         tagged = sum(1 for g in got if g[1] != base + "_test.go")
         status = "ok" if not (missing or dupes or extra) and order_ok else "MISMATCH"
-        print("%-28s zig=%d go=%d (%d in tagged files) %s" % (rel, len(want), len(got), tagged, status))
+        print("%-28s zig=%d go=%d (%d in tagged files, %d listed as not translated) %s" % (rel, len(want), len(got), tagged, n_listed, status))
         for label, items in (("missing in Go", missing), ("duplicated in Go", dupes), ("not in Zig", extra)):
             for it in items:
                 print("   %s: %s" % (label, it))

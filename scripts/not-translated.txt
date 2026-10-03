@@ -1,0 +1,12 @@
+# Zig tests that are deliberately not translated to Go. One per line:
+#   <zig file> | <test title> | <reason>
+# check-test-mapping.py treats these as accounted for. Every entry needs the
+# project lead's approval (docs/mapping.md, rule 4).
+terminal/sgr.zig | sgr: Attribute C compat | C ABI layout (Attribute.C) is not ported
+terminal/sgr.zig | term51: Attribute.Unknown.cval: exposes both slices as pointer and length | cval (C binding helper) is not ported
+terminal/sgr.zig | term51: Attribute.Unknown.cval: empty slices | cval (C binding helper) is not ported
+terminal/sgr.zig | term51: Attribute.Underline.cval: numeric value of each style | cval (C binding helper) is not ported
+terminal/color.zig | term51: Name.cval: every named value and unnamed values | cval (C binding helper) is not ported
+terminal/color.zig | term51: RGB.cval: copies the channels into the extern struct | cval (C binding helper) is not ported
+terminal/color.zig | term51: LAB.fromRgb: dump exact data when TERM51_COLOR_DUMP_DIR is set | only produces the data files data/colors/*.txt, which corpus_color_test.go compares against
+terminal/kitty/color.zig | term51: OSC.cval: always void, default terminator is st | cval (C binding helper) is not ported; also needs OSCTerminator (osc.zig wireframe pending)

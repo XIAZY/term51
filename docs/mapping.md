@@ -97,3 +97,35 @@ what Zig's `@tagName` yields and what the recorded corpus contains.
 - `next` returns `[3]?Action`; Go returns `[3]Optional[ParserAction]`.
 - `osc_parser` is an `osc.Parser`. Until `osc.zig` is ported, `osc.go` is a
   marked placeholder that recognises nothing (see `docs/port-status.md`).
+
+## Tests
+
+- One Go test per Zig test, in the same order, with the exact Zig title in a
+  `// Zig: test "<title>"` comment directly above it. `scripts/check-test-mapping.py`
+  verifies this.
+- Zig tests that are deliberately not translated are listed with their reason
+  in `scripts/not-translated.txt` (C-binding helpers such as `cval`, tests of
+  C ABI layouts, tests that only produce data files). Each needs the project
+  lead's approval.
+- Tests are translated before the implementation exists, against a wireframe
+  (signatures only, every body panics "not implemented"). Until the
+  implementation is approved those tests fail by design; run the ones that can
+  pass with `go test ./terminal/ -skip 'SGR|Color|X11|KittyColor|MouseShape'`.
+- Tests that read recorded data (`corpus_color_test.go`, `corpus_test.go`) use
+  the `term51` checkout named by `LIBGHOSTTY_VT_CORPUS`.
+
+## Wireframe naming decisions (project lead)
+
+- A Zig file in a subdirectory is part of the same Go package, with the
+  subdirectory in the name: `kitty/color.zig` is `kitty_color.go`, type prefix
+  `KittyColor`; `osc/parsers/*.zig` follow the same rule.
+- Namespace files: `color.RGB` is `ColorRGB`, `color.default` is
+  `ColorDefault`, `x11_color.map` is `X11ColorMap`.
+- SGR: tag constants are `SGRAttributeTag<Variant>`; struct fields for
+  variants whose name starts with a digit get an `X` prefix (`X8Bg`,
+  `X256Fg`, ...); `usize` is `uint`; `Parser.empty` is `SGRParserEmpty`.
+- Floating point: the LAB code is 32-bit float arithmetic. Go may fuse a
+  multiply and an add into one instruction on ARM, which Zig does not do and
+  which changes the last bit. When implemented, wrap each product in an
+  explicit `float32(...)`; `data/colors/*.txt` in the corpus catches any
+  difference.

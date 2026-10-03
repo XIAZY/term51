@@ -49,7 +49,7 @@ func TestRefCountedSet_corpus_capacities(t *testing.T) {
 			cap_ := atoi(f[1])
 			itemsCap, tableCap, tableMask := atoi(f[2]), atoi(f[3]), atoi(f[4])
 			nl++
-			l := RefCountedSetLayoutInit[uint16](cap_)
+			l := RefCountedSetLayoutInit[uint16](cap_, sm2_itemSizes16)
 			if l.cap != itemsCap || l.table_cap != tableCap || uint(l.table_mask) != tableMask {
 				t.Errorf("Layout.init(%d) = cap %d table_cap %d table_mask %d, want %d %d %d",
 					cap_, l.cap, l.table_cap, l.table_mask, itemsCap, tableCap, tableMask)

@@ -183,30 +183,36 @@ type sm2_FixSet8 = sm2_Fix[sm2_Val, uint8, uint8, sm2_Ctx]
 type sm2_FixSetMix = sm2_Fix[sm2_Val, uint16, uint32, sm2_Ctx]
 type sm2_FixStyleSet = sm2_Fix[Style, StyleId, SizeCellCountInt, StyleSetContext]
 
+// sm2_itemSizes16 and sm2_itemSizes8 are @sizeOf and @alignOf of the Zig
+// items of term51GSet (and term51GSetDel, term51GSetMix): 16 and 4, and of
+// term51GSet8: 12 and 4.
+var sm2_itemSizes16 = refCountedSetItemSizes{item_size: 16, item_align: 4}
+var sm2_itemSizes8 = refCountedSetItemSizes{item_size: 12, item_align: 4}
+
 // sm2_fixInit is Fix.init: Layout.init(cap) and S.init.
-func sm2_fixInit[T comparable, Id RefCountedSetInt, Ref RefCountedSetInt, C RefCountedSetContext[T]](t *testing.T, cap uint, ctx C) *sm2_Fix[T, Id, Ref, C] {
-	layout := RefCountedSetLayoutInit[Id](cap)
+func sm2_fixInit[T comparable, Id RefCountedSetInt, Ref RefCountedSetInt, C RefCountedSetContext[T]](t *testing.T, sizes refCountedSetItemSizes, cap uint, ctx C) *sm2_Fix[T, Id, Ref, C] {
+	layout := RefCountedSetLayoutInit[Id](cap, sizes)
 	return &sm2_Fix[T, Id, Ref, C]{t: t, set: RefCountedSetInit[T, Id, Ref, C](layout, ctx)}
 }
 
 func sm2_newSet(t *testing.T, cap uint, ctx sm2_Ctx) *sm2_FixSet {
-	return sm2_fixInit[sm2_Val, uint16, uint16, sm2_Ctx](t, cap, ctx)
+	return sm2_fixInit[sm2_Val, uint16, uint16, sm2_Ctx](t, sm2_itemSizes16, cap, ctx)
 }
 
 func sm2_newSetDel(t *testing.T, cap uint, ctx sm2_CtxDel) *sm2_FixSetDel {
-	return sm2_fixInit[sm2_Val, uint16, uint16, sm2_CtxDel](t, cap, ctx)
+	return sm2_fixInit[sm2_Val, uint16, uint16, sm2_CtxDel](t, sm2_itemSizes16, cap, ctx)
 }
 
 func sm2_newSet8(t *testing.T, cap uint, ctx sm2_Ctx) *sm2_FixSet8 {
-	return sm2_fixInit[sm2_Val, uint8, uint8, sm2_Ctx](t, cap, ctx)
+	return sm2_fixInit[sm2_Val, uint8, uint8, sm2_Ctx](t, sm2_itemSizes8, cap, ctx)
 }
 
 func sm2_newSetMix(t *testing.T, cap uint, ctx sm2_Ctx) *sm2_FixSetMix {
-	return sm2_fixInit[sm2_Val, uint16, uint32, sm2_Ctx](t, cap, ctx)
+	return sm2_fixInit[sm2_Val, uint16, uint32, sm2_Ctx](t, sm2_itemSizes16, cap, ctx)
 }
 
 func sm2_newStyleSet(t *testing.T, cap uint) *sm2_FixStyleSet {
-	return sm2_fixInit[Style, StyleId, SizeCellCountInt, StyleSetContext](t, cap, StyleSetContext{})
+	return sm2_fixInit[Style, StyleId, SizeCellCountInt, StyleSetContext](t, styleSetItemSizes, cap, StyleSetContext{})
 }
 
 // add is `try f.set.add(f.buf, v)`.
@@ -409,7 +415,7 @@ func TestRefCountedSet_term51_RefCountedSet_capacityForCount_largest_count_for_1
 	// 65536 is the largest cap Layout.init accepts for a u16 Id.
 	expectEqual(t, uint(65536), RefCountedSetCapacityForCount(53247))
 	expectEqual(t, uint(65538), RefCountedSetCapacityForCount(53248))
-	expectEqual(t, uint(53248), RefCountedSetLayoutInit[uint16](RefCountedSetCapacityForCount(53247)).cap)
+	expectEqual(t, uint(53248), RefCountedSetLayoutInit[uint16](RefCountedSetCapacityForCount(53247), sm2_itemSizes16).cap)
 }
 
 // Zig: test "term51: RefCountedSet.capacityForCount: layout capacity always holds n items plus reserved id 0"
@@ -418,7 +424,7 @@ func TestRefCountedSet_term51_RefCountedSet_capacityForCount_layout_capacity_alw
 		c := RefCountedSetCapacityForCount(n)
 		expect(t, c >= n+1, "c >= n + 1")
 		// Layout.cap counts ids including the reserved 0, so n items need n + 1.
-		expect(t, RefCountedSetLayoutInit[uint16](c).cap >= n+1, "S.Layout.init(c).cap >= n + 1")
+		expect(t, RefCountedSetLayoutInit[uint16](c, sm2_itemSizes16).cap >= n+1, "S.Layout.init(c).cap >= n + 1")
 	}
 }
 
@@ -448,92 +454,95 @@ func TestRefCountedSet_term51_RefCountedSet_capacityForCount_a_set_sized_for_n_h
 
 // Zig: test "term51: RefCountedSet.Layout.init: layout zero capacity"
 func TestRefCountedSet_term51_RefCountedSet_Layout_init_layout_zero_capacity(t *testing.T) {
-	l := RefCountedSetLayoutInit[uint16](0)
+	l := RefCountedSetLayoutInit[uint16](0, sm2_itemSizes16)
 	expectEqual(t, uint(0), l.cap)
 	expectEqual(t, uint(0), l.table_cap)
 	expectEqual(t, uint16(0), l.table_mask)
-	// Zig-only: l.table_start, l.items_start and l.total_size (byte
-	// offsets and size) are not in the Go layout.
+	expectEqual(t, uint64(0), l.table_start)
+	expectEqual(t, uint64(0), l.items_start)
+	expectEqual(t, uint64(0), l.total_size)
 }
 
 // Zig: test "term51: RefCountedSet.Layout.init: layout offsets and total size for the u16 set"
 func TestRefCountedSet_term51_RefCountedSet_Layout_init_layout_offsets_and_total_size_for_the_u16_set(t *testing.T) {
 	// Item size 16, alignment 4, Id size 2.
-	// Zig-only: each Zig row also has items_start and total (byte offsets
-	// and sizes: 4/4, 4/20, 8/56, 8/56, 16/112, 16/112, 32/240, 32/240,
-	// 64/480, 256/1920, 2048/15360, 32768/245760, 131072/983040 twice).
 	type row struct {
-		cap       uint
-		table_cap uint
-		items_cap uint
-		mask      uint16
+		cap         uint
+		table_cap   uint
+		items_cap   uint
+		mask        uint16
+		items_start uint64
+		total       uint64
 	}
 	rows := []row{
 		// table is a single 2-byte entry, padded to 4 for the items.
-		{cap: 1, table_cap: 1, items_cap: 0, mask: 0},
-		{cap: 2, table_cap: 2, items_cap: 1, mask: 1},
-		{cap: 3, table_cap: 4, items_cap: 3, mask: 3},
-		{cap: 4, table_cap: 4, items_cap: 3, mask: 3},
-		{cap: 5, table_cap: 8, items_cap: 6, mask: 7},
-		{cap: 8, table_cap: 8, items_cap: 6, mask: 7},
-		{cap: 9, table_cap: 16, items_cap: 13, mask: 15},
-		{cap: 16, table_cap: 16, items_cap: 13, mask: 15},
-		{cap: 17, table_cap: 32, items_cap: 26, mask: 31},
-		{cap: 100, table_cap: 128, items_cap: 104, mask: 127},
-		{cap: 1000, table_cap: 1024, items_cap: 832, mask: 1023},
-		{cap: 16384, table_cap: 16384, items_cap: 13312, mask: 16383},
-		{cap: 65535, table_cap: 65536, items_cap: 53248, mask: 65535},
-		{cap: 65536, table_cap: 65536, items_cap: 53248, mask: 65535},
+		{cap: 1, table_cap: 1, items_cap: 0, mask: 0, items_start: 4, total: 4},
+		{cap: 2, table_cap: 2, items_cap: 1, mask: 1, items_start: 4, total: 20},
+		{cap: 3, table_cap: 4, items_cap: 3, mask: 3, items_start: 8, total: 56},
+		{cap: 4, table_cap: 4, items_cap: 3, mask: 3, items_start: 8, total: 56},
+		{cap: 5, table_cap: 8, items_cap: 6, mask: 7, items_start: 16, total: 112},
+		{cap: 8, table_cap: 8, items_cap: 6, mask: 7, items_start: 16, total: 112},
+		{cap: 9, table_cap: 16, items_cap: 13, mask: 15, items_start: 32, total: 240},
+		{cap: 16, table_cap: 16, items_cap: 13, mask: 15, items_start: 32, total: 240},
+		{cap: 17, table_cap: 32, items_cap: 26, mask: 31, items_start: 64, total: 480},
+		{cap: 100, table_cap: 128, items_cap: 104, mask: 127, items_start: 256, total: 1920},
+		{cap: 1000, table_cap: 1024, items_cap: 832, mask: 1023, items_start: 2048, total: 15360},
+		{cap: 16384, table_cap: 16384, items_cap: 13312, mask: 16383, items_start: 32768, total: 245760},
+		{cap: 65535, table_cap: 65536, items_cap: 53248, mask: 65535, items_start: 131072, total: 983040},
+		{cap: 65536, table_cap: 65536, items_cap: 53248, mask: 65535, items_start: 131072, total: 983040},
 	}
 	for _, r := range rows {
-		l := RefCountedSetLayoutInit[uint16](r.cap)
+		l := RefCountedSetLayoutInit[uint16](r.cap, sm2_itemSizes16)
 		expectEqual(t, r.items_cap, l.cap)
 		expectEqual(t, r.table_cap, l.table_cap)
 		expectEqual(t, r.mask, l.table_mask)
-		// Zig-only: l.table_start == 0, l.items_start == r.items_start and
-		// l.total_size == r.total.
+		expectEqual(t, uint64(0), l.table_start)
+		expectEqual(t, r.items_start, l.items_start)
+		expectEqual(t, r.total, l.total_size)
 	}
 }
 
 // Zig: test "term51: RefCountedSet.Layout.init: layout offsets and total size for the u8 set"
 func TestRefCountedSet_term51_RefCountedSet_Layout_init_layout_offsets_and_total_size_for_the_u8_set(t *testing.T) {
 	// Item size 12, alignment 4, Id size 1.
-	// Zig-only: each Zig row also has items_start and total (byte offsets
-	// and sizes: 4/4, 4/40, 16/172, 256/2752 twice).
 	type row struct {
-		cap       uint
-		table_cap uint
-		items_cap uint
-		mask      uint8
+		cap         uint
+		table_cap   uint
+		items_cap   uint
+		mask        uint8
+		items_start uint64
+		total       uint64
 	}
 	rows := []row{
-		{cap: 1, table_cap: 1, items_cap: 0, mask: 0},
-		{cap: 3, table_cap: 4, items_cap: 3, mask: 3},
-		{cap: 16, table_cap: 16, items_cap: 13, mask: 15},
-		{cap: 255, table_cap: 256, items_cap: 208, mask: 255},
-		{cap: 256, table_cap: 256, items_cap: 208, mask: 255},
+		{cap: 1, table_cap: 1, items_cap: 0, mask: 0, items_start: 4, total: 4},
+		{cap: 3, table_cap: 4, items_cap: 3, mask: 3, items_start: 4, total: 40},
+		{cap: 16, table_cap: 16, items_cap: 13, mask: 15, items_start: 16, total: 172},
+		{cap: 255, table_cap: 256, items_cap: 208, mask: 255, items_start: 256, total: 2752},
+		{cap: 256, table_cap: 256, items_cap: 208, mask: 255, items_start: 256, total: 2752},
 	}
 	for _, r := range rows {
-		l := RefCountedSetLayoutInit[uint8](r.cap)
+		l := RefCountedSetLayoutInit[uint8](r.cap, sm2_itemSizes8)
 		expectEqual(t, r.items_cap, l.cap)
 		expectEqual(t, r.table_cap, l.table_cap)
 		expectEqual(t, r.mask, l.table_mask)
-		// Zig-only: l.table_start == 0, l.items_start == r.items_start and
-		// l.total_size == r.total.
+		expectEqual(t, uint64(0), l.table_start)
+		expectEqual(t, r.items_start, l.items_start)
+		expectEqual(t, r.total, l.total_size)
 	}
 }
 
 // Zig: test "term51: RefCountedSet.Layout.init: layout style set offsets follow item size and alignment"
 func TestRefCountedSet_term51_RefCountedSet_Layout_init_layout_style_set_offsets_follow_item_size_and_alignment(t *testing.T) {
-	// Zig-only: isz = @sizeOf(SS.Item) and ial = @alignOf(SS.Item).
+	isz := styleSetItemSizes.item_size
+	ial := styleSetItemSizes.item_align
 	for _, cap := range []uint{1, 2, 3, 16, 17, 1000, 16384} {
-		l := RefCountedSetLayoutInit[StyleId](cap)
+		l := RefCountedSetLayoutInit[StyleId](cap, styleSetItemSizes)
 		tc := sm2_ceilPowerOfTwo(cap)
 		expectEqual(t, tc, l.table_cap)
 		expectEqual(t, tc-1, uint(l.table_mask))
-		// Zig-only: l.table_start == 0, l.items_start ==
-		// alignForward(tc * 2, ial) and l.total_size == l.items_start +
-		// l.cap * isz.
+		expectEqual(t, uint64(0), l.table_start)
+		expectEqual(t, (uint64(tc)*2+ial-1)/ial*ial, l.items_start) // alignForward(tc * 2, ial)
+		expectEqual(t, l.items_start+uint64(l.cap)*isz, l.total_size)
 	}
 }
 
@@ -543,15 +552,15 @@ func TestRefCountedSet_term51_RefCountedSet_Layout_init_capacity_is_a_power_of_t
 	// term51GSet8 and the style set, as (table_cap, cap).
 	for _, layout := range []func(cap uint) (uint, uint){
 		func(cap uint) (uint, uint) {
-			l := RefCountedSetLayoutInit[uint16](cap)
+			l := RefCountedSetLayoutInit[uint16](cap, sm2_itemSizes16)
 			return l.table_cap, l.cap
 		},
 		func(cap uint) (uint, uint) {
-			l := RefCountedSetLayoutInit[uint8](cap)
+			l := RefCountedSetLayoutInit[uint8](cap, sm2_itemSizes8)
 			return l.table_cap, l.cap
 		},
 		func(cap uint) (uint, uint) {
-			l := RefCountedSetLayoutInit[StyleId](cap)
+			l := RefCountedSetLayoutInit[StyleId](cap, styleSetItemSizes)
 			return l.table_cap, l.cap
 		},
 	} {
@@ -583,12 +592,12 @@ func TestRefCountedSet_term51_RefCountedSet_Layout_init_capacity_is_a_power_of_t
 		}
 	}
 	// 16-bit ids: the largest accepted capacity is 65536 (one past maxInt).
-	big := RefCountedSetLayoutInit[uint16](65536)
+	big := RefCountedSetLayoutInit[uint16](65536, sm2_itemSizes16)
 	expectEqual(t, uint(65536), big.table_cap)
 	expectEqual(t, uint(53248), big.cap)
 	expectEqual(t, uint16(65535), big.table_mask)
 	// 8-bit ids: 256.
-	big8 := RefCountedSetLayoutInit[uint8](256)
+	big8 := RefCountedSetLayoutInit[uint8](256, sm2_itemSizes8)
 	expectEqual(t, uint(256), big8.table_cap)
 	expectEqual(t, uint(208), big8.cap)
 	expectEqual(t, uint8(255), big8.table_mask)
@@ -596,7 +605,7 @@ func TestRefCountedSet_term51_RefCountedSet_Layout_init_capacity_is_a_power_of_t
 
 // Zig: test "term51: RefCountedSet.init: fresh state with table zeroed and items defaulted"
 func TestRefCountedSet_term51_RefCountedSet_init_fresh_state_with_table_zeroed_and_items_defaulted(t *testing.T) {
-	layout := RefCountedSetLayoutInit[uint16](16)
+	layout := RefCountedSetLayoutInit[uint16](16, sm2_itemSizes16)
 	// Zig-only: buf (aligned allocation of layout.total_size + 32 bytes)
 	// filled with 0xAA.
 
@@ -631,7 +640,7 @@ func TestRefCountedSet_term51_RefCountedSet_init_fresh_state_with_table_zeroed_a
 
 // Zig: test "term51: RefCountedSet.init: layout offsets are relative to the true base"
 func TestRefCountedSet_term51_RefCountedSet_init_layout_offsets_are_relative_to_the_true_base(t *testing.T) {
-	layout := RefCountedSetLayoutInit[uint16](16)
+	layout := RefCountedSetLayoutInit[uint16](16, sm2_itemSizes16)
 	// Zig-only: buf (64 + layout.total_size + 16 bytes of 0xAA) and the
 	// base `.initOffset(buf, 64)`: Go sets own their memory and have no base.
 

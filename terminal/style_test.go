@@ -385,7 +385,7 @@ func TestStyle_Style_VT_formatting_all_palette_colors_with_palette_set(t *testin
 
 // Zig: test "Set basic usage"
 func TestStyle_Set_basic_usage(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 
 	style := Style{flags: styleFlags{bold: true}}
@@ -439,7 +439,7 @@ func TestStyle_Set_basic_usage(t *testing.T) {
 // Zig: test "Set capacities"
 func TestStyle_Set_capacities(t *testing.T) {
 	// We want to support at least this many styles without overflowing.
-	_ = RefCountedSetLayoutInit[StyleId](16384)
+	_ = RefCountedSetLayoutInit[StyleId](16384, styleSetItemSizes)
 }
 
 // Zig: test "Style HTML formatting basic bold"
@@ -1316,11 +1316,11 @@ func TestStyle_term51_eql_set_instantiation_types_and_layout(t *testing.T) {
 
 	// Zero capacity.
 	{
-		l := RefCountedSetLayoutInit[StyleId](0)
+		l := RefCountedSetLayoutInit[StyleId](0, styleSetItemSizes)
 		expectEqual(t, uint(0), l.cap)
 		expectEqual(t, uint(0), l.table_cap)
 		expectEqual(t, StyleId(0), l.table_mask)
-		// Zig-only: expectEqual(@as(usize, 0), l.total_size)
+		expectEqual(t, uint64(0), l.total_size)
 	}
 
 	// The cap is the rounded-up power of two times the load factor,
@@ -1345,20 +1345,20 @@ func TestStyle_term51_eql_set_instantiation_types_and_layout(t *testing.T) {
 		{req: 65536, table: 65536, cap: 53248},
 	}
 	for _, c := range cases {
-		l := RefCountedSetLayoutInit[StyleId](c.req)
+		l := RefCountedSetLayoutInit[StyleId](c.req, styleSetItemSizes)
 		expectEqual(t, c.table, l.table_cap)
 		expectEqual(t, c.cap, l.cap)
 		expectEqual(t, StyleId(c.table-1), l.table_mask)
-		// Zig-only: expectEqual(@as(usize, 0), l.table_start)
-		// Zig-only: expect(l.items_start >= l.table_cap * @sizeOf(Id))
-		// Zig-only: expect(l.items_start % @alignOf(Set.Item) == 0)
-		// Zig-only: expectEqual(l.items_start + l.cap * @sizeOf(Set.Item), l.total_size)
+		expectEqual(t, uint64(0), l.table_start)
+		expect(t, l.items_start >= uint64(l.table_cap)*2, "l.items_start >= l.table_cap * @sizeOf(Id)")
+		expect(t, l.items_start%styleSetItemSizes.item_align == 0, "l.items_start % @alignOf(Set.Item) == 0")
+		expectEqual(t, l.items_start+uint64(l.cap)*styleSetItemSizes.item_size, l.total_size)
 	}
 }
 
 // Zig: test "term51: eql: set first id is 1 and default style is storable"
 func TestStyle_term51_eql_set_first_id_is_1_and_default_style_is_storable(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1384,7 +1384,7 @@ func TestStyle_term51_eql_set_lookup_and_add_distinguish_every_one_field_differe
 	variants = append(variants, Style{})
 
 	// 36 variants: table of 64 gives cap 52, so 51 usable ids.
-	layout := RefCountedSetLayoutInit[StyleId](64)
+	layout := RefCountedSetLayoutInit[StyleId](64, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1411,7 +1411,7 @@ func TestStyle_term51_eql_set_lookup_and_add_distinguish_every_one_field_differe
 
 // Zig: test "term51: eql: set add of a hash-colliding but unequal style"
 func TestStyle_term51_eql_set_add_of_a_hash_colliding_but_unequal_style(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1433,7 +1433,7 @@ func TestStyle_term51_eql_set_add_of_a_hash_colliding_but_unequal_style(t *testi
 // Zig: test "term51: eql: set fills to capacity then reports OutOfMemory"
 func TestStyle_term51_eql_set_fills_to_capacity_then_reports_OutOfMemory(t *testing.T) {
 	// Layout.init(16): table 16, cap 13, so ids 1..12 are usable.
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	expectEqual(t, uint(13), layout.cap)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
@@ -1458,7 +1458,7 @@ func TestStyle_term51_eql_set_fills_to_capacity_then_reports_OutOfMemory(t *test
 
 // Zig: test "term51: eql: set full with dead items reports NeedsRehash"
 func TestStyle_term51_eql_set_full_with_dead_items_reports_NeedsRehash(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1484,7 +1484,7 @@ func TestStyle_term51_eql_set_full_with_dead_items_reports_NeedsRehash(t *testin
 
 // Zig: test "term51: eql: set release of the last id frees its id for reuse"
 func TestStyle_term51_eql_set_release_of_the_last_id_frees_its_id_for_reuse(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1504,7 +1504,7 @@ func TestStyle_term51_eql_set_release_of_the_last_id_frees_its_id_for_reuse(t *t
 // Zig: test "term51: eql: set tiny layouts have no usable ids"
 func TestStyle_term51_eql_set_tiny_layouts_have_no_usable_ids(t *testing.T) {
 	for _, req := range []uint{1, 2} {
-		layout := RefCountedSetLayoutInit[StyleId](req)
+		layout := RefCountedSetLayoutInit[StyleId](req, styleSetItemSizes)
 		// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 		set := sm3_newSet(layout)
 		_, err := set.Add(Style{})
@@ -1514,7 +1514,7 @@ func TestStyle_term51_eql_set_tiny_layouts_have_no_usable_ids(t *testing.T) {
 
 	// table 4: cap 3, two usable ids.
 	{
-		layout := RefCountedSetLayoutInit[StyleId](4)
+		layout := RefCountedSetLayoutInit[StyleId](4, styleSetItemSizes)
 		// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 		set := sm3_newSet(layout)
 		expectEqual(t, StyleId(1), sm3_add(t, &set, sm3_rgbStyle(1)))
@@ -1526,7 +1526,7 @@ func TestStyle_term51_eql_set_tiny_layouts_have_no_usable_ids(t *testing.T) {
 
 // Zig: test "term51: eql: set release and resurrect a dead item"
 func TestStyle_term51_eql_set_release_and_resurrect_a_dead_item(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1552,7 +1552,7 @@ func TestStyle_term51_eql_set_release_and_resurrect_a_dead_item(t *testing.T) {
 
 // Zig: test "term51: eql: set use, useMultiple, release, releaseMultiple"
 func TestStyle_term51_eql_set_use_useMultiple_release_releaseMultiple(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1576,7 +1576,7 @@ func TestStyle_term51_eql_set_use_useMultiple_release_releaseMultiple(t *testing
 
 // Zig: test "term51: eql: set get returns a pointer to the stored style"
 func TestStyle_term51_eql_set_get_returns_a_pointer_to_the_stored_style(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1591,7 +1591,7 @@ func TestStyle_term51_eql_set_get_returns_a_pointer_to_the_stored_style(t *testi
 
 // Zig: test "term51: eql: set addWithId"
 func TestStyle_term51_eql_set_addWithId(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1631,7 +1631,7 @@ func TestStyle_term51_eql_set_addWithId_reusing_a_dead_id_for_an_existing_value_
 	// already lives under another id, upsert returns that other id but
 	// `living` is still incremented, so count() drifts above the number
 	// of items that are alive.
-	layout := RefCountedSetLayoutInit[StyleId](16)
+	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1658,7 +1658,7 @@ func TestStyle_term51_eql_set_addWithId_reusing_a_dead_id_for_an_existing_value_
 func TestStyle_term51_eql_set_of_16_bit_ids_holds_53247_styles(t *testing.T) {
 	// The largest layout a u16 id can address: table 65536, cap 53248.
 	// Id 0 is reserved so 53247 styles fit, which is short of 65535.
-	layout := RefCountedSetLayoutInit[StyleId](65535)
+	layout := RefCountedSetLayoutInit[StyleId](65535, styleSetItemSizes)
 	expectEqual(t, uint(53248), layout.cap)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)

@@ -72,7 +72,16 @@ def main():
         if len(parts) > 2:
             base = "_".join(parts[1:-1] + [os.path.splitext(parts[-1])[0]])
             pkg = os.path.join(ROOT, parts[0])
-        go_files = sorted(glob.glob(os.path.join(pkg, base + "_test.go")) + glob.glob(os.path.join(pkg, base + "_*_test.go")))
+        extra = []
+        for f in glob.glob(os.path.join(pkg, base + "_*_test.go")):
+            # osc_encoding_test.go belongs to osc_encoding.go, not to osc.go:
+            # a test file whose stem names an existing Go file is not an
+            # extra test file of this one (Parser_osc_test.go is: there is no
+            # Parser_osc.go).
+            stem = os.path.basename(f)[: -len("_test.go")]
+            if not os.path.exists(os.path.join(pkg, stem + ".go")):
+                extra.append(f)
+        go_files = sorted(glob.glob(os.path.join(pkg, base + "_test.go")) + extra)
         want = zig_tests(os.path.join(zig_dir, rel))
         got = go_tests(go_files)
         got_names = [g[0] for g in got]

@@ -1,16 +1,7 @@
-//go:build osc_ported
-
-// Tests translated one for one from src/terminal/Parser.zig that need a
-// working OSC parser: they expect an osc_dispatch action, or drive
-// osc_parser and expect a command back. terminal/osc.go is a placeholder
-// that recognises nothing, so these are kept behind the build tag osc_ported
-// until osc.zig is ported. They are in the same order as in Parser.zig.
-//
-// Lines marked "TODO(osc): " use OSC command names that do not exist in the
-// placeholder yet. They are written as docs/mapping.md's naming rules
-// suggest (osc.Command -> OSCCommand, tagged union -> struct with a Tag
-// field, enum value .bel -> OSCTerminatorBel) and must be checked against
-// the real port of osc.zig.
+// Tests translated one for one from src/terminal/Parser.zig that expect an
+// osc_dispatch action, or drive osc_parser and expect a command back. They
+// are in the same order as in Parser.zig. They fail with the not-implemented
+// panic until osc.zig is ported.
 //
 // The helpers (expect, expectEqual, zigUnwrap, zigPayload, term51Feed, ...)
 // are in Parser_test.go.
@@ -40,8 +31,8 @@ func TestParser_osc_change_window_title(t *testing.T) {
 		expect(t, !a[2].Valid, "a[2] == null")
 
 		cmd := zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch
-		expect(t, cmd.Tag == OSCCommandChangeWindowTitle, "cmd == .change_window_title") // TODO(osc): OSCCommand.Tag, OSCCommandChangeWindowTitle
-		expectEqualStrings(t, "abc", string(cmd.ChangeWindowTitle))                      // TODO(osc): OSCCommand.ChangeWindowTitle
+		expect(t, cmd.Tag == OSCCommandKeyChangeWindowTitle, "cmd == .change_window_title")
+		expectEqualStrings(t, "abc", string(cmd.ChangeWindowTitle))
 	}
 }
 
@@ -65,8 +56,8 @@ func TestParser_osc_change_window_title_end_in_esc(t *testing.T) {
 		expect(t, !a[2].Valid, "a[2] == null")
 
 		cmd := zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch
-		expect(t, cmd.Tag == OSCCommandChangeWindowTitle, "cmd == .change_window_title") // TODO(osc): OSCCommand.Tag, OSCCommandChangeWindowTitle
-		expectEqualStrings(t, "abc", string(cmd.ChangeWindowTitle))                      // TODO(osc): OSCCommand.ChangeWindowTitle
+		expect(t, cmd.Tag == OSCCommandKeyChangeWindowTitle, "cmd == .change_window_title")
+		expectEqualStrings(t, "abc", string(cmd.ChangeWindowTitle))
 	}
 }
 
@@ -77,7 +68,7 @@ func TestParser_osc_change_window_title_end_in_esc(t *testing.T) {
 func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 	p := ParserInit()
 	defer p.Deinit()
-	// Zig-only: p.osc_parser.alloc = std.testing.allocator;
+	p.osc_parser.alloc = struct{}{} // Zig: p.osc_parser.alloc = std.testing.allocator;
 
 	_ = p.Next(0x1B)
 	_ = p.Next(']')
@@ -93,22 +84,22 @@ func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 		expect(t, !a[2].Valid, "a[2] == null")
 
 		cmd := zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch
-		expect(t, cmd.Tag == OSCCommandColorOperation, "cmd == .color_operation") // TODO(osc): OSCCommand.Tag, OSCCommandColorOperation
+		expect(t, cmd.Tag == OSCCommandKeyColorOperation, "cmd == .color_operation")
 		// Zig passes these two in this order: (actual, expected).
-		expectEqual(t, cmd.ColorOperation.Terminator, OSCTerminatorBel)                                   // TODO(osc): OSCCommand.ColorOperation.Terminator, OSCTerminatorBel
-		expect(t, cmd.ColorOperation.Op == OSCColorOperationOsc112, "cmd.color_operation.op == .osc_112") // TODO(osc): OSCCommand.ColorOperation.Op, OSCColorOperationOsc112
-		expect(t, cmd.ColorOperation.Requests.count() == 1, "cmd.color_operation.requests.count() == 1")  // TODO(osc): osc.color.List (std.SegmentedList) count
-		it := cmd.ColorOperation.Requests.constIterator(0)                                                // TODO(osc): osc.color.List (std.SegmentedList) constIterator
+		expectEqual(t, cmd.ColorOperation.terminator, OSCTerminatorBel)
+		expect(t, cmd.ColorOperation.op == OSCParsersColorOperationOsc112, "cmd.color_operation.op == .osc_112")
+		expect(t, cmd.ColorOperation.requests.count() == 1, "cmd.color_operation.requests.count() == 1")
+		it := cmd.ColorOperation.requests.constIterator(0)
 		{
-			op := it.next()                                             // TODO(osc): iterator next returns ?*const Request; nil is null
-			expect(t, op != nil, "it.next().?")                         // TODO(osc): the `.?` of `const op = it.next().?;`
-			expect(t, op.Tag == OSCColorRequestReset, "op.* == .reset") // TODO(osc): OSCColorRequest.Tag, OSCColorRequestReset
+			op := it.next()
+			expect(t, op != nil, "it.next().?")
+			expect(t, op.Tag == OSCParsersColorRequestReset, "op.* == .reset")
 			expectEqual(t,
-				OSCColorRequest{Tag: OSCColorRequestReset, Reset: OSCColorTarget{Tag: OSCColorTargetDynamic, Dynamic: OSCColorDynamicCursor}}, // TODO(osc): osc.color.Request{ .reset = .{ .dynamic = .cursor } }
+				OSCParsersColorRequest{Tag: OSCParsersColorRequestReset, Reset: OSCParsersColorTarget{Tag: OSCParsersColorTargetDynamic, Dynamic: ColorDynamicCursor}},
 				*op,
 			)
 		}
-		expect(t, it.next() == nil, "it.next() == null") // TODO(osc): iterator next
+		expect(t, it.next() == nil, "it.next() == null")
 	}
 }
 
@@ -116,7 +107,7 @@ func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 func TestParser_osc_104_empty(t *testing.T) {
 	p := ParserInit()
 	defer p.Deinit()
-	// Zig-only: p.osc_parser.alloc = std.testing.allocator;
+	p.osc_parser.alloc = struct{}{} // Zig: p.osc_parser.alloc = std.testing.allocator;
 
 	_ = p.Next(0x1B)
 	_ = p.Next(']')
@@ -132,18 +123,18 @@ func TestParser_osc_104_empty(t *testing.T) {
 		expect(t, !a[2].Valid, "a[2] == null")
 
 		cmd := zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch
-		expect(t, cmd.Tag == OSCCommandColorOperation, "cmd == .color_operation") // TODO(osc): OSCCommand.Tag, OSCCommandColorOperation
+		expect(t, cmd.Tag == OSCCommandKeyColorOperation, "cmd == .color_operation")
 		// Zig passes these two in this order: (actual, expected).
-		expectEqual(t, cmd.ColorOperation.Terminator, OSCTerminatorBel)                                   // TODO(osc): OSCCommand.ColorOperation.Terminator, OSCTerminatorBel
-		expect(t, cmd.ColorOperation.Op == OSCColorOperationOsc104, "cmd.color_operation.op == .osc_104") // TODO(osc): OSCCommand.ColorOperation.Op, OSCColorOperationOsc104
-		expect(t, cmd.ColorOperation.Requests.count() == 1, "cmd.color_operation.requests.count() == 1")  // TODO(osc): osc.color.List (std.SegmentedList) count
-		it := cmd.ColorOperation.Requests.constIterator(0)                                                // TODO(osc): osc.color.List (std.SegmentedList) constIterator
+		expectEqual(t, cmd.ColorOperation.terminator, OSCTerminatorBel)
+		expect(t, cmd.ColorOperation.op == OSCParsersColorOperationOsc104, "cmd.color_operation.op == .osc_104")
+		expect(t, cmd.ColorOperation.requests.count() == 1, "cmd.color_operation.requests.count() == 1")
+		it := cmd.ColorOperation.requests.constIterator(0)
 		{
-			op := it.next()                                                            // TODO(osc): iterator next returns ?*const Request; nil is null
-			expect(t, op != nil, "it.next().?")                                        // TODO(osc): the `.?` of `const op = it.next().?;`
-			expect(t, op.Tag == OSCColorRequestResetPalette, "op.* == .reset_palette") // TODO(osc): OSCColorRequest.Tag, OSCColorRequestResetPalette
+			op := it.next()
+			expect(t, op != nil, "it.next().?")
+			expect(t, op.Tag == OSCParsersColorRequestResetPalette, "op.* == .reset_palette")
 		}
-		expect(t, it.next() == nil, "it.next() == null") // TODO(osc): iterator next
+		expect(t, it.next() == nil, "it.next() == null")
 	}
 }
 
@@ -186,8 +177,8 @@ func TestParser_term51_next_exit_transition_and_entry_actions_occupy_slots_0_1_a
 		_ = term51Feed(&p, "\x1b]2;ab")
 		a := p.Next(0x07)
 		expect(t, zigUnwrap(t, a[0]).Tag == ParserActionOscDispatch, "a[0].? == .osc_dispatch")
-		expect(t, zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch.Tag == OSCCommandChangeWindowTitle, "a[0].?.osc_dispatch == .change_window_title") // TODO(osc): OSCCommand.Tag, OSCCommandChangeWindowTitle
-		expectEqualStrings(t, "ab", string(zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch.ChangeWindowTitle))                                       // TODO(osc): OSCCommand.ChangeWindowTitle
+		expect(t, zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch.Tag == OSCCommandKeyChangeWindowTitle, "a[0].?.osc_dispatch == .change_window_title")
+		expectEqualStrings(t, "ab", string(zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch.ChangeWindowTitle))
 		expectEqual(t, ParserStateGround, p.state)
 	}
 }
@@ -203,6 +194,6 @@ func TestParser_term51_doAction_osc_put_feeds_the_OSC_parser(t *testing.T) {
 	// Zig: const cmd = p.osc_parser.end(0x07).?; a null *OSCCommand is nil.
 	cmd := p.osc_parser.End(Some[uint8](0x07))
 	expect(t, cmd != nil, "p.osc_parser.end(0x07).?")
-	expect(t, cmd.Tag == OSCCommandChangeWindowTitle, "cmd.* == .change_window_title") // TODO(osc): OSCCommand.Tag, OSCCommandChangeWindowTitle
-	expectEqualStrings(t, "z", string(cmd.ChangeWindowTitle))                          // TODO(osc): OSCCommand.ChangeWindowTitle
+	expect(t, cmd.Tag == OSCCommandKeyChangeWindowTitle, "cmd.* == .change_window_title")
+	expectEqualStrings(t, "z", string(cmd.ChangeWindowTitle))
 }

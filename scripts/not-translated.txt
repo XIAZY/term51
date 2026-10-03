@@ -10,3 +10,16 @@ terminal/color.zig | term51: Name.cval: every named value and unnamed values | c
 terminal/color.zig | term51: RGB.cval: copies the channels into the extern struct | cval (C binding helper) is not ported
 terminal/color.zig | term51: LAB.fromRgb: dump exact data when TERM51_COLOR_DUMP_DIR is set | only produces the data files data/colors/*.txt, which corpus_color_test.go compares against
 terminal/kitty/color.zig | term51: OSC.cval: always void, default terminator is st | cval (C binding helper) is not ported; also needs OSCTerminator (osc.zig wireframe pending)
+terminal/osc.zig | ghostty.h Command.ProgressReport.State | C ABI check against ghostty.h (lib.checkGhosttyHEnum); skipped in the library build and the C binding is not ported
+terminal/osc.zig | (unnamed, osc.zig:773) | `_ = parsers; _ = encoding;` only makes the Zig compiler analyse the imported files; Go always compiles every file of the package
+terminal/osc.zig | term51: Terminator.cval: st is 0 and bel is 1 | cval (C binding helper) is not ported
+terminal/osc.zig | term51: Command.ProgressReport.cval: state number and clamped progress | cval (C binding helper) is not ported
+terminal/osc/parsers/context_signal.zig | term51: Field.Type: result type of every field | compile-time result types of Field.Type (Go has no type-valued functions; OSCParsersContextSignalFieldValue replaces it)
+terminal/osc/parsers/color.zig | term51: parse: allocation failure yields an empty request list | std.testing.FailingAllocator has no Go counterpart
+terminal/osc/parsers/color.zig | term51: parseGetSetAnsiColor: allocation failure frees the partial list | std.testing.FailingAllocator has no Go counterpart
+terminal/osc/parsers/color.zig | term51: parseResetAnsiColor: allocation failure frees the partial list | std.testing.FailingAllocator has no Go counterpart
+terminal/osc/parsers/color.zig | term51: parseGetSetDynamicColor: allocation failure leaks the partial list | std.testing.FailingAllocator has no Go counterpart
+terminal/osc/parsers/kitty_clipboard_protocol.zig | term51: Option.Type: result type of every option | checks the compile-time result type of Option.Type (a comptime function that returns a type); Go has no counterpart (the wireframe replaces it by OSCParsersKittyClipboardProtocolOptionValue)
+terminal/osc/parsers/semantic_prompt.zig | term51: Option.Type: result type of every option | checks the compile-time result types of Option.Type, a comptime type function with no Go counterpart (its Go counterpart is the struct OSCParsersSemanticPromptOptionValue)
+terminal/osc/parsers/kitty_color.zig | term51: parse: allocation failure drops the request | uses std.testing.FailingAllocator (no Go counterpart)
+terminal/osc/parsers/kitty_text_sizing.zig | term51: OSC.cval: returns void | cval (C binding helper) is not ported; also checks the compile-time type OSC.C == void

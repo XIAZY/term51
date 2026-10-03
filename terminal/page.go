@@ -1031,6 +1031,15 @@ func (self PageRowSemanticPrompt) String() string { panic(notImplemented) }
 // row structure (graphemes, styles, etc.)
 func (self PageRow) ManagedMemory() bool { panic(notImplemented) }
 
+// bitCast is not a Zig declaration. It stands for `@as(u64, @bitCast(self))`:
+// the 64 bits of the packed struct, laid out as described on PageRow, with
+// `cells` as the upstream byte offset.
+func (self PageRow) bitCast() uint64 { panic(notImplemented) }
+
+// pageRowFromBits is not a Zig declaration. It stands for
+// `@as(Row, @bitCast(bits))`: the inverse of PageRow.bitCast.
+func pageRowFromBits(bits uint64) PageRow { panic(notImplemented) }
+
 // PageCell is page.Cell.
 //
 // A cell represents a single terminal grid cell.
@@ -1195,6 +1204,11 @@ func PageCellInit(cp uint32) PageCell { panic(notImplemented) }
 // in Cell.isZero (page.zig line 2066): the 64 bits of the packed struct,
 // laid out as described on PageCell.
 func (self PageCell) bitCast() uint64 { panic(notImplemented) }
+
+// pageCellFromBits is not a Zig declaration. It stands for
+// `@as(Cell, @bitCast(bits))`: the inverse of PageCell.bitCast. Bits that
+// carry no meaning in the packed struct are dropped.
+func pageCellFromBits(bits uint64) PageCell { panic(notImplemented) }
 
 // IsZero is page.Cell.isZero.
 func (self PageCell) IsZero() bool { panic(notImplemented) }

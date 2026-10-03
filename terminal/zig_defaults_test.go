@@ -65,3 +65,21 @@ func screenSelectLineDefault(pin PageListPin) ScreenSelectLine {
 func screenDumpStringOptionsDefault(tl PageListPin) ScreenDumpStringOptions {
 	return ScreenDumpStringOptions{tl: tl, unwrap: true}
 }
+
+// terminalOptionsDefault is `Terminal.Options{ .cols = cols, .rows = rows }`
+// with the Zig defaults: max_scrollback 10_000, colors .default and
+// default_modes .{}. Tests that pass other fields modify the result.
+func terminalOptionsDefault(cols SizeCellCountInt, rows SizeCellCountInt) TerminalOptions {
+	return TerminalOptions{
+		cols:           cols,
+		rows:           rows,
+		max_scrollback: 10_000,
+		colors:         TerminalColorsDefault,
+		default_modes:  ModesModePackedInit(),
+	}
+}
+
+// terminalFlagsDefault is Terminal.Flags `.{}`: focused = true.
+func terminalFlagsDefault() TerminalFlags {
+	return TerminalFlags{focused: true}
+}

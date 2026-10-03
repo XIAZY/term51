@@ -59,6 +59,16 @@ type oscWriterAllocating struct {
 	writer oscWriter
 }
 
+// oscWriterAllocatingInit is std.Io.Writer.Allocating.init: an empty
+// allocating writer. The allocator parameter is dropped.
+func oscWriterAllocatingInit() oscWriterAllocating { panic(notImplemented) }
+
+// written is std.Io.Writer.Allocating.written: the bytes written so far.
+func (self *oscWriterAllocating) written() []uint8 { panic(notImplemented) }
+
+// deinit is std.Io.Writer.Allocating.deinit.
+func (self *oscWriterAllocating) deinit() { panic(notImplemented) }
+
 // OSCCommand is osc.Command.
 //
 // Zig: union(Key). Only the field named by Tag is meaningful. The variants

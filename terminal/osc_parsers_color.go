@@ -99,6 +99,16 @@ type oscParsersColorTokenIterator struct {
 	index     int
 }
 
+// oscParsersColorTokenizeScalar is std.mem.tokenizeScalar(u8, buffer,
+// delimiter): an iterator over the non-empty runs of buffer between
+// delimiter bytes.
+func oscParsersColorTokenizeScalar(buffer []uint8, delimiter uint8) oscParsersColorTokenIterator {
+	panic(notImplemented)
+}
+
+// next is std.mem.TokenIterator.next: the next token, or none at the end.
+func (self *oscParsersColorTokenIterator) next() Optional[[]uint8] { panic(notImplemented) }
+
 // oscParsersColorParseGetSetAnsiColor is
 // osc.parsers.color.parseGetSetAnsiColor: OSC 4/5.
 //

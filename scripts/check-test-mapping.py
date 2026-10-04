@@ -16,6 +16,8 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+CROSS_FILES = {"Screen": ["rollback_test.go"], "PageList": ["rollback_test.go"], "Terminal": ["rollback_test.go"]}
+
 
 def zig_tests(path):
     out = []
@@ -81,9 +83,17 @@ def main():
             stem = os.path.basename(f)[: -len("_test.go")]
             if not os.path.exists(os.path.join(pkg, stem + ".go")):
                 extra.append(f)
+        # Cross-cutting test files (not named after one Zig file): the rollback
+        # tests cover functions of Screen.zig, PageList.zig and Terminal.zig.
+        for cross in CROSS_FILES.get(base, []):
+            extra.append(os.path.join(pkg, cross))
         go_files = sorted(glob.glob(os.path.join(pkg, base + "_test.go")) + extra)
         want = zig_tests(os.path.join(zig_dir, rel))
         got = go_tests(go_files)
+        # A cross-cutting file holds tests of several Zig files: keep only the
+        # ones that belong to this Zig file.
+        cross_names = set(CROSS_FILES.get(base, []))
+        got = [g for g in got if g[1] not in cross_names or g[0] in want]
         got_names = [g[0] for g in got]
         total += len(want)
         listed = skipped.get(rel, {})

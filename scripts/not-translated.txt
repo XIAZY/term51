@@ -155,3 +155,12 @@ terminal/Terminal.zig | term51: resize: tabstop allocation failure is reported b
 terminal/Terminal.zig | term51: switchScreen: allocation failure leaves the primary screen active | allocator-failure test (std.testing.FailingAllocator, fail_index); the Go port has no allocator
 terminal/Terminal.zig | term51: switchScreenMode: allocation failure when creating the alternate screen | allocator-failure test (std.testing.FailingAllocator, fail_index); the Go port has no allocator
 terminal/Terminal.zig | term51: gpa: a terminal built with its own allocator hands that allocator out | allocator test (std.testing.FailingAllocator used as an identifiable allocator, fa.allocations counting, a.alloc/a.free); the Go port has no allocator and Terminal.gpa returns nothing, so no assertion would remain
+
+# Added 2026-10-04 for the formatter and render translations. PENDING approval.
+terminal/formatter.zig | term51: PageFormatter.formatWithState: allocation failure of the point map is a write error | std.testing.FailingAllocator (fail_index loop) has no Go counterpart; Go memory has no allocation failure
+terminal/formatter.zig | term51: PageListFormatter.format: allocation failure of the pin map is a write error | std.testing.FailingAllocator (fail_index loop) has no Go counterpart; Go memory has no allocation failure
+terminal/formatter.zig | term51: ScreenFormatter.format: allocation failure of the pin map is a write error | std.testing.FailingAllocator (fail_index loop) has no Go counterpart; Go memory has no allocation failure
+terminal/render.zig | term51: RenderState.update: allocation failures leave a state that can be freed | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart
+terminal/render.zig | term51: RenderState.updateHighlightsFlattened: allocation failure is propagated | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart
+terminal/render.zig | term51: RenderState.string: allocation failure of the map is OutOfMemory | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart
+terminal/render.zig | term51: RenderState.linkCells: allocation failure is OutOfMemory | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart

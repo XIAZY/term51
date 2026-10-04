@@ -189,3 +189,23 @@ recorded-corpus tests leave the production value (8192).
 bodies cannot compile; they have no behaviour). `Screen.clone` with the cursor
 outside the cloned region returns `ErrScreenCloneCursorOutside` instead of
 upstream's abort.
+
+## Platform branches (Darwin) in the input encoders
+
+The target is BlackBerry 10 (QNX), so the port follows the non-Darwin branch of
+every compile-time platform check in `src/input/`: `macos_option_as_alt` is
+never read, alt always prevents associated text in the Kitty encoding, alt is
+kept in modifyOtherKeys state 2, super plus text encodes the text, and
+`ctrlOrSuper` is ctrl. The Zig tests that only run on macOS (they return
+`SkipZigTest` elsewhere) are on the not-translated list as "platform not
+targeted"; tests that mix both keep the non-Darwin assertions and mark the
+Darwin lines `// Zig-only (Darwin):`.
+
+How a future macOS build would select the behaviour: each file that has such a
+check has a stub standing for the comptime test (`inputKeyEncodeIsMacos()` for
+`builtin.os.tag == .macos`, `inputKeyEncodeIsDarwin()` for `isDarwin()`: macOS,
+iOS, tvOS, watchOS, visionOS; the same idea in `input_key_mods.go` and
+`input_key.go`). Making the stubs return true on `runtime.GOOS == "darwin"` (and
+"ios" for the second) selects the Darwin branches. The Darwin tests would then be
+translated as Go tests that call `t.Skip` when the matching stub returns false.
+Nothing here is done for the current target.

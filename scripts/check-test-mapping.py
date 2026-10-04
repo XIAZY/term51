@@ -74,6 +74,10 @@ def main():
         if len(parts) > 2:
             base = "_".join(parts[1:-1] + [os.path.splitext(parts[-1])[0]])
             pkg = os.path.join(ROOT, parts[0])
+        # src/input/<name>.zig lives in the same Go package, files input_<name>.
+        if len(parts) == 2 and parts[0] == "input":
+            base = "input_" + os.path.splitext(parts[1])[0]
+            pkg = os.path.join(ROOT, "terminal")
         extra = []
         for f in glob.glob(os.path.join(pkg, base + "_*_test.go")):
             # osc_encoding_test.go belongs to osc_encoding.go, not to osc.go:
@@ -81,7 +85,14 @@ def main():
             # extra test file of this one (Parser_osc_test.go is: there is no
             # Parser_osc.go).
             stem = os.path.basename(f)[: -len("_test.go")]
-            if not os.path.exists(os.path.join(pkg, stem + ".go")):
+            # Likewise a file whose stem starts with the name of a longer
+            # existing Go file (input_key_encode_a_test.go is not an extra
+            # file of input_key.go).
+            longer = any(
+                os.path.basename(g)[:-3].startswith(base + "_") and (stem == os.path.basename(g)[:-3] or stem.startswith(os.path.basename(g)[:-3] + "_"))
+                for g in glob.glob(os.path.join(pkg, base + "_*.go")) if not g.endswith("_test.go")
+            )
+            if not os.path.exists(os.path.join(pkg, stem + ".go")) and not longer:
                 extra.append(f)
         # Cross-cutting test files (not named after one Zig file): the rollback
         # tests cover functions of Screen.zig, PageList.zig and Terminal.zig.

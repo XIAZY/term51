@@ -1,6 +1,6 @@
 package terminal
 
-// PROVISIONAL: option A (see mapping doc); the tests stand if the choice is reversed only for the parts that do not read byte offsets
+// Option A (keep upstream's byte-offset bookkeeping on Go slices): confirmed by the project owner 2026-10-04.
 
 // Data-comparison test for hash_map.go against the recorded corpus file
 // data/hashmap/hashmap_data.txt, written by the Zig dump test in hash_map.zig

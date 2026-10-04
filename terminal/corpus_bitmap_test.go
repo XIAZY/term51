@@ -6,7 +6,7 @@ package terminal
 // BitmapAllocator.layout: dump exact data when TERM51_BITMAP_DUMP_DIR is
 // set`, not translated). The files are plain text.
 //
-// PROVISIONAL: option A (see mapping doc); the tests stand if the choice is reversed only for the parts that do not read byte offsets
+// Option A (keep upstream's byte-offset bookkeeping on Go slices): confirmed by the project owner 2026-10-04.
 //
 // bitmap_layout.txt has, for the chunk sizes 16 (grapheme) and 32 (string),
 // a header `# chunk_size=<c>: ...` and then one line per capacity of a set

@@ -4,7 +4,7 @@
 // comment. Tests that expect a panic carry "// Go-only: panic test:" (Zig tests
 // cannot test an assert or a safety-checked panic: the test would abort).
 //
-// PROVISIONAL: option A (see mapping doc); the tests stand if the choice is reversed only for the parts that do not read byte offsets
+// Option A (keep upstream's byte-offset bookkeeping on Go slices): confirmed by the project owner 2026-10-04.
 //
 // Translation notes:
 //   - `try testing.expect(x)` is expect(t, x, "<the Zig expression>"), and

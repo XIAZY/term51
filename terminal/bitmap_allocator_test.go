@@ -2,7 +2,7 @@
 // (Ghostty v1.3.1 plus the term51 additional tests). Each Go test carries the
 // exact Zig title in a "// Zig: test" comment.
 //
-// PROVISIONAL: option A (see mapping doc); the tests stand if the choice is reversed only for the parts that do not read byte offsets
+// Option A (keep upstream's byte-offset bookkeeping on Go slices): confirmed by the project owner 2026-10-04.
 //
 // Translation notes:
 //   - `try testing.expect(x)` is expect(t, x, "<the Zig expression>"), and

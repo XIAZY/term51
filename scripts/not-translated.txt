@@ -165,3 +165,27 @@ terminal/render.zig | term51: RenderState.update: allocation failures leave a st
 terminal/render.zig | term51: RenderState.updateHighlightsFlattened: allocation failure is propagated | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart
 terminal/render.zig | term51: RenderState.string: allocation failure of the map is OutOfMemory | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart
 terminal/render.zig | term51: RenderState.linkCells: allocation failure is OutOfMemory | std.testing.FailingAllocator (allocation-failure test) has no Go counterpart
+
+# Added 2026-10-04 for the input encoder translations. Darwin entries follow the project lead's rule
+# (platform not targeted); the rest are in the approved categories. PENDING approval.
+input/key_encode.zig | kitty: report associated with alt text on macOS with option | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | kitty: report associated with alt text on macOS with alt | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | legacy: alt+x macos | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | legacy: shift+alt+. macos | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | legacy: alt+digit with modify other state 2 and macos-option-as-alt = false | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | legacy: super-only on macOS with text | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | legacy: super and other mods on macOS with text | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_encode.zig | term51: legacy: macos super and option behaviour | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
+input/key_mods.zig | translation macos-option-as-alt | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch); the test returns SkipZigTest off Darwin
+input/key_mods.zig | RemapSet: formatEntry empty | app code: needs config/formatter.zig (entryFormatter), skipped in the library build
+input/key_mods.zig | RemapSet: formatEntry single sided | app code: needs config/formatter.zig (entryFormatter), skipped in the library build
+input/key_mods.zig | RemapSet: formatEntry unsided creates two entries | app code: needs config/formatter.zig (entryFormatter), skipped in the library build
+input/key_mods.zig | RemapSet: formatEntry right sided | app code: needs config/formatter.zig (entryFormatter), skipped in the library build
+input/key_mods.zig | term51: Mods: layout and backing types | layout and type-reflection checks only (@bitSizeOf, Backing type identity)
+input/key_mods.zig | term51: RemapSet.parse: out of memory leaves the set untouched | allocation-failure test (FailingAllocator)
+input/key_mods.zig | term51: RemapSet.parseCLI: out of memory is passed through | allocation-failure test (FailingAllocator)
+input/key_mods.zig | term51: RemapSet.clone: out of memory | allocation-failure test (FailingAllocator)
+input/key.zig | term51: Key.imguiKey: not testable in the library build | not ported: belongs to the app's debug interface, not the library
+input/kitty.zig | term51: Entry: fields and types | type-reflection check (@typeInfo field names and types of Entry); the Go struct declares them and the compiler checks the types
+input/config.zig | term51: OptionAsAlt: layout is a c_int | layout and type-reflection check (@sizeOf(c_int), @typeInfo tag_type and is_exhaustive); Go has no counterpart
+input/function_keys.zig | keys | needs termio.zig (returns SkipZigTest in the library build); replaced by the project test "term51: keys: sequence lengths and library build options", which is translated

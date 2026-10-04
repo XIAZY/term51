@@ -72,10 +72,9 @@ func fm2Active(x SizeCellCountInt, y uint32) Point {
 	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
 }
 
-// fm2Clear is `builder.clearRetainingCapacity()`: Zig's
-// std.Io.Writer.Allocating.clearRetainingCapacity sets `writer.end = 0`.
+// fm2Clear is `builder.clearRetainingCapacity()`.
 func fm2Clear(b *oscWriterAllocating) {
-	b.writer.end = 0
+	b.clearRetainingCapacity()
 }
 
 // fm2FirstNode is `t.screens.active.pages.pages.first.?`.

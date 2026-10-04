@@ -110,7 +110,7 @@ def main():
         listed = skipped.get(rel, {})
         missing = [w for w in want if got_names.count(w) == 0 and w.strip('"') not in listed]
         n_listed = sum(1 for w in want if w.strip('"') in listed and got_names.count(w) == 0)
-        dupes = sorted({g for g in got_names if got_names.count(g) > 1})
+        dupes = sorted({g for g in got_names if got_names.count(g) > max(1, want.count(g))})
         extra = [g for g in got_names if g not in want]
         # order is checked within each Go file
         order_ok = True

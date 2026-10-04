@@ -53,12 +53,9 @@ func fm1Builder(t *testing.T) *oscWriterAllocating {
 	return &b
 }
 
-// fm1ClearRetainingCapacity is std.Io.Writer.Allocating.clearRetainingCapacity
-// (`a.writer.end = 0`). The wireframe has no such method on
-// oscWriterAllocating; this helper sets the writer's end field, which the
-// wireframe declares. Listed in the report.
+// fm1ClearRetainingCapacity is std.Io.Writer.Allocating.clearRetainingCapacity.
 func fm1ClearRetainingCapacity(b *oscWriterAllocating) {
-	b.writer.end = 0
+	b.clearRetainingCapacity()
 }
 
 // fm1Terminal is `var t = try Terminal.init(alloc, .{ .cols = cols, .rows =

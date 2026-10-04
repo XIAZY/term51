@@ -68,9 +68,12 @@
 // (`memory.len > std_size`) in initPages, deinit, reset, clone, compact,
 // grow, createPageExt and destroyNodeExt. Page (page.go) has no `memory`.
 // The stub `pageListMemoryLen`, which is NOT a Zig declaration, stands for
-// `page.memory.len`: for a page owned by a PageList that is `std_size` if
-// `Page.layout(capacity).total_size <= std_size` (a pooled buffer is always
-// `std_size` long, whatever its layout needs) and `total_size` otherwise.
+// `page.memory.len`: `Page.layout(capacity).total_size` of the page's own
+// capacity, for pooled and non-pooled pages alike (measured on upstream: a
+// fresh pooled 3353-column page has memory.len 430,080 while std_size is
+// 454,656). Whether a page is pooled is decided by comparing that length
+// with `std_size`; the pool buffer itself is std_size long, which is what
+// page_size counts on creation (see the page_size drift finding).
 //
 // The page list. Zig: `List = IntrusiveDoublyLinkedList(Node)`
 // (src/datastruct/intrusive_linked_list.zig, not std), `Node { prev, next,
@@ -1299,11 +1302,9 @@ func pageListDestroyNodeExt(
 }
 
 // pageListMemoryLen is NOT a Zig declaration. It stands for
-// `page.memory.len`, the byte length of the buffer backing a page that
-// belongs to a PageList: pageListStdSize if
-// `PageLayoutOf(page.capacity).total_size <= pageListStdSize` (the page
-// came from the page pool, whose buffers are all `std_size` long), and that
-// `total_size` otherwise. PageList.zig reads it in initPages, deinit,
+// `page.memory.len`: `PageLayoutOf(page.capacity).total_size`, for pooled
+// and non-pooled pages alike (not the pool buffer's std_size; see the file
+// header). PageList.zig reads it in initPages, deinit,
 // reset, clone, compact, grow, createPageExt and destroyNodeExt, and tests
 // read `node.data.memory.len`. See the file header.
 func pageListMemoryLen(page *Page) uint64 { panic(notImplemented) }

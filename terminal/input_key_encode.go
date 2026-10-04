@@ -87,17 +87,12 @@
 //   - `legacy`: with `.macos` and super pressed, text is not encoded;
 //   - `legacyAltPrefix`: with `.macos`, `macos_option_as_alt` decides
 //     whether alt is an ESC prefix.
-// The port runs on Linux and QNX and so follows the non-Darwin branch
-// everywhere: `macos_option_as_alt` is never read, alt always prevents
-// associated text, alt is kept in modifyOtherKeys, super+text encodes the
-// text. The two checks are `inputKeyEncodeIsMacos()` (`builtin.os.tag ==
-// .macos`) and `inputKeyEncodeIsDarwin()` (`isDarwin()`: macOS, iOS,
-// tvOS, watchOS, visionOS), stubs standing for the comptime tests; Darwin
-// behaviour would be selected by making them return true (runtime.GOOS
-// "darwin", and "darwin" or "ios"). A Zig test that returns SkipZigTest
-// off Darwin becomes a Go test that calls `t.Skip` when the matching stub
-// returns false (until the stubs are implemented they panic, like every
-// other wireframe function).
+// The library is platform-neutral: both branches are ported. The two checks
+// are `inputKeyEncodeIsMacos()` (`builtin.os.tag == .macos`) and
+// `inputKeyEncodeIsDarwin()` (`isDarwin()`), which return platformIsMacos()
+// and platformIsDarwin() (platform.go). Off Apple platforms
+// `macos_option_as_alt` is never read, alt always prevents associated text,
+// alt is kept in modifyOtherKeys, and super+text encodes the text.
 //
 // # Declarations that are not Zig declarations
 //
@@ -437,11 +432,11 @@ func (self inputKeyEncodeKittySequence) encodeSpecial(writer *oscWriter) error {
 }
 
 // inputKeyEncodeIsMacos stands for the comptime check `builtin.os.tag ==
-// .macos` in kitty, legacy and legacyAltPrefix. The port follows the
-// non-macOS branch (Linux, QNX); see the file header.
+// .macos` in kitty, legacy and legacyAltPrefix. It returns platformIsMacos()
+// (platform.go): the macOS branch on macOS, the other branch elsewhere.
 func inputKeyEncodeIsMacos() bool { panic(notImplemented) }
 
 // inputKeyEncodeIsDarwin stands for the comptime check
-// `builtin.target.os.tag.isDarwin()` in legacy. The port follows the
-// non-Darwin branch (Linux, QNX); see the file header.
+// `builtin.target.os.tag.isDarwin()` in legacy. It returns
+// platformIsDarwin() (platform.go).
 func inputKeyEncodeIsDarwin() bool { panic(notImplemented) }

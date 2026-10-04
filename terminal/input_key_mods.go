@@ -97,12 +97,10 @@
 // # Darwin
 //
 // `Mods.translation` and `Mods.ctrlOrSuper` have a comptime branch on
-// `builtin.target.os.tag.isDarwin()`. The port runs on Linux and QNX and so
-// follows the non-Darwin branch. The check is `inputKeyModsIsDarwin()`, a
-// stub standing for the comptime test; Darwin behaviour would be selected
-// by making it return true (runtime.GOOS "darwin" or "ios"). With it false,
-// `translation` returns the mods unchanged and `ctrlOrSuper` returns
-// `ctrl`.
+// `builtin.target.os.tag.isDarwin()`. The library is platform-neutral: both
+// branches are ported and the choice is made by `inputKeyModsIsDarwin()`,
+// which returns platformIsDarwin() (platform.go). Off Darwin, `translation`
+// returns the mods unchanged and `ctrlOrSuper` returns `ctrl`.
 //
 // # Declarations that are not Zig declarations
 //
@@ -341,8 +339,7 @@ func (self InputKeyModsMods) CtrlOrSuper() bool { panic(notImplemented) }
 
 // inputKeyModsIsDarwin stands for the comptime check
 // `builtin.target.os.tag.isDarwin()` in Mods.translation and
-// Mods.ctrlOrSuper. The port follows the non-Darwin branch (Linux, QNX);
-// see the file header.
+// Mods.ctrlOrSuper. It returns platformIsDarwin() (platform.go).
 func inputKeyModsIsDarwin() bool { panic(notImplemented) }
 
 // InputKeyModsRemapSet is key_mods.RemapSet: modifier remapping. See

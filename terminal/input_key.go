@@ -52,12 +52,11 @@
 // # Darwin
 //
 // `Key.ctrlOrSuper` and the free function `ctrlOrSuper` have a comptime
-// branch on `builtin.target.os.tag.isDarwin()`. The port runs on Linux and
-// QNX and so follows the non-Darwin branch: `Key.ctrlOrSuper` is true for
-// control_left/control_right, `ctrlOrSuper(mods)` sets `ctrl`. The check is
-// `inputKeyIsDarwin()`, a stub standing for the comptime test; Darwin
-// behaviour would be selected by making it return true (runtime.GOOS
-// "darwin" or "ios").
+// branch on `builtin.target.os.tag.isDarwin()`. The library is
+// platform-neutral: both branches are ported and the choice is made by
+// `inputKeyIsDarwin()`, which returns platformIsDarwin() (platform.go). Off
+// Darwin, `Key.ctrlOrSuper` is true for control_left/control_right and
+// `ctrlOrSuper(mods)` sets `ctrl`; on Darwin both use super.
 //
 // # Declarations that are not Zig declarations
 //
@@ -528,5 +527,5 @@ func InputKeyCtrlOrSuper(mods InputKeyMods) InputKeyMods { panic(notImplemented)
 
 // inputKeyIsDarwin stands for the comptime check
 // `builtin.target.os.tag.isDarwin()` in Key.ctrlOrSuper and ctrlOrSuper.
-// The port follows the non-Darwin branch (Linux, QNX); see the file header.
+// It returns platformIsDarwin() (platform.go).
 func inputKeyIsDarwin() bool { panic(notImplemented) }

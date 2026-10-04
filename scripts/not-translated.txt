@@ -12,6 +12,7 @@ terminal/color.zig | term51: LAB.fromRgb: dump exact data when TERM51_COLOR_DUMP
 terminal/kitty/color.zig | term51: OSC.cval: always void, default terminator is st | cval (C binding helper) is not ported; also needs OSCTerminator (osc.zig wireframe pending)
 terminal/osc.zig | ghostty.h Command.ProgressReport.State | C ABI check against ghostty.h (lib.checkGhosttyHEnum); skipped in the library build and the C binding is not ported
 terminal/osc.zig | (unnamed, osc.zig:773) | `_ = parsers; _ = encoding;` only makes the Zig compiler analyse the imported files; Go always compiles every file of the package
+terminal/osc/parsers.zig | (unnamed, parsers.zig:19) | `refAllDecls` only makes the Zig compiler analyse the imported files; Go always compiles every file of the package
 terminal/osc.zig | term51: Terminator.cval: st is 0 and bel is 1 | cval (C binding helper) is not ported
 terminal/osc.zig | term51: Command.ProgressReport.cval: state number and clamped progress | cval (C binding helper) is not ported
 terminal/osc/parsers/context_signal.zig | term51: Field.Type: result type of every field | compile-time result types of Field.Type (Go has no type-valued functions; OSCParsersContextSignalFieldValue replaces it)

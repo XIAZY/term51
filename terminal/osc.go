@@ -77,6 +77,11 @@ func (self *oscWriterAllocating) deinit() { panic(notImplemented) }
 // (dcs.go).
 func (self *oscWriterAllocating) toOwnedSlice() ([]uint8, error) { panic(notImplemented) }
 
+// clearRetainingCapacity is std.Io.Writer.Allocating.clearRetainingCapacity:
+// discard the bytes written so far (written() becomes empty) and keep the
+// buffer for reuse.
+func (self *oscWriterAllocating) clearRetainingCapacity() { panic(notImplemented) }
+
 // oscWriterFixed is std.Io.Writer.fixed: a writer that writes into buf and
 // fails with ErrWriteFailed once buf is full. Zig: `var w: std.Io.Writer =
 // .fixed(&buf);` is `w := oscWriterFixed(buf[:])`.

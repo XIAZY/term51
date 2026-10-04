@@ -78,6 +78,10 @@ def main():
         if len(parts) == 2 and parts[0] == "input":
             base = "input_" + os.path.splitext(parts[1])[0]
             pkg = os.path.join(ROOT, "terminal")
+        # src/datastruct/<name>.zig: Go files datastruct_<name>.
+        if len(parts) == 2 and parts[0] == "datastruct":
+            base = "datastruct_" + os.path.splitext(parts[1])[0]
+            pkg = os.path.join(ROOT, "terminal")
         extra = []
         for f in glob.glob(os.path.join(pkg, base + "_*_test.go")):
             # osc_encoding_test.go belongs to osc_encoding.go, not to osc.go:

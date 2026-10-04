@@ -189,3 +189,40 @@ input/key.zig | term51: Key.imguiKey: not testable in the library build | not po
 input/kitty.zig | term51: Entry: fields and types | type-reflection check (@typeInfo field names and types of Entry); the Go struct declares them and the compiler checks the types
 input/config.zig | term51: OptionAsAlt: layout is a c_int | layout and type-reflection check (@sizeOf(c_int), @typeInfo tag_type and is_exhaustive); Go has no counterpart
 input/function_keys.zig | keys | needs termio.zig (returns SkipZigTest in the library build); replaced by the project test "term51: keys: sequence lengths and library build options", which is translated
+
+# Added 2026-10-04 for the search and CircBuf translations (screen allocation-failure tests approved in advance; the rest PENDING approval).
+datastruct/circ_buf.zig | term51: CircBuf.init: allocation failure | std.testing.FailingAllocator (fault injection) has no Go counterpart
+datastruct/circ_buf.zig | term51: CircBuf.resize: allocation failure leaves capacity and data but rotates | std.testing.FailingAllocator (fault injection) has no Go counterpart
+terminal/search.zig | (unnamed, search.zig:17) | `refAllDecls` and `_ = @import("search/sliding_window.zig")` only make the Zig compiler analyse the declarations; Go always compiles every file of the package
+terminal/search.zig | term51: search: the library build selects the lib artifact | tests `options.artifact` (terminal_options build options), which is not ported: the Go library has no artifact switch (search.go header, "Omitted")
+terminal/search.zig | term51: search: Thread is void in the library build | `Thread` (and `options`) are not declared in Go: the search thread is out of scope (search.go header, "Omitted")
+terminal/search/active.zig | term51: ActiveSearch.init: out of memory leaves nothing allocated | std.testing.FailingAllocator has no Go counterpart
+terminal/search/active.zig | term51: ActiveSearch.update: out of memory leaves a consistent search | std.testing.checkAllAllocationFailures / FailingAllocator have no Go counterpart
+terminal/search/pagelist.zig | term51: PageListSearch.init: out of memory untracks the pin and frees everything | std.testing.FailingAllocator has no Go counterpart
+terminal/search/viewport.zig | term51: ViewportSearch.init: out of memory leaves nothing allocated | std.testing.FailingAllocator has no Go counterpart
+terminal/search/viewport.zig | term51: ViewportSearch.update: out of memory leaves the search able to recover | std.testing.checkAllAllocationFailures / FailingAllocator have no Go counterpart
+terminal/search/viewport.zig | term51: ViewportSearch.update: failure to fingerprint keeps the previous fingerprint | std.testing.FailingAllocator has no Go counterpart
+terminal/search/viewport.zig | term51: ViewportSearch.Fingerprint.init: out of memory | std.testing.FailingAllocator has no Go counterpart
+terminal/search/screen.zig | reloadActive partial history cleanup on appendSlice error | fault injection: arms reloadActive_tw (tripwire) to fail an allocation and checks for leaks; no allocator in the Go port to fail
+terminal/search/screen.zig | reloadActive partial history cleanup on loop append error | fault injection: arms reloadActive_tw (tripwire) to fail an allocation and checks for leaks; no allocator in the Go port to fail
+terminal/search/screen.zig | term51: ScreenSearch.allocator: returns the allocator of the search | ScreenSearch.allocator() is not ported (allocator parameters are dropped)
+terminal/search/screen.zig | term51: ScreenSearch.feed: allocation failure while restarting keeps the old search intact | allocation-failure test (std.testing.FailingAllocator with a fail_index sweep); no allocator in the Go port
+terminal/search/screen.zig | term51: ScreenSearch.init: allocation failure at every allocation cleans up | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.init: allocation failure without scrollback | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.matches: allocation failure | allocation-failure test (std.testing.FailingAllocator); matches takes no allocator in Go
+terminal/search/screen.zig | term51: ScreenSearch.searchAll: allocation failure at every allocation cleans up | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.tickActive: allocation failure loses the match being processed | allocation-failure test (std.testing.FailingAllocator)
+terminal/search/screen.zig | term51: ScreenSearch.tickActive: allocation failure at every allocation | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.tickHistory: allocation failure loses the match being processed | allocation-failure test (std.testing.FailingAllocator)
+terminal/search/screen.zig | term51: ScreenSearch.feed: allocation failure while feeding history keeps the state | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.select: allocation failure at every allocation cleans up | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.reloadActive: allocation failure appending history keeps the old history | reloadActive fault injection (reloadActive_tw tripwire, history_append_existing); no counterpart in Go
+terminal/search/screen.zig | term51: ScreenSearch.reloadActive: allocation failure on the first history append | reloadActive fault injection (reloadActive_tw tripwire, history_append_new); no counterpart in Go
+terminal/search/screen.zig | term51: ScreenSearch.reloadActive: allocation failure on the second history append | reloadActive fault injection (reloadActive_tw tripwire, history_append_new after 1); no counterpart in Go
+terminal/search/screen.zig | term51: ScreenSearch.reloadActive: allocation failure at every allocation with a selection | allocation-failure test (std.testing.FailingAllocator sweep)
+terminal/search/screen.zig | term51: ScreenSearch.selectNext: allocation failure while tracking leaves no selection | allocation-failure test (failing page list pool allocator, tracked pin set capacity); no counterpart in Go
+terminal/search/screen.zig | term51: ScreenSearch.selectNext: allocation failure while moving keeps the old selection | allocation-failure test (failing page list pool allocator, tracked pin set capacity); no counterpart in Go
+terminal/search/screen.zig | term51: ScreenSearch.selectPrev: allocation failure while tracking | allocation-failure test (failing page list pool allocator, tracked pin set capacity); no counterpart in Go
+terminal/search/sliding_window.zig | term51: SlidingWindow.init: out of memory unwinds every allocation | allocation-failure test (FailingAllocator sweeps over fail_index; no allocator in the Go port)
+terminal/search/sliding_window.zig | term51: SlidingWindow.append: out of memory leaves the window empty (forward) | allocation-failure test (std.testing.FailingAllocator via term51AKAppendOom); no Go counterpart
+terminal/search/sliding_window.zig | term51: SlidingWindow.append: out of memory leaves the window empty (reverse) | allocation-failure test (std.testing.FailingAllocator via term51AKAppendOom); no Go counterpart

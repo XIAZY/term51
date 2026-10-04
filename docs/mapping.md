@@ -170,3 +170,22 @@ what Zig's `@tagName` yields and what the recorded corpus contains.
   when a set reports that it is full and so drive page growth. `Style.hash`
   needs Zig's `std.hash.int`; `PageEntry.hash` needs Wyhash with `autoHash`
   semantics, neither of which the Go standard library has.
+
+## Page-layer bookkeeping (decision: option A, final)
+
+Confirmed by the project owner on 2026-10-04. The port keeps upstream's byte
+bookkeeping on ordinary Go slices: `BitmapAllocator` (chunk bitmaps and byte
+layout), `hash_map` (layout, control bytes, hashing, probing), `Page.layout`,
+the page-list size accounting (`page_size`, `maxSize`, pool item size). The
+scrollback limit is counted in bytes of page memory as in Ghostty, so the
+same output keeps the same history. All byte sizes and offsets are `uint64`
+(the recorded data come from a 64-bit build; the phone is 32-bit ARM). Tests
+that depend on rows per page or literal byte sizes set
+`PageStdCapacity.grapheme_bytes = 512` through the shared `testStdCapacity`
+helper (`terminal/zig_defaults_test.go`) and never run in parallel; the
+recorded-corpus tests leave the production value (8192).
+
+`PageList.diagram` and `HighlightFlattenedInit` are not ported (upstream's
+bodies cannot compile; they have no behaviour). `Screen.clone` with the cursor
+outside the cloned region returns `ErrScreenCloneCursorOutside` instead of
+upstream's abort.

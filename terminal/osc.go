@@ -40,9 +40,11 @@ var ErrWriteFailed = errors.New("WriteFailed")
 
 // oscWriter stands in for std.Io.Writer as osc.zig and the files under osc/
 // use it: a buffer and the number of bytes written to it. Zig's
-// `writer.buffered()` is buffer[:end]. Wireframe: fields only; the
-// implementation adds the methods it needs (writeByte, buffered) with Zig's
-// names, as dcsWriterAllocating does in dcs.go.
+// `writer.buffered()` is buffer[:end]. Wireframe: fields, plus the stubs
+// the tests need (oscWriterFixed, buffered, and toOwnedSlice on
+// oscWriterAllocating, declared below); the implementation adds the other
+// methods it needs (writeByte, ...) with Zig's names, as
+// dcsWriterAllocating does in dcs.go.
 type oscWriter struct {
 	// Zig: buffer: []u8. For a fixed writer this is the parser's own
 	// `buffer` array.
@@ -68,6 +70,22 @@ func (self *oscWriterAllocating) written() []uint8 { panic(notImplemented) }
 
 // deinit is std.Io.Writer.Allocating.deinit.
 func (self *oscWriterAllocating) deinit() { panic(notImplemented) }
+
+// toOwnedSlice is std.Io.Writer.Allocating.toOwnedSlice: the bytes written
+// so far, handed to the caller, leaving the writer empty. The allocator
+// parameter is dropped. Zig: Error![]u8; the error is ErrOutOfMemory
+// (dcs.go).
+func (self *oscWriterAllocating) toOwnedSlice() ([]uint8, error) { panic(notImplemented) }
+
+// oscWriterFixed is std.Io.Writer.fixed: a writer that writes into buf and
+// fails with ErrWriteFailed once buf is full. Zig: `var w: std.Io.Writer =
+// .fixed(&buf);` is `w := oscWriterFixed(buf[:])`.
+func oscWriterFixed(buf []uint8) oscWriter { panic(notImplemented) }
+
+// buffered is std.Io.Writer.buffered: the bytes written into the writer's
+// buffer so far, buffer[:end]. For an allocating writer Zig's
+// `builder.writer.buffered()` is `builder.writer.buffered()`.
+func (self *oscWriter) buffered() []uint8 { panic(notImplemented) }
 
 // OSCCommand is osc.Command.
 //

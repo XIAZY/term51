@@ -483,6 +483,10 @@ func (self *Terminal) VtHandler() StreamReadonlyHandler { panic(notImplemented) 
 // `self.screens.active.alloc`. Go has no allocator and Screen has no
 // `alloc` field, so the stub returns nothing; it is kept because a project
 // test calls it. See the file header.
+//
+// It returns nothing in Go (there is no allocator) and exists only so that
+// the translated call (`t.gpa()`) compiles; the translated tests cannot
+// compare its result.
 func (self *Terminal) gpa() { panic(notImplemented) }
 
 // PrintString is Terminal.printString.

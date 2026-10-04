@@ -68,7 +68,7 @@ terminal/style.zig | term51: Style.hash: dump exact data when TERM51_SET_DUMP_DI
 
 # Added 2026-10-03 for the page, PageList, Screen, ScreenSet, Selection, StringMap,
 # highlight, Terminal, stream_readonly, hyperlink, bitmap_allocator and hash_map
-# translations. PENDING the project lead's approval.
+# translations. Approved by the project lead 2026-10-04.
 terminal/bitmap_allocator.zig | term51: findFreeChunks: large request that spans past the last bitmap | sits inside the unreferenced struct term51WDefect and is never compiled or run by Zig (upstream aborts there: out-of-bounds read at bitmap_allocator.zig:281); the Go test TestBitmapAllocator_findFreeChunks_large_request_past_last_bitmap expects the reference-patched "no space" result instead (docs/deliberate-fixes.md), and TestBitmapAllocator_findFreeChunks_random_bitmaps_skipped_inputs_no_space covers the inputs the random test skips
 terminal/bitmap_allocator.zig | term51: BitmapAllocator.layout: dump exact data when TERM51_BITMAP_DUMP_DIR is set | gated data-dump test (only writes data/bitmap/bitmap_layout.txt and bitmap_trace.txt); its output is replayed against the Go code by terminal/corpus_bitmap_test.go
 terminal/hyperlink.zig | term51: Hyperlink.dupe: allocation failures leak nothing | std.testing.FailingAllocator has no Go counterpart (allocation-failure injection)

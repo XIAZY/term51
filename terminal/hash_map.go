@@ -188,6 +188,10 @@ type hashMapAutoContext[K comparable] struct{}
 // bytes in little-endian order, at the key's ZIG width (usize is 8 bytes in
 // the recorded data). The hash decides slot placement and so when a map
 // reports that it is full.
+//
+// REQUIREMENT on the implementation: a Go `uint` or `int` key is hashed as
+// 8 bytes (Zig usize/isize on the 64-bit reference) on every platform,
+// including 32-bit targets where the Go type is 4 bytes wide.
 func (self hashMapAutoContext[K]) Hash(key K) uint64 { panic(notImplemented) }
 
 // Eql is AutoContext.eql.
@@ -431,6 +435,11 @@ type HashMapGetOrPutResult[K any, V any] struct {
 // `layout.capacity` long. Go cannot infer the type arguments, so a caller
 // writes all three:
 // hashMapUnmanagedInit[uint32, uint32, hashMapAutoContext[uint32]](layout).
+//
+// REQUIREMENT on the implementation: a map initialised with a capacity of
+// zero has non-nil, empty metadata (`metadata != nil`, `len(metadata) ==
+// 0`), as Zig's metadata pointer is non-null for any initialised map; nil
+// metadata stands only for Zig's `metadata == null`.
 func hashMapUnmanagedInit[K any, V any, C HashMapContext[K]](layout hashMapLayout) hashMapUnmanaged[K, V, C] {
 	panic(notImplemented)
 }
@@ -471,6 +480,10 @@ func (self hashMapUnmanaged[K, V, C]) values() []V { panic(notImplemented) }
 func (self hashMapUnmanaged[K, V, C]) Capacity() HashMapSize { panic(notImplemented) }
 
 // Iterator is HashMapUnmanaged.iterator.
+//
+// Zig: self is `*const Self`. The Go receiver is a value, like every
+// method of hashMapUnmanaged: the map type is a handle onto shared state
+// (metadata slice and header pointer), so the iterator sees the same map.
 func (self hashMapUnmanaged[K, V, C]) Iterator() HashMapIterator[K, V, C] { panic(notImplemented) }
 
 // KeyIterator is HashMapUnmanaged.keyIterator.
@@ -763,8 +776,11 @@ func (self hashMapUnmanaged[K, V, C]) RemoveByPtr(key_ptr *K) { panic(notImpleme
 // `(@intFromPtr(key_ptr) - @intFromPtr(self.keys())) / @sizeOf(K)`: the
 // index in `keys` of the element key_ptr points at.
 //
-// The implementation may use package unsafe for this and for nothing else,
-// and must panic if key_ptr does not point at an element of the map's keys.
+// The implementation may use package unsafe for this and for nothing else.
+//
+// REQUIREMENT on the implementation: keyIndex must panic if key_ptr does
+// not point at an element of the map's key slice (where Zig's result would
+// be meaningless); tests check this.
 func (self hashMapUnmanaged[K, V, C]) keyIndex(key_ptr *K) uint { panic(notImplemented) }
 
 // initMetadatas is HashMapUnmanaged.initMetadatas.

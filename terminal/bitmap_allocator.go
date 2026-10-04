@@ -167,6 +167,16 @@ func (self *BitmapAllocator[T]) Alloc(n uint) ([]T, error) { panic(notImplemente
 // Zig: pub fn free(self: *Self, base: anytype, slice: anytype) void. The
 // slice must be one returned by Alloc (same start, same length): Zig finds
 // the chunk index from the slice's address.
+//
+// REQUIREMENT on the implementation: Free must use only the slice's start
+// position (its element offset within `chunks`) and its length, as Zig uses
+// only `slice.ptr` and `slice.len`; it must not use the slice's capacity.
+// Tests free sub-slices obtained by re-slicing an allocation, whose
+// capacity differs from what Alloc returned.
+//
+// BitmapAllocator[T] hands out one element type T. Upstream tests that
+// allocate values of mixed types from one allocator (for example u8 and
+// u21) are scaled to a single element type in Go.
 func (self *BitmapAllocator[T]) Free(slice []T) { panic(notImplemented) }
 
 // CapacityBytes is BitmapAllocator.capacityBytes: returns the total

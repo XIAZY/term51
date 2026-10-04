@@ -47,6 +47,11 @@ package terminal
 // StringMap is the file-level struct of StringMap.zig.
 type StringMap struct {
 	// Zig: [:0]const u8.
+	//
+	// Convention for Zig's sentinel-terminated `[:0]const u8`: the Go slice
+	// has len = the string length (the 0 is not counted, as in Zig), and its
+	// backing array holds a 0 byte at index len, so cap > len. Tests may
+	// check the sentinel with `s[:len(s)+1][len(s)] == 0`.
 	string []uint8
 	// Zig: `map: []Pin`. `map` is a Go keyword.
 	map_ []PageListPin

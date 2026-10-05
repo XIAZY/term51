@@ -1,5 +1,4 @@
-// WIREFRAME for src/terminal/osc/parsers/context_signal.zig (Ghostty
-// v1.3.1). NOT YET PORTED.
+// Ported from src/terminal/osc/parsers/context_signal.zig (Ghostty v1.3.1).
 //
 // OSC 3008: Hierarchical Context Signalling (UAPI spec)
 // Specification: https://uapi-group.org/specifications/specs/osc_context/
@@ -7,8 +6,6 @@
 // OSC 3008 allows programs to signal context changes to the terminal
 // emulator. Each context has an identifier and metadata fields. Contexts are
 // hierarchical and form a stack.
-//
-// Types and signatures only; see the header of color.go for the rules.
 //
 // File naming: `osc/parsers/context_signal.zig` becomes
 // `osc_parsers_context_signal.go` in package terminal, and its declarations
@@ -23,6 +20,11 @@
 //     warn("osc_context_signal", ...).
 
 package terminal
+
+import (
+	"bytes"
+	"strconv"
+)
 
 // oscParsersContextSignalMaxContextIdLen is
 // osc.parsers.context_signal.max_context_id_len: maximum length of a context
@@ -54,7 +56,14 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self OSCParsersContextSignalCommandAction) String() string { panic(notImplemented) }
+func (self OSCParsersContextSignalCommandAction) String() string {
+	return oscParsersContextSignalCommandActionNames[self]
+}
+
+var oscParsersContextSignalCommandActionNames = [...]string{
+	OSCParsersContextSignalCommandActionStart: "start",
+	OSCParsersContextSignalCommandActionEnd:   "end",
+}
 
 // ReadOption is osc.parsers.context_signal.Command.readOption: read a
 // metadata field value from the raw fields string. Returns null if the field
@@ -66,7 +75,7 @@ func (self OSCParsersContextSignalCommandAction) String() string { panic(notImpl
 func (self OSCParsersContextSignalCommand) ReadOption(
 	option OSCParsersContextSignalField,
 ) OSCParsersContextSignalFieldValue {
-	panic(notImplemented)
+	return option.Read(self.metadata)
 }
 
 // OSCParsersContextSignalContextType is
@@ -93,13 +102,36 @@ const (
 
 // String returns the Zig tag name (@tagName), the name that
 // std.meta.stringToEnum matches in ContextType.parse.
-func (self OSCParsersContextSignalContextType) String() string { panic(notImplemented) }
+func (self OSCParsersContextSignalContextType) String() string {
+	return oscParsersContextSignalContextTypeNames[self]
+}
+
+var oscParsersContextSignalContextTypeNames = [oscParsersContextSignalContextTypeCount]string{
+	OSCParsersContextSignalContextTypeBoot:       "boot",
+	OSCParsersContextSignalContextTypeContainer:  "container",
+	OSCParsersContextSignalContextTypeVm:         "vm",
+	OSCParsersContextSignalContextTypeElevate:    "elevate",
+	OSCParsersContextSignalContextTypeChpriv:     "chpriv",
+	OSCParsersContextSignalContextTypeSubcontext: "subcontext",
+	OSCParsersContextSignalContextTypeRemote:     "remote",
+	OSCParsersContextSignalContextTypeShell:      "shell",
+	OSCParsersContextSignalContextTypeCommand:    "command",
+	OSCParsersContextSignalContextTypeApp:        "app",
+	OSCParsersContextSignalContextTypeService:    "service",
+	OSCParsersContextSignalContextTypeSession:    "session",
+}
 
 // OSCParsersContextSignalContextTypeParse is
 // osc.parsers.context_signal.ContextType.parse:
 // std.meta.stringToEnum(ContextType, value).
 func OSCParsersContextSignalContextTypeParse(value []uint8) Optional[OSCParsersContextSignalContextType] {
-	panic(notImplemented)
+	// std.meta.stringToEnum: the value whose tag name equals value exactly.
+	for i := OSCParsersContextSignalContextType(0); i < oscParsersContextSignalContextTypeCount; i++ {
+		if string(value) == i.String() {
+			return Some(i)
+		}
+	}
+	return None[OSCParsersContextSignalContextType]()
 }
 
 // OSCParsersContextSignalExitStatus is
@@ -118,13 +150,28 @@ const (
 
 // String returns the Zig tag name (@tagName), the name that
 // std.meta.stringToEnum matches in ExitStatus.parse.
-func (self OSCParsersContextSignalExitStatus) String() string { panic(notImplemented) }
+func (self OSCParsersContextSignalExitStatus) String() string {
+	return oscParsersContextSignalExitStatusNames[self]
+}
+
+var oscParsersContextSignalExitStatusNames = [oscParsersContextSignalExitStatusCount]string{
+	OSCParsersContextSignalExitStatusSuccess:   "success",
+	OSCParsersContextSignalExitStatusFailure:   "failure",
+	OSCParsersContextSignalExitStatusCrash:     "crash",
+	OSCParsersContextSignalExitStatusInterrupt: "interrupt",
+}
 
 // OSCParsersContextSignalExitStatusParse is
 // osc.parsers.context_signal.ExitStatus.parse:
 // std.meta.stringToEnum(ExitStatus, value).
 func OSCParsersContextSignalExitStatusParse(value []uint8) Optional[OSCParsersContextSignalExitStatus] {
-	panic(notImplemented)
+	// std.meta.stringToEnum: the value whose tag name equals value exactly.
+	for i := OSCParsersContextSignalExitStatus(0); i < oscParsersContextSignalExitStatusCount; i++ {
+		if string(value) == i.String() {
+			return Some(i)
+		}
+	}
+	return None[OSCParsersContextSignalExitStatus]()
 }
 
 // OSCParsersContextSignalField is osc.parsers.context_signal.Field: metadata
@@ -159,7 +206,30 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self OSCParsersContextSignalField) String() string { panic(notImplemented) }
+func (self OSCParsersContextSignalField) String() string {
+	return oscParsersContextSignalFieldNames[self]
+}
+
+var oscParsersContextSignalFieldNames = [oscParsersContextSignalFieldCount]string{
+	OSCParsersContextSignalFieldType:       "type",
+	OSCParsersContextSignalFieldUser:       "user",
+	OSCParsersContextSignalFieldHostname:   "hostname",
+	OSCParsersContextSignalFieldMachineid:  "machineid",
+	OSCParsersContextSignalFieldBootid:     "bootid",
+	OSCParsersContextSignalFieldPid:        "pid",
+	OSCParsersContextSignalFieldPidfdid:    "pidfdid",
+	OSCParsersContextSignalFieldComm:       "comm",
+	OSCParsersContextSignalFieldCwd:        "cwd",
+	OSCParsersContextSignalFieldCmdline:    "cmdline",
+	OSCParsersContextSignalFieldVm:         "vm",
+	OSCParsersContextSignalFieldContainer:  "container",
+	OSCParsersContextSignalFieldTargetuser: "targetuser",
+	OSCParsersContextSignalFieldTargethost: "targethost",
+	OSCParsersContextSignalFieldSessionid:  "sessionid",
+	OSCParsersContextSignalFieldExit:       "exit",
+	OSCParsersContextSignalFieldStatus:     "status",
+	OSCParsersContextSignalFieldSignal:     "signal",
+}
 
 // OSCParsersContextSignalFieldValue is the Go counterpart of
 // osc.parsers.context_signal.Field.Type, the comptime function that gives
@@ -197,7 +267,9 @@ type OSCParsersContextSignalFieldValue struct {
 }
 
 // key is osc.parsers.context_signal.Field.key: @tagName(self).
-func (self OSCParsersContextSignalField) key() []uint8 { panic(notImplemented) }
+func (self OSCParsersContextSignalField) key() []uint8 {
+	return []uint8(self.String())
+}
 
 // Read is osc.parsers.context_signal.Field.read: read the field value from
 // the raw fields string.
@@ -211,7 +283,109 @@ func (self OSCParsersContextSignalField) key() []uint8 { panic(notImplemented) }
 // Go: the result is in the field of the returned struct that is named after
 // `self`; see OSCParsersContextSignalFieldValue.
 func (self OSCParsersContextSignalField) Read(raw []uint8) OSCParsersContextSignalFieldValue {
-	panic(notImplemented)
+	var result OSCParsersContextSignalFieldValue
+
+	// Zig: std.mem.splitScalar(u8, raw, ';'). bytes.Split with a one-byte
+	// separator yields the same pieces, empty ones included.
+	for _, full := range bytes.Split(raw, []uint8{';'}) {
+		// Parse key=value
+		eql_idx := bytes.IndexByte(full, '=')
+		if eql_idx < 0 || !bytes.Equal(full[:eql_idx], self.key()) {
+			continue
+		}
+		value := full[eql_idx+1:]
+
+		switch self {
+		case OSCParsersContextSignalFieldType:
+			result.Type = OSCParsersContextSignalContextTypeParse(value)
+		case OSCParsersContextSignalFieldExit:
+			result.Exit = OSCParsersContextSignalExitStatusParse(value)
+		case OSCParsersContextSignalFieldPid,
+			OSCParsersContextSignalFieldPidfdid,
+			OSCParsersContextSignalFieldStatus:
+			// Zig: a labeled block that breaks with null on the first byte
+			// that is not a decimal digit, else with
+			// std.fmt.parseInt(u64, value, 10) catch null. After the digit
+			// check the input has no sign, no '_' and no base prefix, so
+			// strconv.ParseUint(value, 10, 64) accepts and rejects exactly
+			// what Zig's parseInt does: it fails on the empty string and on
+			// overflow.
+			number := None[uint64]()
+			digits := true
+			for _, c := range value {
+				if c < '0' || c > '9' {
+					digits = false
+					break
+				}
+			}
+			if digits {
+				if v, err := strconv.ParseUint(string(value), 10, 64); err == nil {
+					number = Some(v)
+				}
+			}
+			switch self {
+			case OSCParsersContextSignalFieldPid:
+				result.Pid = number
+			case OSCParsersContextSignalFieldPidfdid:
+				result.Pidfdid = number
+			case OSCParsersContextSignalFieldStatus:
+				result.Status = number
+			}
+		// String fields
+		case OSCParsersContextSignalFieldUser,
+			OSCParsersContextSignalFieldHostname,
+			OSCParsersContextSignalFieldMachineid,
+			OSCParsersContextSignalFieldBootid,
+			OSCParsersContextSignalFieldComm,
+			OSCParsersContextSignalFieldCwd,
+			OSCParsersContextSignalFieldCmdline,
+			OSCParsersContextSignalFieldVm,
+			OSCParsersContextSignalFieldContainer,
+			OSCParsersContextSignalFieldTargetuser,
+			OSCParsersContextSignalFieldTargethost,
+			OSCParsersContextSignalFieldSessionid,
+			OSCParsersContextSignalFieldSignal:
+			var str Optional[[]uint8]
+			if len(value) > 0 {
+				str = Some(value)
+			}
+			switch self {
+			case OSCParsersContextSignalFieldUser:
+				result.User = str
+			case OSCParsersContextSignalFieldHostname:
+				result.Hostname = str
+			case OSCParsersContextSignalFieldMachineid:
+				result.Machineid = str
+			case OSCParsersContextSignalFieldBootid:
+				result.Bootid = str
+			case OSCParsersContextSignalFieldComm:
+				result.Comm = str
+			case OSCParsersContextSignalFieldCwd:
+				result.Cwd = str
+			case OSCParsersContextSignalFieldCmdline:
+				result.Cmdline = str
+			case OSCParsersContextSignalFieldVm:
+				result.Vm = str
+			case OSCParsersContextSignalFieldContainer:
+				result.Container = str
+			case OSCParsersContextSignalFieldTargetuser:
+				result.Targetuser = str
+			case OSCParsersContextSignalFieldTargethost:
+				result.Targethost = str
+			case OSCParsersContextSignalFieldSessionid:
+				result.Sessionid = str
+			case OSCParsersContextSignalFieldSignal:
+				result.Signal = str
+			}
+		default:
+			// Zig's switch is exhaustive over a comptime Field.
+			panic("unreachable")
+		}
+		return result
+	}
+
+	// Not found
+	return result
 }
 
 // OSCParsersContextSignalParse is osc.parsers.context_signal.parse: parse
@@ -226,5 +400,87 @@ func (self OSCParsersContextSignalField) Read(raw []uint8) OSCParsersContextSign
 // Zig: `parse(parser: *Parser, _: ?u8) ?*OSCCommand`. The result is nil for
 // Zig's null; otherwise it points at the parser's own command.
 func OSCParsersContextSignalParse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
-	panic(notImplemented)
+	writer := parser.writer
+	if writer == nil {
+		parser.state = OSCParserStateInvalid
+		return nil
+	}
+	data := writer.buffered()
+	if len(data) == 0 {
+		parser.state = OSCParserStateInvalid
+		return nil
+	}
+
+	// Determine the action (start= or end=)
+	var action OSCParsersContextSignalCommandAction
+	if bytes.HasPrefix(data, []uint8("start=")) {
+		action = OSCParsersContextSignalCommandActionStart
+	} else if bytes.HasPrefix(data, []uint8("end=")) {
+		action = OSCParsersContextSignalCommandActionEnd
+	} else {
+		warn("osc_context_signal", "OSC 3008: expected 'start=' or 'end=' prefix, got: %s",
+			data[:min(len(data), 10)])
+		parser.state = OSCParserStateInvalid
+		return nil
+	}
+
+	// Skip past the "start=" or "end=" prefix
+	var prefix_len int
+	switch action {
+	case OSCParsersContextSignalCommandActionStart:
+		prefix_len = len("start=")
+	case OSCParsersContextSignalCommandActionEnd:
+		prefix_len = len("end=")
+	}
+	rest := data[prefix_len:]
+
+	if len(rest) == 0 {
+		warn("osc_context_signal", "OSC 3008: missing context ID")
+		parser.state = OSCParserStateInvalid
+		return nil
+	}
+
+	// Extract the context ID (up to the first semicolon or end of data)
+	id_end := bytes.IndexByte(rest, ';')
+	if id_end < 0 {
+		id_end = len(rest)
+	}
+	id := rest[:id_end]
+
+	// Validate context ID length (1-64 chars per spec)
+	if len(id) == 0 || len(id) > oscParsersContextSignalMaxContextIdLen {
+		warn("osc_context_signal", "OSC 3008: context ID length %d out of range (1-%d)",
+			len(id),
+			oscParsersContextSignalMaxContextIdLen)
+		parser.state = OSCParserStateInvalid
+		return nil
+	}
+
+	// Validate context ID characters (32..126 byte range per spec)
+	for _, c := range id {
+		if c < 0x20 || c > 0x7e {
+			warn("osc_context_signal", "OSC 3008: invalid character 0x%02x in context ID", c)
+			parser.state = OSCParserStateInvalid
+			return nil
+		}
+	}
+
+	// Extract raw metadata fields (everything after the ID)
+	var metadata []uint8
+	if id_end < len(rest) {
+		metadata = rest[id_end+1:]
+	} else {
+		metadata = []uint8("")
+	}
+
+	parser.command = OSCCommand{
+		Tag: OSCCommandKeyContextSignal,
+		ContextSignal: OSCParsersContextSignalCommand{
+			action:   action,
+			id:       id,
+			metadata: metadata,
+		},
+	}
+
+	return &parser.command
 }

@@ -42,12 +42,12 @@
 //
 // `KeyEvent.bindingHash` is `std.hash.Wyhash.init(0)` fed with
 // `std.hash.autoHash` of `key` (a c_int enum: its 4 bytes),
-// `unshifted_codepoint` (a u21: autoHash hashes its bytes as a u21, i.e.
-// `std.mem.asBytes` of the u21, 4 bytes with the top padding zero) and
-// `mods.binding()` (a packed struct(u16): its 2 bytes). The implementation
-// must reproduce Zig's values exactly if any test or corpus records them;
-// the project tests only compare hashes with each other. As for
-// `PageEntry.hash` (docs/mapping.md), Go's standard library has no Wyhash.
+// `unshifted_codepoint` (a u21: autoHash feeds 3 bytes, little-endian,
+// measured against Zig 0.15.2: autoHash(u21 0x41) equals
+// Wyhash.hash(0, {0x41, 0, 0})) and `mods.binding()` (a packed
+// struct(u16): its 2 bytes). The implementation must reproduce Zig's values
+// exactly; it uses the ported Wyhash (std_hash_wyhash.go) and needs a u21
+// case in std_hash_auto_hash.go.
 //
 // # Darwin
 //

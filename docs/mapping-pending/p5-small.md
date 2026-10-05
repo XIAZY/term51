@@ -29,3 +29,29 @@ Sections ready to merge into docs/mapping.md (Screen and Terminal module).
   Go index panics where Zig's does (Go-only tests). In `untracked` the
   start pin is built first so that an empty list panics on `nodes[0]`
   first, as in Zig.
+
+### `Selection.zig` (`Selection.go`)
+- `Bounds` is the wireframe's tagged struct; every exhaustive `switch
+  (self.bounds)` gets `default: panic("unreachable")`. `startPtr`/`endPtr`
+  on an untracked selection return the address of the pin inside the
+  selection (`|*v| &v.start`), so they act on the caller's variable.
+- `.?` on `pointFromPin(.screen, ...)` and `pages.pin(...)` is
+  `assert(x.Valid)` (Go-only tests for order/contains/containedRow). The
+  `.screen` payload access after it is not asserted: `pointFromPin` returns
+  the tag it was asked for.
+- `track`: `assert(!self.tracked())` guards the `bounds.untracked` access
+  (Zig's tag check); the first `errdefer untrackPin` is a deferred closure
+  on the named error result (PageList idiom), the second is a comment (it
+  is registered after the last failable call).
+- Labeled blocks `pin: { var p = ...; p.x = ...; break :pin p; }` and
+  `start:`/`end:` copies in containedRowCached are locals built before the
+  call; the label is kept as a comment.
+- `adjust(.down)`'s `while (current.down(1)) |next| : (current = next) {
+  ... } else { self.adjust(s, .end_of_line); }` is a `for` loop whose
+  null branch runs the `else` and breaks; `break` on a found row skips it,
+  as in Zig.
+- `s.pages.cols - 1` (containedRowCached) and `size.cols - 1`
+  (`.end_of_line`) are asserted `> 0` (u16 underflow traps in Zig), as
+  PageList.go does for the same expressions. `@intCast(cells.len - 1)` in
+  `.end` is a plain conversion: the row has a cell with text, so it is not
+  empty, and its length is at most the u16 column count.

@@ -17,12 +17,17 @@ build.
 | `terminal/osc/encoding.zig` | `terminal/osc_encoding.go` | done | 6 of 6, all pass | `isSafeUtf8` equal to Zig on all 3- and 4-byte strings | pass |
 | `terminal/osc/parsers.zig` | `terminal/osc_parsers.go` | done (declarations only) | no tests | - | pass |
 | `terminal/osc/parsers/*.zig` (15 files) | `terminal/osc_parsers_*.go` | done | 448 of 457 (9 not translated), all pass except 1 that skips as upstream does (iterm2) | - | pass |
-| `os/string_encoding.zig` | `terminal/os_string_encoding.go` | done | 18 of 18, all pass | - | pass |
+| `os/string_encoding.zig` | `terminal/os_string_encoding.go` | done | 50 of 50 (18 upstream, 32 term51), all pass | - | pass |
 | `terminal/sgr.zig` | `terminal/sgr.go` | done | 60 of 64 (4 not translated), all pass | - | pass |
 | `terminal/color.zig` | `terminal/color.go` | done | 67 of 70 (3 not translated), all pass | `data/colors` (lab grid, lerp, 256-colour generation) bit for bit; default palette table | pass |
 | `terminal/x11_color.zig` | `terminal/x11_color.go` | done | 8 of 8, all pass | `rgb.txt` byte for byte | pass |
 | `terminal/kitty/color.zig` | `terminal/kitty_color.go` | done | 9 of 10 (1 not translated), all pass | - | pass |
 | `terminal/mouse_shape.zig` | `terminal/mouse_shape.go` | done | 7 of 7; 6 pass, 1 skips as upstream does (library build) | - | pass |
+| `terminal/ansi.zig` | `terminal/ansi.go` | done | 9 of 9, all pass | - | pass |
+| `terminal/charsets.zig` | `terminal/charsets.go` | done | 9 of 9, all pass | - | pass |
+| `terminal/modes.zig` | `terminal/modes.go` | done | 23 of 25 (2 not translated: a layout test and an analysis-only unnamed test), all pass | modes table equals upstream's | pass |
+| `terminal/device_status.zig` | `terminal/device_status.go` | done | 7 of 7, all pass | - | pass |
+| `terminal/kitty/key.zig` | `terminal/kitty_key.go` | done | 25 of 25, all pass | - | pass |
 
 `scripts/check-test-mapping.py` verifies that every Zig test has exactly one
 Go test, in the same order, by the `// Zig: test "<title>"` comment above each

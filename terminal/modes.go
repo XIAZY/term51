@@ -36,10 +36,16 @@
 // ModesModeStateInit(); a zero ModesModeState is NOT Zig's default state.
 //
 // `@field(packed, entry.name)` is modesModePackedField, which returns a
-// pointer to the bool field Zig names entry.name. The `inline else` +
-// `comptime entryForMode(...)` of set/get/save/restore are evaluated at run
-// time in Go: each call looks the entry up with modesEntryForMode and the
-// field with modesModePackedField.
+// pointer to the bool field Zig names entry.name. Zig resolves the
+// `inline else` + `comptime entryForMode(...)` + `@field` of set, get, save
+// and restore at compile time, so at run time each is a single field
+// access. Following the rule for compile-time work (computed once at
+// start-up, not on each call), two tables are built at start-up:
+// modesModeIndex maps a Mode to the index of its entry, and
+// modesModePackedFields holds, per entry, the field accessor `@field`
+// resolves to (checked against modesModePackedField at start-up).
+// set/get/save/restore, entryForMode, modeFromInt and String use them;
+// modesEntryForMode and modesModePackedField keep their Zig meaning.
 
 package terminal
 
@@ -74,9 +80,10 @@ func (self *ModesModeState) Reset() {
 
 // Set is modes.ModeState.set: set a mode to a value.
 func (self *ModesModeState) Set(mode ModesMode, value bool) {
-	// Zig: switch (mode) { inline else => |mode_comptime| ... }
-	entry := modesEntryForMode(mode)
-	*modesModePackedField(&self.values, entry.name) = value
+	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
+	// at compile time; the tables are built at start-up.
+	i := modesModeEntryIndex(mode)
+	*modesModePackedFields[i](&self.values) = value
 }
 
 // Get is modes.ModeState.get: get the value of a mode.
@@ -84,9 +91,10 @@ func (self *ModesModeState) Set(mode ModesMode, value bool) {
 // Zig takes `*const ModeState`; Go uses the pointer receiver of the other
 // methods.
 func (self *ModesModeState) Get(mode ModesMode) bool {
-	// Zig: switch (mode) { inline else => |mode_comptime| ... }
-	entry := modesEntryForMode(mode)
-	return *modesModePackedField(&self.values, entry.name)
+	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
+	// at compile time; the tables are built at start-up.
+	i := modesModeEntryIndex(mode)
+	return *modesModePackedFields[i](&self.values)
 }
 
 // Save is modes.ModeState.save: save the state of the given mode. This can
@@ -94,18 +102,20 @@ func (self *ModesModeState) Get(mode ModesMode) bool {
 // mode was saved exactly once and not restored. Otherwise this will just
 // keep restoring the last stored value in memory.
 func (self *ModesModeState) Save(mode ModesMode) {
-	// Zig: switch (mode) { inline else => |mode_comptime| ... }
-	entry := modesEntryForMode(mode)
-	*modesModePackedField(&self.saved, entry.name) = *modesModePackedField(&self.values, entry.name)
+	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
+	// at compile time; the tables are built at start-up.
+	i := modesModeEntryIndex(mode)
+	*modesModePackedFields[i](&self.saved) = *modesModePackedFields[i](&self.values)
 }
 
 // Restore is modes.ModeState.restore: see save. This will return the
 // restored value.
 func (self *ModesModeState) Restore(mode ModesMode) bool {
-	// Zig: switch (mode) { inline else => |mode_comptime| ... }
-	entry := modesEntryForMode(mode)
-	*modesModePackedField(&self.values, entry.name) = *modesModePackedField(&self.saved, entry.name)
-	return *modesModePackedField(&self.values, entry.name)
+	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
+	// at compile time; the tables are built at start-up.
+	i := modesModeEntryIndex(mode)
+	*modesModePackedFields[i](&self.values) = *modesModePackedFields[i](&self.saved)
+	return *modesModePackedFields[i](&self.values)
 }
 
 // ModesModePacked is modes.ModePacked: a packed struct of all the settable
@@ -255,6 +265,66 @@ func modesModePackedField(p *ModesModePacked, name []uint8) *bool {
 	panic("ModePacked has no field " + string(name))
 }
 
+// modesModePackedFields is, for each entry of modesEntries (same index),
+// the field `@field(packed, entry.name)` resolves to at compile time, as an
+// accessor. modesModePackedFieldsCheck verifies at start-up that each one
+// returns the same field as modesModePackedField(p, entry.name).
+var modesModePackedFields = [...]func(p *ModesModePacked) *bool{
+	func(p *ModesModePacked) *bool { return &p.disable_keyboard },                   // disable_keyboard
+	func(p *ModesModePacked) *bool { return &p.insert },                             // insert
+	func(p *ModesModePacked) *bool { return &p.send_receive_mode },                  // send_receive_mode
+	func(p *ModesModePacked) *bool { return &p.linefeed },                           // linefeed
+	func(p *ModesModePacked) *bool { return &p.cursor_keys },                        // cursor_keys
+	func(p *ModesModePacked) *bool { return &p.x132_column },                        // 132_column
+	func(p *ModesModePacked) *bool { return &p.slow_scroll },                        // slow_scroll
+	func(p *ModesModePacked) *bool { return &p.reverse_colors },                     // reverse_colors
+	func(p *ModesModePacked) *bool { return &p.origin },                             // origin
+	func(p *ModesModePacked) *bool { return &p.wraparound },                         // wraparound
+	func(p *ModesModePacked) *bool { return &p.autorepeat },                         // autorepeat
+	func(p *ModesModePacked) *bool { return &p.mouse_event_x10 },                    // mouse_event_x10
+	func(p *ModesModePacked) *bool { return &p.cursor_blinking },                    // cursor_blinking
+	func(p *ModesModePacked) *bool { return &p.cursor_visible },                     // cursor_visible
+	func(p *ModesModePacked) *bool { return &p.enable_mode_3 },                      // enable_mode_3
+	func(p *ModesModePacked) *bool { return &p.reverse_wrap },                       // reverse_wrap
+	func(p *ModesModePacked) *bool { return &p.alt_screen_legacy },                  // alt_screen_legacy
+	func(p *ModesModePacked) *bool { return &p.keypad_keys },                        // keypad_keys
+	func(p *ModesModePacked) *bool { return &p.enable_left_and_right_margin },       // enable_left_and_right_margin
+	func(p *ModesModePacked) *bool { return &p.mouse_event_normal },                 // mouse_event_normal
+	func(p *ModesModePacked) *bool { return &p.mouse_event_button },                 // mouse_event_button
+	func(p *ModesModePacked) *bool { return &p.mouse_event_any },                    // mouse_event_any
+	func(p *ModesModePacked) *bool { return &p.focus_event },                        // focus_event
+	func(p *ModesModePacked) *bool { return &p.mouse_format_utf8 },                  // mouse_format_utf8
+	func(p *ModesModePacked) *bool { return &p.mouse_format_sgr },                   // mouse_format_sgr
+	func(p *ModesModePacked) *bool { return &p.mouse_alternate_scroll },             // mouse_alternate_scroll
+	func(p *ModesModePacked) *bool { return &p.mouse_format_urxvt },                 // mouse_format_urxvt
+	func(p *ModesModePacked) *bool { return &p.mouse_format_sgr_pixels },            // mouse_format_sgr_pixels
+	func(p *ModesModePacked) *bool { return &p.ignore_keypad_with_numlock },         // ignore_keypad_with_numlock
+	func(p *ModesModePacked) *bool { return &p.alt_esc_prefix },                     // alt_esc_prefix
+	func(p *ModesModePacked) *bool { return &p.alt_sends_escape },                   // alt_sends_escape
+	func(p *ModesModePacked) *bool { return &p.reverse_wrap_extended },              // reverse_wrap_extended
+	func(p *ModesModePacked) *bool { return &p.alt_screen },                         // alt_screen
+	func(p *ModesModePacked) *bool { return &p.save_cursor },                        // save_cursor
+	func(p *ModesModePacked) *bool { return &p.alt_screen_save_cursor_clear_enter }, // alt_screen_save_cursor_clear_enter
+	func(p *ModesModePacked) *bool { return &p.bracketed_paste },                    // bracketed_paste
+	func(p *ModesModePacked) *bool { return &p.synchronized_output },                // synchronized_output
+	func(p *ModesModePacked) *bool { return &p.grapheme_cluster },                   // grapheme_cluster
+	func(p *ModesModePacked) *bool { return &p.report_color_scheme },                // report_color_scheme
+	func(p *ModesModePacked) *bool { return &p.in_band_size_reports },               // in_band_size_reports
+}
+
+var _ = modesModePackedFieldsCheck()
+
+// modesModePackedFieldsCheck asserts that modesModePackedFields matches
+// modesEntries and modesModePackedField. It runs once at start-up.
+func modesModePackedFieldsCheck() bool {
+	assert(len(modesModePackedFields) == len(modesEntries))
+	var p ModesModePacked
+	for i, entry := range modesEntries {
+		assert(modesModePackedFields[i](&p) == modesModePackedField(&p, entry.name))
+	}
+	return true
+}
+
 // ModesModeStateInit stands for Zig's `ModeState{}`: every field takes its
 // declared default, which for `values`, `saved` and `default` is
 // `ModePacked{}` (see ModesModePackedInit). Zig has no named constructor;
@@ -368,12 +438,38 @@ func modesModeInit() []modesModeField {
 // String returns the Zig tag name (@tagName). The enum is exhaustive: a
 // value outside it panics, as @tagName on an invalid value does.
 func (self ModesMode) String() string {
-	for _, field := range modesModeFields {
-		if field.value == ModesModeTagBacking(self) {
-			return string(field.name)
-		}
+	return string(modesModeFields[modesModeEntryIndex(self)].name)
+}
+
+// modesModeIndex maps a Mode (its u16 value) to the index of its entry in
+// modesEntries (and of its field in modesModeFields), or
+// modesModeIndexNone where no entry has that value. Built once at start-up
+// from modesModeFields: Zig maps a Mode to its entry at compile time.
+var modesModeIndex = modesModeIndexInit()
+
+const modesModeIndexNone = 0xFF
+
+func modesModeIndexInit() *[1 << 16]uint8 {
+	var t [1 << 16]uint8
+	for i := range t {
+		t[i] = modesModeIndexNone
 	}
-	panic("unreachable")
+	assert(len(modesModeFields) < modesModeIndexNone)
+	for i, field := range modesModeFields {
+		assert(t[field.value] == modesModeIndexNone)
+		t[field.value] = uint8(i)
+	}
+	return &t
+}
+
+// modesModeEntryIndex is the index of mode's entry. A value that is not a
+// Mode panics, as Zig's `unreachable` (an invalid enum value) would.
+func modesModeEntryIndex(mode ModesMode) int {
+	i := modesModeIndex[mode]
+	if i == modesModeIndexNone {
+		panic("unreachable")
+	}
+	return int(i)
 }
 
 // ModesModeTag is modes.ModeTag: the tag type for our enum is a u16 but we
@@ -408,17 +504,20 @@ func (self ModesModeTag) Int() ModesModeTagBacking {
 
 // ModesModeFromInt is modes.modeFromInt.
 //
-// Zig: `inline for (entries)`; a loop over the entries. The comptime test
-// of `entry.disabled` is an ordinary `if`.
+// Zig: `inline for (entries)`, unrolled at compile time into one
+// comparison per enabled entry. Go looks the tag up in modesModeIndex
+// (built at start-up) instead: an enabled entry with value v and this ansi
+// bit exists exactly when the tag (v, ansi) is in the index and its entry
+// is not disabled. No entry value exceeds a u15, so a larger v matches
+// nothing.
 func ModesModeFromInt(v uint16, ansi bool) Optional[ModesMode] {
-	for _, entry := range modesEntries {
-		if !entry.disabled {
-			if entry.value == int(v) && entry.ansi == ansi {
-				tag := ModesModeTag{ansi: ansi, value: uint16(entry.value)}
-				int_ := tag.Int()
-				return Some(ModesMode(int_))
-			}
-		}
+	if v > 0x7FFF {
+		return None[ModesMode]()
+	}
+	tag := ModesModeTag{ansi: ansi, value: v}
+	int_ := tag.Int()
+	if i := modesModeIndex[int_]; i != modesModeIndexNone && !modesEntries[i].disabled {
+		return Some(ModesMode(int_))
 	}
 
 	return None[ModesMode]()
@@ -448,14 +547,7 @@ func ModesModeValues() []ModesMode {
 // Zig: `mode` is a comptime parameter; an unknown mode is `unreachable`.
 // `@setEvalBranchQuota(10_000)` has no Go counterpart.
 func modesEntryForMode(mode ModesMode) modesModeEntry {
-	name := mode.String()
-	for _, entry := range modesEntries {
-		if string(entry.name) == name {
-			return entry
-		}
-	}
-
-	panic("unreachable")
+	return modesEntries[modesModeEntryIndex(mode)]
 }
 
 // modesModeEntry is modes.ModeEntry: a single entry of a possible mode we

@@ -17,12 +17,16 @@ package terminal
 // are in x11_color_test.go.
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -70,6 +74,83 @@ func TestColor_corpus_lab_grid(t *testing.T) {
 	}
 	expectEqual(t, 22*22*22, len(want))
 	col_corpusExpectLines(t, "lab_grid.txt", want, got)
+}
+
+// lab_channels.txt: every channel value, each channel taken alone (r, then
+// g, then b), then gray (v, v, v); same line format as lab_grid.txt. Added
+// after review found that Go fused multiply-adds on arm64 changed
+// pow(x, 2.4) for channel values the 22-level grid does not contain (180).
+func TestColor_corpus_lab_channels(t *testing.T) {
+	want := corpusColorLines(t, "lab_channels.txt")
+	var got []string
+	for which := 0; which < 4; which++ {
+		for i := 0; i < 256; i++ {
+			v := uint8(i)
+			var c ColorRGB
+			switch which {
+			case 0:
+				c = ColorRGB{r: v, g: 0, b: 0}
+			case 1:
+				c = ColorRGB{r: 0, g: v, b: 0}
+			case 2:
+				c = ColorRGB{r: 0, g: 0, b: v}
+			default:
+				c = ColorRGB{r: v, g: v, b: v}
+			}
+			lab := colorLABFromRgb(c)
+			back := lab.toRgb()
+			got = append(got, fmt.Sprintf("%d %d %d %08x %08x %08x -> %d %d %d",
+				c.r, c.g, c.b,
+				math.Float32bits(lab.l), math.Float32bits(lab.a), math.Float32bits(lab.b),
+				back.r, back.g, back.b))
+		}
+	}
+	expectEqual(t, 4*256, len(want))
+	col_corpusExpectLines(t, "lab_channels.txt", want, got)
+}
+
+// lab_cube.txt: the whole RGB cube through LAB.fromRgb and LAB.toRgb, one
+// SHA-256 per red value over the 65,536 colours with that red (g outer, b
+// inner), each hashed as the little-endian bit patterns of l, a and b
+// followed by toRgb's r, g and b. Line = "<r> <sha256 hex>". The red
+// values are hashed in parallel. A mismatch names the red value whose slice
+// differs; the file cannot say which colour in it.
+func TestColor_corpus_lab_cube(t *testing.T) {
+	want := corpusColorLines(t, "lab_cube.txt")
+	expectEqual(t, 256, len(want))
+	got := make([]string, 256)
+	var wg sync.WaitGroup
+	reds := make(chan int)
+	for w := 0; w < runtime.NumCPU(); w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for ri := range reds {
+				h := sha256.New()
+				var rec [15]uint8
+				for gi := 0; gi < 256; gi++ {
+					for bi := 0; bi < 256; bi++ {
+						lab := colorLABFromRgb(ColorRGB{r: uint8(ri), g: uint8(gi), b: uint8(bi)})
+						back := lab.toRgb()
+						binary.LittleEndian.PutUint32(rec[0:4], math.Float32bits(lab.l))
+						binary.LittleEndian.PutUint32(rec[4:8], math.Float32bits(lab.a))
+						binary.LittleEndian.PutUint32(rec[8:12], math.Float32bits(lab.b))
+						rec[12] = back.r
+						rec[13] = back.g
+						rec[14] = back.b
+						h.Write(rec[:])
+					}
+				}
+				got[ri] = fmt.Sprintf("%d %x", ri, h.Sum(nil))
+			}
+		}()
+	}
+	for ri := 0; ri < 256; ri++ {
+		reds <- ri
+	}
+	close(reds)
+	wg.Wait()
+	col_corpusExpectLines(t, "lab_cube.txt", want, got)
 }
 
 // lab_lerp.txt: a grid of t values between two colors, exact float bits:

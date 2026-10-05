@@ -100,6 +100,16 @@ func (self DeviceStatusTag) Int() DeviceStatusTagBacking {
 	return self.value | question<<15
 }
 
+// DeviceStatusTagFromInt stands for Zig's `@bitCast` from the backing
+// integer (Tag.Backing, a u16) to a Tag: the reverse of DeviceStatusTag.Int.
+// Every u16 is a valid Tag.
+func DeviceStatusTagFromInt(v DeviceStatusTagBacking) DeviceStatusTag {
+	return DeviceStatusTag{
+		value:    v & 0x7FFF,
+		question: v>>15 != 0,
+	}
+}
+
 // DeviceStatusReqFromInt is device_status.reqFromInt.
 //
 // Zig: `inline for (entries)`; a loop over the entries.

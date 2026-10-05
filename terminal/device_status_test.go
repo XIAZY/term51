@@ -56,13 +56,9 @@ func TestDeviceStatus_term51_Tag_layout_of_the_value_and_question_bit(t *testing
 	expectEqual(t, uint16(0x8005), DeviceStatusTag{value: 5, question: true}.Int())
 	expectEqual(t, uint16(0x7FFF), DeviceStatusTag{value: 0x7FFF}.Int())
 	expectEqual(t, uint16(0xFFFF), DeviceStatusTag{value: 0x7FFF, question: true}.Int())
-	// MISSING-IN-WIREFRAME: the Zig test ends with
-	//     const t: Tag = @bitCast(@as(u16, 0x83E4));
-	//     try testing.expectEqual(@as(u15, 996), t.value);
-	//     try testing.expect(t.question);
-	// which needs a conversion from the backing integer to a Tag
-	// (DeviceStatusTagFromInt, like ModesModeTagFromInt); device_status.go
-	// has none, so these three lines are not translated yet.
+	tag := DeviceStatusTagFromInt(uint16(0x83E4))
+	expectEqual(t, uint16(996), tag.value)
+	expect(t, tag.question, "t.question")
 }
 
 // Zig: test "term51: reqFromInt: supported requests"

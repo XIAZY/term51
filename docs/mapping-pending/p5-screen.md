@@ -85,9 +85,9 @@ asserted.
 upstream aborts in the final `assertIntegrity` (cursor outside the cloned
 region and the clone has more rows than the active area). The check is the
 exact abort condition (`pointFromPin(.active, cursor pin)` is null), placed
-just before `assertIntegrity`; the errdefer then deinits the clone. No Go
-test exists for it yet (term51 docs say there is one): a Go-only test should
-be added (Screen_2_test.go is read-only for the porter).
+just before `assertIntegrity`; the errdefer then deinits the clone. Go-only
+test: `TestSc2_go_only_clone_cursor_outside_a_clone_with_history_returns_an_error`
+(Screen_2_test.go).
 
 #### `testWriteString`
 

@@ -214,3 +214,11 @@ tests Zig gates on `isDarwin()` run under "darwin" and "ios", those gated on
 `.macos` under "darwin"; shared tests whose expected values depend on the platform
 loop over the three modes (`// Go-only: platform modes`). Tvos, watchos, visionos and
 DriverKit are not Go targets and are not modelled.
+
+## Enums that are not exhaustive print `#N`
+
+Every `String()` of an enum that Zig declares non-exhaustive (`ColorName`, the ANSI C0
+enum, mode and key enums with an `_` arm, and so on) must return `#N` (decimal)
+for a value that has no name, as the recorder's `dumpAny` does. The replayer
+(`terminal/corpus_replay*_test.go`) depends on it. Sentinel errors carry Zig's
+error name as their text for the same reason.

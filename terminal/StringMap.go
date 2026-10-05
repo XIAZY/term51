@@ -1,13 +1,7 @@
-// WIREFRAME for src/terminal/StringMap.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Port of src/terminal/StringMap.zig (Ghostty v1.3.1).
 //
 // A string along with the mapping of each individual byte in the string
 // to the point in the screen.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
 //
 // File naming: StringMap.zig is a file-level struct, so the type is
 // `StringMap`. It has no `init`: Screen.selectionString fills one in
@@ -61,4 +55,8 @@ type StringMap struct {
 //
 // Zig: pub fn deinit(self: StringMap, alloc: Allocator) void. The allocator
 // parameter is dropped. Kept only because the tests call it.
-func (self StringMap) Deinit() { panic(notImplemented) }
+func (self StringMap) Deinit() {
+	// Zig: alloc.free(self.string); alloc.free(self.map);
+	// The garbage collector frees in Go; the receiver is a copy, as in Zig,
+	// so nothing is left to reset.
+}

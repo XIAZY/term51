@@ -1782,3 +1782,28 @@ func TestColor_term51_RGB_fromHex_underscores_are_accepted_and_signs_are_rejecte
 	col_expectError(t, ErrInvalidFormat, col_fromHexErr("+f"))
 	col_expectError(t, ErrInvalidFormat, col_fromHexErr("-f"))
 }
+
+// Zig: test "term51: RGB.fromIntensity: underscores can lower a channel by one (zig std defect)"
+func TestColor_term51_RGB_fromIntensity_underscores_can_lower_a_channel_by_one_zig_std_defect(t *testing.T) {
+	// Reproduces a Zig 0.15.2 std defect: std.fmt.parseFloat's slow path
+	// (convert_slow.zig -> decimal.zig Decimal.parse, lines 273-294) trims
+	// trailing zeros starting from stream.offsetTrue() - 1, which does not
+	// count the '_' separators, so it can drop real digits. Near a midpoint
+	// between two f64 values the result is one unit in the last place low,
+	// and the channel truncates to one less. The same digits without '_'
+	// give the correctly rounded value. The Go port reproduces this; see
+	// docs/upstream-findings.md and docs/deliberate-fixes.md.
+	expectEqual(t, term51Rgb(16, 0, 0), col_parse(t, "rgbi:0.0_66666666666666658802586908905141171999275684356689453125001/0/0"))
+	expectEqual(t, term51Rgb(17, 0, 0), col_parse(t, "rgbi:0.066666666666666658802586908905141171999275684356689453125001/0/0"))
+	expectEqual(t, term51Rgb(66, 127, 255), col_parse(t, "rgbi:0.2_62_7450980392156687504012779754702933132648468017578125001/0.5/1"))
+	expectEqual(t, term51Rgb(67, 127, 255), col_parse(t, "rgbi:0.262745098039215687504012779754702933132648468017578125001/0.5/1"))
+	expectEqual(t, term51Rgb(0, 132, 0), col_parse(t, "rgbi:0/0.5_21568627450980371040856198305846191942691802978515625001/0"))
+	expectEqual(t, term51Rgb(255, 0, 249), col_parse(t, "rgbi:1/0.0_0/0.98039215686274500116681451800104696303606033325195312_5001"))
+	expectEqual(t, term51Rgb(33, 99, 199), col_parse(t, "rgbi:0.1_3333333333333331760517381781028234399855136871337890625001/0.3_92_1568627450980060178409303262014873325824737548828125001/0.78431372549019601203568186065240297466516494750976562_5001"))
+	expectEqual(t, term51Rgb(34, 100, 200), col_parse(t, "rgbi:0.13333333333333331760517381781028234399855136871337890625001/0.3921568627450980060178409303262014873325824737548828125001/0.784313725490196012035681860652402974665164947509765625001"))
+	expectEqual(t, term51Rgb(245, 244, 245), col_parse(t, "rgbi:0.960784313725490168867082729775574989616870880126953125001/0.9_60784313725490168867082729775574989616870880126953125001/0.960784313725490168867082729775574989616870880126953125001"))
+	expectEqual(t, term51Rgb(16, 16, 16), col_parse(t, "rgbi:6.6_666666666666658802586908905141171999275684356689453125001e-2/6.6_666666666666658802586908905141171999275684356689453125001e-2/6.6_666666666666658802586908905141171999275684356689453125001e-2"))
+	// '_' that do not change the result
+	expectEqual(t, term51Rgb(18, 0, 0), col_parse(t, "rgbi:0.0_70588235294117639140321074364692321978509426116943359375001/0/0"))
+	expectEqual(t, term51Rgb(16, 25, 255), col_parse(t, "rgbi:0.0_666/0.1_0/1.0_0"))
+}

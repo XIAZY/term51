@@ -65,7 +65,7 @@ var corpusSelfCounts = map[string][2]int{
 	"esc":    {4, 2032},
 	"fuzz":   {9, 30900},
 	"modes":  {8, 4773},
-	"osc":    {6, 4135},
+	"osc":    {7, 4192},
 	"parser": {27, 78397},
 	"resize": {8, 4116},
 	"scroll": {6, 5345},
@@ -109,8 +109,8 @@ func TestCorpusReplaySelfParseAllAreas(t *testing.T) {
 		totalSuites += suites
 		totalCases += cases
 	}
-	if totalSuites != 127 || totalCases != 190047 {
-		t.Errorf("%d suites %d cases, want 127 and 190047", totalSuites, totalCases)
+	if totalSuites != 128 || totalCases != 190104 {
+		t.Errorf("%d suites %d cases, want 128 and 190104", totalSuites, totalCases)
 	}
 	if markers[replayOpExpectCrash] != 114 || markers[replayOpTransientInvariant] != 951 || markers[replayOpUpstreamInvalid] != 0 {
 		t.Errorf("markers expect_crash=%d transient_invariant=%d upstream_invalid=%d, want 114 951 0",
@@ -1082,7 +1082,7 @@ func TestCorpusReplaySelfDumpAgainstGolden(t *testing.T) {
 	// Every distinct recorded set color of the first sections of the osc
 	// suites is rebuilt from its r, g and b and dumped again.
 	checked := map[string]bool{}
-	for _, suite := range []string{"all", "color_state", "unterminated"} {
+	for _, suite := range []string{"all", "color_state", "rgbi_float", "unterminated"} {
 		lines := dumpSelfGoldenLines(t, "osc", suite+".golden.gz")
 		for i, l := range lines {
 			prefix, _, found := strings.Cut(l, ".override.r=")

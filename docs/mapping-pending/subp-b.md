@@ -37,22 +37,39 @@ Files: `osc_parsers_osc9.go`, `osc_parsers_semantic_prompt.go`, and the new
 - Enum `String()` methods read name tables (`...Names`), as Parser.go does.
 - `Command.init` sets `options_unvalidated` to `[]uint8("")` (Zig `""`).
 - `writeCommandLine` calls the two decoders of `os/string_encoding.zig`,
-  which no Go file had. They are ported in `terminal/os_string_encoding.go`
+  which no Go file had. The file is ported in `terminal/os_string_encoding.go`
   (next section): without them 17 translated tests (cmdline,
   cmdline_url, `term51: Command.writeCommandLine: ...`) cannot pass.
 
-### `os/string_encoding.zig` (new file, needs the lead's approval)
-- File `terminal/os_string_encoding.go`, prefix `OsStringEncoding`
-  (directory in the name, as for subdirectories of src/terminal).
-- Ported: `printfQDecode`, `urlPercentDecode` (exported, they are `pub`) and
-  `hex` (`osStringEncodingHex`, private). `hex` returns `u4` in Zig; the Go
-  result is a uint8 that is always below 16, and `std.math.shl(u8, hex(a),
-  4) | hex(b)` is `hex(a)<<4 | hex(b)` on uint8 (no bit is lost).
+### `os/string_encoding.zig` (new file, approved by the lead)
+- File `terminal/os_string_encoding.go`, prefix `OsStringEncoding`: a file
+  outside src/terminal named like `datastruct_circ_buf.go` (directory in
+  the name). `pub fn`s are exported (`OsStringEncodingPrintfQDecode`,
+  `OsStringEncodingUrlPercentDecode`, `OsStringEncodingUrlPercentEncode`),
+  private ones take the lower-case prefix (`osStringEncodingHex`,
+  `osStringEncodingIsValidChar`). The whole file is ported, in Zig order,
+  although only the two decoders are used inside libghostty-vt.
+- `hex` returns `u4` in Zig; the Go result is a uint8 that is always below
+  16, and `std.math.shl(u8, hex(a), 4) | hex(b)` is `hex(a)<<4 | hex(b)` on
+  uint8 (no bit is lost). Its `else => unreachable` is `panic("unreachable")`
+  (not reachable: both callers check the digit first).
 - `std.ascii.control_code.esc/lf/cr/ht/vt` are the literal bytes with the
-  Zig name in a comment.
-- Not ported: `isValidChar`, `urlPercentEncode` (only src/synthetic uses
-  them; it is not part of libghostty-vt).
-- The file's 18 Zig tests (`printf_q 1`..`10`, `singles percent`,
-  `percent 1`..`7`) are not translated: they belong in a test file that does
-  not exist yet; the lead decides (translate, or list in
-  scripts/not-translated.txt).
+  Zig name in a comment. `std.ascii.isPrint` is written out
+  (`c < 0x80 && !(c <= 0x1f || c == 0x7f)`, std's isAscii and isControl).
+- `std.Uri.Component.percentEncode(w, raw, comptime isValidChar)` is
+  `osStringEncodingUriComponentPercentEncode`, a port of the std function
+  with the comptime function parameter as a Go func value. Zig's
+  `w.print("{s}%{X:0>2}", .{ raw[start..index], char })` writes the pending
+  slice, `%` and two upper-case hex digits; the port writes the same bytes
+  with three `writeAll` calls. Only with a fixed writer that runs out of
+  room could the split of a partial write differ from std's formatter (not
+  reachable in the library: urlPercentEncode has no caller in it).
+- Tests: all 18 Zig tests (`printf_q 1`..`10`, `singles percent`,
+  `percent 1`..`7`) are translated one for one in
+  `terminal/os_string_encoding_test.go`.
+- `scripts/check-test-mapping.py` needs a rule for `os/` (like the
+  `datastruct/` one): `os/string_encoding.zig` currently resolves to
+  `os/string_encoding_test.go` and reports all 18 tests missing. With
+  `parts[0] in ("datastruct", "os")` and `base = parts[0] + "_" + ...` it
+  reports `zig=18 go=18 ok` (checked on a temporary copy; the script is not
+  edited).

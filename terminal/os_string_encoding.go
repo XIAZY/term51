@@ -1,15 +1,18 @@
-// Port of src/os/string_encoding.zig (Ghostty v1.3.1), the two decoders
-// that osc/parsers/semantic_prompt.zig calls (Command.writeCommandLine).
+// Port of src/os/string_encoding.zig (Ghostty v1.3.1). Within
+// libghostty-vt only osc/parsers/semantic_prompt.zig uses it
+// (Command.writeCommandLine calls printfQDecode and urlPercentDecode);
+// urlPercentEncode is used only by src/synthetic, but the whole file is
+// ported.
 //
-// File naming: `os/string_encoding.zig` lies outside src/terminal; the
-// directory goes into the name as for the subdirectories of src/terminal,
-// so the file is `os_string_encoding.go` and its declarations take the
-// prefix `OsStringEncoding`.
+// File naming: string_encoding.zig is in src/os, outside src/terminal; it
+// is in package terminal because semantic_prompt.zig uses it. As for
+// datastruct_circ_buf.go, the directory is part of the name: the file is
+// `os_string_encoding.go` and its prefix is `OsStringEncoding`. `pub fn`s
+// are exported, private functions take the prefix in lower case
+// (`osStringEncodingHex`, `osStringEncodingIsValidChar`).
 //
-// Not ported: `isValidChar` and `urlPercentEncode` (only
-// src/synthetic/Osc.zig uses them, which is not part of libghostty-vt), and
-// the file's tests (printf_q 1-10, singles percent, percent 1-7), which are
-// not yet translated.
+// Declarations appear in the same order as in string_encoding.zig. The
+// file's tests are in os_string_encoding_test.go.
 //
 // The writer is a *std.Io.Writer; see oscWriter in osc.go. The error set
 // std.Io.Writer.Error || error{DecodeError} is ErrWriteFailed (osc.go) or
@@ -153,4 +156,58 @@ func osStringEncodingHex(c uint8) uint8 {
 	default:
 		panic("unreachable")
 	}
+}
+
+// osStringEncodingIsValidChar is os.string_encoding.isValidChar: is the
+// given character valid in URI percent encoding?
+func osStringEncodingIsValidChar(c uint8) bool {
+	switch c {
+	case ' ', ';', '=':
+		return false
+	default:
+		// std.ascii.isPrint: isAscii(c) and !isControl(c).
+		return c < 0x80 && !(c <= 0x1f || c == 0x7f)
+	}
+}
+
+// OsStringEncodingUrlPercentEncode is os.string_encoding.urlPercentEncode:
+// write data to the writer after URI percent encoding. Zig's error set is
+// std.Io.Writer.Error, i.e. ErrWriteFailed (osc.go).
+func OsStringEncodingUrlPercentEncode(writer *oscWriter, data []uint8) error {
+	if err := osStringEncodingUriComponentPercentEncode(writer, data, osStringEncodingIsValidChar); err != nil {
+		return err
+	}
+	return nil
+}
+
+// osStringEncodingUriComponentPercentEncode is std.Uri.Component.percentEncode
+// (lib/std/Uri.zig), which urlPercentEncode calls. Not a function of
+// string_encoding.zig: it is the port of the standard-library function.
+// Zig's comptime function parameter isValidChar is a Go func value.
+//
+// Zig writes each escape with `w.print("{s}%{X:0>2}", .{ raw[start..index],
+// char })`; the port writes the same bytes in the same order: the pending
+// slice, '%', then the two upper-case hex digits (the zero padding).
+func osStringEncodingUriComponentPercentEncode(w *oscWriter, raw []uint8, isValidChar func(uint8) bool) error {
+	const hexDigits = "0123456789ABCDEF"
+	var start int
+	for index, char := range raw {
+		if isValidChar(char) {
+			continue
+		}
+		if err := w.writeAll(raw[start:index]); err != nil {
+			return err
+		}
+		if err := w.writeAll([]uint8("%")); err != nil {
+			return err
+		}
+		if err := w.writeAll([]uint8{hexDigits[char>>4], hexDigits[char&0xf]}); err != nil {
+			return err
+		}
+		start = index + 1
+	}
+	if err := w.writeAll(raw[start:]); err != nil {
+		return err
+	}
+	return nil
 }

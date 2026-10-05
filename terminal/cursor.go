@@ -1,10 +1,4 @@
-// WIREFRAME for src/terminal/cursor.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/terminal/cursor.zig (Ghostty v1.3.1).
 //
 // File naming: cursor.zig is a namespace file, so its declarations take the
 // prefix `Cursor`: `cursor.Style` is `CursorStyle`.
@@ -18,7 +12,7 @@
 //
 // # Declarations that are not Zig declarations
 //
-//   - the `String` method.
+//   - the `String` method and its name table `cursorStyleNames`.
 //
 // # Zig defaults a Go literal does not give
 //
@@ -51,5 +45,15 @@ const (
 	CursorStyleBlockHollow
 )
 
-// String returns the Zig tag name (@tagName).
-func (self CursorStyle) String() string { panic(notImplemented) }
+// cursorStyleNames are the tag names of CursorStyle, in order.
+var cursorStyleNames = [...]string{
+	"bar",
+	"block",
+	"underline",
+	"block_hollow",
+}
+
+// String returns the Zig tag name (@tagName). A value outside the enum
+// panics on the index, as @tagName of an invalid value of an exhaustive
+// enum traps.
+func (self CursorStyle) String() string { return cursorStyleNames[self] }

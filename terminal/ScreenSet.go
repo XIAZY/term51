@@ -1,4 +1,4 @@
-// WIREFRAME for src/terminal/ScreenSet.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Port of src/terminal/ScreenSet.zig (Ghostty v1.3.1).
 //
 // A ScreenSet holds multiple terminal screens. This is initially created
 // to handle simple primary vs alternate screens, but could be extended
@@ -7,12 +7,6 @@
 // One of the goals of this is to allow lazy initialization of screens
 // as needed. The primary screen is always initialized, but the alternate
 // screen may not be until first used.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
 //
 // File naming: ScreenSet.zig is a file-level struct, so the type is
 // `ScreenSet` and its constructor is `ScreenSetInit`. What is nested in it
@@ -38,7 +32,8 @@
 // # Declarations that are not Zig declarations
 //
 //   - `screenSetEnumMap` and its methods: std.EnumMap, see above;
-//   - the `String` method of `ScreenSetKey`.
+//   - the `String` method of `ScreenSetKey` and its name table
+//     `screenSetKeyNames`.
 //
 // # Omitted
 //
@@ -59,7 +54,13 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self ScreenSetKey) String() string { panic(notImplemented) }
+func (self ScreenSetKey) String() string { return screenSetKeyNames[self] }
+
+// screenSetKeyNames are the tag names of ScreenSetKey, in order.
+var screenSetKeyNames = [...]string{
+	"primary",
+	"alternate",
+}
 
 // screenSetEnumMap is NOT a declaration of ScreenSet.zig: it is
 // std.EnumMap(Key, *Screen), the type of `ScreenSet.all`. The methods below
@@ -71,19 +72,42 @@ type screenSetEnumMap struct {
 }
 
 // Get is std's EnumMap.get: the value for key, or null (nil).
-func (self *screenSetEnumMap) Get(key ScreenSetKey) *Screen { panic(notImplemented) }
+func (self *screenSetEnumMap) Get(key ScreenSetKey) *Screen {
+	// std: `if (self.bits.isSet(index)) self.values[index] else null`; the
+	// presence bit is "not nil". A key outside the enum panics on the index.
+	return self.values[key]
+}
 
 // Put is std's EnumMap.put: set the value for key.
-func (self *screenSetEnumMap) Put(key ScreenSetKey, value *Screen) { panic(notImplemented) }
+func (self *screenSetEnumMap) Put(key ScreenSetKey, value *Screen) {
+	// A `*Screen` is never null in Zig; nil would read as "not present".
+	assert(value != nil)
+	self.values[key] = value
+}
 
 // FetchRemove is std's EnumMap.fetchRemove: remove key and return the value
 // it had, or null (nil).
-func (self *screenSetEnumMap) FetchRemove(key ScreenSetKey) *Screen { panic(notImplemented) }
+func (self *screenSetEnumMap) FetchRemove(key ScreenSetKey) *Screen {
+	// std: `defer self.bits.unset(index); return if (self.bits.isSet(index))
+	// self.values[index] else null;`
+	value := self.values[key]
+	self.values[key] = nil
+	return value
+}
 
 // Count is std's EnumMap.count: the number of keys present.
 //
 // Zig: returns usize.
-func (self *screenSetEnumMap) Count() uint { panic(notImplemented) }
+func (self *screenSetEnumMap) Count() uint {
+	// std: `self.bits.count()`.
+	var n uint
+	for _, v := range self.values {
+		if v != nil {
+			n++
+		}
+	}
+	return n
+}
 
 // ScreenSet is the file-level struct of ScreenSet.zig.
 //
@@ -107,21 +131,51 @@ type ScreenSet struct {
 // Zig: pub fn init(alloc: Allocator, opts: Screen.Options)
 // Allocator.Error!ScreenSet. The allocator parameter is dropped. The error
 // is ErrOutOfMemory (dcs.go).
-func ScreenSetInit(opts ScreenOptions) (ScreenSet, error) { panic(notImplemented) }
+func ScreenSetInit(opts ScreenOptions) (ScreenSet, error) {
+	// We need to initialize our initial primary screen
+	screen := new(Screen)
+	// Zig: errdefer alloc.destroy(screen); Go memory.
+	s, err := ScreenInit(opts)
+	if err != nil {
+		return ScreenSet{}, err
+	}
+	*screen = s
+	var all screenSetEnumMap
+	all.Put(ScreenSetKeyPrimary, screen) // Zig: .init(.{ .primary = screen })
+	return ScreenSet{
+		active_key: ScreenSetKeyPrimary,
+		active:     screen,
+		all:        all,
+	}, nil
+}
 
 // Deinit is ScreenSet.deinit.
 //
 // Zig: pub fn deinit(self: *ScreenSet, alloc: Allocator) void. The
 // allocator parameter is dropped. Kept: it deinitialises all initialized
 // screens.
-func (self *ScreenSet) Deinit() { panic(notImplemented) }
+func (self *ScreenSet) Deinit() {
+	// Destroy all initialized screens
+	//
+	// Zig: `var it = self.all.iterator(); while (it.next()) |entry|`, which
+	// yields the present keys in key order.
+	for _, screen := range self.all.values {
+		if screen == nil {
+			continue
+		}
+		screen.Deinit()
+		// Zig: alloc.destroy(entry.value.*); Go memory.
+	}
+}
 
 // Get is ScreenSet.get.
 //
 // Get the screen for the given key, if it is initialized.
 //
 // Zig: pub fn get(self: *const ScreenSet, key: Key) ?*Screen. Null is nil.
-func (self *ScreenSet) Get(key ScreenSetKey) *Screen { panic(notImplemented) }
+func (self *ScreenSet) Get(key ScreenSetKey) *Screen {
+	return self.all.Get(key)
+}
 
 // GetInit is ScreenSet.getInit.
 //
@@ -131,7 +185,18 @@ func (self *ScreenSet) Get(key ScreenSetKey) *Screen { panic(notImplemented) }
 // opts: Screen.Options) Allocator.Error!*Screen. The allocator parameter is
 // dropped. The error is ErrOutOfMemory (dcs.go).
 func (self *ScreenSet) GetInit(key ScreenSetKey, opts ScreenOptions) (*Screen, error) {
-	panic(notImplemented)
+	if screen := self.Get(key); screen != nil {
+		return screen, nil
+	}
+	screen := new(Screen)
+	// Zig: errdefer alloc.destroy(screen); Go memory.
+	s, err := ScreenInit(opts)
+	if err != nil {
+		return nil, err
+	}
+	*screen = s
+	self.all.Put(key, screen)
+	return screen, nil
 }
 
 // Remove is ScreenSet.remove.
@@ -140,10 +205,21 @@ func (self *ScreenSet) GetInit(key ScreenSetKey, opts ScreenOptions) (*Screen, e
 //
 // Zig: pub fn remove(self: *ScreenSet, alloc: Allocator, key: Key) void.
 // The allocator parameter is dropped.
-func (self *ScreenSet) Remove(key ScreenSetKey) { panic(notImplemented) }
+func (self *ScreenSet) Remove(key ScreenSetKey) {
+	assert(key != ScreenSetKeyPrimary)
+	if screen := self.all.FetchRemove(key); screen != nil {
+		screen.Deinit()
+		// Zig: alloc.destroy(screen); Go memory.
+	}
+}
 
 // SwitchTo is ScreenSet.switchTo.
 //
 // Switch the active screen to the given key. Requires that the
 // screen is initialized.
-func (self *ScreenSet) SwitchTo(key ScreenSetKey) { panic(notImplemented) }
+func (self *ScreenSet) SwitchTo(key ScreenSetKey) {
+	self.active_key = key
+	active := self.all.Get(key)
+	assert(active != nil) // .?
+	self.active = active
+}

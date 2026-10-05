@@ -549,13 +549,33 @@ func dumpField(v reflect.Value, i int) reflect.Value {
 // zigName is the Zig field name of a Go struct field: the Go port appends
 // `_` to a name that is a Go keyword or collides (`default_` is `default`)
 // and prefixes `x` to a name that starts with a digit (`x132_column` is
-// `132_column`).
+// `132_column`). The structs of the parser actions (ParserActionCSI, ...) have
+// exported fields, the CamelCase of the Zig name: `ParamsSep` is `params_sep`.
 func zigName(name string) string {
+	if name != "" && name[0] >= 'A' && name[0] <= 'Z' {
+		return zigSnake(name)
+	}
 	name = strings.TrimSuffix(name, "_")
 	if len(name) > 1 && name[0] == 'x' && name[1] >= '0' && name[1] <= '9' {
 		name = name[1:]
 	}
 	return name
+}
+
+// zigSnake is the inverse of zigCamel for a name without digits or
+// underscores: `ParamsSep` is `params_sep`.
+func zigSnake(name string) string {
+	var sb strings.Builder
+	for i, c := range name {
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 {
+				sb.WriteByte('_')
+			}
+			c += 'a' - 'A'
+		}
+		sb.WriteRune(c)
+	}
+	return sb.String()
 }
 
 // zigCamel is the CamelCase of a tag: `cursor_up` is `CursorUp`.
@@ -729,6 +749,10 @@ var dumpVoidTags = map[reflect.Type][]string{
 		"reset_invisible", "strikethrough", "reset_strikethrough",
 		"reset_fg", "reset_bg",
 	},
+	// Parser.Action (the parser trace, trace.zig:58 parserFeed). Its osc_dispatch
+	// payload, OSCCommand, is not listed: the traces that have one are pending
+	// osc.go (corpusPendingOSC) and dumpUnion panics on it.
+	reflect.TypeOf(ParserAction{}):           {"dcs_unhook", "apc_start", "apc_end"},
 	reflect.TypeOf(KittyColorOSCRequest{}):   {},
 	reflect.TypeOf(KittyColorKind{}):         {},
 	reflect.TypeOf(OSCParsersColorRequest{}): {"reset_palette", "reset_special"},
@@ -744,19 +768,30 @@ func dumpUnion(w *bytes.Buffer, prefix string, v reflect.Value) {
 		panic("dumpAny: tagged union with an unnamed tag at " + prefix)
 	}
 	fmt.Fprintf(w, "%s=%s\n", prefix, name)
+	if payload, ok := dumpUnionPayload(v, name, prefix); ok {
+		dumpValue(w, prefix+"."+name, payload)
+	}
+}
+
+// dumpUnionPayload is the payload of the union v for the tag `name`: the
+// field named by zigFieldName, and false for a tag whose Zig payload is void
+// (dumpVoidTags). It panics for a union type that is not listed and for a
+// non-void tag without a field, instead of leaving the line out. v must be
+// addressable.
+func dumpUnionPayload(v reflect.Value, name string, prefix string) (reflect.Value, bool) {
 	voids, ok := dumpVoidTags[v.Type()]
 	if !ok {
 		panic(fmt.Sprintf("dumpAny: union type %s is not in dumpVoidTags (tag %q at %s)", v.Type(), name, prefix))
 	}
 	if slices.Contains(voids, name) {
-		return
+		return reflect.Value{}, false
 	}
 	f, ok := v.Type().FieldByName(zigFieldName(name))
 	if !ok {
 		panic(fmt.Sprintf("dumpAny: union type %s: tag %q is not void in Zig but the type has no field %s (at %s)",
 			v.Type(), name, zigFieldName(name), prefix))
 	}
-	dumpValue(w, prefix+"."+name, dumpField(v, f.Index[0]))
+	return dumpField(v, f.Index[0]), true
 }
 
 // dumpAllBools is Zig's allBools (dump.zig:470): more than one field that

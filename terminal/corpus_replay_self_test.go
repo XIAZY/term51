@@ -439,15 +439,15 @@ func TestCorpusReplaySelfReport(t *testing.T) {
 		t.Errorf("split report\n got  %q\n want %q", got, want)
 	}
 
-	st := &corpusSuiteStats{cases: 1330, run: 20, skipped: 1, skippedLines: 4}
+	st := &corpusSuiteStats{cases: 1330, run: 20, skipped: 1, skippedLines: 4, pendingOSC: 7}
 	st.mismatch[replayKindGolden] = 2
 	st.mismatch[replayKindActions] = 1
 	if got, want := corpusSummary("csi", "cup", st, false),
-		"SUITE csi/cup cases=1330 run=20 skipped=1 mismatch=3 (golden=2 actions=1) skipped_lines=4"; got != want {
+		"SUITE csi/cup cases=1330 run=20 skipped=1 mismatch=3 (golden=2 actions=1) skipped_lines=4 pending_osc=7"; got != want {
 		t.Errorf("summary %q, want %q", got, want)
 	}
 	if got, want := corpusSummary("csi", "cup", &corpusSuiteStats{cases: 3, run: 3}, true),
-		"SUITE csi/cup cases=3 run=3 skipped=0 mismatch=0 layout_lines_differ=0"; got != want {
+		"SUITE csi/cup cases=3 run=3 skipped=0 mismatch=0 layout_lines_differ=0 pending_osc=0"; got != want {
 		t.Errorf("summary %q, want %q", got, want)
 	}
 
@@ -643,11 +643,11 @@ func TestCorpusReplaySelfProduce(t *testing.T) {
 		!isUpstreamInvalid(ops) || isUpstreamInvalid([]replayOp{{Tag: replayOpFeed}}) {
 		t.Error("expectsCrash or isUpstreamInvalid")
 	}
-	// The trace kinds are not replayed yet: an error, which corpusProduce
+	// The search kind is not a terminal kind: an error, which corpusProduce
 	// turns into a line of the output.
-	out := corpusProduce(replayNamed{"x", []replayOp{{Tag: replayOpFeed, Feed: []uint8("x")}}}, replayKindParser)
-	if !bytes.HasPrefix(out, []byte("## case x\n!replay error=")) {
-		t.Errorf("corpusProduce of an unrun kind: %q", out)
+	out := corpusProduce(replayNamed{"x", []replayOp{{Tag: replayOpFeed, Feed: []uint8("x")}}}, replayKindSearch)
+	if got, want := string(out), "## case x\n!replay error=kind search is not a terminal kind\n"; got != want {
+		t.Errorf("corpusProduce of the search kind: %q, want %q", got, want)
 	}
 	// The run of an upstream_invalid case is never reached.
 	func() {
@@ -784,7 +784,7 @@ func TestCorpusReplaySelfDumpAny(t *testing.T) {
 		{"float small", 0.00001, "p=0.00001\n"},
 		{"float big", 1e21, "p=1000000000000000000000\n"},
 		{"names", dumpSelfNames{x132_column: true, default_: Some(uint32(2)), _padding: 7, Other: 3},
-			"p.132_column=1\np.default=2\np.Other=three\n"},
+			"p.132_column=1\np.default=2\np.other=three\n"},
 	} {
 		if got := dumpSelfText("p", c.v); got != c.want {
 			t.Errorf("%s:\n got  %q\n want %q", c.name, got, c.want)
@@ -1299,7 +1299,9 @@ func parsePackageSources(t *testing.T) []*ast.File {
 }
 
 // dumpUnionTypes are the tagged-union types reachable from a type by fields,
-// pointers, slices and arrays, the type itself included.
+// pointers, slices and arrays, the type itself included. The walk does not
+// enter OSCCommand (the payload of the parser action osc_dispatch), whose dump is
+// pending osc.go (corpusPendingOSC).
 func dumpUnionTypes(root reflect.Type) []reflect.Type {
 	var out []reflect.Type
 	seen := map[reflect.Type]bool{}
@@ -1309,6 +1311,9 @@ func dumpUnionTypes(root reflect.Type) []reflect.Type {
 			return
 		}
 		seen[rt] = true
+		if rt == reflect.TypeOf(OSCCommand{}) {
+			return
+		}
 		switch rt.Kind() {
 		case reflect.Struct:
 			if dumpIsUnion(rt) {
@@ -1325,7 +1330,7 @@ func dumpUnionTypes(root reflect.Type) []reflect.Type {
 	return out
 }
 
-// Every tagged union reachable from the stream action: for each tag the Zig
+// Every tagged union reachable from the stream action and the parser action: for each tag the Zig
 // source says whether its payload is void, and the Go type has a payload
 // field (named by zigFieldName) exactly for the others; dumpVoidTags lists
 // exactly the void tags and exactly these types. A failure names the type and
@@ -1336,6 +1341,12 @@ func TestCorpusReplaySelfUnionsAgainstZig(t *testing.T) {
 	types := dumpUnionTypes(reflect.TypeOf(StreamAction{}))
 	if len(types) < 6 {
 		t.Errorf("only %d union types reachable from StreamAction: %v", len(types), types)
+	}
+	// The parser trace dumps Parser.Action (trace.zig:58 parserFeed).
+	for _, ut := range dumpUnionTypes(reflect.TypeOf(ParserAction{})) {
+		if !slices.Contains(types, ut) {
+			types = append(types, ut)
+		}
 	}
 	registered := map[reflect.Type]bool{}
 	for _, ut := range types {
@@ -1405,7 +1416,7 @@ func TestCorpusReplaySelfUnionsAgainstZig(t *testing.T) {
 	}
 	for ut := range dumpVoidTags {
 		if !registered[ut] {
-			t.Errorf("dumpVoidTags has %s, which is not reachable from StreamAction", ut)
+			t.Errorf("dumpVoidTags has %s, which is not reachable from StreamAction or ParserAction", ut)
 		}
 	}
 }

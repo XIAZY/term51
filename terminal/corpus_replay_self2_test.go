@@ -741,6 +741,8 @@ func TestCorpusReplaySelfZigParseIntSites(t *testing.T) {
 	for file, want := range map[string]string{
 		"main.zig":  "u16 u16 usize u16 u16 isize",
 		"input.zig": "u16 u16 u1 u21 u8 u5 u1",
+		// init, repeat, resize, scroll_viewport, open start=, drain, append
+		"search.zig": "u16 u16 usize usize u16 u16 isize usize usize usize",
 	} {
 		text, err := os.ReadFile(filepath.Join(corpusDir(t), "harness", "src", file))
 		if err != nil {
@@ -1165,7 +1167,7 @@ func TestCorpusReplaySelfSplitCheckWholeFirst(t *testing.T) {
 	st = &splitStats{corpusSuiteStats: corpusSuiteStats{cases: 9, run: 3}, variants: 40, known: 1, skipped: 12, whole: 2}
 	st.mismatch[replayKindGolden] = 3
 	if got, want := splitSummary("csi", "cup", st),
-		"SPLIT csi/cup cases=9 run=3 variants=40 known=1 skipped=12 whole=2 mismatch=3 (golden=3)"; got != want {
+		"SPLIT csi/cup cases=9 run=3 variants=40 known=1 skipped=12 whole=2 mismatch=3 (golden=3) pending_osc=0"; got != want {
 		t.Errorf("summary %q, want %q", got, want)
 	}
 }

@@ -11,8 +11,9 @@ package terminal
 // and every variant is compared with the recorded golden section of the case
 // (the Zig compares with its own whole run; the golden section is that run,
 // recorded). The area test is TestCorpusReplaySplit<Area>; it replays the
-// kinds of the area's row of corpusAreas (golden now; actions and
-// actions_noalloc with stage 2b).
+// kinds of the area's row of corpusAreas that main.zig:537 splits (golden,
+// actions, actions_noalloc: corpusSplitKinds; the parser kind is bytewise by
+// nature, so it has no variants).
 //
 // The WHOLE run of a case is replayed and compared with the golden section
 // first. If it already differs, that is reported once, as a whole-run
@@ -64,13 +65,14 @@ package terminal
 //
 // The suite line:
 //
-//	SPLIT csi/cup cases=1330 run=20 variants=1234 known=0 skipped=57 whole=1 mismatch=3
+//	SPLIT csi/cup cases=1330 run=20 variants=1234 known=0 skipped=57 whole=1 mismatch=3 pending_osc=0
 //
 // (cases in the suite, cases run, variants replayed, variants accepted by the
 // known file, variants not replayed because the whole run of their case
 // differs, cases whose whole run differs, differences: the whole runs that
-// differ and the variants that differ). It is always logged. A test that runs
-// no case fails (corpusFailIfEmpty).
+// differ and the variants that differ, traces of a case and kind that are
+// pending osc.go and not replayed: corpusPendingOSC). It is always logged. A
+// test that runs no case fails (corpusFailIfEmpty).
 
 import (
 	"bytes"
@@ -82,6 +84,10 @@ import (
 	"strings"
 	"testing"
 )
+
+// corpusSplitKinds are the kinds that `vtgold split` runs (main.zig:537, the
+// inline for over golden, actions, actions_noalloc).
+var corpusSplitKinds = replayKindSetOf(replayKindGolden, replayKindActions, replayKindActionsNoalloc)
 
 // ---------------------------------------------------------------------------
 // The plan: which variants of a case.
@@ -406,7 +412,7 @@ func splitSummary(area, suite string, st *splitStats) string {
 	if len(kinds) > 0 {
 		line += " (" + strings.Join(kinds, " ") + ")"
 	}
-	return line
+	return line + fmt.Sprintf(" pending_osc=%d", st.pendingOSC)
 }
 
 // splitReporter is the part of *testing.T that splitCheck uses.
@@ -428,6 +434,10 @@ func splitCheck(t splitReporter, run *corpusRun, st *splitStats, known splitKnow
 	suite string, c replayNamed, kind replayKind, want []byte) int {
 	t.Helper()
 	area := run.area.name
+	if corpusPendingOSC(kind, want) {
+		st.pendingOSC++
+		return 0
+	}
 	variants := splitVariants(area, suite, c, cfg)
 
 	whole := splitProduceFn(c, kind, feedMode{Tag: feedModeWhole})
@@ -471,12 +481,12 @@ func (run *corpusRun) replaySplitSuite(t *testing.T, cfg splitConfig, known spli
 	corpusCheckManifest(t, run.manifest, area, suite, parsed)
 	var kinds []replayKind
 	for _, k := range parsed.kinds.kinds() {
-		if area.kinds.contains(k) {
+		if area.kinds.contains(k) && corpusSplitKinds.contains(k) {
 			kinds = append(kinds, k)
 		}
 	}
 	if len(kinds) == 0 {
-		t.Skipf("%s/%s: no kind to replay", area.name, suite)
+		t.Skipf("%s/%s: no kind to split", area.name, suite)
 	}
 	st := &splitStats{corpusSuiteStats: corpusSuiteStats{cases: len(parsed.cases)}}
 	selected := run.selectCases(t, suite, parsed, kinds)

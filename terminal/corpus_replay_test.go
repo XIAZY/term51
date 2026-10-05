@@ -18,11 +18,17 @@ package terminal
 //     (TestCorpusReplay<Area>);
 //   - corpus_replay_run_test.go   main.zig: runCase and its ops, feed,
 //     produce, produceSuite;
+//   - corpus_replay_trace_test.go trace.zig and main.zig runTrace: the kinds
+//     actions, actions_noalloc and parser, and corpusPendingOSC;
+//   - corpus_replay_search_test.go search.zig: the search area
+//     (TestCorpusReplaySearch);
 //   - corpus_replay_dump_test.go  dump.zig: dumpTerminal, dumpScreen,
 //     dumpAny and the helpers;
-//   - corpus_replay_self_test.go  TestCorpusReplaySelf*: tests of the
+//   - corpus_replay_self_test.go, corpus_replay_self2_test.go,
+//     corpus_replay_self3_test.go  TestCorpusReplaySelf*: tests of the
 //     plumbing that pass without the port (case files against the manifest,
-//     sampling, reports, dumpAny, the section loader).
+//     sampling, reports, dumpAny, the section loader, the trace kinds, the
+//     markers, the search area).
 //
 // # Corpus
 //
@@ -36,9 +42,18 @@ package terminal
 // # Which kinds are replayed
 //
 // A kind is compared only when its row of corpusAreas lists it and the suite
-// has it. Stage 2a: the golden kind of every area (TestCorpusReplay<Area>); a
-// suite without a golden file (parser/utf8_decode) is skipped. The trace
-// kinds (actions, actions_noalloc, parser) come with stage 2b.
+// has it: every row lists all four terminal kinds, so every kind of the
+// `kinds` line of a suite is compared (TestCorpusReplay<Area>; a suite without
+// a golden file, parser/utf8_decode, only has the kinds it lists). The search
+// area (corpus_replay_search_test.go) has its own row, searchArea, and the
+// kind search.
+//
+// # Traces that are pending osc.go
+//
+// The traces of the kinds actions, actions_noalloc and parser that contain an
+// OSC action are not compared until osc.go is ported: corpusPendingOSC (in
+// corpus_replay_trace_test.go) is the one place that decides, replayCase and
+// splitCheck skip them, and the SUITE and SPLIT lines count them, `pending_osc=N`.
 //
 // # Environment variables
 //
@@ -92,7 +107,7 @@ package terminal
 // `line n` counts the lines of the section, whose first line is `## case`.
 // At the end of every suite one line, always logged:
 //
-//	SUITE csi/cup cases=1330 run=20 skipped=0 mismatch=3 (golden=2) skipped_lines=0
+//	SUITE csi/cup cases=1330 run=20 skipped=0 mismatch=3 (golden=2) skipped_lines=0 pending_osc=0
 //
 // Other files of the replayer:
 //
@@ -102,7 +117,9 @@ package terminal
 //   - corpus_replay_input_test.go  the keyboard and paste corpus (input.zig);
 //   - corpus_replay_tables_test.go the static tables (tables.zig).
 //
-// Hook for stage 2b: the trace kinds (runTrace in corpus_replay_run_test.go).
+// The search area writes `SUITE search/<suite> cases=N run=N no_result=N
+// mismatch=N`: no_result counts the cases of the suite with no recorded result,
+// which are not replayed (see corpus_replay_search_test.go).
 
 import (
 	"bufio"
@@ -139,13 +156,16 @@ const (
 	// Action trace from a Stream created without an allocator.
 	replayKindActionsNoalloc
 	replayKindParser
+	// Not a Kind of main.zig: the dump of a search suite, harness/src/search.zig
+	// (`<suite>.search.gz`; corpus_replay_search_test.go).
+	replayKindSearch
 
 	replayKindCount = iota
 )
 
 // replayKindNames are the Zig tag names of Kind, which are also the file
 // extensions of the golden files.
-var replayKindNames = [replayKindCount]string{"golden", "actions", "actions_noalloc", "parser"}
+var replayKindNames = [replayKindCount]string{"golden", "actions", "actions_noalloc", "parser", "search"}
 
 func (k replayKind) String() string { return replayKindNames[k] }
 
@@ -544,7 +564,9 @@ func parseKinds(it *replayTokens) (replayKindSet, error) {
 			return kinds, nil
 		}
 		kind, ok := replayKindFromString(k)
-		if !ok {
+		// `kinds search` is the line of a search suite, which main.zig never
+		// parses (search.zig isSearchSuite): not a Kind there.
+		if !ok || kind == replayKindSearch {
 			return 0, errReplayBadCase
 		}
 		kinds |= replayKindSetOf(kind)
@@ -565,13 +587,14 @@ type corpusArea struct {
 	kinds replayKindSet
 }
 
-// corpusAreaRow is the row of an area whose test compares the golden kind.
+// corpusAreaRow is the row of a terminal area whose test compares every kind
+// that a suite of it lists (golden, actions, actions_noalloc, parser).
 func corpusAreaRow(name string) corpusArea {
 	return corpusArea{
 		name:      name,
 		casesDir:  filepath.Join("cases", name),
 		goldenDir: filepath.Join("golden", name),
-		kinds:     replayKindSetOf(replayKindGolden),
+		kinds:     replayKindSetOf(replayKindGolden, replayKindActions, replayKindActionsNoalloc, replayKindParser),
 	}
 }
 
@@ -1323,6 +1346,12 @@ type corpusSuiteStats struct {
 	mismatch     [replayKindCount]int
 	reported     int // reports logged in full
 	skippedLines int // differing lines of corpusSkipPrefixes
+	// Traces that are not compared until osc.go is ported (corpusPendingOSC),
+	// counted per kind and case.
+	pendingOSC int
+	// Search suites: the cases with no recorded result, which are not replayed
+	// (corpus_replay_search_test.go).
+	noResult int
 }
 
 func (s *corpusSuiteStats) mismatches() int {
@@ -1349,7 +1378,7 @@ func corpusSummary(area, suite string, st *corpusSuiteStats, strict bool) string
 	if strict {
 		name = "layout_lines_differ"
 	}
-	return fmt.Sprintf("%s %s=%d", line, name, st.skippedLines)
+	return fmt.Sprintf("%s %s=%d pending_osc=%d", line, name, st.skippedLines, st.pendingOSC)
 }
 
 // corpusRun is the state shared by the suites of one test function.
@@ -1550,6 +1579,10 @@ func (run *corpusRun) replayCase(t *testing.T, st *corpusSuiteStats, suite strin
 	}
 	if bytes.HasPrefix(want, []byte(corpusSectionPrefix+name+"\n!upstream-crash\n")) {
 		t.Errorf("%s/%s case=%s kind=%s: recorded by the uncorrected recorder (!upstream-crash)", run.area.name, suite, c.name, kind)
+		return
+	}
+	if corpusPendingOSC(kind, want) {
+		st.pendingOSC++
 		return
 	}
 	got := corpusProduce(c, kind)

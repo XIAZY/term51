@@ -27,8 +27,8 @@ package terminal
 //     encoder error) is printed by zigErrorName, which accepts only the bare
 //     sentinels of the package (docs/mapping.md: the port never wraps
 //     errors);
-//   - the trace kinds (actions, actions_noalloc, parser: runTrace) are not
-//     replayed yet (stage 2): produce returns errReplayKindNotRun for them.
+//   - the trace kinds (actions, actions_noalloc, parser) are run by runTrace
+//     (corpus_replay_trace_test.go).
 
 import (
 	"bytes"
@@ -38,10 +38,6 @@ import (
 
 // replayCorrected is `recorder_options.corrected` (main.zig:332).
 const replayCorrected = true
-
-// errReplayKindNotRun is returned by produce for a kind that the replayer
-// does not run yet.
-var errReplayKindNotRun = errors.New("replay kind not implemented yet")
 
 // Mirrors harness/src/main.zig:161 FeedMode
 //
@@ -105,7 +101,10 @@ func runCase(ops []replayOp, mode feedMode, w *bytes.Buffer) error {
 		case replayOpFeed:
 			runCaseFeed(st, op.Feed)
 		case replayOpResize:
-			runCaseResize(st, op.Resize)
+			// Go only: the failed integrity check of a transient_invariant case.
+			if err := runCaseResize(st, op.Resize); err != nil {
+				return err
+			}
 		case replayOpScrollTop:
 			runCaseScrollTop(st)
 		case replayOpScrollActive:
@@ -410,10 +409,10 @@ func produce(ops []replayOp, kind replayKind, mode feedMode, w *bytes.Buffer) er
 	case replayKindGolden:
 		return runCase(ops, mode, w)
 	case replayKindActions, replayKindActionsNoalloc, replayKindParser:
-		// Stage 2: runTrace (main.zig:173).
-		return errReplayKindNotRun
+		return runTrace(ops, mode, kind, w)
 	}
-	return errReplayKindNotRun
+	// Go only: replayKindSearch is not a kind of main.zig (search.zig).
+	return fmt.Errorf("kind %s is not a terminal kind", kind)
 }
 
 // Mirrors harness/src/main.zig:391 produceSuite

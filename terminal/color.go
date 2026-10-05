@@ -1596,7 +1596,7 @@ func colorStdParseFloatParseInfOrNan(s []uint8, negative bool) (float64, bool) {
 		}
 	} else if colorStdParseFloatStartsWithIgnoreCase(s, "nan") {
 		consumed = 3
-		special = math.NaN()
+		special = colorStdMathNanF64()
 	} else {
 		return 0, false
 	}
@@ -1716,6 +1716,17 @@ func colorStdParseFloatConvertHex(n_ colorStdParseFloatNumber) float64 {
 	return math.Float64frombits(bits_)
 }
 
+// colorStdMathNanF64 is std.math.nan(f64), the quiet NaN 0x7FF8000000000000
+// (Go's math.NaN() has a different payload).
+func colorStdMathNanF64() float64 {
+	return math.Float64frombits(0x7FF8000000000000)
+}
+
+// colorStdMathNanF32 is std.math.nan(f32), the quiet NaN 0x7FC00000.
+func colorStdMathNanF32() float32 {
+	return math.Float32frombits(0x7FC00000)
+}
+
 // colorZigMaxF32 is Zig's @max on f32: when one operand is NaN the other is
 // returned (LLVM maxnum). Go's built-in max returns NaN.
 func colorZigMaxF32(a float32, b float32) float32 {
@@ -1765,7 +1776,7 @@ func colorStdMathPowF32(x float32, y float32) float32 {
 	}
 
 	if x != x || y != y {
-		return float32(math.NaN())
+		return colorStdMathNanF32()
 	}
 
 	if y == 1 {
@@ -1835,7 +1846,7 @@ func colorStdMathPowF32(x float32, y float32) float32 {
 
 	// pow(x, y) = nan for x < 0 and y not an integer
 	if yf != 0 && x < 0 {
-		return float32(math.NaN())
+		return colorStdMathNanF32()
 	}
 	if yi >= 1<<31 {
 		return colorCompilerRtExpf(y * colorCompilerRtLogf(x))
@@ -1900,7 +1911,7 @@ func colorStdMathPowF64(x float64, y float64) float64 {
 	}
 
 	if x != x || y != y {
-		return math.NaN()
+		return colorStdMathNanF64()
 	}
 
 	if y == 1 {
@@ -1967,7 +1978,7 @@ func colorStdMathPowF64(x float64, y float64) float64 {
 
 	// pow(x, y) = nan for x < 0 and y not an integer
 	if yf != 0 && x < 0 {
-		return math.NaN()
+		return colorStdMathNanF64()
 	}
 	if yi >= 1<<63 {
 		return colorCompilerRtExp(y * colorCompilerRtLog(x))
@@ -2281,7 +2292,7 @@ func colorCompilerRtLogf(x_ float32) float32 {
 		}
 		// log(-#) = nan
 		if ix>>31 != 0 {
-			return float32(math.NaN())
+			return colorStdMathNanF32()
 		}
 
 		// subnormal, scale x
@@ -2419,7 +2430,7 @@ func colorCompilerRtLog(x_ float64) float64 {
 		}
 		// log(-#) = nan
 		if hx>>31 != 0 {
-			return math.NaN()
+			return colorStdMathNanF64()
 		}
 
 		// subnormal, scale x

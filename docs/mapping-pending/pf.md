@@ -29,8 +29,8 @@ f64.
   drops that many digits from the end, real digits included. Near a
   midpoint between two doubles this returns the lower one (one unit in the
   last place low). Example: `0.0_66666666666666658802586908905141171999275684356689453125001`
-  gives 0x3FB1111111111111; the correctly rounded value (strconv, and Zig
-  without the `_`) is 0x3FB1111111111112. Through `rgbi:` that is red 16
+  gives 0x3FB1111111111110; the correctly rounded value (strconv, and Zig
+  without the `_`) is 0x3FB1111111111111. Through `rgbi:` that is red 16
   instead of 17. Only inputs that reach the slow path are affected, which
   means more than 19 significant digits near a midpoint, with Eisel-Lemire
   unable to decide.

@@ -1246,6 +1246,16 @@ on `Point` (286) or `Optional[Point]` (8) were switched to the two helpers.
 `_padding`'s u5 compares, hashes and prints as its Zig bits
 (`TestStyle_go_only_flags_out_of_range_bits_are_masked`).
 
+## The one per-call exception to the compile-time rule (project lead, 2026-10-05)
+
+`hashMapAutoContext.Hash` picks the key's Zig width with a type switch on
+every call. Zig resolves `getAutoHashFn(K)` at compile time, but Go cannot
+resolve it once for an empty generic context struct (no field to hold the
+choice, no specialisation by type parameter). It is a type switch, not
+string work. A defined key type (for example `type X uint32`) panics "not
+ported"; the library's keys are aliases and are fine. Every other piece of
+Zig compile-time work is done once in Go.
+
 ## Page-layer bookkeeping (decision: option A, final)
 
 Confirmed by the project owner on 2026-10-04. The port keeps upstream's byte

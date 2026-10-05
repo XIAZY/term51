@@ -224,3 +224,6 @@ std/fmt/parse_float.zig | hex.f16 | f16 only; only parseFloat(f64) is ported
 std/fmt/parse_float.zig | hex.f32 | f32 only; only parseFloat(f64) is ported
 std/fmt/parse_float.zig | hex.f80 | f80 only; only parseFloat(f64) is ported
 std/fmt/parse_float.zig | hex.f128 | f128 only; only parseFloat(f64) is ported
+unicode/main.zig | (unnamed, main.zig:8) | `refAllDecls` only makes the Zig compiler analyse the namespace's declarations; Go always compiles every file of the package
+unicode/grapheme.zig | term51: graphemeBreak: dump exact data when TERM51_UNICODE_DUMP_DIR is set | gated data dump (writes data/unicode/grapheme_precompute.bin, grapheme_precompute.txt, grapheme_break.txt); corpus_unicode_test.go checks the data
+unicode/props_table.zig | term51: table: dump exact data when TERM51_UNICODE_DUMP_DIR is set | gated data dump (writes data/unicode/unicode_tables.bin, unicode_tables.zig.txt, props_runs.txt, props_sha256.txt); corpus_unicode_test.go checks the data

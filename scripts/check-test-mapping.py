@@ -78,9 +78,9 @@ def main():
         if len(parts) == 2 and parts[0] == "input":
             base = "input_" + os.path.splitext(parts[1])[0]
             pkg = os.path.join(ROOT, "terminal")
-        # src/datastruct/<name>.zig and src/os/<name>.zig: Go files
-        # datastruct_<name> and os_<name>.
-        if len(parts) == 2 and parts[0] in ("datastruct", "os"):
+        # src/datastruct/<name>.zig, src/os/<name>.zig and src/unicode/<name>.zig:
+        # Go files datastruct_<name>, os_<name> and unicode_<name>.
+        if len(parts) == 2 and parts[0] in ("datastruct", "os", "unicode"):
             base = parts[0] + "_" + os.path.splitext(parts[1])[0]
             pkg = os.path.join(ROOT, "terminal")
         extra = []

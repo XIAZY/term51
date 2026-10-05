@@ -51,8 +51,8 @@ Upstream quirk kept: `deleteItem` returns early only when
 `bucket == maxInt(Id) == table_cap - 1` (u16 set laid out for 65,536) would
 go on to `assert(table[bucket] == id)`.
 
-Tests: ref_counted_set_test.go 74 + corpus_sets_test.go 1
-(TestRefCountedSet_corpus_capacities). See the final report for counts.
+Tests: ref_counted_set_test.go 79 + corpus_sets_test.go 1
+(TestRefCountedSet_corpus_capacities), all pass natively and on 32-bit ARM.
 
 ## `style.zig`
 
@@ -73,7 +73,7 @@ File: `terminal/style.go`.
 | `PackedStyle.Data.fromColor`: `inline else => \|v, t\| @unionInit(Data, @tagName(t), ...)` | switch on the tag returning the 24-bit value of that view | none 0; palette idx in bits 0..7; rgb r, g<<8, b<<16 |
 | `@bitCast(packed_style)` to `[2]u64` | `stylePackedStyle.bitCast` (wireframe stub) | the fields shifted into place; `underline` masked to 3 bits, `_padding` to 5 and each Data to 24, so the Go values that the Zig widths cannot hold are dropped as the packed layout would (they cannot exist in Zig) |
 | `bgCell` `.content = .{ .color_palette = idx }` | `PageCellContent{color_palette: idx}` | the other views zero (Zig: the rest of the 24 bits of the packed union are not set) |
-| `Style.hash` | `std.hash.int` from the std-hash port (see that branch) | |
+| `Style.hash`: `@call(.always_inline, std.hash.int, .{wide[0] ^ wide[1]})` | `stdHashIntU64(wide[0] ^ wide[1])` (std_hash.go) | `data/sets/style_hash.txt`: all 4,096 styles match, natively and on 32-bit ARM (TestStyle_corpus_hash) |
 
 `StyleColorTag.String` uses a names array (`styleColorTagNames`), as sgr.go.
 
@@ -91,7 +91,7 @@ File: `terminal/hyperlink.go`.
 | `self.page.?` / `(self.src_page orelse self.page.?)` in the Set context | `assert(self.page != nil)` (for `hash`, only when `src_page` is nil) | Zig's "attempt to use null value" panic; Go-only panic tests `TestHyperlink_panic_SetContext_*` |
 | `std.meta.activeTag(x)` | `x.Tag` | |
 | `std.mem.eql(u8, a, b)` | `bytes.Equal(a, b)` | |
-| `PageEntry.hash`: `Wyhash.init(0)`, `autoHash(&h, activeTag)`, `autoHash(&h, v)`, `autoHashStrat(&h, slice, .Deep)`, `final()` | from the std-hash port (see that branch) | |
+| `PageEntry.hash`: `Wyhash.init(0)`, `autoHash(&h, activeTag(id))`, `autoHash(&h, v)` (implicit, u32), `autoHashStrat(&h, slice, .Deep)` (explicit id, then uri), `final()` | `stdHashWyhashInit(0)`, `stdHashAutoHashAutoHashEnumU1(&h, uint8(tag))` (the tag is an enum(u1): explicit 0, implicit 1), `stdHashAutoHashAutoHashU32`, `stdHashAutoHashHashSliceU8(&h, s, stdHashAutoHashHashStrategyDeep)`, `h.final()` | `data/sets/hyperlink_hash.txt` has no Go test (the Zig dump test is not translated, and no corpus test reads the file); checked with a throw-away test (not committed): all 3,000 lines match natively and on 32-bit ARM. Suggest adding a corpus test like TestStyle_corpus_hash |
 
 Tag `String()` methods use names arrays (`hyperlinkHyperlinkIdTagNames`,
 `hyperlinkPageEntryIdTagNames`).

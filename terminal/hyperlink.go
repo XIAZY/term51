@@ -263,7 +263,32 @@ func (self *HyperlinkPageEntry) Dupe(self_page *Page, dst_page *Page) (Hyperlink
 //
 // Zig: pub fn hash(self: *const PageEntry, base: anytype) u64. Must
 // reproduce data/sets/hyperlink_hash.txt (docs/mapping.md).
-func (self *HyperlinkPageEntry) Hash() uint64 { panic(notImplemented) }
+func (self *HyperlinkPageEntry) Hash() uint64 {
+	var hasher = stdHashWyhashInit(0)
+	// autoHash(&hasher, std.meta.activeTag(self.id)): the tag is an
+	// enum(u1), explicit 0, implicit 1.
+	stdHashAutoHashAutoHashEnumU1(&hasher, uint8(self.id.Tag))
+	switch self.id.Tag {
+	case HyperlinkPageEntryIdImplicit:
+		v := self.id.Implicit
+		stdHashAutoHashAutoHashU32(&hasher, v)
+	case HyperlinkPageEntryIdExplicit:
+		slice := self.id.Explicit
+		stdHashAutoHashHashSliceU8( // autoHashStrat
+			&hasher,
+			slice, // slice.slice(base)
+			stdHashAutoHashHashStrategyDeep,
+		)
+	default:
+		panic("unreachable")
+	}
+	stdHashAutoHashHashSliceU8( // autoHashStrat
+		&hasher,
+		self.uri, // self.uri.slice(base)
+		stdHashAutoHashHashStrategyDeep,
+	)
+	return hasher.final()
+}
 
 // Eql is hyperlink.PageEntry.eql.
 //

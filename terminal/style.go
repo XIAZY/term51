@@ -878,7 +878,13 @@ func (self stylePackedStyle) bitCast() [2]uint64 {
 // Hash is style.Style.hash.
 //
 // Zig: self is *const Style.
-func (self *Style) Hash() uint64 { panic(notImplemented) }
+func (self *Style) Hash() uint64 {
+	// We pack the style in to 128 bits, fold it to 64 bits,
+	// then use std.hash.int to make it sufficiently uniform.
+	packed_style := stylePackedStyleFromStyle(*self)
+	wide := packed_style.bitCast()
+	return stdHashIntU64(wide[0] ^ wide[1]) // @call(.always_inline, std.hash.int, ...)
+}
 
 // StyleSet is style.Set: the RefCountedSet instantiation that stores
 // styles.

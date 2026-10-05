@@ -139,6 +139,15 @@ where this is off. See the optimisation list.
 
 #### Tests
 
-- page_1/2/3_test.go: 320 translated Zig tests (all 331 Zig tests are
-  mapped; 11 listed in not-translated.txt) plus the Go-only panic tests.
-  Results: see the final report of this worktree.
+- page_1/2/3_test.go: 405 Go tests (140 + 135 + 130): the 320 translated
+  Zig tests (all 331 Zig tests are mapped; 11 listed in
+  not-translated.txt) and the Go-only panic tests. hyperlink_test.go: 42
+  tests (the 32 that needed PageInit included). All 447 pass, each run on
+  its own, natively (arm64) and under 32-bit ARM qemu (main at 869098c
+  merged). No translated test turned out to be layout-only beyond the 11
+  already listed.
+- `data/layout/page_layout.txt` (27,060 lines: 505 capacities with every
+  Layout field and maxCols, and 3,325 `Capacity.adjust` results) matched
+  line for line natively and on 32-bit ARM, checked with a throw-away test
+  (not committed). Suggest a Go-only corpus test like
+  TestStyle_corpus_hash; nothing reads the file today.

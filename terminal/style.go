@@ -332,6 +332,11 @@ func (self Style) Format() string {
 
 	dflt := Style{}
 
+	// Go-only: print the flags as their Zig bits (styleFlags.bits), so a Go
+	// value with bits above underline's u3 or _padding's u5 prints as it
+	// compares and hashes. self is a copy.
+	self.flags.underline, self.flags._padding = SGRAttributeUnderline(self.flags.bits()>>8&0x7), uint8(self.flags.bits()>>11)
+
 	writer = append(writer, "Style{ "...)
 
 	started := false

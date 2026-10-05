@@ -1174,8 +1174,8 @@ on `Point` (286) or `Optional[Point]` (8) were switched to the two helpers.
 
 `Style` flags follow the same idea for widths: `Style.Eql` (and so
 `Default`) compares the flags as the masked u16 that `Style.hash` uses
-(`styleFlags.bits`), so a Go value with bits above `underline`'s u3 or
-`_padding`'s u5 compares and hashes as its Zig bits
+(`styleFlags.bits`), and `Style.Format` prints those bits, so a Go value with bits above `underline`'s u3 or
+`_padding`'s u5 compares, hashes and prints as its Zig bits
 (`TestStyle_go_only_flags_out_of_range_bits_are_masked`).
 
 ## Page-layer bookkeeping (decision: option A, final)

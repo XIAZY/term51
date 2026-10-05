@@ -1893,4 +1893,9 @@ func TestStyle_go_only_flags_out_of_range_bits_are_masked(t *testing.T) {
 	expect(t, pad33.Eql(pad1), "pad33.Eql(pad1)")
 	expect(t, !pad33.Default(), "!pad33.Default()")
 	expectEqual(t, pad33.Hash(), pad1.Hash())
+
+	// Format prints the same Zig bits.
+	expectEqualStrings(t, dflt.Format(), pad.Format())
+	expectEqualStrings(t, ul1.Format(), ul.Format())
+	expectEqualStrings(t, pad1.Format(), pad33.Format())
 }

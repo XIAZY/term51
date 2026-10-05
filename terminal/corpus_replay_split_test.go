@@ -11,7 +11,7 @@ package terminal
 // and every variant is compared with the recorded golden section of the case
 // (the Zig compares with its own whole run; the golden section is that run,
 // recorded). The area test is TestCorpusReplaySplit<Area>; it replays the
-// kinds of the area's row of corpusAreas that main.zig:537 splits (golden,
+// kinds of the area's row of corpusAreas that main.zig:597 splits (golden,
 // actions, actions_noalloc: corpusSplitKinds; the parser kind is bytewise by
 // nature, so it has no variants).
 //
@@ -65,14 +65,13 @@ package terminal
 //
 // The suite line:
 //
-//	SPLIT csi/cup cases=1330 run=20 variants=1234 known=0 skipped=57 whole=1 mismatch=3 pending_osc=0
+//	SPLIT csi/cup cases=1330 run=20 variants=1234 known=0 skipped=57 whole=1 mismatch=3
 //
 // (cases in the suite, cases run, variants replayed, variants accepted by the
 // known file, variants not replayed because the whole run of their case
 // differs, cases whose whole run differs, differences: the whole runs that
-// differ and the variants that differ, traces of a case and kind that are
-// pending osc.go and not replayed: corpusPendingOSC). It is always logged. A
-// test that runs no case fails (corpusFailIfEmpty).
+// differ and the variants that differ). It is always logged. A test that
+// runs no case fails (corpusFailIfEmpty).
 
 import (
 	"bytes"
@@ -85,7 +84,7 @@ import (
 	"testing"
 )
 
-// corpusSplitKinds are the kinds that `vtgold split` runs (main.zig:537, the
+// corpusSplitKinds are the kinds that `vtgold split` runs (main.zig:597, the
 // inline for over golden, actions, actions_noalloc).
 var corpusSplitKinds = replayKindSetOf(replayKindGolden, replayKindActions, replayKindActionsNoalloc)
 
@@ -228,9 +227,29 @@ func splitOffsets(length int, seed uint64, cfg splitConfig) []int {
 
 // splitVariants lists the variants of a case, in the order of splitCheck
 // (main.zig:360): the bytewise run first, then per feed op its offsets.
-func splitVariants(area, suite string, c replayNamed, cfg splitConfig) []splitVariant {
+//
+// With TERM51_SPLIT_AT the list is that variant, and an op that the case does
+// not have, or an offset that is not strictly inside the feed of the op, is an
+// error (the replay of such a variant would silently feed the whole op).
+func splitVariants(area, suite string, c replayNamed, cfg splitConfig) ([]splitVariant, error) {
 	if cfg.at != nil {
-		return []splitVariant{*cfg.at}
+		if v := *cfg.at; v.op >= 0 {
+			feedIdx := 0
+			for _, op := range c.ops {
+				if op.Tag != replayOpFeed {
+					continue
+				}
+				if feedIdx == v.op {
+					if v.at <= 0 || v.at >= len(op.Feed) {
+						return nil, fmt.Errorf("TERM51_SPLIT_AT=%s: the offset is not strictly inside the %d bytes of the feed", v, len(op.Feed))
+					}
+					return []splitVariant{v}, nil
+				}
+				feedIdx++
+			}
+			return nil, fmt.Errorf("TERM51_SPLIT_AT=%s: the case has %d feed ops", v, feedIdx)
+		}
+		return []splitVariant{*cfg.at}, nil
 	}
 	out := []splitVariant{splitBytewise}
 	feedIdx := 0
@@ -244,7 +263,7 @@ func splitVariants(area, suite string, c replayNamed, cfg splitConfig) []splitVa
 		}
 		feedIdx++
 	}
-	return out
+	return out, nil
 }
 
 // splitMode is the feedMode of a variant.
@@ -412,7 +431,7 @@ func splitSummary(area, suite string, st *splitStats) string {
 	if len(kinds) > 0 {
 		line += " (" + strings.Join(kinds, " ") + ")"
 	}
-	return line + fmt.Sprintf(" pending_osc=%d", st.pendingOSC)
+	return line
 }
 
 // splitReporter is the part of *testing.T that splitCheck uses.
@@ -426,7 +445,8 @@ type splitReporter interface {
 // The replay of one case and kind: first the whole run, which is compared with
 // the recorded section `want` (in the Zig the whole run is the base of the
 // comparison and is not itself compared); then, if it matches, all the
-// variants of the plan, each compared with `want`. It returns the number of
+// variants of the plan, each compared with `want` (without the lines of
+// corpusSkipPrefixes) and with the whole run (all lines). It returns the number of
 // differences: 1 for a whole run that differs (its variants are skipped and
 // counted), else the number of variants that differ. The report of a variant
 // has the variant and its seed.
@@ -434,11 +454,11 @@ func splitCheck(t splitReporter, run *corpusRun, st *splitStats, known splitKnow
 	suite string, c replayNamed, kind replayKind, want []byte) int {
 	t.Helper()
 	area := run.area.name
-	if corpusPendingOSC(kind, want) {
-		st.pendingOSC++
-		return 0
+	variants, err := splitVariants(area, suite, c, cfg)
+	if err != nil {
+		t.Error(fmt.Sprintf("%s/%s case=%s kind=%s: %v", area, suite, c.name, kind, err))
+		return 1
 	}
-	variants := splitVariants(area, suite, c, cfg)
 
 	whole := splitProduceFn(c, kind, feedMode{Tag: feedModeWhole})
 	if diff, equal := corpusCompare(whole, want, run.cfg.skip()); !equal {
@@ -454,7 +474,16 @@ func splitCheck(t splitReporter, run *corpusRun, st *splitStats, known splitKnow
 	for _, v := range variants {
 		got := splitProduceFn(c, kind, v.mode())
 		st.variants++
+		// The golden section, without the lines of corpusSkipPrefixes; then the
+		// whole run of the port, all lines: the Zig compares a variant with its
+		// own whole run (main.zig:367, :382), so a difference that only a split
+		// makes cannot hide in the layout lines.
+		ref := want
 		diff, equal := corpusCompare(got, want, run.cfg.skip())
+		if equal {
+			ref = whole
+			diff, equal = corpusCompare(got, whole, nil)
+		}
 		if equal {
 			continue
 		}
@@ -466,7 +495,7 @@ func splitCheck(t splitReporter, run *corpusRun, st *splitStats, known splitKnow
 			split: splitLabel(area, suite, c.name, v), diff: diff}
 		splitReport(t, run, st, m, failed == 0)
 		if failed == 0 {
-			run.writeDiff(t, m, got, want)
+			run.writeDiff(t, m, got, ref)
 		}
 		failed++
 	}

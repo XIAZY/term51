@@ -24,8 +24,15 @@ package terminal
 //     and the tag, for a union that is not listed and for a non-void tag
 //     without a payload field, instead of leaving the line out;
 //   - Go field names that differ from the Zig ones are mapped by zigName;
-//   - Zig's SegmentedList and ArrayList special cases of dumpAny do not exist
-//     in Go (a slice is already the list of its items);
+//   - Zig's ArrayList special case of dumpAny does not exist in Go (a slice is
+//     already the list of its items); its SegmentedList special case is the
+//     Go type OSCParsersColorList (dumpIsSegmentedList), a struct that holds
+//     the items as a slice;
+//   - an enum whose type has no String method, or whose String is taken by
+//     another function (OSCTerminator: String is Zig's `string`, the tag name
+//     is TagName), is named through TagName when the type has it; an integer
+//     type that is neither is a wireframe gap and dumpAny panics with the type
+//     and the field instead of printing the number (see dumpTagName);
 //   - the VTGOLD_RAW debugging aid (`raw_cells`) is not ported: the recorder
 //     never uses it for the corpus.
 
@@ -499,25 +506,48 @@ func dumpAny(w *bytes.Buffer, prefix string, v any) {
 
 var dumpStringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
 
-// dumpIsEnum is the Go test for Zig's `.@"enum"`: an integer type with a
-// String method.
-func dumpIsEnum(t reflect.Type) bool {
+// dumpTagNamerType is the interface of an enum whose String method is not the
+// tag name (OSCTerminator: String is Zig's `string`, TagName is @tagName).
+var dumpTagNamerType = reflect.TypeOf((*interface{ TagName() string })(nil)).Elem()
+
+// dumpHasName is true for a type that can name its values: a String or a
+// TagName method.
+func dumpHasName(t reflect.Type) bool {
+	return t.Implements(dumpTagNamerType) || t.Implements(dumpStringerType)
+}
+
+// dumpIsInteger is true for the Go integer kinds.
+func dumpIsInteger(t reflect.Type) bool {
 	switch t.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return t.Implements(dumpStringerType)
+		return true
 	}
 	return false
 }
 
-// dumpIsInt is Zig's `.int` (and not an enum).
-func dumpIsInt(t reflect.Type) bool {
-	switch t.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return !t.Implements(dumpStringerType)
+// dumpIsEnum is the Go test for Zig's `.@"enum"`: an integer type that can
+// name its values (dumpHasName).
+func dumpIsEnum(t reflect.Type) bool {
+	_, listed := dumpEnumNames[t]
+	return dumpIsInteger(t) && (dumpHasName(t) || listed)
+}
+
+// dumpUnnamedEnum panics for a defined integer type that is not an enum for
+// dumpIsEnum: see dumpIsInt. t is the type of the value at prefix.
+func dumpUnnamedEnum(t reflect.Type, prefix string) {
+	if dumpIsInteger(t) && !dumpIsEnum(t) && t.PkgPath() != "" {
+		panic("dumpAny: the integer type " + t.String() + " has no String or TagName method, " +
+			"Zig prints the name of its enum value (at " + prefix + ")")
 	}
-	return false
+}
+
+// dumpIsInt is Zig's `.int` (and not an enum). Every Zig integer is a plain
+// Go integer type; a defined integer type without a name method is a Zig
+// enum whose wireframe lacks String, and dumpAny would print the number
+// where Zig prints the name: dumpValue panics for it (dumpUnnamedEnum).
+func dumpIsInt(t reflect.Type) bool {
+	return dumpIsInteger(t) && !dumpIsEnum(t)
 }
 
 // dumpInteger is the integer value of v as text.
@@ -529,11 +559,40 @@ func dumpInteger(v reflect.Value) string {
 	return strconv.FormatUint(v.Uint(), 10)
 }
 
+// dumpEnumNames replaces the name methods of the listed enum types, by value.
+// It is nil in the replayer: the names come from the port. Only the self tests
+// of the dumper (corpus_replay_osc_self_test.go) set it, to dump values of
+// types whose String is still the wireframe's panic or is missing.
+var dumpEnumNames map[reflect.Type]map[int64]string
+
 // dumpTagName is std.enums.tagName: the name of an enum value, and false for
-// a value that has none.
+// a value that has none. The name is TagName() when the type has it, else
+// String(). A type with neither is a union tag or an enum that the wireframe
+// leaves without a name: panic, naming the type.
 func dumpTagName(v reflect.Value) (string, bool) {
-	name := v.Interface().(fmt.Stringer).String()
+	if names, ok := dumpEnumNames[v.Type()]; ok {
+		name, ok := names[dumpInt64(v)]
+		return name, ok
+	}
+	var name string
+	switch e := v.Interface().(type) {
+	case interface{ TagName() string }:
+		name = e.TagName()
+	case fmt.Stringer:
+		name = e.String()
+	default:
+		panic("dumpAny: " + v.Type().String() + " has no String or TagName method, its value names cannot be dumped")
+	}
 	return name, name != ""
+}
+
+// dumpInt64 is the integer value of v.
+func dumpInt64(v reflect.Value) int64 {
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int()
+	}
+	return int64(v.Uint())
 }
 
 // dumpField is the field i of the struct v, readable even when the field is
@@ -624,6 +683,7 @@ func dumpIsUnion(t reflect.Type) bool {
 // dump.zig:353-466.
 func dumpValue(w *bytes.Buffer, prefix string, v reflect.Value) {
 	t := v.Type()
+	dumpUnnamedEnum(t, prefix)
 	switch v.Kind() {
 	case reflect.Bool:
 		fmt.Fprintf(w, "%s=%d\n", prefix, boolInt(v.Bool()))
@@ -648,6 +708,8 @@ func dumpValue(w *bytes.Buffer, prefix string, v reflect.Value) {
 			}
 		case dumpIsUnion(t):
 			dumpUnion(w, prefix, v)
+		case dumpIsSegmentedList(t):
+			dumpSegmentedList(w, prefix, v)
 		case dumpAllBools(t):
 			dumpBools(w, prefix, v)
 		default:
@@ -659,6 +721,7 @@ func dumpValue(w *bytes.Buffer, prefix string, v reflect.Value) {
 			}
 		}
 	case reflect.Array:
+		dumpUnnamedEnum(t.Elem(), prefix+"[]")
 		if t.Elem().Kind() == reflect.Uint8 && !dumpIsEnum(t.Elem()) {
 			b := make([]byte, v.Len())
 			for i := range b {
@@ -671,6 +734,7 @@ func dumpValue(w *bytes.Buffer, prefix string, v reflect.Value) {
 			dumpItems(w, prefix, v)
 		}
 	case reflect.Slice:
+		dumpUnnamedEnum(t.Elem(), prefix+"[]")
 		switch {
 		case t.Elem().Kind() == reflect.Uint8 && !dumpIsEnum(t.Elem()):
 			w.WriteString(prefix + "=")
@@ -749,20 +813,26 @@ var dumpVoidTags = map[reflect.Type][]string{
 		"reset_invisible", "strikethrough", "reset_strikethrough",
 		"reset_fg", "reset_bg",
 	},
-	// Parser.Action (the parser trace, trace.zig:58 parserFeed). Its osc_dispatch
-	// payload, OSCCommand, is not listed: the traces that have one are pending
-	// osc.go (corpusPendingOSC) and dumpUnion panics on it.
-	reflect.TypeOf(ParserAction{}):           {"dcs_unhook", "apc_start", "apc_end"},
-	reflect.TypeOf(KittyColorOSCRequest{}):   {},
-	reflect.TypeOf(KittyColorKind{}):         {},
-	reflect.TypeOf(OSCParsersColorRequest{}): {"reset_palette", "reset_special"},
-	reflect.TypeOf(OSCParsersColorTarget{}):  {},
+	// Parser.Action (the parser trace, trace.zig:58 parserFeed), and its
+	// osc_dispatch payload, osc.Command, with the unions that the OSC and
+	// colour payloads of the stream actions and of osc.Command contain.
+	reflect.TypeOf(ParserAction{}):                          {"dcs_unhook", "apc_start", "apc_end"},
+	reflect.TypeOf(OSCCommand{}):                            {"invalid", "hyperlink_end", "conemu_wait_input"},
+	reflect.TypeOf(OSCCommandConemuChangeTabTitlePayload{}): {"reset"},
+	reflect.TypeOf(KittyColorOSCRequest{}):                  {},
+	reflect.TypeOf(KittyColorKind{}):                        {},
+	reflect.TypeOf(OSCParsersColorRequest{}):                {"reset_palette", "reset_special"},
+	reflect.TypeOf(OSCParsersColorTarget{}):                 {},
 }
 
 // dumpUnion is the `.@"union"` arm: `prefix=<tag>`, then the payload of the
 // tag as `prefix.<tag>` unless it is void (see dumpVoidTags).
 func dumpUnion(w *bytes.Buffer, prefix string, v reflect.Value) {
 	tag := dumpField(v, 0)
+	if !dumpIsEnum(tag.Type()) {
+		panic(fmt.Sprintf("dumpAny: union type %s: its tag type %s has no String or TagName method (at %s)",
+			v.Type(), tag.Type(), prefix))
+	}
 	name, ok := dumpTagName(tag)
 	if !ok {
 		panic("dumpAny: tagged union with an unnamed tag at " + prefix)
@@ -832,6 +902,20 @@ func dumpBools(w *bytes.Buffer, prefix string, v reflect.Value) {
 		w.WriteString("none")
 	}
 	w.WriteString("\n")
+}
+
+// dumpIsSegmentedList is Zig's `@hasField(T, "prealloc_segment")` test
+// (dump.zig:375): the one SegmentedList of the recorded values, osc.color.List.
+func dumpIsSegmentedList(t reflect.Type) bool {
+	return t == reflect.TypeOf(OSCParsersColorList{})
+}
+
+// dumpSegmentedList is the std.SegmentedList arm (dump.zig:375): `prefix.len`
+// and every item as `prefix[i]:` and `prefix[]`. Like Zig's, it is the
+// logical contents; the Go list is a struct whose one field is the slice of
+// its items, which dumpItems writes in the same format.
+func dumpSegmentedList(w *bytes.Buffer, prefix string, v reflect.Value) {
+	dumpItems(w, prefix, dumpField(v, 0))
 }
 
 // dumpItems is the slice/array arm for items that are not bytes or integers:

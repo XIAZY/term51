@@ -439,15 +439,15 @@ func TestCorpusReplaySelfReport(t *testing.T) {
 		t.Errorf("split report\n got  %q\n want %q", got, want)
 	}
 
-	st := &corpusSuiteStats{cases: 1330, run: 20, skipped: 1, skippedLines: 4, pendingOSC: 7}
+	st := &corpusSuiteStats{cases: 1330, run: 20, skipped: 1, skippedLines: 4}
 	st.mismatch[replayKindGolden] = 2
 	st.mismatch[replayKindActions] = 1
 	if got, want := corpusSummary("csi", "cup", st, false),
-		"SUITE csi/cup cases=1330 run=20 skipped=1 mismatch=3 (golden=2 actions=1) skipped_lines=4 pending_osc=7"; got != want {
+		"SUITE csi/cup cases=1330 run=20 skipped=1 mismatch=3 (golden=2 actions=1) skipped_lines=4"; got != want {
 		t.Errorf("summary %q, want %q", got, want)
 	}
 	if got, want := corpusSummary("csi", "cup", &corpusSuiteStats{cases: 3, run: 3}, true),
-		"SUITE csi/cup cases=3 run=3 skipped=0 mismatch=0 layout_lines_differ=0 pending_osc=0"; got != want {
+		"SUITE csi/cup cases=3 run=3 skipped=0 mismatch=0 layout_lines_differ=0"; got != want {
 		t.Errorf("summary %q, want %q", got, want)
 	}
 
@@ -1299,9 +1299,7 @@ func parsePackageSources(t *testing.T) []*ast.File {
 }
 
 // dumpUnionTypes are the tagged-union types reachable from a type by fields,
-// pointers, slices and arrays, the type itself included. The walk does not
-// enter OSCCommand (the payload of the parser action osc_dispatch), whose dump is
-// pending osc.go (corpusPendingOSC).
+// pointers, slices and arrays, the type itself included.
 func dumpUnionTypes(root reflect.Type) []reflect.Type {
 	var out []reflect.Type
 	seen := map[reflect.Type]bool{}
@@ -1311,9 +1309,6 @@ func dumpUnionTypes(root reflect.Type) []reflect.Type {
 			return
 		}
 		seen[rt] = true
-		if rt == reflect.TypeOf(OSCCommand{}) {
-			return
-		}
 		switch rt.Kind() {
 		case reflect.Struct:
 			if dumpIsUnion(rt) {

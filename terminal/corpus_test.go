@@ -190,4 +190,4 @@ func dumpEscaped(b []uint8) string {
 // The parser trace of every byte of every parser suite (the old
 // TestCorpusParserTrace, with its PENDING exclusion of the traces that
 // contain an OSC dispatch) is now the `parser` kind of TestCorpusReplayParser
-// (corpus_replay_trace_test.go: parserFeed, corpusPendingOSC).
+// (corpus_replay_trace_test.go: parserFeed), without any exclusion.

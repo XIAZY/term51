@@ -64,95 +64,16 @@ func corpusSelfBody(text string) string {
 // ---------------------------------------------------------------------------
 // The trace kinds.
 
-func TestCorpusReplaySelfPendingOSC(t *testing.T) {
-	// The function on small texts.
-	for _, c := range []struct {
-		kind replayKind
-		text string
-		want bool
-	}{
-		{replayKindActions, "## case a\n@print 41\n@window_title\n v.title=x\n", true},
-		{replayKindActionsNoalloc, "## case a\n@end_hyperlink\n", true},
-		{replayKindActions, "## case a\n@print 41\n@cursor_pos\n v.row=1\n", false},
-		{replayKindActions, "## case a\n@print 41,42\n v.title=@window_title\n", false},
-		{replayKindActions, "## case a\n@window_titles\n", false},
-		{replayKindParser, "## case a\n> 1b state=escape\n@osc_dispatch\n v=osc_dispatch\n", true},
-		{replayKindParser, "## case a\n> 1b state=escape\n@print\n v=print\n", false},
-		{replayKindParser, "## case a\n@window_title\n", false},
-		{replayKindGolden, "## case a\n@window_title\n@osc_dispatch\n", false},
-		{replayKindSearch, "## case a\n@window_title\n", false},
-	} {
-		if got := corpusPendingOSC(c.kind, []byte(c.text)); got != c.want {
-			t.Errorf("corpusPendingOSC(%s, %q) = %v, want %v", c.kind, c.text, got, c.want)
-		}
-	}
-
-	// The tags are the actions that stream.zig oscDispatch dispatches.
-	text := string(corpusReadAll(t, "third_party/ghostty/src/terminal/stream.zig"))
-	i := strings.Index(text, "inline fn oscDispatch")
-	j := strings.Index(text, "inline fn configureCharset")
-	if i < 0 || j < i {
-		t.Fatal("oscDispatch not found in stream.zig")
-	}
-	var zigTags []string
-	for _, m := range regexp.MustCompile(`self\.handler\.vt\(\.([a-z_]+),`).FindAllStringSubmatch(text[i:j], -1) {
-		zigTags = append(zigTags, m[1])
-	}
-	if !slices.Equal(sortedCopy(zigTags), sortedCopy(corpusPendingOSCTags)) {
-		t.Errorf("corpusPendingOSCTags %v, oscDispatch of stream.zig dispatches %v", sortedCopy(corpusPendingOSCTags), sortedCopy(zigTags))
-	}
-
-	// The traces of the corpus that are pending: sections, and of them pending
-	// ones, per kind (the numbers of the SUITE lines summed over every case).
-	type count struct{ total, pending int }
-	got := map[replayKind]count{}
-	for _, area := range corpusAreas {
-		for _, suite := range corpusSuiteNames(t, area) {
-			parsed := corpusReadSuite(t, area, suite)
-			for _, kind := range []replayKind{replayKindActions, replayKindActionsNoalloc, replayKindParser} {
-				// With -short the actions kind of the big areas is not counted (150
-				// MB inflated; the two small kinds are, they are in osc, dcs and
-				// parser only).
-				if !parsed.kinds.contains(kind) || testing.Short() && kind == replayKindActions && !slices.Contains([]string{"osc", "dcs", "parser"}, area.name) {
-					continue
-				}
-				_, texts := corpusSelfSections(t, area, corpusGoldenName(suite, kind))
-				c := got[kind]
-				c.total += len(texts)
-				for _, text := range texts {
-					if corpusPendingOSC(kind, []byte(text)) {
-						c.pending++
-					}
-				}
-				got[kind] = c
-			}
-		}
-	}
-	want := map[replayKind]count{
-		replayKindActions:        {190047, 9039},
-		replayKindActionsNoalloc: {4783, 1831},
-		replayKindParser:         {9010, 393},
-	}
-	for kind, w := range want {
-		if testing.Short() && kind == replayKindActions {
-			continue
-		}
-		if got[kind] != w {
-			t.Errorf("%s: %d sections, %d pending on osc.go; want %d and %d", kind, got[kind].total, got[kind].pending, w.total, w.pending)
-		}
-	}
-	t.Logf("pending on osc.go: actions %d of %d, actions_noalloc %d of %d, parser %d of %d",
-		got[replayKindActions].pending, got[replayKindActions].total,
-		got[replayKindActionsNoalloc].pending, got[replayKindActionsNoalloc].total,
-		got[replayKindParser].pending, got[replayKindParser].total)
-}
-
 // The parser kind needs only the parser of the port (Parser.go): every trace
-// of every parser suite that is not pending osc.go is replayed through
-// corpusProduce (runTrace) and compared with the recorded one, all cases.
+// of every parser suite is replayed through corpusProduce (runTrace) and
+// compared with the recorded one, all cases, except the traces that contain an
+// `@osc_dispatch`: the parser of the port yields no OSC command until osc.go
+// is ported, so those traces cannot match yet. This is a limit of THIS
+// plumbing self-test only (it must pass today); TestCorpusReplayParser has no
+// exclusion and fails for them until osc.go is ported.
 func TestCorpusReplaySelfParserTrace(t *testing.T) {
 	area := corpusAreaByName(t, "parser")
-	compared, pending, bad := 0, 0, 0
+	compared, needOSC, bad := 0, 0, 0
 	suitesRead := 0
 	for _, suite := range corpusSuiteNames(t, area) {
 		parsed := corpusReadSuite(t, area, suite)
@@ -171,8 +92,8 @@ func TestCorpusReplaySelfParserTrace(t *testing.T) {
 			if names[i] != c.name {
 				t.Fatalf("%s: section %d is %q, the case is %q", suite, i, names[i], c.name)
 			}
-			if corpusPendingOSC(replayKindParser, []byte(texts[i])) {
-				pending++
+			if strings.Contains(texts[i], "\n@osc_dispatch\n") {
+				needOSC++
 				continue
 			}
 			compared++
@@ -185,10 +106,10 @@ func TestCorpusReplaySelfParserTrace(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("parser traces: %d compared, %d pending on osc.go, %d differ", compared, pending, bad)
-	if !testing.Short() && (compared+pending != 9010 || pending != 393) {
+	t.Logf("parser traces: %d compared, %d with an @osc_dispatch (need osc.go), %d differ", compared, needOSC, bad)
+	if !testing.Short() && (compared+needOSC != 9010 || needOSC != 393) {
 		// 25 of the 27 suites have the parser kind; 9,010 traces in all.
-		t.Errorf("%d compared and %d pending, want 9010 in all and 393 pending", compared, pending)
+		t.Errorf("%d compared and %d with an @osc_dispatch, want 9010 in all and 393 with one", compared, needOSC)
 	}
 	if bad > 0 {
 		t.Errorf("%d traces differ", bad)
@@ -1063,7 +984,7 @@ func searchSelfParseWin(l string) (searchWinRec, bool) {
 	if !ok {
 		return searchWinRec{}, false
 	}
-	r := searchWinRec{dataLen: uint(searchSelfUint(v[0])), dataOffset: uint(searchSelfUint(v[1]))}
+	r := searchWinRec{dataLen: uint(searchSelfUint(v[0])), dataOffset: uint(searchSelfUint(v[1])), metaLen: uint(searchSelfUint(v[2]))}
 	for _, n := range searchSelfUints(lens) {
 		r.metas = append(r.metas, uint(n))
 	}
@@ -1074,14 +995,14 @@ func searchSelfParseWin(l string) (searchWinRec, bool) {
 }
 
 // searchSelfParseWinSummary reads `<d>/<o>/<m>`: the lengths of the cell maps
-// are not in it, so the metas are zeros.
+// are not in it.
 func searchSelfParseWinSummary(s string) (searchWinRec, bool) {
 	p := strings.Split(s, "/")
 	if len(p) != 3 {
 		return searchWinRec{}, false
 	}
 	return searchWinRec{dataLen: uint(searchSelfUint(p[0])), dataOffset: uint(searchSelfUint(p[1])),
-		metas: make([]uint, searchSelfUint(p[2]))}, true
+		metaLen: uint(searchSelfUint(p[2]))}, true
 }
 
 func searchSelfParseState(l string) (searchStateRec, bool) {
@@ -1122,11 +1043,13 @@ func TestCorpusReplaySelfSearchRecords(t *testing.T) {
 		{searchHlRec{label: "match 2", topX: 3, botX: 4, tl: Some(PointCoordinate{x: 3, y: 9}), br: None[PointCoordinate](),
 			chunks: []searchChunkRec{{page: Some(uint(1)), start: 2, end: 3, serial: 5}, {start: 0, end: 1, serial: 6}}}.format(),
 			"hl match 2 top_x=3 bot_x=4 tl=3,9 br=none chunks=2 1:2-3:5 -:0-1:6\n"},
-		{searchWinRec{dataLen: 20, dataOffset: 0, metas: []uint{5}}.format(), "win data_len=20 data_offset=0 metas=1:5\n"},
+		{searchWinRec{dataLen: 20, dataOffset: 0, metaLen: 1, metas: []uint{5}}.format(), "win data_len=20 data_offset=0 metas=1:5\n"},
 		{searchWinRec{}.format(), "win data_len=0 data_offset=0 metas=0\n"},
-		{searchWinRec{metas: []uint{1, 2, 3}}.format(), "win data_len=0 data_offset=0 metas=3:1,2,3\n"},
+		// metas=N is meta.Len(), not the length of the iterated list.
+		{searchWinRec{metaLen: 2, metas: []uint{5}}.format(), "win data_len=0 data_offset=0 metas=2:5\n"},
+		{searchWinRec{metaLen: 3, metas: []uint{1, 2, 3}}.format(), "win data_len=0 data_offset=0 metas=3:1,2,3\n"},
 		{searchStateRec{state: "history", total: 1, active: 1, hist: true, actWin: searchWinRec{},
-			histWin: Some(searchWinRec{dataLen: 20, metas: []uint{9}})}.format(),
+			histWin: Some(searchWinRec{dataLen: 20, metaLen: 1, metas: []uint{9}})}.format(),
 			"st state=history total=1 active=1 history=0 sel=none hist=1 act_win=0/0/0 hist_win=20/0/1\n"},
 		{searchStateRec{state: "complete", sel: Some(uint(3))}.format(),
 			"st state=complete total=0 active=0 history=0 sel=3 hist=0 act_win=0/0/0 hist_win=-\n"},

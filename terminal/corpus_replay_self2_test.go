@@ -172,15 +172,26 @@ func TestCorpusReplaySelfSplitVariants(t *testing.T) {
 	// The bytewise run first, then per feed op (counting feed ops only, as
 	// Zig's feed_idx) its offsets; ops of length 0 and 1 have none.
 	want := []splitVariant{splitBytewise, {0, 1}, {0, 2}, {2, 1}}
-	if got := splitVariants("a", "s", c, def); !reflect.DeepEqual(got, want) {
-		t.Errorf("variants %v, want %v", got, want)
+	if got, err := splitVariants("a", "s", c, def); err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("variants %v %v, want %v", got, err, want)
 	}
 	at := splitVariant{2, 1}
-	if got := splitVariants("a", "s", c, splitConfig{at: &at}); !reflect.DeepEqual(got, []splitVariant{at}) {
-		t.Errorf("SPLIT_AT: %v", got)
+	if got, err := splitVariants("a", "s", c, splitConfig{at: &at}); err != nil || !reflect.DeepEqual(got, []splitVariant{at}) {
+		t.Errorf("SPLIT_AT: %v %v", got, err)
 	}
-	if got := splitVariants("a", "s", replayNamed{name: "e"}, def); !reflect.DeepEqual(got, []splitVariant{splitBytewise}) {
-		t.Errorf("a case without feeds: %v", got)
+	bw := splitBytewise
+	if got, err := splitVariants("a", "s", c, splitConfig{at: &bw}); err != nil || !reflect.DeepEqual(got, []splitVariant{bw}) {
+		t.Errorf("SPLIT_AT=bytewise: %v %v", got, err)
+	}
+	// An op that the case does not have, and an offset that is not strictly
+	// inside the feed of the op (feed ops 0, 1, 2 have 3, 1 and 2 bytes), fail.
+	for _, bad := range []splitVariant{{3, 1}, {5, 1}, {0, 0}, {0, 3}, {1, 1}, {2, 2}, {2, 9}} {
+		if got, err := splitVariants("a", "s", c, splitConfig{at: &bad}); err == nil {
+			t.Errorf("SPLIT_AT=%s: no error, variants %v", bad, got)
+		}
+	}
+	if got, err := splitVariants("a", "s", replayNamed{name: "e"}, def); err != nil || !reflect.DeepEqual(got, []splitVariant{splitBytewise}) {
+		t.Errorf("a case without feeds: %v %v", got, err)
 	}
 
 	if m := splitBytewise.mode(); m.Tag != feedModeBytewise {
@@ -1113,7 +1124,8 @@ func TestCorpusReplaySelfSplitCheckWholeFirst(t *testing.T) {
 	want := []byte("## case c\nx\n")
 	differ := []byte("## case c\ny\n")
 	// Variants of the case: bytewise and the offsets 1..4.
-	nVariants := len(splitVariants("csi", "cup", c, splitConfig{allUpTo: 64, head: 64, seeded: 3}))
+	plan, _ := splitVariants("csi", "cup", c, splitConfig{allUpTo: 64, head: 64, seeded: 3})
+	nVariants := len(plan)
 	if nVariants != 5 {
 		t.Fatalf("%d variants", nVariants)
 	}
@@ -1167,7 +1179,53 @@ func TestCorpusReplaySelfSplitCheckWholeFirst(t *testing.T) {
 	st = &splitStats{corpusSuiteStats: corpusSuiteStats{cases: 9, run: 3}, variants: 40, known: 1, skipped: 12, whole: 2}
 	st.mismatch[replayKindGolden] = 3
 	if got, want := splitSummary("csi", "cup", st),
-		"SPLIT csi/cup cases=9 run=3 variants=40 known=1 skipped=12 whole=2 mismatch=3 (golden=3) pending_osc=0"; got != want {
+		"SPLIT csi/cup cases=9 run=3 variants=40 known=1 skipped=12 whole=2 mismatch=3 (golden=3)"; got != want {
 		t.Errorf("summary %q, want %q", got, want)
+	}
+}
+
+// A variant is compared with the golden section without the layout lines, and
+// with the whole run of the port with all of them: a layout line that only a
+// split changes is a mismatch, and an invalid TERM51_SPLIT_AT is an error.
+func TestCorpusReplaySelfSplitCheckLayoutAndAt(t *testing.T) {
+	c := replayNamed{name: "c", ops: []replayOp{{Tag: replayOpFeed, Feed: []uint8("ABC")}}}
+	want := []byte("## case c\nx\nlayout.a=1\n")
+	defer func(f func(replayNamed, replayKind, feedMode) []byte) { splitProduceFn = f }(splitProduceFn)
+	run := &corpusRun{area: corpusArea{name: "csi"}}
+	cfg := splitConfig{allUpTo: 64, head: 64, seeded: 3}
+
+	// The whole run has a layout line that differs from the golden one (skipped),
+	// the variants have that line too: no difference.
+	splitProduceFn = func(_ replayNamed, _ replayKind, _ feedMode) []byte { return []byte("## case c\nx\nlayout.a=2\n") }
+	rep, st := &splitSelfReporter{}, &splitStats{}
+	if n := splitCheck(rep, run, st, nil, cfg, "cup", c, replayKindGolden, want); n != 0 || len(rep.errs) != 0 {
+		t.Errorf("same layout as the whole run: n=%d errs=%v", n, rep.errs)
+	}
+	// One variant has another layout line than the whole run.
+	splitProduceFn = func(_ replayNamed, _ replayKind, mode feedMode) []byte {
+		if mode.Tag == feedModeSplit && mode.At == 2 {
+			return []byte("## case c\nx\nlayout.a=3\n")
+		}
+		return []byte("## case c\nx\nlayout.a=2\n")
+	}
+	rep, st = &splitSelfReporter{}, &splitStats{}
+	n := splitCheck(rep, run, st, nil, cfg, "cup", c, replayKindGolden, want)
+	if n != 1 || len(rep.errs) != 1 || !strings.Contains(rep.errs[0], "split=op:0,at:2") ||
+		!strings.Contains(rep.errs[0], "layout.a=3") || !strings.Contains(rep.errs[0], "layout.a=2") {
+		t.Errorf("layout line that only a split changes: n=%d errs=%v", n, rep.errs)
+	}
+
+	// An op that does not exist and an offset that is not inside the feed.
+	for _, at := range []string{"op:3,at:1", "op:0,at:3", "op:0,at:0"} {
+		v, err := parseSplitVariant(at)
+		if err != nil && at != "op:0,at:0" {
+			t.Fatal(err)
+		}
+		bad := splitConfig{at: &v}
+		rep, st = &splitSelfReporter{}, &splitStats{}
+		if n := splitCheck(rep, run, st, nil, bad, "cup", c, replayKindGolden, want); n != 1 || len(rep.errs) != 1 ||
+			!strings.Contains(rep.errs[0], "TERM51_SPLIT_AT="+at) {
+			t.Errorf("SPLIT_AT=%s: n=%d errs=%v", at, n, rep.errs)
+		}
 	}
 }

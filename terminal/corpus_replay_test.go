@@ -19,7 +19,7 @@ package terminal
 //   - corpus_replay_run_test.go   main.zig: runCase and its ops, feed,
 //     produce, produceSuite;
 //   - corpus_replay_trace_test.go trace.zig and main.zig runTrace: the kinds
-//     actions, actions_noalloc and parser, and corpusPendingOSC;
+//     actions, actions_noalloc and parser;
 //   - corpus_replay_search_test.go search.zig: the search area
 //     (TestCorpusReplaySearch);
 //   - corpus_replay_dump_test.go  dump.zig: dumpTerminal, dumpScreen,
@@ -47,13 +47,6 @@ package terminal
 // a golden file, parser/utf8_decode, only has the kinds it lists). The search
 // area (corpus_replay_search_test.go) has its own row, searchArea, and the
 // kind search.
-//
-// # Traces that are pending osc.go
-//
-// The traces of the kinds actions, actions_noalloc and parser that contain an
-// OSC action are not compared until osc.go is ported: corpusPendingOSC (in
-// corpus_replay_trace_test.go) is the one place that decides, replayCase and
-// splitCheck skip them, and the SUITE and SPLIT lines count them, `pending_osc=N`.
 //
 // # Environment variables
 //
@@ -107,7 +100,7 @@ package terminal
 // `line n` counts the lines of the section, whose first line is `## case`.
 // At the end of every suite one line, always logged:
 //
-//	SUITE csi/cup cases=1330 run=20 skipped=0 mismatch=3 (golden=2) skipped_lines=0 pending_osc=0
+//	SUITE csi/cup cases=1330 run=20 skipped=0 mismatch=3 (golden=2) skipped_lines=0
 //
 // Other files of the replayer:
 //
@@ -1346,9 +1339,6 @@ type corpusSuiteStats struct {
 	mismatch     [replayKindCount]int
 	reported     int // reports logged in full
 	skippedLines int // differing lines of corpusSkipPrefixes
-	// Traces that are not compared until osc.go is ported (corpusPendingOSC),
-	// counted per kind and case.
-	pendingOSC int
 	// Search suites: the cases with no recorded result, which are not replayed
 	// (corpus_replay_search_test.go).
 	noResult int
@@ -1378,7 +1368,7 @@ func corpusSummary(area, suite string, st *corpusSuiteStats, strict bool) string
 	if strict {
 		name = "layout_lines_differ"
 	}
-	return fmt.Sprintf("%s %s=%d pending_osc=%d", line, name, st.skippedLines, st.pendingOSC)
+	return fmt.Sprintf("%s %s=%d", line, name, st.skippedLines)
 }
 
 // corpusRun is the state shared by the suites of one test function.
@@ -1579,10 +1569,6 @@ func (run *corpusRun) replayCase(t *testing.T, st *corpusSuiteStats, suite strin
 	}
 	if bytes.HasPrefix(want, []byte(corpusSectionPrefix+name+"\n!upstream-crash\n")) {
 		t.Errorf("%s/%s case=%s kind=%s: recorded by the uncorrected recorder (!upstream-crash)", run.area.name, suite, c.name, kind)
-		return
-	}
-	if corpusPendingOSC(kind, want) {
-		st.pendingOSC++
 		return
 	}
 	got := corpusProduce(c, kind)

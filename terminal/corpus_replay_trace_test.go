@@ -22,73 +22,17 @@ package terminal
 //     field named by the tag (dumpUnionPayload), nothing for a void tag;
 //   - `gpa` (the allocator) is replayAllocator: StreamInitAlloc and
 //     osc_parser.alloc only distinguish nil from non-nil.
-//
-// # Pending osc.go
-//
-// The OSC parser of the port is still a placeholder (osc.go), so a trace that
-// contains an action that only an OSC sequence produces cannot be compared yet:
-// corpusPendingOSC is the ONE place that says which traces those are (the
-// action tags of stream.zig oscDispatch for the action kinds, `@osc_dispatch`
-// for the parser kind). The replayers (corpus_replay_test.go replayCase and
-// corpus_replay_split_test.go splitCheck) skip such a case and kind and count it
-// as pending_osc in the suite line; nothing else is excluded. When osc.go is
-// ported, empty corpusPendingOSCTags and the parser branch of corpusPendingOSC:
-// TestCorpusReplaySelfPendingOSC then fails until the counts are updated.
 
 import (
 	"bytes"
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 // replayAllocator stands for `gpa`, the allocator that the recorder hands to
 // StreamInitAlloc and sets as parser.osc_parser.alloc: for the port only
 // "an allocator was provided" (non-nil) matters (stream.go, osc.go).
 type replayAllocator struct{}
-
-// corpusPendingOSCTags are the tags (Zig names) of the stream actions that only
-// an OSC command produces: the arms of stream.zig:1942 oscDispatch that call
-// `handler.vt(...)`. TestCorpusReplaySelfPendingOSC compares the list with the
-// Zig source.
-var corpusPendingOSCTags = []string{
-	"semantic_prompt", "window_title", "clipboard_contents", "report_pwd",
-	"mouse_shape", "color_operation", "kitty_color_report",
-	"show_desktop_notification", "start_hyperlink", "end_hyperlink",
-	"progress_report",
-}
-
-// corpusPendingOSC is the exclusion of the traces that are pending osc.go (see
-// the file header): whether the recorded trace `want` (the text of a section)
-// of the kind contains such an action. The kinds golden and search are never
-// pending.
-func corpusPendingOSC(kind replayKind, want []byte) bool {
-	switch kind {
-	case replayKindActions, replayKindActionsNoalloc:
-		for _, line := range strings.Split(string(want), "\n") {
-			tag, ok := strings.CutPrefix(line, "@")
-			if ok && slicesContainsString(corpusPendingOSCTags, tag) {
-				return true
-			}
-		}
-	case replayKindParser:
-		for _, line := range strings.Split(string(want), "\n") {
-			if line == "@osc_dispatch" {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func slicesContainsString(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
 
 // Mirrors harness/src/trace.zig:16 ActionHandler
 type actionHandler struct {

@@ -590,18 +590,22 @@ func (r searchHlRec) format() string {
 type searchWinRec struct {
 	dataLen    uint
 	dataOffset uint
-	metas      []uint // the cell_map length of every meta
+	// win.meta.Len(): the number written as `metas=N`, as the Zig writes it
+	// (it is NOT the length of metas, so that a wrong CircBuf.Len() with a
+	// right iterator is a mismatch).
+	metaLen uint
+	metas   []uint // the cell_map length of every meta, from the iterator
 }
 
 // Mirrors harness/src/search.zig:520 Ctx.winSummary
 //
 // `{d}{c}{d}{c}{d}`: the bytes in data, data_offset and the number of metas.
 func (r searchWinRec) summary(sep byte) string {
-	return fmt.Sprintf("%d%c%d%c%d", r.dataLen, sep, r.dataOffset, sep, len(r.metas))
+	return fmt.Sprintf("%d%c%d%c%d", r.dataLen, sep, r.dataOffset, sep, r.metaLen)
 }
 
 func (r searchWinRec) format() string {
-	s := fmt.Sprintf("win data_len=%d data_offset=%d metas=%d", r.dataLen, r.dataOffset, len(r.metas))
+	s := fmt.Sprintf("win data_len=%d data_offset=%d metas=%d", r.dataLen, r.dataOffset, r.metaLen)
 	for i, m := range r.metas {
 		if i == 0 {
 			s += ":"
@@ -864,10 +868,10 @@ func (self *searchCtx) printHl(label string, hl HighlightFlattened) {
 	self.w.WriteString(rec.format())
 }
 
-// searchWinRecOf is the window's numbers: bytes in data, data_offset and the
-// cell_map length of every meta.
+// searchWinRecOf is the window's numbers: bytes in data, data_offset, the
+// length of meta and the cell_map length of every meta.
 func searchWinRecOf(win *SearchSlidingWindow) searchWinRec {
-	rec := searchWinRec{dataLen: win.data.Len(), dataOffset: win.data_offset}
+	rec := searchWinRec{dataLen: win.data.Len(), dataOffset: win.data_offset, metaLen: win.meta.Len()}
 	it := win.meta.Iterator(DatastructCircBufIteratorDirectionForward)
 	for m := it.Next(); m != nil; m = it.Next() {
 		rec.metas = append(rec.metas, uint(len(m.cell_map)))

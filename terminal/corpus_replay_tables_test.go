@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -45,23 +46,32 @@ func tablesDefaultPalette(w *bytes.Buffer) {
 //
 // Every mode upstream knows: "<name> <number> <ansi|dec> default=<0|1>".
 //
-// Zig reads the default from `ModePacked{}` by field name; the Go field is
-// not reachable by name, so the default is read through a fresh
-// ModesModeState (its `values` is ModesModePackedInit()).
+// Zig reads the default from `ModePacked{}` by field name (`@field(defaults,
+// field.name)`); so does this, by reflection: the Go field of the name is the
+// one whose zigName is the name of the mode.
 func tablesModes(w *bytes.Buffer) {
-	defaults := ModesModeStateInit()
 	for _, mode := range ModesModeValues() {
 		tag := ModesModeTagFromInt(uint16(mode))
 		kind := "dec"
 		if tag.ansi {
 			kind = "ansi"
 		}
-		def := 0
-		if defaults.Get(mode) {
-			def = 1
-		}
-		fmt.Fprintf(w, "%s %d %s default=%d\n", mode, tag.value, kind, def)
+		defaults := ModesModePackedInit()
+		def := tablesModeDefault(&defaults, mode.String())
+		fmt.Fprintf(w, "%s %d %s default=%d\n", mode, tag.value, kind, boolInt(def))
 	}
+}
+
+// tablesModeDefault is `@field(defaults, name)`: the bool field of the packed
+// struct that Zig calls name. It panics for a name without a field.
+func tablesModeDefault(defaults *ModesModePacked, name string) bool {
+	v := reflect.ValueOf(defaults).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		if zigName(v.Type().Field(i).Name) == name {
+			return dumpField(v, i).Bool()
+		}
+	}
+	panic("ModesModePacked has no field " + name)
 }
 
 // tablesProduce runs a table writer; a panic of the port becomes a line of

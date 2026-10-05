@@ -502,7 +502,16 @@ merge into `docs/mapping.md`.
   does not. Every product that is an operand of `+` or `-` is wrapped in an
   explicit `float32(...)`/`float64(...)` conversion (Go spec: an explicit
   conversion rounds and prevents fusion). Applied in `LAB.*`, `luminance`,
-  `perceivedLuminance` and in every stand-in below.
+  `perceivedLuminance` and in every stand-in below. Go also fuses across
+  statements, so a product stored in a variable that later feeds `+` or `-`
+  is wrapped as well (`lo = float32(fk * ln2lo)`, `t1`, `t2`, `hfsq`, `z`,
+  `w`, `x1 = float32(x1 * x1)`): to be safe every stored product in these
+  functions is wrapped. Found by review after the parser module merged:
+  the unwrapped stored products compiled to FMADD/FMSUB on arm64 and made
+  `pow(x, 2.4)` 1 ULP off for some channels (e.g. 180); 32-bit ARM never
+  fuses. `scripts/check-no-fma.sh` (run first by `scripts/test.sh`)
+  disassembles the package for arm64 and amd64 v3 and fails on any fused
+  instruction, since instruction selection can change with a Go upgrade.
 - `std.math.pow(f32)`, `std.math.pow(f64)`, `std.math.cbrt(f32)`,
   `std.math.scalbn`/`ldexp` (f32, f64) are ported (`colorStdMathPowF32`,
   `colorStdMathPowF64`, `colorStdMathCbrtF32`, `colorStdMathLdexpF32/F64`).

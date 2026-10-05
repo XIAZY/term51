@@ -13,3 +13,4 @@ own change, measured before and after.
 | 4 | `x11_color.go` lookup | Allocates a lower-cased copy of each looked-up name. | The map is keyed by the lower-cased name to give Zig's case-insensitive lookup. |
 | 5 | `color.go` 256-bit set iterator | Tests every bit; could skip whole empty words. | Literal translation of Zig's `StaticBitSet` iterator use. |
 | 6 | `color.go` decimal float parse | Rebuilds a string to hand to `strconv`. | Zig's float grammar is ported for validation; decimal values then go through `strconv` (both round correctly). |
+| 7 | `modes.go` `ModeState` get/set/save/restore | Looks the mode up in the entries table on every call (about 420 ns per `Get` on arm64); `Terminal.print` calls `modes.get` for every printed character (Terminal.zig:326, 339, 425). | Zig resolves the mode to a struct field at compile time (`inline else` + `@field`); the port does the same lookup at run time. Build the mode-to-field mapping once at start-up. |

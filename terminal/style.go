@@ -1,10 +1,4 @@
-// WIREFRAME for src/terminal/style.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Ported from src/terminal/style.zig (Ghostty v1.3.1).
 //
 // File naming: style.zig is a namespace file, so its declarations take the
 // prefix `Style`: `style.Id` is `StyleId`, `style.default_id` is
@@ -111,25 +105,66 @@ const (
 	StyleColorRgb
 )
 
+// styleColorTagNames are the tag names of StyleColorTag, indexed by value
+// (Zig's @tagName).
+var styleColorTagNames = [...]string{"none", "palette", "rgb"}
+
 // String returns the Zig tag name (@tagName).
-func (self StyleColorTag) String() string { panic(notImplemented) }
+func (self StyleColorTag) String() string {
+	return styleColorTagNames[self]
+}
 
 // Eql is style.Style.Color.eql: true if the color is equal to another
 // color.
-func (self StyleColor) Eql(other StyleColor) bool { panic(notImplemented) }
+func (self StyleColor) Eql(other StyleColor) bool {
+	// Zig: `@as(Tag, self) == @as(Tag, other) and switch (self) {...}`.
+	if self.Tag != other.Tag {
+		return false
+	}
+	switch self.Tag {
+	case StyleColorNone:
+		return true
+	case StyleColorPalette:
+		return self.Palette == other.Palette
+	case StyleColorRgb:
+		return self.Rgb == other.Rgb
+	}
+	panic("unreachable")
+}
 
 // Format is style.Style.Color.format: formatting to make debug logs easier
 // to read by only including non-default attributes.
 //
 // Per docs/mapping.md a Zig `format` method becomes `Format() string` with
 // output identical to Zig's.
-func (self StyleColor) Format() string { panic(notImplemented) }
+func (self StyleColor) Format() string {
+	// Zig: `_ = fmt; _ = options;` the format string and options are
+	// unused, and Go's Format has none.
+	switch self.Tag {
+	case StyleColorNone:
+		return "Color.none"
+	case StyleColorPalette:
+		p := self.Palette
+		return "Color.palette{ " + itoa(uint64(p)) + " }"
+	case StyleColorRgb:
+		rgb := self.Rgb
+		return "Color.rgb{ " + itoa(uint64(rgb.r)) + ", " + itoa(uint64(rgb.g)) + ", " + itoa(uint64(rgb.b)) + " }"
+	}
+	panic("unreachable")
+}
 
 // Default is style.Style.default: true if the style is the default style.
-func (self Style) Default() bool { panic(notImplemented) }
+func (self Style) Default() bool {
+	return self.Eql(Style{})
+}
 
 // Eql is style.Style.eql: true if the style is equal to another style.
-func (self Style) Eql(other Style) bool { panic(notImplemented) }
+func (self Style) Eql(other Style) bool {
+	return self.flags == other.flags &&
+		self.fg_color.Eql(other.fg_color) &&
+		self.bg_color.Eql(other.bg_color) &&
+		self.underline_color.Eql(other.underline_color)
+}
 
 // Bg is style.Style.bg: returns the bg color for a cell with this style
 // given the cell that has this style and the palette to use.
@@ -141,7 +176,25 @@ func (self Style) Eql(other Style) bool { panic(notImplemented) }
 // Zig: cell is *const page.Cell, palette is *const color.Palette; returns
 // ?color.RGB.
 func (self Style) Bg(cell *PageCell, palette *ColorPalette) Optional[ColorRGB] {
-	panic(notImplemented)
+	switch cell.content_tag {
+	case PageCellContentTagBgColorPalette:
+		return Some(palette[cell.content.color_palette])
+	case PageCellContentTagBgColorRgb:
+		rgb := cell.content.color_rgb
+		return Some(ColorRGB{r: rgb.r, g: rgb.g, b: rgb.b})
+
+	default:
+		switch self.bg_color.Tag {
+		case StyleColorNone:
+			return None[ColorRGB]()
+		case StyleColorPalette:
+			idx := self.bg_color.Palette
+			return Some(palette[idx])
+		case StyleColorRgb:
+			return Some(self.bg_color.Rgb)
+		}
+		panic("unreachable")
+	}
 }
 
 // StyleFg is style.Style.Fg: the options of Style.fg.
@@ -165,23 +218,223 @@ type StyleFg struct {
 
 // Fg is style.Style.fg: returns the fg color for a cell with this style
 // given the palette and various configuration options.
-func (self Style) Fg(opts StyleFg) ColorRGB { panic(notImplemented) }
+func (self Style) Fg(opts StyleFg) ColorRGB {
+	// Note we don't pull the bold check to the top-level here because
+	// we don't want to duplicate the conditional multiple times since
+	// certain colors require more checks (e.g. `bold_is_bright`).
+
+	switch self.fg_color.Tag {
+	case StyleColorNone: // default:
+		if self.flags.bold {
+			if opts.bold.Valid {
+				bold := opts.bold.Value
+				switch bold.Tag {
+				case ConfigBoldColorBright:
+				case ConfigBoldColorColor:
+					v := bold.Color
+					return v.ToTerminalRGB() // break :default
+				default:
+					panic("unreachable")
+				}
+			}
+		}
+
+		return opts.default_ // break :default
+
+	case StyleColorPalette: // palette:
+		idx := self.fg_color.Palette
+		if self.flags.bold {
+			if opts.bold.Valid {
+				const bright_offset = uint8(ColorNameBrightBlack) // @intFromEnum(color.Name.bright_black)
+				if idx < bright_offset {
+					return opts.palette[idx+bright_offset] // break :palette
+				}
+			}
+		}
+
+		return opts.palette[idx] // break :palette
+
+	case StyleColorRgb: // rgb:
+		rgb := self.fg_color.Rgb
+		if self.flags.bold && rgb.Eql(opts.default_) {
+			if opts.bold.Valid {
+				bold := opts.bold.Value
+				switch bold.Tag {
+				case ConfigBoldColorColor:
+					v := bold.Color
+					return v.ToTerminalRGB() // break :rgb
+				case ConfigBoldColorBright:
+				default:
+					panic("unreachable")
+				}
+			}
+		}
+
+		return rgb // break :rgb
+	}
+	panic("unreachable")
+}
 
 // UnderlineColor is style.Style.underlineColor: returns the underline color
 // for this style.
 func (self Style) UnderlineColor(palette *ColorPalette) Optional[ColorRGB] {
-	panic(notImplemented)
+	switch self.underline_color.Tag {
+	case StyleColorNone:
+		return None[ColorRGB]()
+	case StyleColorPalette:
+		idx := self.underline_color.Palette
+		return Some(palette[idx])
+	case StyleColorRgb:
+		return Some(self.underline_color.Rgb)
+	}
+	panic("unreachable")
 }
 
 // BgCell is style.Style.bgCell: returns a bg-color only cell from this
 // style, if it exists.
 //
 // Zig: returns ?page.Cell.
-func (self Style) BgCell() Optional[PageCell] { panic(notImplemented) }
+func (self Style) BgCell() Optional[PageCell] {
+	switch self.bg_color.Tag {
+	case StyleColorNone:
+		return None[PageCell]()
+	case StyleColorPalette:
+		idx := self.bg_color.Palette
+		return Some(PageCell{
+			content_tag: PageCellContentTagBgColorPalette,
+			content:     PageCellContent{color_palette: idx},
+		})
+	case StyleColorRgb:
+		rgb := self.bg_color.Rgb
+		return Some(PageCell{
+			content_tag: PageCellContentTagBgColorRgb,
+			content: PageCellContent{color_rgb: PageCellRGB{
+				r: rgb.r,
+				g: rgb.g,
+				b: rgb.b,
+			}},
+		})
+	}
+	panic("unreachable")
+}
 
 // Format is style.Style.format: formatting to make debug logs easier to
 // read by only including non-default attributes.
-func (self Style) Format() string { panic(notImplemented) }
+func (self Style) Format() string {
+	// Zig: `_ = fmt; _ = options;` the format string and options are
+	// unused, and Go's Format has none. The writer is the returned string.
+	var writer []uint8
+
+	dflt := Style{}
+
+	writer = append(writer, "Style{ "...)
+
+	started := false
+
+	// Zig: `inline for (std.meta.fields(Style))`: fg_color, bg_color,
+	// underline_color, then flags, which is handled in place. Every field
+	// that is not `flags` is a Color: `!std.meta.eql(value, d_val)` is
+	// Color.eql (tag, then the active payload), and `{any}` of it is
+	// fmtAny below.
+	//
+	// fmtAny is `{any}` of a Color (std.Io.Writer.printValue, Zig 0.15.2,
+	// max_depth 3): a tagged union prints `.{ .<tag> = <payload> }`, a void
+	// payload `void`, a u8 in decimal and color.RGB, a packed struct, as
+	// `.{ .r = R, .g = G, .b = B }`.
+	fmtAny := func(c StyleColor) string {
+		var payload string
+		switch c.Tag {
+		case StyleColorNone:
+			payload = "void"
+		case StyleColorPalette:
+			payload = itoa(uint64(c.Palette))
+		case StyleColorRgb:
+			payload = ".{ .r = " + itoa(uint64(c.Rgb.r)) + ", .g = " + itoa(uint64(c.Rgb.g)) +
+				", .b = " + itoa(uint64(c.Rgb.b)) + " }"
+		default:
+			panic("unreachable")
+		}
+		return ".{ ." + c.Tag.String() + " = " + payload + " }"
+	}
+	for _, f := range [...]struct {
+		name  string
+		value StyleColor
+		d_val StyleColor
+	}{
+		{"fg_color", self.fg_color, dflt.fg_color},
+		{"bg_color", self.bg_color, dflt.bg_color},
+		{"underline_color", self.underline_color, dflt.underline_color},
+	} {
+		value := f.value
+		d_val := f.d_val
+		if !value.Eql(d_val) {
+			if started {
+				writer = append(writer, ", "...)
+			}
+			writer = append(writer, f.name+"="+fmtAny(value)...)
+			started = true
+		}
+	}
+
+	// The field `flags`, last in Style.
+	{
+		if started {
+			writer = append(writer, ", "...)
+		}
+
+		writer = append(writer, "flags={ "...)
+
+		started = false
+
+		// Zig: `inline for (std.meta.fields(@TypeOf(self.flags)))`: the
+		// eight bools in order, then underline and _padding, which are not
+		// bool and are printed with `{any}` when they differ from the
+		// default.
+		for _, ff := range [...]struct {
+			name string
+			v    bool
+		}{
+			{"bold", self.flags.bold},
+			{"italic", self.flags.italic},
+			{"faint", self.flags.faint},
+			{"blink", self.flags.blink},
+			{"inverse", self.flags.inverse},
+			{"invisible", self.flags.invisible},
+			{"strikethrough", self.flags.strikethrough},
+			{"overline", self.flags.overline},
+		} {
+			if ff.v {
+				if started {
+					writer = append(writer, ", "...)
+				}
+				writer = append(writer, ff.name...)
+				started = true
+			}
+		}
+		if self.flags.underline != dflt.flags.underline {
+			if started {
+				writer = append(writer, ", "...)
+			}
+			// `{any}` of an exhaustive enum: `.` and the tag name.
+			writer = append(writer, "underline=."+self.flags.underline.String()...)
+			started = true
+		}
+		if self.flags._padding != dflt.flags._padding {
+			if started {
+				writer = append(writer, ", "...)
+			}
+			// `{any}` of a u5: decimal.
+			writer = append(writer, "_padding="+itoa(uint64(self.flags._padding))...)
+			started = true
+		}
+		writer = append(writer, " }"...)
+
+		started = true
+	}
+
+	writer = append(writer, " }"...)
+	return string(writer)
+}
 
 // FormatterVt is style.Style.formatterVt: returns a formatter that renders
 // this style as VT sequences, to be used with `{f}`. This always resets the
@@ -194,7 +447,9 @@ func (self Style) Format() string { panic(notImplemented) }
 // especially with mixed separators (e.g. `:` vs `;`).
 //
 // Zig: self is *const Style, and the formatter keeps that pointer.
-func (self *Style) FormatterVt() styleVTFormatter { panic(notImplemented) }
+func (self *Style) FormatterVt() styleVTFormatter {
+	return styleVTFormatter{style: self}
+}
 
 // FormatterHtml is style.Style.formatterHtml: returns a formatter that
 // renders this style as inline CSS properties, to be used with `{f}`. The
@@ -204,7 +459,9 @@ func (self *Style) FormatterVt() styleVTFormatter { panic(notImplemented) }
 // Palette colors are emitted as CSS variables like `var(--vt-palette-N)`.
 //
 // Zig: self is *const Style, and the formatter keeps that pointer.
-func (self *Style) FormatterHtml() styleHtmlFormatter { panic(notImplemented) }
+func (self *Style) FormatterHtml() styleHtmlFormatter {
+	return styleHtmlFormatter{style: self}
+}
 
 // styleVTFormatter is style.Style.VTFormatter.
 type styleVTFormatter struct {
@@ -223,7 +480,101 @@ type styleVTFormatter struct {
 //
 // Zig: pub fn format(self: VTFormatter, writer: *std.Io.Writer) !void, used
 // with `{f}`.
-func (self styleVTFormatter) Format() string { panic(notImplemented) }
+func (self styleVTFormatter) Format() string {
+	builder := oscWriterAllocatingInit()
+	format := func(writer *oscWriter) error {
+		// Always reset the style. Styles are fully self-contained.
+		// Even if this style is empty, then that means we want to go
+		// back to the default.
+		if err := writer.writeAll([]uint8("\x1b[0m")); err != nil {
+			return err
+		}
+
+		// Our flags
+		if self.style.flags.bold {
+			if err := writer.writeAll([]uint8("\x1b[1m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.faint {
+			if err := writer.writeAll([]uint8("\x1b[2m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.italic {
+			if err := writer.writeAll([]uint8("\x1b[3m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.blink {
+			if err := writer.writeAll([]uint8("\x1b[5m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.inverse {
+			if err := writer.writeAll([]uint8("\x1b[7m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.invisible {
+			if err := writer.writeAll([]uint8("\x1b[8m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.strikethrough {
+			if err := writer.writeAll([]uint8("\x1b[9m")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.overline {
+			if err := writer.writeAll([]uint8("\x1b[53m")); err != nil {
+				return err
+			}
+		}
+		switch self.style.flags.underline {
+		case SGRAttributeUnderlineNone:
+		case SGRAttributeUnderlineSingle:
+			if err := writer.writeAll([]uint8("\x1b[4m")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineDouble:
+			if err := writer.writeAll([]uint8("\x1b[4:2m")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineCurly:
+			if err := writer.writeAll([]uint8("\x1b[4:3m")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineDotted:
+			if err := writer.writeAll([]uint8("\x1b[4:4m")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineDashed:
+			if err := writer.writeAll([]uint8("\x1b[4:5m")); err != nil {
+				return err
+			}
+		default:
+			panic("unreachable")
+		}
+
+		// Various RGB colors.
+		if err := self.formatColor(writer, 38, self.style.fg_color); err != nil {
+			return err
+		}
+		if err := self.formatColor(writer, 48, self.style.bg_color); err != nil {
+			return err
+		}
+		if err := self.formatColor(writer, 58, self.style.underline_color); err != nil {
+			return err
+		}
+		return nil
+	}
+	// An allocating writer never fails.
+	if err := format(&builder.writer); err != nil {
+		panic("unreachable")
+	}
+	return string(builder.written())
+}
 
 // formatColor is style.Style.VTFormatter.formatColor.
 //
@@ -231,7 +582,29 @@ func (self styleVTFormatter) Format() string { panic(notImplemented) }
 // prefix: u8, value: Color) !void. The writer is oscWriter (osc.go), the
 // package's stand-in for std.Io.Writer.
 func (self styleVTFormatter) formatColor(writer *oscWriter, prefix uint8, value StyleColor) error {
-	panic(notImplemented)
+	switch value.Tag {
+	case StyleColorNone:
+	case StyleColorPalette:
+		idx := value.Palette
+		if self.palette != nil {
+			p := self.palette
+			rgb := p[idx]
+			// writer.print("\x1b[{d};2;{d};{d};{d}m", .{ prefix, rgb.r, rgb.g, rgb.b })
+			return writer.writeAll([]uint8("\x1b[" + itoa(uint64(prefix)) + ";2;" +
+				itoa(uint64(rgb.r)) + ";" + itoa(uint64(rgb.g)) + ";" + itoa(uint64(rgb.b)) + "m"))
+		} else {
+			// writer.print("\x1b[{d};5;{d}m", .{ prefix, idx })
+			return writer.writeAll([]uint8("\x1b[" + itoa(uint64(prefix)) + ";5;" + itoa(uint64(idx)) + "m"))
+		}
+	case StyleColorRgb:
+		rgb := value.Rgb
+		// writer.print("\x1b[{d};2;{d};{d};{d}m", .{ prefix, rgb.r, rgb.g, rgb.b })
+		return writer.writeAll([]uint8("\x1b[" + itoa(uint64(prefix)) + ";2;" +
+			itoa(uint64(rgb.r)) + ";" + itoa(uint64(rgb.g)) + ";" + itoa(uint64(rgb.b)) + "m"))
+	default:
+		panic("unreachable")
+	}
+	return nil
 }
 
 // styleHtmlFormatter is style.Style.HtmlFormatter.
@@ -250,7 +623,114 @@ type styleHtmlFormatter struct {
 //
 // Zig: pub fn format(self: HtmlFormatter, writer: *std.Io.Writer) !void,
 // used with `{f}`.
-func (self styleHtmlFormatter) Format() string { panic(notImplemented) }
+func (self styleHtmlFormatter) Format() string {
+	builder := oscWriterAllocatingInit()
+	format := func(writer *oscWriter) error {
+		// Colors
+		if err := self.formatColor(writer, []uint8("color"), self.style.fg_color); err != nil {
+			return err
+		}
+		if err := self.formatColor(writer, []uint8("background-color"), self.style.bg_color); err != nil {
+			return err
+		}
+		if err := self.formatColor(writer, []uint8("text-decoration-color"), self.style.underline_color); err != nil {
+			return err
+		}
+
+		// Text decoration line
+		has_line := self.style.flags.underline != SGRAttributeUnderlineNone ||
+			self.style.flags.strikethrough ||
+			self.style.flags.overline ||
+			self.style.flags.blink
+		if has_line {
+			if err := writer.writeAll([]uint8("text-decoration-line:")); err != nil {
+				return err
+			}
+			if self.style.flags.underline != SGRAttributeUnderlineNone {
+				if err := writer.writeAll([]uint8(" underline")); err != nil {
+					return err
+				}
+			}
+			if self.style.flags.strikethrough {
+				if err := writer.writeAll([]uint8(" line-through")); err != nil {
+					return err
+				}
+			}
+			if self.style.flags.overline {
+				if err := writer.writeAll([]uint8(" overline")); err != nil {
+					return err
+				}
+			}
+			if self.style.flags.blink {
+				if err := writer.writeAll([]uint8(" blink")); err != nil {
+					return err
+				}
+			}
+			if err := writer.writeAll([]uint8(";")); err != nil {
+				return err
+			}
+		}
+
+		// Text decoration style
+		switch self.style.flags.underline {
+		case SGRAttributeUnderlineNone:
+		case SGRAttributeUnderlineSingle:
+			if err := writer.writeAll([]uint8("text-decoration-style: solid;")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineDouble:
+			if err := writer.writeAll([]uint8("text-decoration-style: double;")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineCurly:
+			if err := writer.writeAll([]uint8("text-decoration-style: wavy;")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineDotted:
+			if err := writer.writeAll([]uint8("text-decoration-style: dotted;")); err != nil {
+				return err
+			}
+		case SGRAttributeUnderlineDashed:
+			if err := writer.writeAll([]uint8("text-decoration-style: dashed;")); err != nil {
+				return err
+			}
+		default:
+			panic("unreachable")
+		}
+
+		if self.style.flags.bold {
+			if err := writer.writeAll([]uint8("font-weight: bold;")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.italic {
+			if err := writer.writeAll([]uint8("font-style: italic;")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.faint {
+			if err := writer.writeAll([]uint8("opacity: 0.5;")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.invisible {
+			if err := writer.writeAll([]uint8("visibility: hidden;")); err != nil {
+				return err
+			}
+		}
+		if self.style.flags.inverse {
+			if err := writer.writeAll([]uint8("filter: invert(100%);")); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	// An allocating writer never fails.
+	if err := format(&builder.writer); err != nil {
+		panic("unreachable")
+	}
+	return string(builder.written())
+}
 
 // formatColor is style.Style.HtmlFormatter.formatColor.
 //
@@ -258,7 +738,29 @@ func (self styleHtmlFormatter) Format() string { panic(notImplemented) }
 // property: []const u8, c: Color) !void. The writer is oscWriter (osc.go),
 // the package's stand-in for std.Io.Writer.
 func (self styleHtmlFormatter) formatColor(writer *oscWriter, property []uint8, c StyleColor) error {
-	panic(notImplemented)
+	switch c.Tag {
+	case StyleColorNone:
+	case StyleColorPalette:
+		idx := c.Palette
+		if self.palette != nil {
+			p := self.palette
+			rgb := p[idx]
+			// writer.print("{s}: rgb({d}, {d}, {d});", .{ property, rgb.r, rgb.g, rgb.b })
+			return writer.writeAll([]uint8(string(property) + ": rgb(" +
+				itoa(uint64(rgb.r)) + ", " + itoa(uint64(rgb.g)) + ", " + itoa(uint64(rgb.b)) + ");"))
+		} else {
+			// writer.print("{s}: var(--vt-palette-{d});", .{ property, idx })
+			return writer.writeAll([]uint8(string(property) + ": var(--vt-palette-" + itoa(uint64(idx)) + ");"))
+		}
+	case StyleColorRgb:
+		rgb := c.Rgb
+		// writer.print("{s}: rgb({d}, {d}, {d});", .{ property, rgb.r, rgb.g, rgb.b })
+		return writer.writeAll([]uint8(string(property) + ": rgb(" +
+			itoa(uint64(rgb.r)) + ", " + itoa(uint64(rgb.g)) + ", " + itoa(uint64(rgb.b)) + ");"))
+	default:
+		panic("unreachable")
+	}
+	return nil
 }
 
 // stylePackedStyle is style.Style.PackedStyle.
@@ -313,21 +815,76 @@ type stylePackedStyle struct {
 type stylePackedStyleData uint32
 
 // stylePackedStyleDataFromColor is style.Style.PackedStyle.Data.fromColor.
-func stylePackedStyleDataFromColor(c StyleColor) stylePackedStyleData { panic(notImplemented) }
+func stylePackedStyleDataFromColor(c StyleColor) stylePackedStyleData {
+	// Zig: `inline else => |v, t| @unionInit(Data, @tagName(t), ...)`:
+	// the view of Data named like the color's tag, as its 24 bits.
+	switch c.Tag {
+	case StyleColorNone:
+		return 0 // .none = 0
+	case StyleColorPalette:
+		v := c.Palette
+		return stylePackedStyleData(v) // .palette = .{ .idx = v } (_padding 0)
+	case StyleColorRgb:
+		v := c.Rgb
+		return stylePackedStyleData(v.r) | stylePackedStyleData(v.g)<<8 | stylePackedStyleData(v.b)<<16 // .rgb = v
+	}
+	panic("unreachable")
+}
 
 // stylePackedStyleFromStyle is style.Style.PackedStyle.fromStyle.
-func stylePackedStyleFromStyle(style Style) stylePackedStyle { panic(notImplemented) }
+func stylePackedStyleFromStyle(style Style) stylePackedStyle {
+	var self stylePackedStyle
+	self.tags.fg = style.fg_color.Tag
+	self.tags.bg = style.bg_color.Tag
+	self.tags.underline = style.underline_color.Tag
+	self.data.fg = stylePackedStyleDataFromColor(style.fg_color)
+	self.data.bg = stylePackedStyleDataFromColor(style.bg_color)
+	self.data.underline = stylePackedStyleDataFromColor(style.underline_color)
+	self.flags = style.flags
+	// _padding: Zig default 0.
+	return self
+}
 
 // bitCast is not a Zig declaration. It stands for
 // `const wide: [2]u64 = @bitCast(packed_style);` in Style.hash (style.zig
 // line 530): the 128 bits of the packed struct, element 0 holding bits
 // 0..63 and element 1 holding bits 64..127.
-func (self stylePackedStyle) bitCast() [2]uint64 { panic(notImplemented) }
+func (self stylePackedStyle) bitCast() [2]uint64 {
+	// Style.Flags as its u16: bold bit 0 .. overline bit 7, underline bits
+	// 8..10 (u3), _padding bits 11..15 (u5). The masks keep each field to
+	// its Zig width.
+	b := func(v bool) uint64 {
+		if v {
+			return 1
+		}
+		return 0
+	}
+	f := self.flags
+	flags := b(f.bold)<<0 | b(f.italic)<<1 | b(f.faint)<<2 | b(f.blink)<<3 |
+		b(f.inverse)<<4 | b(f.invisible)<<5 | b(f.strikethrough)<<6 | b(f.overline)<<7 |
+		(uint64(f.underline)&0x7)<<8 | (uint64(f._padding)&0x1f)<<11
+
+	// The 128 bits: tags at 0, 8, 16; data (u24 each, masked) at 24, 48,
+	// 72; flags at 96; _padding at 112.
+	fg := uint64(self.data.fg) & 0xFFFFFF
+	bg := uint64(self.data.bg) & 0xFFFFFF
+	ul := uint64(self.data.underline) & 0xFFFFFF
+	lo := uint64(self.tags.fg) | uint64(self.tags.bg)<<8 | uint64(self.tags.underline)<<16 |
+		fg<<24 | bg<<48
+	hi := bg>>16 | ul<<8 | flags<<32 | uint64(self._padding)<<48
+	return [2]uint64{lo, hi}
+}
 
 // Hash is style.Style.hash.
 //
 // Zig: self is *const Style.
-func (self *Style) Hash() uint64 { panic(notImplemented) }
+func (self *Style) Hash() uint64 {
+	// We pack the style in to 128 bits, fold it to 64 bits,
+	// then use std.hash.int to make it sufficiently uniform.
+	packed_style := stylePackedStyleFromStyle(*self)
+	wide := packed_style.bitCast()
+	return stdHashIntU64(wide[0] ^ wide[1]) // @call(.always_inline, std.hash.int, ...)
+}
 
 // StyleSet is style.Set: the RefCountedSet instantiation that stores
 // styles.
@@ -343,12 +900,18 @@ type StyleSetContext struct{}
 //
 // Zig: pub fn hash(self: *const @This(), style: Style) u64. See
 // RefCountedSetContext for the receiver.
-func (self StyleSetContext) Hash(style Style) uint64 { panic(notImplemented) }
+func (self StyleSetContext) Hash(style Style) uint64 {
+	_ = self
+	return style.Hash()
+}
 
 // Eql is the context's `eql`: Style.eql of the two styles.
 //
 // Zig: pub fn eql(self: *const @This(), a: Style, b: Style) bool.
-func (self StyleSetContext) Eql(a Style, b Style) bool { panic(notImplemented) }
+func (self StyleSetContext) Eql(a Style, b Style) bool {
+	_ = self
+	return a.Eql(b)
+}
 
 // Stand-ins for config.zig, which is outside the library and has no Go
 // file. Types and constants only, as far as the signature of Style.fg needs
@@ -391,4 +954,6 @@ type ConfigColor struct {
 
 // ToTerminalRGB is config.Color.toTerminalRGB (Config.zig): the same
 // channels as a terminal color. Style.fg calls it for a bold color.
-func (self ConfigColor) ToTerminalRGB() ColorRGB { panic(notImplemented) }
+func (self ConfigColor) ToTerminalRGB() ColorRGB {
+	return ColorRGB{r: self.r, g: self.g, b: self.b}
+}

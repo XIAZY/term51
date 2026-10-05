@@ -1885,7 +1885,7 @@ func colorStdMathPowF32(x float32, y float32) float32 {
 			a1 *= x1
 			ae += xe
 		}
-		x1 *= x1
+		x1 = float32(x1 * x1)
 		xe <<= 1
 		if x1 < 0.5 {
 			x1 += x1
@@ -2014,7 +2014,7 @@ func colorStdMathPowF64(x float64, y float64) float64 {
 			a1 *= x1
 			ae += xe
 		}
-		x1 *= x1
+		x1 = float64(x1 * x1)
 		xe <<= 1
 		if x1 < 0.5 {
 			x1 += x1
@@ -2248,7 +2248,7 @@ func colorCompilerRtExpf(x_ float32) float32 {
 
 		fk := float32(k)
 		hi = x - float32(fk*ln2hi)
-		lo = fk * ln2lo
+		lo = float32(fk * ln2lo)
 		x = hi - lo
 	} else if hx > 0x39000000 {
 		// |x| > 2^(-14)
@@ -2313,12 +2313,12 @@ func colorCompilerRtLogf(x_ float32) float32 {
 
 	f := x - 1.0
 	s := f / (2.0 + f)
-	z := s * s
-	w := z * z
-	t1 := w * (Lg2 + float32(w*Lg4))
-	t2 := z * (Lg1 + float32(w*Lg3))
+	z := float32(s * s)
+	w := float32(z * z)
+	t1 := float32(w * (Lg2 + float32(w*Lg4)))
+	t2 := float32(z * (Lg1 + float32(w*Lg3)))
 	R := t2 + t1
-	hfsq := 0.5 * f * f
+	hfsq := float32(0.5 * f * f)
 	dk := float32(k)
 
 	return float32(s*(hfsq+R)) + float32(dk*ln2_lo) - hfsq + f + float32(dk*ln2_hi)
@@ -2382,7 +2382,7 @@ func colorCompilerRtExp(x_ float64) float64 {
 
 		dk := float64(k)
 		hi = x - float64(dk*ln2hi)
-		lo = dk * ln2lo
+		lo = float64(dk * ln2lo)
 		x = hi - lo
 	} else if hx > 0x3E300000 {
 		// |x| > 2^(-28)
@@ -2451,12 +2451,12 @@ func colorCompilerRtLog(x_ float64) float64 {
 	x = math.Float64frombits(ix)
 
 	f := x - 1.0
-	hfsq := 0.5 * f * f
+	hfsq := float64(0.5 * f * f)
 	s := f / (2.0 + f)
-	z := s * s
-	w := z * z
-	t1 := w * (Lg2 + float64(w*(Lg4+float64(w*Lg6))))
-	t2 := z * (Lg1 + float64(w*(Lg3+float64(w*(Lg5+float64(w*Lg7))))))
+	z := float64(s * s)
+	w := float64(z * z)
+	t1 := float64(w * (Lg2 + float64(w*(Lg4+float64(w*Lg6)))))
+	t2 := float64(z * (Lg1 + float64(w*(Lg3+float64(w*(Lg5+float64(w*Lg7)))))))
 	R := t2 + t1
 	dk := float64(k)
 

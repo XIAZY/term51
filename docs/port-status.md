@@ -26,7 +26,7 @@ build.
 | `terminal/ansi.zig` | `terminal/ansi.go` | done | 9 of 9, all pass | - | pass |
 | `terminal/charsets.zig` | `terminal/charsets.go` | done | 9 of 9, all pass | - | pass |
 | `terminal/modes.zig` | `terminal/modes.go` | done | 23 of 25 (2 not translated: a layout test and an analysis-only unnamed test), all pass | modes table equals upstream's | pass |
-| `terminal/device_status.zig` | `terminal/device_status.go` | done | 7 of 7, all pass (3 lines of one test await `DeviceStatusTagFromInt` in the wireframe) | - | pass |
+| `terminal/device_status.zig` | `terminal/device_status.go` | done | 7 of 7, all pass | - | pass |
 | `terminal/kitty/key.zig` | `terminal/kitty_key.go` | done | 25 of 25, all pass | - | pass |
 
 `scripts/check-test-mapping.py` verifies that every Zig test has exactly one

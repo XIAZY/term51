@@ -961,8 +961,7 @@ func TestOSCParsersColor_term51_parseGetSetDynamicColor_values_past_the_last_dyn
 		expectEqual(t, 1, list.count())
 		expectEqual(t, oscA_colSet(oscA_colDynamic(ColorDynamicHighlightForeground), oscA_colRed), *list.at(0))
 		// The second value was never consumed.
-		// Zig-only: try testing.expectEqualStrings("#0000ff", it.next().?);
-		// (oscParsersColorTokenIterator has no next method in the wireframe)
+		expectEqualStrings(t, "#0000ff", string(zigUnwrap(t, it.next())))
 	}
 	{
 		// Even an invalid value after the last color is not an error.
@@ -1035,6 +1034,5 @@ func TestOSCParsersColor_term51_parseResetDynamicColor_consumes_exactly_one_toke
 	list := oscA_parseResetDynamicColor(t, ColorDynamicCursor, &it)
 	defer list.deinit()
 	expectEqual(t, 0, list.count())
-	// Zig-only: try testing.expectEqualStrings("b", it.next().?);
-	// (oscParsersColorTokenIterator has no next method in the wireframe)
+	expectEqualStrings(t, "b", string(zigUnwrap(t, it.next())))
 }

@@ -704,7 +704,7 @@ func TestParser_term51_init_starts_in_ground_with_empty_accumulators(t *testing.
 	expectEqual(t, 0, p.params_sep.count())
 	expectEqual(t, uint16(0), p.param_acc)
 	expectEqual(t, uint8(0), p.param_acc_idx)
-	// Zig-only: try testing.expect(p.osc_parser.alloc == null);
+	expect(t, p.osc_parser.alloc == nil, "p.osc_parser.alloc == null")
 }
 
 // Zig: test "term51: init: limits"
@@ -718,7 +718,7 @@ func TestParser_term51_init_limits(t *testing.T) {
 // Zig: test "term51: deinit: releases an OSC buffer that was never terminated"
 func TestParser_term51_deinit_releases_an_OSC_buffer_that_was_never_terminated(t *testing.T) {
 	p := ParserInit()
-	// Zig-only: p.osc_parser.alloc = testing.allocator;
+	p.osc_parser.alloc = struct{}{} // Zig: p.osc_parser.alloc = testing.allocator;
 	// A title longer than the fixed buffer forces the allocating writer.
 	_ = term51Feed(&p, "\x1b]2;")
 	for range 4096 {

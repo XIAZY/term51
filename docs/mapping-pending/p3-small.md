@@ -176,8 +176,8 @@ recompute the same digests:
   resize to the current dynamic length reallocates. The local `new` keeps
   Zig's name (it shadows Go's builtin inside the function only).
   `resize_tw` and `tw.check(.dynamic_alloc)` are omitted (wireframe
-  decision: test-only fault injection; the 3 tests using it and the one
-  FailingAllocator test are in `scripts/not-translated.txt`).
+  decision: test-only fault injection; the tripwire test and the three
+  FailingAllocator tests are in `scripts/not-translated.txt`).
 - `init`: on a `resize` error (unreachable in Go) returns the zero Tabstops
   and the error (Zig's value is undefined).
 - `deinit`: the free is the GC's; `self.* = undefined` is `*self =

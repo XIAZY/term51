@@ -1,4 +1,4 @@
-// WIREFRAME for src/terminal/highlight.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Port of src/terminal/highlight.zig (Ghostty v1.3.1).
 //
 // Highlights are any contiguous sequences of cells that should
 // be called out in some way, most commonly for text selection but
@@ -11,20 +11,13 @@
 // completely. Selection is deeply tied to various parts of the Ghostty
 // internals so this may take some time.
 //
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
-//
 // File naming: highlight.zig is a namespace file, so its declarations take
 // the prefix `Highlight`: `highlight.Untracked` is `HighlightUntracked`,
 // `highlight.Tracked` is `HighlightTracked`, `highlight.Flattened` is
 // `HighlightFlattened`, `highlight.Flattened.Chunk` is
 // `HighlightFlattenedChunk`, `highlight.Flattened.empty` is
 // `HighlightFlattenedEmpty`. `init` functions are `<Type>Init`:
-// `HighlightTrackedInit`, `HighlightTrackedInitAssume`,
-// `HighlightFlattenedInit`.
+// `HighlightTrackedInit`, `HighlightTrackedInitAssume`.
 //
 // Declarations appear in the same order as in highlight.zig.
 //
@@ -52,9 +45,11 @@
 // that `PageChunk` does not have, and returns a struct literal with a field
 // `end_x` that `Flattened` does not have (the field is `bot_x`). Zig only
 // analyses a function that is referenced and nothing references this one,
-// so the library builds. The stub is declared from the signature, which is
-// well-formed; there is no upstream behaviour to port and no upstream test.
-// The decision what its body should be belongs to the project lead.
+// so the library builds. There is no upstream behaviour to port and no
+// upstream test, so it is not ported (docs/mapping.md, "Page-layer
+// bookkeeping": `PageList.diagram` and `HighlightFlattenedInit` are not
+// ported); a comment marks its place, as for `PageList.diagram`. The tests
+// build flattened highlights with their own helper.
 
 package terminal
 
@@ -81,11 +76,17 @@ type HighlightUntracked struct {
 // Zig: pub fn track(self: *const Untracked, screen: *Screen)
 // Allocator.Error!Tracked. The error is ErrOutOfMemory (dcs.go).
 func (self *HighlightUntracked) Track(screen *Screen) (HighlightTracked, error) {
-	panic(notImplemented)
+	return HighlightTrackedInit(
+		screen,
+		self.start,
+		self.end,
+	)
 }
 
 // Eql is highlight.Untracked.eql.
-func (self HighlightUntracked) Eql(other HighlightUntracked) bool { panic(notImplemented) }
+func (self HighlightUntracked) Eql(other HighlightUntracked) bool {
+	return self.start.Eql(other.start) && self.end.Eql(other.end)
+}
 
 // HighlightTracked is highlight.Tracked.
 //
@@ -113,8 +114,27 @@ func HighlightTrackedInit(
 	screen *Screen,
 	start PageListPin,
 	end PageListPin,
-) (HighlightTracked, error) {
-	panic(notImplemented)
+) (_ HighlightTracked, err error) {
+	start_tracked, err := screen.pages.TrackPin(start)
+	if err != nil {
+		return HighlightTracked{}, err
+	}
+	defer func() {
+		// errdefer
+		if err != nil {
+			screen.pages.UntrackPin(start_tracked)
+		}
+	}()
+	end_tracked, err := screen.pages.TrackPin(end)
+	if err != nil {
+		return HighlightTracked{}, err
+	}
+	// Zig: errdefer screen.pages.untrackPin(end_tracked); nothing after it
+	// can fail, so it never runs.
+	return HighlightTracked{
+		start: start_tracked,
+		end:   end_tracked,
+	}, nil
 }
 
 // HighlightTrackedInitAssume is highlight.Tracked.initAssume.
@@ -127,13 +147,19 @@ func HighlightTrackedInit(
 //
 // Do not call deinit on highlights created with this function.
 func HighlightTrackedInitAssume(start *PageListPin, end *PageListPin) HighlightTracked {
-	panic(notImplemented)
+	return HighlightTracked{
+		start: start,
+		end:   end,
+	}
 }
 
 // Deinit is highlight.Tracked.deinit.
 //
 // Kept: it untracks both pins in the screen's page list.
-func (self HighlightTracked) Deinit(screen *Screen) { panic(notImplemented) }
+func (self HighlightTracked) Deinit(screen *Screen) {
+	screen.pages.UntrackPin(self.start)
+	screen.pages.UntrackPin(self.end)
+}
 
 // HighlightFlattened is highlight.Flattened.
 //
@@ -178,39 +204,83 @@ var HighlightFlattenedEmpty = HighlightFlattened{
 	bot_x:  0,
 }
 
-// HighlightFlattenedInit is highlight.Flattened.init.
-//
-// Zig: pub fn init(alloc: Allocator, start: Pin, end: Pin)
-// Allocator.Error!Flattened. The allocator parameter is dropped. The error
-// is ErrOutOfMemory (dcs.go).
-//
-// Upstream's body does not compile and is never referenced; see the file
-// header.
-func HighlightFlattenedInit(start PageListPin, end PageListPin) (HighlightFlattened, error) {
-	panic(notImplemented)
-}
+// highlight.Flattened.init (line 141) is omitted: upstream's body does not
+// compile and is never referenced; see the file header.
 
 // Deinit is highlight.Flattened.deinit.
 //
 // Zig: pub fn deinit(self: *Flattened, alloc: Allocator) void. The
 // allocator parameter is dropped. It only frees; the stub is kept for the
 // callers.
-func (self *HighlightFlattened) Deinit() { panic(notImplemented) }
+func (self *HighlightFlattened) Deinit() {
+	// Zig: self.chunks.deinit(alloc), which frees the list and leaves
+	// `chunks` undefined. The garbage collector frees in Go; the list is
+	// dropped (nil).
+	self.chunks = nil
+}
 
 // Clone is highlight.Flattened.clone.
 //
 // Zig: pub fn clone(self: *const Flattened, alloc: Allocator)
 // Allocator.Error!Flattened. The allocator parameter is dropped. The error
 // is ErrOutOfMemory (dcs.go).
-func (self *HighlightFlattened) Clone() (HighlightFlattened, error) { panic(notImplemented) }
+func (self *HighlightFlattened) Clone() (HighlightFlattened, error) {
+	// Zig: try self.chunks.clone(alloc): a list with its own storage holding
+	// the same elements (std's clone of an empty list is an empty list).
+	chunks := make([]HighlightFlattenedChunk, len(self.chunks))
+	copy(chunks, self.chunks)
+	return HighlightFlattened{
+		chunks: chunks,
+		top_x:  self.top_x,
+		bot_x:  self.bot_x,
+	}, nil
+}
 
 // StartPin is highlight.Flattened.startPin.
-func (self HighlightFlattened) StartPin() PageListPin { panic(notImplemented) }
+func (self HighlightFlattened) StartPin() PageListPin {
+	slice := self.chunks
+	return PageListPin{
+		node: slice[0].node,
+		x:    self.top_x,
+		y:    slice[0].start,
+	}
+}
 
 // EndPin is highlight.Flattened.endPin.
-func (self HighlightFlattened) EndPin() PageListPin { panic(notImplemented) }
+func (self HighlightFlattened) EndPin() PageListPin {
+	slice := self.chunks
+	end := slice[len(slice)-1].end
+	assert(end > 0) // Zig: `end - 1` traps on u16 underflow.
+	return PageListPin{
+		node: slice[len(slice)-1].node,
+		x:    self.bot_x,
+		y:    end - 1,
+	}
+}
 
 // Untracked is highlight.Flattened.untracked.
 //
 // Convert to an Untracked highlight.
-func (self HighlightFlattened) Untracked() HighlightUntracked { panic(notImplemented) }
+func (self HighlightFlattened) Untracked() HighlightUntracked {
+	// Note: we don't use startPin/endPin here because it is slightly
+	// faster to reuse the slices.
+	//
+	// Zig: `slice.items(.node)`, `.items(.start)`, `.items(.end)` are the
+	// fields of the elements of the one Go slice (file header).
+	slice := self.chunks
+	start := PageListPin{
+		node: slice[0].node,
+		x:    self.top_x,
+		y:    slice[0].start,
+	}
+	end := slice[len(slice)-1].end
+	assert(end > 0) // Zig: `ends[ends.len - 1] - 1` traps on u16 underflow.
+	return HighlightUntracked{
+		start: start,
+		end: PageListPin{
+			node: slice[len(slice)-1].node,
+			x:    self.bot_x,
+			y:    end - 1,
+		},
+	}
+}

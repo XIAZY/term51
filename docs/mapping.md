@@ -841,6 +841,12 @@ and `Action` is the wireframe's (header of `stream.go`); unchanged.
   Zig therefore cannot be told apart from one passed by pointer in Go; two
   tests that check this are translated with a pointer handler and lose that
   distinction (a Go limitation, accepted).
+  The same limitation applies to `vtRaw` (project lead review, 2026-10-05):
+  `vt_raw` is detected on the handler value given to `StreamInit`. For a
+  value-type handler Go would call `VtRaw` on that copy, and a pointer-receiver
+  `VtRaw` on a value handler is not detected at all, where Zig's
+  `@hasDecl` would see it. Every handler in the package is a pointer, so
+  nothing differs today.
 - The reference-counted set is generic over all four of Zig's parameters, has
   no memory base, keeps `cap`, `table_cap` and `table_mask` as counts (the
   byte offsets are dropped), treats a zero-capacity set as empty (lookups find

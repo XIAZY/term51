@@ -4692,7 +4692,109 @@ func pageListMemoryLen(page *Page) uint64 {
 // that behavior is required.
 //
 // Zig: !void. The inferred error set is Page.CloneFromError (page.go).
-func (self *PageList) EraseRow(pt Point) error { panic(notImplemented) }
+func (self *PageList) EraseRow(pt Point) error {
+	defer self.AssertIntegrity()
+	pn_ := self.Pin(pt)
+	assert(pn_.Valid) // .?
+	pn := pn_.Value
+
+	node := pn.node
+	rows := node.data.rows
+
+	// In order to move the following rows up we rotate the rows array by 1.
+	// The rotate operation turns e.g. [ 0 1 2 3 ] in to [ 1 2 3 0 ], which
+	// works perfectly to move all of our elements where they belong.
+	pageListRotateOnce(rows[pn.y:node.data.size.rows])
+
+	// We adjust the tracked pins in this page, moving up any that were below
+	// the removed row.
+	{
+		pin_keys := self.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if p.node == node && p.y > pn.y {
+				p.y -= 1
+			}
+		}
+	}
+
+	// If we have a pinned viewport, we need to adjust for active area.
+	self.fixupViewport(1)
+
+	// Mark the whole page as dirty.
+	//
+	// Technically we only need to mark rows from the erased row to the end
+	// of the page as dirty, but that's slower and this is a hot function.
+	node.data.dirty = true
+
+	// We iterate through all of the following pages in order to move their
+	// rows up by 1 as well.
+	for node.next != nil {
+		next := node.next
+		next_rows := next.data.rows
+
+		// We take the top row of the page and clone it in to the bottom
+		// row of the previous page, which gets rid of the top row that was
+		// rotated down in the previous page, and accounts for the row in
+		// this page that will be rotated down as well.
+		//
+		//  rotate -> clone --> rotate -> result
+		//    0 -.      1         1         1
+		//    1  |      2         2         2
+		//    2  |      3         3         3
+		//    3 <'      0 <.      4         4
+		//   ---       --- |     ---       ---  <- page boundary
+		//    4         4 -'      4 -.      5
+		//    5         5         5  |      6
+		//    6         6         6  |      7
+		//    7         7         7 <'      4
+		if err := node.data.CloneRowFrom(
+			&next.data,
+			&rows[node.data.size.rows-1],
+			&next_rows[0],
+		); err != nil {
+			return err
+		}
+
+		node = next
+		rows = next_rows
+
+		pageListRotateOnce(rows[0:node.data.size.rows])
+
+		// Mark the whole page as dirty.
+		node.data.dirty = true
+
+		// Our tracked pins for this page need to be updated.
+		// If the pin is in row 0 that means the corresponding row has
+		// been moved to the previous page. Otherwise, move it up by 1.
+		pin_keys := self.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if p.node != node {
+				continue
+			}
+			if p.y == 0 {
+				assert(node.prev != nil) // .?
+				p.node = node.prev
+				p.y = p.node.data.size.rows - 1
+				continue
+			}
+			p.y -= 1
+		}
+	}
+
+	// Clear the final row which was rotated from the top of the page.
+	node.data.ClearCells(&rows[node.data.size.rows-1], 0, uint(node.data.size.cols))
+	return nil
+}
+
+// pageListRotateOnce is NOT a declaration of PageList.zig: it is
+// fastmem.rotateOnce(Row, items) (src/fastmem.zig), which moves the first
+// item to the end: `0 1 2 3` -> `1 2 3 0`. An empty slice panics on
+// `items[0]`, as Zig traps.
+func pageListRotateOnce(items []PageRow) {
+	tmp := items[0]
+	copy(items[0:len(items)-1], items[1:])
+	items[len(items)-1] = tmp
+}
 
 // EraseRowBounded is PageList.eraseRowBounded.
 //
@@ -4704,7 +4806,220 @@ func (self *PageList) EraseRow(pt Point) error { panic(notImplemented) }
 //
 // Zig: !void; limit is usize, a count of rows. The inferred error set is
 // Page.CloneFromError (page.go).
-func (self *PageList) EraseRowBounded(pt Point, limit uint) error { panic(notImplemented) }
+func (self *PageList) EraseRowBounded(pt Point, limit uint) error {
+	defer self.AssertIntegrity()
+
+	// This function has a lot of repeated code in it because it is a hot path.
+	//
+	// To get a better idea of what's happening, read eraseRow first for more
+	// in-depth explanatory comments. To avoid repetition, the only comments for
+	// this function are for where it differs from eraseRow.
+
+	pn_ := self.Pin(pt)
+	assert(pn_.Valid) // .?
+	pn := pn_.Value
+
+	node := pn.node
+	rows := node.data.rows
+
+	// If the row limit is less than the remaining rows before the end of the
+	// page, then we clear the row, rotate it to the end of the boundary limit
+	// and update our pins.
+	assert(node.data.size.rows >= pn.y) // Zig: u16 `-` traps
+	if uint(node.data.size.rows-pn.y) > limit {
+		node.data.ClearCells(&rows[pn.y], 0, uint(node.data.size.cols))
+		pageListRotateOnce(rows[uint(pn.y) : uint(pn.y)+limit+1])
+
+		// Mark the whole page as dirty.
+		//
+		// Technically we only need to mark from the erased row to the
+		// limit but this is a hot function, so we want to minimize work.
+		node.data.dirty = true
+
+		// If our viewport is a pin and our pin is within the erased
+		// region we need to maybe shift our cache up. We do this here instead
+		// of in the pin loop below because its unlikely to be true and we
+		// don't want to run the conditional N times.
+		if self.viewport.Tag == PageListViewportPin {
+			// Zig: the labeled block `viewport:`.
+			if self.viewport_pin_row_offset.Valid {
+				v := &self.viewport_pin_row_offset.Value
+				p := self.viewport_pin
+				if !(p.node != node ||
+					p.y < pn.y ||
+					uint(p.y) > uint(pn.y)+limit ||
+					p.y == 0) {
+					assert(*v > 0) // Zig: usize `-=` traps
+					*v -= 1
+				}
+			}
+		}
+
+		// Update pins in the shifted region.
+		pin_keys := self.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if p.node == node &&
+				p.y >= pn.y &&
+				uint(p.y) <= uint(pn.y)+limit {
+				if p.y == 0 {
+					p.x = 0
+				} else {
+					p.y -= 1
+				}
+			}
+		}
+
+		return nil
+	}
+
+	pageListRotateOnce(rows[pn.y:node.data.size.rows])
+
+	// Mark the whole page as dirty.
+	//
+	// Technically we only need to mark rows from the erased row to the end
+	// of the page as dirty, but that's slower and this is a hot function.
+	node.data.dirty = true
+
+	// We need to keep track of how many rows we've shifted so that we can
+	// determine at what point we need to do a partial shift on subsequent
+	// pages.
+	shifted := uint(node.data.size.rows - pn.y)
+
+	// Update tracked pins.
+	{
+		// See the other places we do something similar in this function
+		// for a detailed explanation.
+		if self.viewport.Tag == PageListViewportPin {
+			if self.viewport_pin_row_offset.Valid {
+				v := &self.viewport_pin_row_offset.Value
+				p := self.viewport_pin
+				if !(p.node != node ||
+					p.y < pn.y ||
+					p.y == 0) {
+					assert(*v > 0) // Zig: usize `-=` traps
+					*v -= 1
+				}
+			}
+		}
+
+		pin_keys := self.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if p.node == node && p.y >= pn.y {
+				if p.y == 0 {
+					p.x = 0
+				} else {
+					p.y -= 1
+				}
+			}
+		}
+	}
+
+	for node.next != nil {
+		next := node.next
+		next_rows := next.data.rows
+
+		if err := node.data.CloneRowFrom(
+			&next.data,
+			&rows[node.data.size.rows-1],
+			&next_rows[0],
+		); err != nil {
+			return err
+		}
+
+		node = next
+		rows = next_rows
+
+		// We check to see if this page contains enough rows to satisfy the
+		// specified limit, accounting for rows we've already shifted in prior
+		// pages.
+		//
+		// The logic here is very similar to the one before the loop.
+		assert(limit >= shifted) // Zig: usize `-` traps
+		shifted_limit := limit - shifted
+		if uint(node.data.size.rows) > shifted_limit {
+			node.data.ClearCells(&rows[0], 0, uint(node.data.size.cols))
+			pageListRotateOnce(rows[0 : shifted_limit+1])
+
+			// Mark the whole page as dirty.
+			//
+			// Technically we only need to mark from the erased row to the
+			// limit but this is a hot function, so we want to minimize work.
+			node.data.dirty = true
+
+			// See the other places we do something similar in this function
+			// for a detailed explanation.
+			if self.viewport.Tag == PageListViewportPin {
+				if self.viewport_pin_row_offset.Valid {
+					v := &self.viewport_pin_row_offset.Value
+					p := self.viewport_pin
+					if !(p.node != node ||
+						uint(p.y) > shifted_limit) {
+						assert(*v > 0) // Zig: usize `-=` traps
+						*v -= 1
+					}
+				}
+			}
+
+			// Update pins in the shifted region.
+			pin_keys := self.tracked_pins.Keys()
+			for _, p := range pin_keys {
+				if p.node != node || uint(p.y) > shifted_limit {
+					continue
+				}
+				if p.y == 0 {
+					assert(node.prev != nil) // .?
+					p.node = node.prev
+					p.y = p.node.data.size.rows - 1
+					continue
+				}
+				p.y -= 1
+			}
+
+			return nil
+		}
+
+		pageListRotateOnce(rows[0:node.data.size.rows])
+
+		// Mark the whole page as dirty.
+		node.data.dirty = true
+
+		// Account for the rows shifted in this node.
+		shifted += uint(node.data.size.rows)
+
+		// See the other places we do something similar in this function
+		// for a detailed explanation.
+		if self.viewport.Tag == PageListViewportPin {
+			if self.viewport_pin_row_offset.Valid {
+				v := &self.viewport_pin_row_offset.Value
+				p := self.viewport_pin
+				if p.node == node {
+					assert(*v > 0) // Zig: usize `-=` traps
+					*v -= 1
+				}
+			}
+		}
+
+		// Update tracked pins.
+		pin_keys := self.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if p.node != node {
+				continue
+			}
+			if p.y == 0 {
+				assert(node.prev != nil) // .?
+				p.node = node.prev
+				p.y = p.node.data.size.rows - 1
+				continue
+			}
+			p.y -= 1
+		}
+	}
+
+	// We reached the end of the page list before the limit, so we clear
+	// the final row since it was rotated down from the top of this page.
+	node.data.ClearCells(&rows[node.data.size.rows-1], 0, uint(node.data.size.cols))
+	return nil
+}
 
 // EraseRows is PageList.eraseRows.
 //
@@ -4715,7 +5030,118 @@ func (self *PageList) EraseRowBounded(pt Point, limit uint) error { panic(notImp
 // underutilized (size < capacity).
 //
 // Zig: bl_pt is ?point.Point.
-func (self *PageList) EraseRows(tl_pt Point, bl_pt Optional[Point]) { panic(notImplemented) }
+func (self *PageList) EraseRows(tl_pt Point, bl_pt Optional[Point]) {
+	defer self.AssertIntegrity()
+
+	// The count of rows that was erased.
+	var erased uint = 0
+
+	// A pageIterator iterates one page at a time from the back forward.
+	// "back" here is in terms of scrollback, but actually the front of the
+	// linked list.
+	it := self.PageIterator(PageListDirectionRightDown, tl_pt, bl_pt)
+	for chunk_ := it.Next(); chunk_.Valid; chunk_ = it.Next() {
+		chunk := chunk_.Value
+		// If the chunk is a full page, deinit thit page and remove it from
+		// the linked list.
+		if chunk.FullPage() {
+			// A rare special case is that we're deleting everything
+			// in our linked list. erasePage requires at least one other
+			// page so to handle this we reinit this page, set it to zero
+			// size which will let us grow our active area back.
+			if chunk.node.next == nil && chunk.node.prev == nil {
+				page := &chunk.node.data
+				erased += uint(page.size.rows)
+				page.Reinit()
+				page.size.rows = 0
+				break
+			}
+
+			erased += uint(chunk.node.data.size.rows)
+			self.erasePage(chunk.node)
+			continue
+		}
+
+		// Zig: `defer chunk.node.data.assertIntegrity()` at the end of
+		// the iteration: the rest of the body is a closure.
+		func() {
+			// We are modifying our chunk so make sure it is in a good state.
+			defer chunk.node.data.AssertIntegrity()
+
+			// The chunk is not a full page so we need to move the rows.
+			// This is a cheap operation because we're just moving cell offsets,
+			// not the actual cell contents.
+			assert(chunk.start == 0)
+			rows := chunk.node.data.rows
+			assert(chunk.node.data.size.rows >= chunk.end) // Zig: u16 `-` traps
+			scroll_amount := chunk.node.data.size.rows - chunk.end
+			for i := range uint(scroll_amount) {
+				src := &rows[i+uint(chunk.end)]
+				dst := &rows[i]
+				old_dst := *dst
+				*dst = *src
+				*src = old_dst
+
+				// Mark the moved row as dirty.
+				dst.dirty = true
+			}
+
+			// Clear our remaining cells that we didn't shift or swapped
+			// in case we grow back into them.
+			for i := uint(scroll_amount); i < uint(chunk.node.data.size.rows); i++ {
+				row := &rows[i]
+				chunk.node.data.ClearCells(
+					row,
+					0,
+					uint(chunk.node.data.size.cols),
+				)
+			}
+
+			// Update any tracked pins to shift their y. If it was in the erased
+			// row then we move it to the top of this page.
+			pin_keys := self.tracked_pins.Keys()
+			for _, p := range pin_keys {
+				if p.node != chunk.node {
+					continue
+				}
+				if p.y >= chunk.end {
+					p.y -= chunk.end
+				} else {
+					p.y = 0
+					p.x = 0
+				}
+			}
+
+			// Our new size is the amount we scrolled
+			chunk.node.data.size.rows = scroll_amount
+			erased += uint(chunk.end)
+		}()
+	}
+
+	// Update our total row count
+	assert(self.total_rows >= erased) // Zig: usize `-=` traps
+	self.total_rows -= erased
+
+	// If we deleted active, we need to regrow because one of our invariants
+	// is that we always have full active space.
+	if tl_pt.Tag == PointTagActive {
+		for range erased {
+			if _, err := self.Grow(); err != nil {
+				// If this fails its a pretty big issue actually... but I don't
+				// want to turn this function into an error-returning function
+				// because erasing active is so rare and even if it happens failing
+				// is even more rare...
+				//
+				// Zig: log.err
+				warn("page_list", "failed to regrow active area after erase err=error.%v", err)
+				return
+			}
+		}
+	}
+
+	// If we have a pinned viewport, we need to adjust for active area.
+	self.fixupViewport(erased)
+}
 
 // erasePage is PageList.erasePage.
 //
@@ -4726,7 +5152,34 @@ func (self *PageList) EraseRows(tl_pt Point, bl_pt Optional[Point]) { panic(notI
 // IMPORTANT: This function does NOT update `total_rows`. The caller is
 // responsible for accounting for the removed rows before or after calling
 // this function.
-func (self *PageList) erasePage(node *PageListNode) { panic(notImplemented) }
+func (self *PageList) erasePage(node *PageListNode) {
+	assert(node.next != nil || node.prev != nil)
+
+	// Update any tracked pins to move to the previous or next page.
+	pin_keys := self.tracked_pins.Keys()
+	for _, p := range pin_keys {
+		if p.node != node {
+			continue
+		}
+		// Zig: node.prev orelse node.next orelse unreachable.
+		if node.prev != nil {
+			p.node = node.prev
+		} else if node.next != nil {
+			p.node = node.next
+		} else {
+			panic("unreachable")
+		}
+		p.y = 0
+		p.x = 0
+
+		// This doesn't get marked garbage because the tracked pin
+		// movement is sensical.
+	}
+
+	// Remove the page from the linked list
+	self.pages.Remove(node)
+	self.destroyNode(node)
+}
 
 // Pin is PageList.pin.
 //
@@ -4738,7 +5191,23 @@ func (self *PageList) erasePage(node *PageListNode) { panic(notImplemented) }
 // necessary.
 //
 // Zig: self is *const PageList; returns ?Pin.
-func (self *PageList) Pin(pt Point) Optional[PageListPin] { panic(notImplemented) }
+func (self *PageList) Pin(pt Point) Optional[PageListPin] {
+	// getTopLeft is much more expensive than checking the cols bounds
+	// so we do this first.
+	x := pt.Coord().x
+	if x >= self.cols {
+		return None[PageListPin]()
+	}
+
+	// Grab the top left and move to the point.
+	p_ := self.GetTopLeft(pt.Tag).Down(uint(pt.Coord().y))
+	if !p_.Valid {
+		return None[PageListPin]()
+	}
+	p := p_.Value
+	p.x = x
+	return Some(p)
+}
 
 // TrackPin is PageList.trackPin.
 //
@@ -4748,16 +5217,41 @@ func (self *PageList) Pin(pt Point) Optional[PageListPin] { panic(notImplemented
 // to the top-left of the screen.
 //
 // Zig: Allocator.Error!*Pin. The error is ErrOutOfMemory (dcs.go).
-func (self *PageList) TrackPin(p PageListPin) (*PageListPin, error) { panic(notImplemented) }
+func (self *PageList) TrackPin(p PageListPin) (*PageListPin, error) {
+	if pageSlowRuntimeSafety {
+		assert(self.PinIsValid(p))
+	}
+
+	// Create our tracked pin
+	tracked := new(PageListPin) // self.pool.pins.create()
+	// errdefer self.pool.pins.destroy(tracked): Go memory.
+	*tracked = p
+
+	// Add it to the tracked list
+	if err := self.tracked_pins.PutNoClobber(tracked); err != nil {
+		return nil, err
+	}
+	// errdefer _ = self.tracked_pins.remove(tracked): nothing fails after
+	// it.
+
+	return tracked, nil
+}
 
 // UntrackPin is PageList.untrackPin: untrack a previously tracked pin.
 // This will deallocate the pin.
-func (self *PageList) UntrackPin(p *PageListPin) { panic(notImplemented) }
+func (self *PageList) UntrackPin(p *PageListPin) {
+	assert(p != self.viewport_pin)
+	if self.tracked_pins.SwapRemove(p) {
+		// Zig: self.pool.pins.destroy(p); Go memory.
+	}
+}
 
 // CountTrackedPins is PageList.countTrackedPins.
 //
 // Zig: self is *const PageList; returns usize, a count.
-func (self *PageList) CountTrackedPins() uint { panic(notImplemented) }
+func (self *PageList) CountTrackedPins() uint {
+	return self.tracked_pins.Count()
+}
 
 // TrackedPins is PageList.trackedPins.
 //
@@ -4765,7 +5259,9 @@ func (self *PageList) CountTrackedPins() uint { panic(notImplemented) }
 // pagelist and is only valid until the pagelist is modified.
 //
 // Zig: self is *const PageList; returns []const *Pin.
-func (self *PageList) TrackedPins() []*PageListPin { panic(notImplemented) }
+func (self *PageList) TrackedPins() []*PageListPin {
+	return self.tracked_pins.Keys()
+}
 
 // PinIsValid is PageList.pinIsValid.
 //
@@ -4774,7 +5270,23 @@ func (self *PageList) TrackedPins() []*PageListPin { panic(notImplemented) }
 // worst case. Only for runtime safety/debug.
 //
 // Zig: self is *const PageList.
-func (self *PageList) PinIsValid(p PageListPin) bool { panic(notImplemented) }
+func (self *PageList) PinIsValid(p PageListPin) bool {
+	// This is very slow so we want to ensure we only ever
+	// call this during slow runtime safety builds.
+	//
+	// Zig: comptime assert(build_options.slow_runtime_safety);
+	// pageSlowRuntimeSafety is the constant true.
+
+	for node := self.pages.first; node != nil; node = node.next {
+		if node != p.node {
+			continue
+		}
+		return p.y < node.data.size.rows &&
+			p.x < node.data.size.cols
+	}
+
+	return false
+}
 
 // pinIsActive is PageList.pinIsActive.
 //
@@ -4782,13 +5294,41 @@ func (self *PageList) PinIsValid(p PageListPin) bool { panic(notImplemented) }
 // "active" if the pin is within the active area.
 //
 // Zig: self is *const PageList.
-func (self *PageList) pinIsActive(p PageListPin) bool { panic(notImplemented) }
+func (self *PageList) pinIsActive(p PageListPin) bool {
+	// If the pin is in the active page, then we can quickly determine
+	// if we're beyond the end.
+	active := self.GetTopLeft(PointTagActive)
+	if p.node == active.node {
+		return p.y >= active.y
+	}
+
+	node_ := active.node.next
+	for node_ != nil {
+		node := node_
+		// This loop is pretty fast because the active area is
+		// never that large so this is at most one, two nodes for
+		// reasonable terminals (including very large real world
+		// ones).
+
+		// A node forward in the active area is our node, so we're
+		// definitely in the active area.
+		if node == p.node {
+			return true
+		}
+		node_ = node.next
+	}
+
+	return false
+}
 
 // pinIsTop is PageList.pinIsTop: returns true if the pin is at the top of
 // the scrollback area.
 //
 // Zig: self is *const PageList.
-func (self *PageList) pinIsTop(p PageListPin) bool { panic(notImplemented) }
+func (self *PageList) pinIsTop(p PageListPin) bool {
+	assert(self.pages.first != nil) // .?
+	return p.y == 0 && p.node == self.pages.first
+}
 
 // PointFromPin is PageList.pointFromPin.
 //
@@ -4804,7 +5344,50 @@ func (self *PageList) pinIsTop(p PageListPin) bool { panic(notImplemented) }
 //
 // Zig: self is *const PageList; returns ?point.Point.
 func (self *PageList) PointFromPin(tag PointTag, p PageListPin) Optional[Point] {
-	panic(notImplemented)
+	tl := self.GetTopLeft(tag)
+
+	// Count our first page which is special because it may be partial.
+	coord := PointCoordinate{x: p.x}
+	if p.node == tl.node {
+		// If our top-left is after our y then we're outside the range.
+		if tl.y > p.y {
+			return None[Point]()
+		}
+		coord.y = uint32(p.y - tl.y)
+	} else {
+		assert(tl.node.data.size.rows >= tl.y) // Zig: u16 `-` traps
+		coord.y += uint32(tl.node.data.size.rows - tl.y)
+		found := false
+		for node := tl.node.next; node != nil; node = node.next {
+			if node == p.node {
+				coord.y += uint32(p.y)
+				found = true
+				break
+			}
+
+			coord.y += uint32(node.data.size.rows)
+		}
+		if !found {
+			// We never saw our node, meaning we're outside the range.
+			return None[Point]()
+		}
+	}
+
+	// Zig: `inline else` building the union with @unionInit by tag name.
+	result := Point{Tag: tag}
+	switch tag {
+	case PointTagActive:
+		result.Active = coord
+	case PointTagViewport:
+		result.Viewport = coord
+	case PointTagScreen:
+		result.Screen = coord
+	case PointTagHistory:
+		result.History = coord
+	default:
+		panic("unreachable")
+	}
+	return Some(result)
 }
 
 // GetCell is PageList.getCell.
@@ -4815,7 +5398,21 @@ func (self *PageList) PointFromPin(tag PointTag, p PageListPin) Optional[Point] 
 // Warning: this is slow and should not be used in performance critical paths
 //
 // Zig: self is *const PageList; returns ?Cell.
-func (self *PageList) GetCell(pt Point) Optional[PageListCell] { panic(notImplemented) }
+func (self *PageList) GetCell(pt Point) Optional[PageListCell] {
+	pt_pin_ := self.Pin(pt)
+	if !pt_pin_.Valid {
+		return None[PageListCell]()
+	}
+	pt_pin := pt_pin_.Value
+	rac := pt_pin.node.data.GetRowAndCell(uint(pt_pin.x), uint(pt_pin.y))
+	return Some(PageListCell{
+		node:    pt_pin.node,
+		row:     rac.row,
+		cell:    rac.cell,
+		row_idx: pt_pin.y,
+		col_idx: pt_pin.x,
+	})
+}
 
 // PageList.diagram (line 4049) is omitted; see the file header.
 
@@ -4842,7 +5439,164 @@ func (self *PageList) HighlightSemanticContent(
 	at PageListPin,
 	content PageCellSemanticContent,
 ) Optional[HighlightUntracked] {
-	panic(notImplemented)
+	// Performance note: we can do this more efficiently in a single
+	// forward-pass. Semantic content operations aren't usually fast path
+	// but if someone wants to optimize them someday that's great.
+
+	// Zig: the labeled block `end:`.
+	var end PageListPin
+	{
+		// Safety assertion, our starting point should be a prompt row.
+		// so the first returned prompt should be ourselves.
+		it := at.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
+		first := it.Next()
+		assert(first.Valid) // .?
+		assert(first.Value.y == at.y)
+
+		// Our end is the end of the line just before the next prompt
+		// line, which should exist since we verified we have at least
+		// two prompts here.
+		found := false
+		if next := it.Next(); next.Valid {
+			// Zig: the labeled block `next:`; `break :next` falls through
+			// to the end of the screen.
+			if prev_ := next.Value.Up(1); prev_.Valid {
+				prev := prev_.Value
+				prev.x = prev.node.data.size.cols - 1
+				end = prev
+				found = true
+			}
+		}
+
+		if !found {
+			// Didn't find any further prompt so the end of our zone is
+			// the end of the screen.
+			br := self.GetBottomRight(PointTagScreen)
+			assert(br.Valid) // .?
+			end = br.Value
+		}
+	}
+
+	switch content {
+	// For the prompt, we select all the way up to command output.
+	// We include all the input lines, too.
+	case PageCellSemanticContentPrompt:
+		result := HighlightUntracked{
+			start: at.Left(uint(at.x)),
+			end:   at,
+		}
+
+		it := at.CellIterator(PageListDirectionRightDown, Some(end))
+	prompt:
+		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
+			p := p_.Value
+			switch p.RowAndCell().cell.semantic_content {
+			case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
+				result.end = p
+			case PageCellSemanticContentOutput:
+				break prompt
+			}
+		}
+
+		return Some(result)
+
+	// For input, we include the start of the input to the end of
+	// the input, which may include all the prompts in the middle, too.
+	case PageCellSemanticContentInput:
+		// Zig: `.start = undefined, .end = undefined`; Go zero values.
+		var result HighlightUntracked
+
+		// Find the start
+		it := at.CellIterator(PageListDirectionRightDown, Some(end))
+		found := false
+	input_start:
+		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
+			p := p_.Value
+			switch p.RowAndCell().cell.semantic_content {
+			case PageCellSemanticContentPrompt:
+			case PageCellSemanticContentInput:
+				result.start = p
+				result.end = p
+				found = true
+				break input_start
+			case PageCellSemanticContentOutput:
+				return None[HighlightUntracked]()
+			}
+		}
+		if !found {
+			// No input found
+			return None[HighlightUntracked]()
+		}
+
+		// Find the end
+	input_end:
+		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
+			p := p_.Value
+			switch p.RowAndCell().cell.semantic_content {
+			// Prompts can be nested in our input for continuation
+			case PageCellSemanticContentPrompt:
+
+			// Output means we're done
+			case PageCellSemanticContentOutput:
+				break input_end
+
+			case PageCellSemanticContentInput:
+				result.end = p
+			}
+		}
+
+		return Some(result)
+
+	case PageCellSemanticContentOutput:
+		// Zig: `.start = undefined, .end = undefined`; Go zero values.
+		var result HighlightUntracked
+
+		// Find the start
+		it := at.CellIterator(PageListDirectionRightDown, Some(end))
+		found := false
+	output_start:
+		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
+			p := p_.Value
+			cell := p.RowAndCell().cell
+			switch cell.semantic_content {
+			case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
+			case PageCellSemanticContentOutput:
+				// Skip empty cells - they default to .output but aren't real output
+				if !cell.HasText() {
+					continue
+				}
+				result.start = p
+				result.end = p
+				found = true
+				break output_start
+			}
+		}
+		if !found {
+			// No output found
+			return None[HighlightUntracked]()
+		}
+
+		// Find the end
+	output_end:
+		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
+			p := p_.Value
+			cell := p.RowAndCell().cell
+			switch cell.semantic_content {
+			case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
+				break output_end
+			case PageCellSemanticContentOutput:
+				// Only extend to cells with actual text
+				if cell.HasText() {
+					result.end = p
+				}
+			}
+		}
+
+		return Some(result)
+
+	default:
+		panic("unreachable")
+	}
 }
 
 // PageListDirection is PageList.Direction: direction that iterators can

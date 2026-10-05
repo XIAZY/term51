@@ -55,3 +55,18 @@ Sections ready to merge into docs/mapping.md (Screen and Terminal module).
   PageList.go does for the same expressions. `@intCast(cells.len - 1)` in
   `.end` is a plain conversion: the row has a cell with text, so it is not
   empty, and its length is at most the u16 column count.
+
+### `ScreenSet.zig` (`ScreenSet.go`)
+- `std.EnumMap(Key, *Screen)` is the wireframe's `screenSetEnumMap`: one
+  `*Screen` per key, nil = absent (std's presence bit). `Put` asserts the
+  value is not nil (a Zig `*Screen` cannot be null, and nil would read as
+  absent). `FetchRemove` returns the value and clears the slot (std's
+  deferred `bits.unset`). `Count` counts the non-nil slots
+  (`bits.count()`). `deinit`'s `iterator()` is a range over the array in
+  key order, skipping nil, which is std's iteration order.
+- `alloc.create(Screen)` + `screen.* = try .init(alloc, opts)` is
+  `new(Screen)` + `*screen = s` after `ScreenInit`; the `errdefer
+  alloc.destroy(screen)` and `alloc.destroy` calls are Go-memory comments.
+- `switchTo`'s `self.all.get(key).?` is `assert(active != nil)` after the
+  `active_key` store, the order of Zig's statements (Go-only test).
+- `Key` is `enum(u1)`; a Go value of 2 or more panics on the array index.

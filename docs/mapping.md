@@ -32,6 +32,17 @@ Set by the project lead; they take precedence over anything below.
    included. Deliberate fixes come after everything passes
    (`term51/docs/deliberate-fixes.md`).
 8. SIMD fast paths are not ported; the scalar path is the reference.
+   Ruling (project lead, 2026-10-05): `Stream.nextSliceCapped` calls
+   `simd.vt.utf8DecodeUntilControlSeq`, whose scalar fallback
+   (`utf8DecodeUntilControlSeqScalar`) lives in the SIMD module and is only
+   reached from the SIMD branch of `nextSlice`, so it is not ported. Its
+   defined result is what per-byte `next` gives (upstream's fallback aborts
+   on `FF ESC [ 1 A` and disagrees with `next` on `E2 82 (`, findings
+   section 12). `stream.go` uses the stand-in `streamUtf8DecodeUntilControlSeq`
+   (see "`stream.zig`" below), and
+   `TestStream_go_only_nextSliceCapped_equals_per_byte_next` enforces the
+   equivalence on 30,000 seeded random inputs fed in random chunks (printed
+   codepoints, action log, parser and UTF-8 decoder state).
 9. The port never wraps errors (no `fmt.Errorf` with `%w`, no `errors.Join`):
    it returns the bare sentinel, so `err.Error()` is Zig's `@errorName`. Every
    sentinel is `var Err<ZigName> = errors.New("<ZigName>")`; the corpus
@@ -692,7 +703,7 @@ and `Action` is the wireframe's (header of `stream.go`); unchanged.
 | Zig | Go | Notes |
 |---|---|---|
 | `try self.handler.vt(.key, payload)` | `if err := self.handler.Vt(StreamActionKeyKey, StreamAction{Tag: StreamActionKeyKey, Key: payload}); err != nil { return err }` | the union is built in place at every call; no helper. A void payload is `StreamAction{Tag: ...}` |
-| `@hasDecl(T, "vtRaw")` (comptime) | `any(self.handler).(StreamHandlerVtRaw)` (run-time type assertion) | `vtRaw(...) catch \|err\| err: { log.warn; break :err true }` is: on a non-nil error, warn and `skip = true` |
+| `@hasDecl(T, "vtRaw")` (comptime) | `any(h).(StreamHandlerVtRaw)` once in `StreamInit`, kept in the added field `vt_raw` (nil: no vtRaw); `nextNonUtf8` tests `self.vt_raw != nil` (project lead: compile-time work happens once in Go, however cheap per call) | `vtRaw(...) catch \|err\| err: { log.warn; break :err true }` is: on a non-nil error, warn and `skip = true` |
 | Labeled block that is a whole prong of the outer `switch (input.final)` / `switch (action.final)` and is left from inside a nested switch (`mode:`, `decrqm:`, `capture:`, `push:`, `set:`, `decsasd:`, `blk:`) | the outer Go switch carries the label `prong:` and `break :x` is `break prong` | equivalent because nothing follows the outer switch in csiDispatch/escDispatch. Each site has a `// break :x` comment |
 | Value-producing inner block (`ansi:`, `question:` in `h`, `l`, `n`) | if / else if / else assigning the value; the failing branch does what Zig's does (`break prong` or `return nil`) | |
 | `ansi:` of DECRQM (`p`), left from inside a nested switch | `goto ansi`, label after the block | the mapping's existing goto rule |
@@ -743,11 +754,15 @@ and `Action` is the wireframe's (header of `stream.go`); unchanged.
   decoder emits on rejecting the ESC, and the bytes up to the ESC are
   consumed, so the ESC is handled by `consumeAllEscapes` as `handleCodepoint`
   would. This keeps nextSliceCapped's control flow and makes it identical to
-  the per-byte path: checked once (not committed) on 30,000 random inputs of
-  0-23 bytes over an alphabet of ESC, CSI/OSC bytes, C0, invalid and
-  truncated UTF-8 leads, continuation bytes, surrogate and overlong starts,
-  each fed in random chunks: same actions, parser state and decoder state as
-  byte-by-byte `next`.
+  the per-byte path. `TestStream_go_only_nextSliceCapped_equals_per_byte_next`
+  (`stream_capped_equiv_test.go`) checks it on 30,000 seeded inputs of
+  0-23 bytes over an alphabet of ESC, CSI/OSC/DCS bytes, C0, invalid and
+  truncated UTF-8 leads, continuation bytes, surrogate, overlong and
+  above-U+10FFFF starts, each fed in random chunks (cp buffer of 4096 or
+  exactly the chunk length): same codepoints, actions, parser state and
+  decoder state as byte-by-byte `next`. A failure prints its seed;
+  `TERM51_CAPPED_SEED=<n>` replays it. Dropping the U+FFFD for a sequence
+  broken by ESC makes it fail at seed 37.
 
 #### Other per-function notes
 

@@ -29,8 +29,8 @@
 //     `deinit` function"). It is `Deinit()`.
 //   - `vtRaw` is optional in Zig (`@hasDecl(T, "vtRaw")` in nextNonUtf8). It
 //     is the separate interface StreamHandlerVtRaw, which a handler may
-//     also implement; the comptime `@hasDecl` is a run-time type assertion
-//     on the handler.
+//     also implement; the comptime `@hasDecl` is a type assertion on the
+//     handler done once in StreamInit and kept in the field vt_raw.
 //
 // Not ported, see docs/mapping.md:
 //   - the C ABI declarations: `lib_target`, the C variant of `Action.Key`
@@ -521,6 +521,11 @@ type Stream[H StreamHandler] struct {
 	handler     H
 	parser      Parser
 	utf8decoder UTF8Decoder
+
+	// Zig: no field. `@hasDecl(T, "vtRaw")` is decided at compile time;
+	// the port decides it once, in StreamInit (mapping: compile-time work is
+	// done once at start-up). nil when the handler has no vtRaw.
+	vt_raw StreamHandlerVtRaw
 }
 
 // StreamInit is Stream(Handler).init: initialize an allocation-free stream.
@@ -538,11 +543,13 @@ type Stream[H StreamHandler] struct {
 // This takes ownership of the handler and will call deinit
 // when the stream is deinitialized.
 func StreamInit[H StreamHandler](h H) Stream[H] {
-	return Stream[H]{
+	var self = Stream[H]{
 		handler:     h,
 		parser:      ParserInit(),
 		utf8decoder: UTF8Decoder{},
 	}
+	self.vt_raw, _ = any(h).(StreamHandlerVtRaw)
+	return self
 }
 
 // StreamInitAlloc is Stream(Handler).initAlloc: initialize the stream that
@@ -957,8 +964,8 @@ csi_param:
 		// A handler can expose this to get the raw action before
 		// it is further parsed. If this returns `true` then we skip
 		// processing ourselves.
-		if raw, ok := any(self.handler).(StreamHandlerVtRaw); ok {
-			skip, err := raw.VtRaw(action)
+		if self.vt_raw != nil {
+			skip, err := self.vt_raw.VtRaw(action)
 			if err != nil {
 				warn("stream", "error handling action manually err=error.%v action=%s",
 					err,

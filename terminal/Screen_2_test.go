@@ -2968,6 +2968,43 @@ func TestSc2_term51_clone_cursor_outside_a_clone_that_has_history_is_placed_in_t
 	sc2OExpectCursorConsistent(t, s2)
 }
 
+// One row past the boundary pinned above: the clone has 4 rows, so its
+// first row is history and the fallback cursor pin is outside the active
+// area. Upstream aborts in assertIntegrity (Screen.zig:464-473, :554, :350;
+// term51 docs/upstream-crashes.md, upstream-findings.md section 15, Screen
+// item 1); the port returns ErrScreenCloneCursorOutside and leaves the
+// source screen unchanged.
+//
+// Go-only: ruling (Screen.clone with the cursor outside the cloned region and more cloned rows than the active area returns ErrScreenCloneCursorOutside instead of upstream's abort; docs/mapping.md "Page-layer bookkeeping")
+func TestSc2_go_only_clone_cursor_outside_a_clone_with_history_returns_an_error(t *testing.T) {
+	testStdCapacity(t)
+	s := sc2Init(t, 5, 3, 100)
+	defer s.Deinit()
+	sc2Write(t, s, "r0\nr1\nr2\nr3\nr4\nr5\nr6\nr7")
+	expectEqual(t, uint(8), s.pages.total_rows)
+	tracked := s.pages.CountTrackedPins()
+
+	// The cursor (screen row 7) is outside rows 0..3.
+	_, err := s.Clone(sc2Screen(0, 0), Some(sc2Screen(0, 3)))
+	expect(t, err == ErrScreenCloneCursorOutside, "err == error.ScreenCloneCursorOutside")
+	expectEqual(t, "ScreenCloneCursorOutside", err.Error())
+
+	// The source is untouched.
+	expectEqual(t, tracked, s.pages.CountTrackedPins())
+	expectEqual(t, uint(8), s.pages.total_rows)
+	expectEqual(t, SizeCellCountInt(2), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(2), s.cursor.y)
+	s.AssertIntegrity()
+
+	// The same region with the cursor inside it clones normally.
+	s2 := sc2Clone(t, s, sc2Screen(0, 4), Some(sc2Screen(0, 7)))
+	defer s2.Deinit()
+	expectEqual(t, uint(4), s2.pages.total_rows)
+	expectEqual(t, SizeCellCountInt(2), s2.cursor.x)
+	expectEqual(t, SizeCellCountInt(2), s2.cursor.y)
+	sc2OExpectCursorConsistent(t, s2)
+}
+
 // Zig: test "term51: clone: pages and cursor across a page boundary"
 func TestSc2_term51_clone_pages_and_cursor_across_a_page_boundary(t *testing.T) {
 	testStdCapacity(t)

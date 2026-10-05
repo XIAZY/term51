@@ -1,4 +1,4 @@
-// WIREFRAME for src/terminal/hash_map.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Ported from src/terminal/hash_map.zig (Ghostty v1.3.1).
 //
 // This file contains a fork of the Zig stdlib HashMap implementation tuned
 // for use with our terminal page representation.
@@ -31,12 +31,6 @@
 // and its more important to get the terminal page representation working
 // first then we can measure and improve this later if we find it to be a
 // bottleneck.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
 //
 // # File naming
 //
@@ -137,9 +131,37 @@
 // `removeByPtr` finds a key's slot by pointer subtraction. Go has none; the
 // stub `keyIndex`, which is not a Zig declaration, stands for it.
 //
+// # Implementation notes
+//
+//   - Zig's run-time safety traps are kept as assertions: `self.metadata.?`
+//     on a null map (in header and initMetadatas), `capacity() - 1` on a
+//     zero capacity (putAssumeCapacityNoClobberContext, getIndex,
+//     getOrPutAssumeCapacityAdapted), `capacity() - size` in growIfNeeded,
+//     `count() + additional_size` in ensureUnusedCapacity, and the u32
+//     `size += 1` / `size -= 1`.
+//   - `x.* = undefined` is the Go zero value.
+//   - `self.metadata.? + idx` (a many-pointer, unchecked) is the index
+//     `idx` into the metadata slice; the loops index it directly.
+//   - The `...Context`-less functions are a compile error in Zig unless
+//     @sizeOf(Context) == 0 and pass `undefined`; Go passes the zero value
+//     of C.
+//   - Metadata's `@bitCast` to u8 is the helper bitCast (not a Zig
+//     declaration): fingerprint in bits 0..6, used in bit 7.
+//   - AutoContext.hash: see Hash; it switches on the key's type once per
+//     call, the only way Go has to pick the key's Zig width inside a
+//     method of an empty generic struct.
+//   - keyIndex uses package unsafe, as the wireframe allows, and nothing
+//     else in this file does.
+//
 // The file has no C ABI declarations.
 
 package terminal
+
+import (
+	"encoding/binary"
+	"math"
+	"unsafe"
+)
 
 // HashMapContext is the `Context` parameter of the hash maps: a type with
 //
@@ -192,10 +214,57 @@ type hashMapAutoContext[K comparable] struct{}
 // REQUIREMENT on the implementation: a Go `uint` or `int` key is hashed as
 // 8 bytes (Zig usize/isize on the 64-bit reference) on every platform,
 // including 32-bit targets where the Go type is 4 bytes wide.
-func (self hashMapAutoContext[K]) Hash(key K) uint64 { panic(notImplemented) }
+func (self hashMapAutoContext[K]) Hash(key K) uint64 {
+	// getAutoHashFn: std.meta.hasUniqueRepresentation(K) holds for every
+	// integer key, so the hash is Wyhash.hash(0, std.mem.asBytes(&key)):
+	// the key's bytes, little-endian, at the Zig width. Go cannot
+	// specialise a method body per type argument; the type switch is the
+	// one run-time step that stands for the comptime choice of width.
+	var buf [8]uint8
+	var n int
+	switch k := any(key).(type) {
+	case uint8:
+		buf[0], n = k, 1
+	case int8:
+		buf[0], n = uint8(k), 1
+	case uint16:
+		binary.LittleEndian.PutUint16(buf[:], k)
+		n = 2
+	case int16:
+		binary.LittleEndian.PutUint16(buf[:], uint16(k))
+		n = 2
+	case uint32:
+		binary.LittleEndian.PutUint32(buf[:], k)
+		n = 4
+	case int32:
+		binary.LittleEndian.PutUint32(buf[:], uint32(k))
+		n = 4
+	case uint64:
+		binary.LittleEndian.PutUint64(buf[:], k)
+		n = 8
+	case int64:
+		binary.LittleEndian.PutUint64(buf[:], uint64(k))
+		n = 8
+	case uint:
+		// usize: 8 bytes, the reference width, on every platform.
+		binary.LittleEndian.PutUint64(buf[:], uint64(k))
+		n = 8
+	case int:
+		// isize: 8 bytes (sign-extended), the reference width, on every
+		// platform.
+		binary.LittleEndian.PutUint64(buf[:], uint64(int64(k)))
+		n = 8
+	default:
+		panic("not ported: hash_map.AutoContext.hash of this key type")
+	}
+	return stdHashWyhashHash(0, buf[:n])
+}
 
 // Eql is AutoContext.eql.
-func (self hashMapAutoContext[K]) Eql(a K, b K) bool { panic(notImplemented) }
+func (self hashMapAutoContext[K]) Eql(a K, b K) bool {
+	// getAutoEqlFn: std.meta.eql(a, b), `==` for the key types used.
+	return a == b
+}
 
 // HashMapOffsetHashMap is the type returned by
 // hash_map.OffsetHashMap(K, V, Context): a HashMap type that uses offsets
@@ -224,7 +293,7 @@ type HashMapOffsetHashMapLayout = hashMapLayout
 // `sizes` stands for the type parameters K and V; see the file header.
 // Named `...LayoutOf` because `...Layout` is the type.
 func HashMapOffsetHashMapLayoutOf(cap HashMapSize, sizes hashMapEntrySizes) HashMapOffsetHashMapLayout {
-	panic(notImplemented)
+	return hashMapLayoutForCapacity(cap, sizes)
 }
 
 // HashMapOffsetHashMapInit is OffsetHashMap.init: initialize a new HashMap
@@ -236,14 +305,22 @@ func HashMapOffsetHashMapLayoutOf(cap HashMapSize, sizes hashMapEntrySizes) Hash
 // three:
 // HashMapOffsetHashMapInit[uint32, uint32, hashMapAutoContext[uint32]](l).
 func HashMapOffsetHashMapInit[K any, V any, C HashMapContext[K]](l HashMapOffsetHashMapLayout) HashMapOffsetHashMap[K, V, C] {
-	panic(notImplemented)
+	// Zig: assert(base_align.check(@intFromPtr(buf.start()))). No buffer
+	// in Go.
+
+	m := hashMapUnmanagedInit[K, V, C](l)
+	// Zig: .metadata = getOffset(Unmanaged.Metadata, buf, @ptrCast(m.metadata.?))
+	return HashMapOffsetHashMap[K, V, C]{metadata: m.metadata, hdr: m.hdr}
 }
 
 // Map is OffsetHashMap.map: returns the pointer-based map from a base
 // pointer.
 //
 // Zig: pub fn map(self: Self, base: anytype) Unmanaged.
-func (self HashMapOffsetHashMap[K, V, C]) Map() hashMapUnmanaged[K, V, C] { panic(notImplemented) }
+func (self HashMapOffsetHashMap[K, V, C]) Map() hashMapUnmanaged[K, V, C] {
+	// Zig: .{ .metadata = self.metadata.ptr(base) }
+	return hashMapUnmanaged[K, V, C]{metadata: self.metadata, hdr: self.hdr}
+}
 
 // hashMapUnmanaged is the type returned by
 // hash_map.HashMapUnmanaged(K, V, Context).
@@ -362,25 +439,46 @@ const (
 )
 
 // IsUsed is Metadata.isUsed.
-func (self hashMapMetadata) IsUsed() bool { panic(notImplemented) }
+func (self hashMapMetadata) IsUsed() bool {
+	return self.used == 1
+}
 
 // IsTombstone is Metadata.isTombstone.
-func (self hashMapMetadata) IsTombstone() bool { panic(notImplemented) }
+func (self hashMapMetadata) IsTombstone() bool {
+	return self.bitCast() == hashMapMetadataSlotTombstone
+}
 
 // IsFree is Metadata.isFree.
-func (self hashMapMetadata) IsFree() bool { panic(notImplemented) }
+func (self hashMapMetadata) IsFree() bool {
+	return self.bitCast() == hashMapMetadataSlotFree
+}
 
 // hashMapMetadataTakeFingerprint is Metadata.takeFingerprint: the 7 highest
 // bits of the hash.
 func hashMapMetadataTakeFingerprint(hash HashMapHash) hashMapMetadataFingerPrint {
-	panic(notImplemented)
+	const hash_bits = 64 // @typeInfo(Hash).int.bits
+	const fp_bits = 7    // @typeInfo(FingerPrint).int.bits
+	// @truncate to a u7: the shift leaves 7 bits.
+	return hashMapMetadataFingerPrint(hash >> (hash_bits - fp_bits))
 }
 
 // Fill is Metadata.fill.
-func (self *hashMapMetadata) Fill(fp hashMapMetadataFingerPrint) { panic(notImplemented) }
+func (self *hashMapMetadata) Fill(fp hashMapMetadataFingerPrint) {
+	self.used = 1
+	self.fingerprint = fp
+}
 
 // Remove is Metadata.remove.
-func (self *hashMapMetadata) Remove() { panic(notImplemented) }
+func (self *hashMapMetadata) Remove() {
+	self.used = 0
+	self.fingerprint = hashMapMetadataTombstone
+}
+
+// bitCast is NOT a Zig declaration: `@as(u8, @bitCast(self))` of the packed
+// struct, fingerprint in bits 0..6 and used in bit 7.
+func (self hashMapMetadata) bitCast() uint8 {
+	return self.fingerprint&0x7f | (self.used&1)<<7
+}
 
 // HashMapIterator is HashMapUnmanaged.Iterator.
 type HashMapIterator[K any, V any, C HashMapContext[K]] struct {
@@ -394,7 +492,29 @@ type HashMapIterator[K any, V any, C HashMapContext[K]] struct {
 // Next is HashMapUnmanaged.Iterator.next.
 //
 // Zig: pub fn next(it: *Iterator) ?Entry.
-func (it *HashMapIterator[K, V, C]) Next() Optional[HashMapEntry[K, V]] { panic(notImplemented) }
+func (it *HashMapIterator[K, V, C]) Next() Optional[HashMapEntry[K, V]] {
+	assert(it.index <= it.hm.Capacity())
+	if it.hm.header().size == 0 {
+		return None[HashMapEntry[K, V]]()
+	}
+
+	cap := it.hm.Capacity()
+	// const end = it.hm.metadata.? + cap;
+	// var metadata = it.hm.metadata.? + it.index;
+	// Go: the metadata from it.index up to end.
+	metadata := it.hm.metadata[it.index:cap]
+
+	for ; len(metadata) != 0; metadata, it.index = metadata[1:], it.index+1 {
+		if metadata[0].IsUsed() {
+			key := &it.hm.keys()[it.index]
+			value := &it.hm.values()[it.index]
+			it.index += 1
+			return Some(HashMapEntry[K, V]{key_ptr: key, value_ptr: value})
+		}
+	}
+
+	return None[HashMapEntry[K, V]]()
+}
 
 // HashMapKeyIterator is HashMapUnmanaged.KeyIterator: FieldIterator(K).
 type HashMapKeyIterator[K any] = hashMapFieldIterator[K]
@@ -417,7 +537,19 @@ type hashMapFieldIterator[T any] struct {
 // Next is FieldIterator.next.
 //
 // Zig: pub fn next(self: *@This()) ?*T.
-func (self *hashMapFieldIterator[T]) Next() *T { panic(notImplemented) }
+func (self *hashMapFieldIterator[T]) Next() *T {
+	for self.len > 0 {
+		self.len -= 1
+		used := self.metadata[0].IsUsed()
+		item := &self.items[0]
+		self.metadata = self.metadata[1:]
+		self.items = self.items[1:]
+		if used {
+			return item
+		}
+	}
+	return nil
+}
 
 // HashMapGetOrPutResult is HashMapUnmanaged.GetOrPutResult.
 type HashMapGetOrPutResult[K any, V any] struct {
@@ -441,7 +573,28 @@ type HashMapGetOrPutResult[K any, V any] struct {
 // 0`), as Zig's metadata pointer is non-null for any initialised map; nil
 // metadata stands only for Zig's `metadata == null`.
 func hashMapUnmanagedInit[K any, V any, C HashMapContext[K]](layout hashMapLayout) hashMapUnmanaged[K, V, C] {
-	panic(notImplemented)
+	// Zig: assert(base_align.check(@intFromPtr(buf.start()))). No buffer
+	// in Go.
+
+	// Get all our main pointers
+	//
+	// Zig: the metadata starts @sizeOf(Header) into buf. Go: its own
+	// slice, `layout.capacity` long (non-nil also for capacity 0), and the
+	// Header the map points at.
+	metadata_ptr := make([]hashMapMetadata, layout.capacity)
+
+	// Build our map
+	m := hashMapUnmanaged[K, V, C]{metadata: metadata_ptr, hdr: &hashMapHeader[K, V]{}}
+	hdr := m.header()
+	hdr.capacity = layout.capacity
+	hdr.size = 0
+	// if (@sizeOf([*]K) != 0) hdr.keys = metadata_buf.member(K, layout.keys_start);
+	hdr.keys = make([]K, layout.capacity)
+	// if (@sizeOf([*]V) != 0) hdr.values = metadata_buf.member(V, layout.vals_start);
+	hdr.values = make([]V, layout.capacity)
+	m.initMetadatas()
+
+	return m
 }
 
 // EnsureTotalCapacity is HashMapUnmanaged.ensureTotalCapacity.
@@ -449,58 +602,124 @@ func hashMapUnmanagedInit[K any, V any, C HashMapContext[K]](layout hashMapLayou
 // The error is ErrOutOfMemory (dcs.go), here and in every function of this
 // file that returns an error.
 func (self hashMapUnmanaged[K, V, C]) EnsureTotalCapacity(new_size HashMapSize) error {
-	panic(notImplemented)
+	if new_size > self.header().size {
+		if err := self.growIfNeeded(new_size - self.header().size); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // EnsureUnusedCapacity is HashMapUnmanaged.ensureUnusedCapacity.
 func (self hashMapUnmanaged[K, V, C]) EnsureUnusedCapacity(additional_size HashMapSize) error {
-	panic(notImplemented)
+	count := self.Count()
+	assert(additional_size <= math.MaxUint32-count) // Zig: `+` traps on overflow
+	return self.EnsureTotalCapacity(count + additional_size)
 }
 
 // ClearRetainingCapacity is HashMapUnmanaged.clearRetainingCapacity.
-func (self hashMapUnmanaged[K, V, C]) ClearRetainingCapacity() { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) ClearRetainingCapacity() {
+	if self.metadata != nil {
+		self.initMetadatas()
+		self.header().size = 0
+	}
+}
 
 // Count is HashMapUnmanaged.count.
-func (self hashMapUnmanaged[K, V, C]) Count() HashMapSize { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Count() HashMapSize {
+	return self.header().size
+}
 
 // header is HashMapUnmanaged.header.
-func (self hashMapUnmanaged[K, V, C]) header() *hashMapHeader[K, V] { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) header() *hashMapHeader[K, V] {
+	// Zig: self.metadata.? (null is a safety-checked panic), then the Header
+	// just before it. Go: the header the map points at.
+	assert(self.metadata != nil)
+	return self.hdr
+}
 
 // keys is HashMapUnmanaged.keys.
 //
 // Zig: fn keys(self: *const Self) [*]K.
-func (self hashMapUnmanaged[K, V, C]) keys() []K { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) keys() []K {
+	return self.header().keys
+}
 
 // values is HashMapUnmanaged.values.
 //
 // Zig: fn values(self: *const Self) [*]V.
-func (self hashMapUnmanaged[K, V, C]) values() []V { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) values() []V {
+	return self.header().values
+}
 
 // Capacity is HashMapUnmanaged.capacity.
-func (self hashMapUnmanaged[K, V, C]) Capacity() HashMapSize { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Capacity() HashMapSize {
+	if self.metadata == nil {
+		return 0
+	}
+
+	return self.header().capacity
+}
 
 // Iterator is HashMapUnmanaged.iterator.
 //
 // Zig: self is `*const Self`. The Go receiver is a value, like every
 // method of hashMapUnmanaged: the map type is a handle onto shared state
 // (metadata slice and header pointer), so the iterator sees the same map.
-func (self hashMapUnmanaged[K, V, C]) Iterator() HashMapIterator[K, V, C] { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Iterator() HashMapIterator[K, V, C] {
+	return HashMapIterator[K, V, C]{hm: &self}
+}
 
 // KeyIterator is HashMapUnmanaged.keyIterator.
-func (self hashMapUnmanaged[K, V, C]) KeyIterator() HashMapKeyIterator[K] { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) KeyIterator() HashMapKeyIterator[K] {
+	if metadata := self.metadata; metadata != nil {
+		return HashMapKeyIterator[K]{
+			len:      uint(self.Capacity()),
+			metadata: metadata,
+			items:    self.keys(),
+		}
+	} else {
+		// Zig: metadata and items undefined.
+		return HashMapKeyIterator[K]{
+			len: 0,
+		}
+	}
+}
 
 // ValueIterator is HashMapUnmanaged.valueIterator.
 func (self hashMapUnmanaged[K, V, C]) ValueIterator() HashMapValueIterator[V] {
-	panic(notImplemented)
+	if metadata := self.metadata; metadata != nil {
+		return HashMapValueIterator[V]{
+			len:      uint(self.Capacity()),
+			metadata: metadata,
+			items:    self.values(),
+		}
+	} else {
+		// Zig: metadata and items undefined.
+		return HashMapValueIterator[V]{
+			len: 0,
+		}
+	}
 }
 
 // PutNoClobber is HashMapUnmanaged.putNoClobber: insert an entry in the map.
 // Assumes it is not already present.
-func (self hashMapUnmanaged[K, V, C]) PutNoClobber(key K, value V) error { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) PutNoClobber(key K, value V) error {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.PutNoClobberContext(key, value, ctx)
+}
 
 // PutNoClobberContext is HashMapUnmanaged.putNoClobberContext.
 func (self hashMapUnmanaged[K, V, C]) PutNoClobberContext(key K, value V, ctx C) error {
-	panic(notImplemented)
+	assert(!self.ContainsContext(key, ctx))
+	if err := self.growIfNeeded(1); err != nil {
+		return err
+	}
+
+	self.PutAssumeCapacityNoClobberContext(key, value, ctx)
+	return nil
 }
 
 // PutAssumeCapacity is HashMapUnmanaged.putAssumeCapacity.
@@ -508,24 +727,52 @@ func (self hashMapUnmanaged[K, V, C]) PutNoClobberContext(key K, value V, ctx C)
 // Asserts there is enough capacity to store the new key-value pair.
 // Clobbers any existing data. To detect if a put would clobber
 // existing data, see `getOrPutAssumeCapacity`.
-func (self hashMapUnmanaged[K, V, C]) PutAssumeCapacity(key K, value V) { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) PutAssumeCapacity(key K, value V) {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	self.PutAssumeCapacityContext(key, value, ctx)
+}
 
 // PutAssumeCapacityContext is HashMapUnmanaged.putAssumeCapacityContext.
 func (self hashMapUnmanaged[K, V, C]) PutAssumeCapacityContext(key K, value V, ctx C) {
-	panic(notImplemented)
+	gop := self.GetOrPutAssumeCapacityContext(key, ctx)
+	*gop.value_ptr = value
 }
 
 // PutAssumeCapacityNoClobber is HashMapUnmanaged.putAssumeCapacityNoClobber:
 // insert an entry in the map. Assumes it is not already present,
 // and that no allocation is needed.
 func (self hashMapUnmanaged[K, V, C]) PutAssumeCapacityNoClobber(key K, value V) {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	self.PutAssumeCapacityNoClobberContext(key, value, ctx)
 }
 
 // PutAssumeCapacityNoClobberContext is
 // HashMapUnmanaged.putAssumeCapacityNoClobberContext.
 func (self hashMapUnmanaged[K, V, C]) PutAssumeCapacityNoClobberContext(key K, value V, ctx C) {
-	panic(notImplemented)
+	assert(!self.ContainsContext(key, ctx))
+
+	hash := ctx.Hash(key)
+	capacity := self.Capacity()
+	assert(capacity >= 1) // Zig: `capacity() - 1` traps on overflow
+	mask := capacity - 1
+	idx := uint(hash & uint64(mask)) // @truncate to usize
+
+	// var metadata = self.metadata.? + idx;
+	for self.metadata[idx].IsUsed() {
+		idx = (idx + 1) & uint(mask)
+	}
+
+	fingerprint := hashMapMetadataTakeFingerprint(hash)
+	self.metadata[idx].Fill(fingerprint)
+	self.keys()[idx] = key
+	self.values()[idx] = value
+	hdr := self.header()
+	assert(hdr.size < math.MaxUint32) // Zig: `+=` traps on overflow
+	hdr.size += 1
 }
 
 // FetchPut is HashMapUnmanaged.fetchPut: inserts a new `Entry` into the hash
@@ -533,44 +780,93 @@ func (self hashMapUnmanaged[K, V, C]) PutAssumeCapacityNoClobberContext(key K, v
 //
 // Zig: Allocator.Error!?KV.
 func (self hashMapUnmanaged[K, V, C]) FetchPut(key K, value V) (Optional[HashMapKV[K, V]], error) {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.FetchPutContext(key, value, ctx)
 }
 
 // FetchPutContext is HashMapUnmanaged.fetchPutContext.
 func (self hashMapUnmanaged[K, V, C]) FetchPutContext(key K, value V, ctx C) (Optional[HashMapKV[K, V]], error) {
-	panic(notImplemented)
+	gop, err := self.GetOrPutContext(key, ctx)
+	if err != nil {
+		return None[HashMapKV[K, V]](), err
+	}
+	result := None[HashMapKV[K, V]]()
+	if gop.found_existing {
+		result = Some(HashMapKV[K, V]{
+			key:   *gop.key_ptr,
+			value: *gop.value_ptr,
+		})
+	}
+	*gop.value_ptr = value
+	return result, nil
 }
 
 // FetchPutAssumeCapacity is HashMapUnmanaged.fetchPutAssumeCapacity: inserts
 // a new `Entry` into the hash map, returning the previous one, if any.
 // If insertion happens, asserts there is enough capacity without allocating.
 func (self hashMapUnmanaged[K, V, C]) FetchPutAssumeCapacity(key K, value V) Optional[HashMapKV[K, V]] {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.FetchPutAssumeCapacityContext(key, value, ctx)
 }
 
 // FetchPutAssumeCapacityContext is
 // HashMapUnmanaged.fetchPutAssumeCapacityContext.
 func (self hashMapUnmanaged[K, V, C]) FetchPutAssumeCapacityContext(key K, value V, ctx C) Optional[HashMapKV[K, V]] {
-	panic(notImplemented)
+	gop := self.GetOrPutAssumeCapacityContext(key, ctx)
+	result := None[HashMapKV[K, V]]()
+	if gop.found_existing {
+		result = Some(HashMapKV[K, V]{
+			key:   *gop.key_ptr,
+			value: *gop.value_ptr,
+		})
+	}
+	*gop.value_ptr = value
+	return result
 }
 
 // FetchRemove is HashMapUnmanaged.fetchRemove: if there is an `Entry` with a
 // matching key, it is deleted from the hash map, and then returned from this
 // function.
 func (self hashMapUnmanaged[K, V, C]) FetchRemove(key K) Optional[HashMapKV[K, V]] {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.FetchRemoveContext(key, ctx)
 }
 
 // FetchRemoveContext is HashMapUnmanaged.fetchRemoveContext.
 func (self hashMapUnmanaged[K, V, C]) FetchRemoveContext(key K, ctx C) Optional[HashMapKV[K, V]] {
-	panic(notImplemented)
+	return self.FetchRemoveAdapted(key, ctx)
 }
 
 // FetchRemoveAdapted is HashMapUnmanaged.fetchRemoveAdapted.
 //
 // Zig: key: anytype, ctx: anytype. See the file header.
 func (self hashMapUnmanaged[K, V, C]) FetchRemoveAdapted(key K, ctx C) Optional[HashMapKV[K, V]] {
-	panic(notImplemented)
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		old_key := &self.keys()[idx.Value]
+		old_val := &self.values()[idx.Value]
+		result := HashMapKV[K, V]{
+			key:   *old_key,
+			value: *old_val,
+		}
+		self.metadata[idx.Value].Remove()
+		// old_key.* = undefined; old_val.* = undefined;
+		var zero_key K
+		var zero_val V
+		*old_key = zero_key
+		*old_val = zero_val
+		hdr := self.header()
+		assert(hdr.size > 0) // Zig: `-=` traps on overflow
+		hdr.size -= 1
+		return Some(result)
+	}
+
+	return None[HashMapKV[K, V]]()
 }
 
 // getIndex is HashMapUnmanaged.getIndex.
@@ -586,132 +882,254 @@ func (self hashMapUnmanaged[K, V, C]) FetchRemoveAdapted(key K, ctx C) Optional[
 //
 // Zig: inline fn getIndex(self: Self, key: anytype, ctx: anytype) ?usize.
 func (self hashMapUnmanaged[K, V, C]) getIndex(key K, ctx C) Optional[uint] {
-	panic(notImplemented)
+	if self.header().size == 0 {
+		return None[uint]()
+	}
+
+	// If you get a compile error on this line, it means that your generic hash
+	// function is invalid for these parameters.
+	hash := ctx.Hash(key)
+	capacity := self.Capacity()
+	assert(capacity >= 1) // Zig: `capacity() - 1` traps on overflow
+	mask := capacity - 1
+	fingerprint := hashMapMetadataTakeFingerprint(hash)
+	// Don't loop indefinitely when there are no empty slots.
+	limit := self.Capacity()
+	idx := uint(hash & uint64(mask)) // @truncate to usize
+
+	// var metadata = self.metadata.? + idx;
+	for !self.metadata[idx].IsFree() && limit != 0 {
+		if self.metadata[idx].IsUsed() && self.metadata[idx].fingerprint == fingerprint {
+			test_key := &self.keys()[idx]
+			// If you get a compile error on this line, it means that your generic eql
+			// function is invalid for these parameters.
+			eql := ctx.Eql(key, *test_key)
+			if eql {
+				return Some(idx)
+			}
+		}
+
+		limit -= 1
+		idx = (idx + 1) & uint(mask)
+	}
+
+	return None[uint]()
 }
 
 // GetEntry is HashMapUnmanaged.getEntry.
 func (self hashMapUnmanaged[K, V, C]) GetEntry(key K) Optional[HashMapEntry[K, V]] {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetEntryContext(key, ctx)
 }
 
 // GetEntryContext is HashMapUnmanaged.getEntryContext.
 func (self hashMapUnmanaged[K, V, C]) GetEntryContext(key K, ctx C) Optional[HashMapEntry[K, V]] {
-	panic(notImplemented)
+	return self.GetEntryAdapted(key, ctx)
 }
 
 // GetEntryAdapted is HashMapUnmanaged.getEntryAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
 func (self hashMapUnmanaged[K, V, C]) GetEntryAdapted(key K, ctx C) Optional[HashMapEntry[K, V]] {
-	panic(notImplemented)
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		return Some(HashMapEntry[K, V]{
+			key_ptr:   &self.keys()[idx.Value],
+			value_ptr: &self.values()[idx.Value],
+		})
+	}
+	return None[HashMapEntry[K, V]]()
 }
 
 // Put is HashMapUnmanaged.put: insert an entry if the associated key is not
 // already present, otherwise update preexisting value.
-func (self hashMapUnmanaged[K, V, C]) Put(key K, value V) error { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Put(key K, value V) error {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.PutContext(key, value, ctx)
+}
 
 // PutContext is HashMapUnmanaged.putContext.
 func (self hashMapUnmanaged[K, V, C]) PutContext(key K, value V, ctx C) error {
-	panic(notImplemented)
+	result, err := self.GetOrPutContext(key, ctx)
+	if err != nil {
+		return err
+	}
+	*result.value_ptr = value
+	return nil
 }
 
 // GetKeyPtr is HashMapUnmanaged.getKeyPtr: get an optional pointer to the
 // actual key associated with adapted key, if present.
 //
 // Zig: ?*K.
-func (self hashMapUnmanaged[K, V, C]) GetKeyPtr(key K) *K { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetKeyPtr(key K) *K {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetKeyPtrContext(key, ctx)
+}
 
 // GetKeyPtrContext is HashMapUnmanaged.getKeyPtrContext.
-func (self hashMapUnmanaged[K, V, C]) GetKeyPtrContext(key K, ctx C) *K { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetKeyPtrContext(key K, ctx C) *K {
+	return self.GetKeyPtrAdapted(key, ctx)
+}
 
 // GetKeyPtrAdapted is HashMapUnmanaged.getKeyPtrAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
-func (self hashMapUnmanaged[K, V, C]) GetKeyPtrAdapted(key K, ctx C) *K { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetKeyPtrAdapted(key K, ctx C) *K {
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		return &self.keys()[idx.Value]
+	}
+	return nil
+}
 
 // GetKey is HashMapUnmanaged.getKey: get a copy of the actual key associated
 // with adapted key, if present.
 //
 // Zig: ?K.
-func (self hashMapUnmanaged[K, V, C]) GetKey(key K) Optional[K] { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetKey(key K) Optional[K] {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetKeyContext(key, ctx)
+}
 
 // GetKeyContext is HashMapUnmanaged.getKeyContext.
 func (self hashMapUnmanaged[K, V, C]) GetKeyContext(key K, ctx C) Optional[K] {
-	panic(notImplemented)
+	return self.GetKeyAdapted(key, ctx)
 }
 
 // GetKeyAdapted is HashMapUnmanaged.getKeyAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
 func (self hashMapUnmanaged[K, V, C]) GetKeyAdapted(key K, ctx C) Optional[K] {
-	panic(notImplemented)
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		return Some(self.keys()[idx.Value])
+	}
+	return None[K]()
 }
 
 // GetPtr is HashMapUnmanaged.getPtr: get an optional pointer to the value
 // associated with key, if present.
 //
 // Zig: ?*V.
-func (self hashMapUnmanaged[K, V, C]) GetPtr(key K) *V { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetPtr(key K) *V {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetPtrContext(key, ctx)
+}
 
 // GetPtrContext is HashMapUnmanaged.getPtrContext.
-func (self hashMapUnmanaged[K, V, C]) GetPtrContext(key K, ctx C) *V { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetPtrContext(key K, ctx C) *V {
+	return self.GetPtrAdapted(key, ctx)
+}
 
 // GetPtrAdapted is HashMapUnmanaged.getPtrAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
-func (self hashMapUnmanaged[K, V, C]) GetPtrAdapted(key K, ctx C) *V { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) GetPtrAdapted(key K, ctx C) *V {
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		return &self.values()[idx.Value]
+	}
+	return nil
+}
 
 // Get is HashMapUnmanaged.get: get a copy of the value associated with key,
 // if present.
 //
 // Zig: ?V.
-func (self hashMapUnmanaged[K, V, C]) Get(key K) Optional[V] { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Get(key K) Optional[V] {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetContext(key, ctx)
+}
 
 // GetContext is HashMapUnmanaged.getContext.
 func (self hashMapUnmanaged[K, V, C]) GetContext(key K, ctx C) Optional[V] {
-	panic(notImplemented)
+	return self.GetAdapted(key, ctx)
 }
 
 // GetAdapted is HashMapUnmanaged.getAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
 func (self hashMapUnmanaged[K, V, C]) GetAdapted(key K, ctx C) Optional[V] {
-	panic(notImplemented)
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		return Some(self.values()[idx.Value])
+	}
+	return None[V]()
 }
 
 // GetOrPut is HashMapUnmanaged.getOrPut.
 func (self hashMapUnmanaged[K, V, C]) GetOrPut(key K) (HashMapGetOrPutResult[K, V], error) {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetOrPutContext(key, ctx)
 }
 
 // GetOrPutContext is HashMapUnmanaged.getOrPutContext.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutContext(key K, ctx C) (HashMapGetOrPutResult[K, V], error) {
-	panic(notImplemented)
+	gop, err := self.GetOrPutContextAdapted(key, ctx)
+	if err != nil {
+		return HashMapGetOrPutResult[K, V]{}, err
+	}
+	if !gop.found_existing {
+		*gop.key_ptr = key
+	}
+	return gop, nil
 }
 
 // GetOrPutAdapted is HashMapUnmanaged.getOrPutAdapted.
 //
 // Zig: key: anytype, key_ctx: anytype.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutAdapted(key K, key_ctx C) (HashMapGetOrPutResult[K, V], error) {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0.
+	return self.GetOrPutContextAdapted(key, key_ctx)
 }
 
 // GetOrPutContextAdapted is HashMapUnmanaged.getOrPutContextAdapted.
 //
 // Zig: key: anytype, key_ctx: anytype.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutContextAdapted(key K, key_ctx C) (HashMapGetOrPutResult[K, V], error) {
-	panic(notImplemented)
+	if err := self.growIfNeeded(1); err != nil {
+		// If allocation fails, try to do the lookup anyway.
+		// If we find an existing item, we can return it.
+		// Otherwise return the error, we could not add another.
+		index := self.getIndex(key, key_ctx)
+		if !index.Valid {
+			return HashMapGetOrPutResult[K, V]{}, err
+		}
+		return HashMapGetOrPutResult[K, V]{
+			key_ptr:        &self.keys()[index.Value],
+			value_ptr:      &self.values()[index.Value],
+			found_existing: true,
+		}, nil
+	}
+	return self.GetOrPutAssumeCapacityAdapted(key, key_ctx), nil
 }
 
 // GetOrPutAssumeCapacity is HashMapUnmanaged.getOrPutAssumeCapacity.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutAssumeCapacity(key K) HashMapGetOrPutResult[K, V] {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetOrPutAssumeCapacityContext(key, ctx)
 }
 
 // GetOrPutAssumeCapacityContext is
 // HashMapUnmanaged.getOrPutAssumeCapacityContext.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutAssumeCapacityContext(key K, ctx C) HashMapGetOrPutResult[K, V] {
-	panic(notImplemented)
+	result := self.GetOrPutAssumeCapacityAdapted(key, ctx)
+	if !result.found_existing {
+		*result.key_ptr = key
+	}
+	return result
 }
 
 // GetOrPutAssumeCapacityAdapted is
@@ -719,48 +1137,146 @@ func (self hashMapUnmanaged[K, V, C]) GetOrPutAssumeCapacityContext(key K, ctx C
 //
 // Zig: key: anytype, ctx: anytype.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutAssumeCapacityAdapted(key K, ctx C) HashMapGetOrPutResult[K, V] {
-	panic(notImplemented)
+	// If you get a compile error on this line, it means that your generic hash
+	// function is invalid for these parameters.
+	hash := ctx.Hash(key)
+	capacity := self.Capacity()
+	assert(capacity >= 1) // Zig: `capacity() - 1` traps on overflow
+	mask := capacity - 1
+	fingerprint := hashMapMetadataTakeFingerprint(hash)
+	limit := self.Capacity()
+	idx := uint(hash & uint64(mask)) // @truncate to usize
+
+	first_tombstone_idx := uint(self.Capacity()) // invalid index
+	// var metadata = self.metadata.? + idx;
+	for !self.metadata[idx].IsFree() && limit != 0 {
+		if self.metadata[idx].IsUsed() && self.metadata[idx].fingerprint == fingerprint {
+			test_key := &self.keys()[idx]
+			// If you get a compile error on this line, it means that your generic eql
+			// function is invalid for these parameters.
+			eql := ctx.Eql(key, *test_key)
+			if eql {
+				return HashMapGetOrPutResult[K, V]{
+					key_ptr:        test_key,
+					value_ptr:      &self.values()[idx],
+					found_existing: true,
+				}
+			}
+		} else if first_tombstone_idx == uint(self.Capacity()) && self.metadata[idx].IsTombstone() {
+			first_tombstone_idx = idx
+		}
+
+		limit -= 1
+		idx = (idx + 1) & uint(mask)
+	}
+
+	if first_tombstone_idx < uint(self.Capacity()) {
+		// Cheap try to lower probing lengths after deletions. Recycle a tombstone.
+		idx = first_tombstone_idx
+	}
+
+	self.metadata[idx].Fill(fingerprint)
+	new_key := &self.keys()[idx]
+	new_value := &self.values()[idx]
+	// new_key.* = undefined; new_value.* = undefined;
+	var zero_key K
+	var zero_val V
+	*new_key = zero_key
+	*new_value = zero_val
+	hdr := self.header()
+	assert(hdr.size < math.MaxUint32) // Zig: `+=` traps on overflow
+	hdr.size += 1
+
+	return HashMapGetOrPutResult[K, V]{
+		key_ptr:        new_key,
+		value_ptr:      new_value,
+		found_existing: false,
+	}
 }
 
 // GetOrPutValue is HashMapUnmanaged.getOrPutValue.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutValue(key K, value V) (HashMapEntry[K, V], error) {
-	panic(notImplemented)
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.GetOrPutValueContext(key, value, ctx)
 }
 
 // GetOrPutValueContext is HashMapUnmanaged.getOrPutValueContext.
 func (self hashMapUnmanaged[K, V, C]) GetOrPutValueContext(key K, value V, ctx C) (HashMapEntry[K, V], error) {
-	panic(notImplemented)
+	res, err := self.GetOrPutAdapted(key, ctx)
+	if err != nil {
+		return HashMapEntry[K, V]{}, err
+	}
+	if !res.found_existing {
+		*res.key_ptr = key
+		*res.value_ptr = value
+	}
+	return HashMapEntry[K, V]{key_ptr: res.key_ptr, value_ptr: res.value_ptr}, nil
 }
 
 // Contains is HashMapUnmanaged.contains: return true if there is a value
 // associated with key in the map.
-func (self hashMapUnmanaged[K, V, C]) Contains(key K) bool { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Contains(key K) bool {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.ContainsContext(key, ctx)
+}
 
 // ContainsContext is HashMapUnmanaged.containsContext.
-func (self hashMapUnmanaged[K, V, C]) ContainsContext(key K, ctx C) bool { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) ContainsContext(key K, ctx C) bool {
+	return self.ContainsAdapted(key, ctx)
+}
 
 // ContainsAdapted is HashMapUnmanaged.containsAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
-func (self hashMapUnmanaged[K, V, C]) ContainsAdapted(key K, ctx C) bool { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) ContainsAdapted(key K, ctx C) bool {
+	return self.getIndex(key, ctx).Valid
+}
 
 // removeByIndex is HashMapUnmanaged.removeByIndex.
-func (self hashMapUnmanaged[K, V, C]) removeByIndex(idx uint) { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) removeByIndex(idx uint) {
+	self.metadata[idx].Remove() // Zig: self.metadata.? (a nil slice panics on the index)
+	// self.keys()[idx] = undefined; self.values()[idx] = undefined;
+	var zero_key K
+	var zero_val V
+	self.keys()[idx] = zero_key
+	self.values()[idx] = zero_val
+	hdr := self.header()
+	assert(hdr.size > 0) // Zig: `-=` traps on overflow
+	hdr.size -= 1
+}
 
 // Remove is HashMapUnmanaged.remove.
 //
 // If there is an `Entry` with a matching key, it is deleted from
 // the hash map, and this function returns true.  Otherwise this
 // function returns false.
-func (self hashMapUnmanaged[K, V, C]) Remove(key K) bool { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) Remove(key K) bool {
+	// Zig: a compile error unless @sizeOf(Context) == 0; the context is
+	// `undefined`, in Go the zero value of C.
+	var ctx C
+	return self.RemoveContext(key, ctx)
+}
 
 // RemoveContext is HashMapUnmanaged.removeContext.
-func (self hashMapUnmanaged[K, V, C]) RemoveContext(key K, ctx C) bool { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) RemoveContext(key K, ctx C) bool {
+	return self.RemoveAdapted(key, ctx)
+}
 
 // RemoveAdapted is HashMapUnmanaged.removeAdapted.
 //
 // Zig: key: anytype, ctx: anytype.
-func (self hashMapUnmanaged[K, V, C]) RemoveAdapted(key K, ctx C) bool { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) RemoveAdapted(key K, ctx C) bool {
+	if idx := self.getIndex(key, ctx); idx.Valid {
+		self.removeByIndex(idx.Value)
+		return true
+	}
+
+	return false
+}
 
 // RemoveByPtr is HashMapUnmanaged.removeByPtr.
 //
@@ -769,7 +1285,17 @@ func (self hashMapUnmanaged[K, V, C]) RemoveAdapted(key K, ctx C) bool { panic(n
 // in the hash map.
 //
 // Zig finds the index by pointer subtraction; see keyIndex.
-func (self hashMapUnmanaged[K, V, C]) RemoveByPtr(key_ptr *K) { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) RemoveByPtr(key_ptr *K) {
+	// TODO: replace with pointer subtraction once supported by zig
+	// if @sizeOf(K) == 0 then there is at most one item in the hash
+	// map, which is assumed to exist as key_ptr must be valid.  This
+	// item must be at index 0.
+	//
+	// Go: keyIndex is the whole `if (@sizeOf(K) > 0) ... else 0`.
+	idx := self.keyIndex(key_ptr)
+
+	self.removeByIndex(idx)
+}
 
 // keyIndex is NOT a Zig declaration. It stands for the pointer subtraction
 // in removeByPtr,
@@ -781,14 +1307,44 @@ func (self hashMapUnmanaged[K, V, C]) RemoveByPtr(key_ptr *K) { panic(notImpleme
 // REQUIREMENT on the implementation: keyIndex must panic if key_ptr does
 // not point at an element of the map's key slice (where Zig's result would
 // be meaningless); tests check this.
-func (self hashMapUnmanaged[K, V, C]) keyIndex(key_ptr *K) uint { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) keyIndex(key_ptr *K) uint {
+	// const idx = if (@sizeOf(K) > 0)
+	//     (@intFromPtr(key_ptr) - @intFromPtr(self.keys())) / @sizeOf(K)
+	// else
+	//     0;
+	size := unsafe.Sizeof(*key_ptr)
+	if size == 0 {
+		return 0
+	}
+	keys := self.keys()
+	ptr := uintptr(unsafe.Pointer(key_ptr))
+	base := uintptr(unsafe.Pointer(unsafe.SliceData(keys)))
+	// Go-only (wireframe REQUIREMENT): the pointer must be an element of
+	// keys. Zig's `-` traps when it lies before keys; the rest is checked
+	// by comparing the element at the computed index.
+	assert(ptr >= base)
+	idx := uint((ptr - base) / size)
+	assert(idx < uint(len(keys)) && &keys[idx] == key_ptr)
+	return idx
+}
 
 // initMetadatas is HashMapUnmanaged.initMetadatas.
-func (self hashMapUnmanaged[K, V, C]) initMetadatas() { panic(notImplemented) }
+func (self hashMapUnmanaged[K, V, C]) initMetadatas() {
+	// @memset(@as([*]u8, @ptrCast(self.metadata.?))[0 .. @sizeOf(Metadata) * self.capacity()], 0);
+	assert(self.metadata != nil) // Zig: self.metadata.?
+	clear(self.metadata[0:self.Capacity()])
+}
 
 // growIfNeeded is HashMapUnmanaged.growIfNeeded.
 func (self hashMapUnmanaged[K, V, C]) growIfNeeded(new_count HashMapSize) error {
-	panic(notImplemented)
+	capacity := self.Capacity()
+	size := self.header().size
+	assert(capacity >= size) // Zig: `-` traps on overflow
+	available := capacity - size
+	if new_count > available {
+		return ErrOutOfMemory
+	}
+	return nil
 }
 
 // hashMapLayout is HashMapUnmanaged.Layout: the memory layout for the
@@ -820,5 +1376,60 @@ type hashMapLayout struct {
 // the (private) type. `sizes` stands for the type parameters K and V; see
 // the file header. Zig asserts that new_capacity is 0 or a power of two.
 func hashMapLayoutForCapacity(new_capacity HashMapSize, sizes hashMapEntrySizes) hashMapLayout {
-	panic(notImplemented)
+	assert(new_capacity == 0 || new_capacity&(new_capacity-1) == 0) // std.math.isPowerOfTwo
+
+	// Cast to usize to prevent overflow in size calculations.
+	// See: https://github.com/ziglang/zig/pull/19048
+	cap := uint64(new_capacity)
+
+	// The comptime declarations header_align, key_align, val_align and
+	// base_align (see the file header).
+	const header_size = 16 // @sizeOf(Header)
+	const header_align = 4 // @alignOf(Header)
+	const metadata_size = 1
+	key_align := sizes.key_align
+	if sizes.key_size == 0 {
+		key_align = 1
+	}
+	val_align := sizes.val_align
+	if sizes.val_size == 0 {
+		val_align = 1
+	}
+	base_align := max(header_align, key_align, val_align)
+
+	// std.mem.alignForward(usize, addr, alignment), which asserts that the
+	// alignment is a power of two. Nothing here can overflow a u64: cap is
+	// at most 2^31.
+	alignForward := func(addr uint64, alignment uint64) uint64 {
+		assert(alignment != 0 && alignment&(alignment-1) == 0)
+		return (addr + (alignment - 1)) &^ (alignment - 1)
+	}
+
+	// Pack our metadata, keys, and values.
+	const meta_start = header_size
+	meta_end := header_size + cap*metadata_size
+	keys_start := alignForward(meta_end, key_align)
+	keys_end := keys_start + cap*sizes.key_size
+	vals_start := alignForward(keys_end, val_align)
+	vals_end := vals_start + cap*sizes.val_size
+
+	// Our total memory size required is the end of our values
+	// aligned to the base required alignment.
+	total_size := alignForward(
+		vals_end,
+		base_align,
+	)
+
+	// The offsets we actually store in the map are from the
+	// metadata pointer so that we can use self.metadata as
+	// the base.
+	keys_offset := keys_start - meta_start
+	vals_offset := vals_start - meta_start
+
+	return hashMapLayout{
+		total_size: total_size,
+		keys_start: keys_offset,
+		vals_start: vals_offset,
+		capacity:   new_capacity,
+	}
 }

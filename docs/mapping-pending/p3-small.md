@@ -134,3 +134,58 @@ recompute the same digests:
   slice; 5000 random entries, ids 0..120 bytes, uris 0..300 bytes) plus three
   fixed entries: Go equals 64-bit Zig (0x118773d096266e81). 32-bit Zig
   differs, as expected (usize length is 4 bytes there).
+
+## `size.zig`, `point.zig`, `Tabstops.zig`
+
+### `size.zig` (`size.go`)
+
+- Nothing to implement: the file keeps only the integer types and
+  `max_page_size` (wireframe decision, unchanged). Header changed from
+  "WIREFRAME" to "Port of". 2 of 24 Zig tests translated, 22 listed in
+  `scripts/not-translated.txt` (Offset, OffsetBuf, getOffset, intFromBase).
+
+### `point.zig` (`point.go`)
+
+- `Tag.String()` reads the name table `pointTagNames`, indexed by value, of
+  length `pointTagCount` (= `@typeInfo(Tag).@"enum".fields.len`, the
+  `iota` after the last tag), as `ParserState` does. A value outside the
+  enum panics (index out of range), as `@tagName` of an invalid value does.
+- `Point.coord` (`inline fn`, one prong for all four tags capturing the
+  payload) is a switch on `Tag` returning the matching field; `default:
+  panic("unreachable")` for a tag outside the enum.
+- `Coordinate.eql` is `x == other.x && y == other.y`.
+
+### `Tabstops.zig` (`Tabstops.go`)
+
+- `masks` (computed at compile time with `@shlExact(1, @as(u3, i))`) is
+  the package-level `tabstopsMasks`, filled once at start-up by a function
+  literal (`1 << i` for i in 0..7; nothing is shifted out, so `@shlExact`
+  cannot trap).
+- `entry`/`index` (`inline fn`): `col / 8`, `col % 8` (`@mod` on usize).
+- `set`, `unset`, `get`: the `assert(dynamic_i < self.dynamic_stops.len)`
+  are `assert`s, so a column beyond the dynamic storage stops the port
+  exactly where Zig's safe build stops. `unset` keeps upstream's `^=` (it
+  toggles; term51 tests pin the defect). `get`'s labeled block `unit:` is
+  an if/else assigning `unit`.
+- `resize`: the allocator is dropped and Go's `make` cannot fail, so it
+  always returns nil; `make` zeroes (Zig's `@memset(new, 0)`).
+  `fastmem.copy(Unit, new, old)` is `copy(new[0:len(old)], old)` (slicing
+  traps like `@memcpy` would if `old` were longer). The free of the old
+  storage is left to the GC. The quirks are kept: the dynamic storage is
+  `cols - 512` units (bytes), not bits, and `size < len` is strict, so a
+  resize to the current dynamic length reallocates. The local `new` keeps
+  Zig's name (it shadows Go's builtin inside the function only).
+  `resize_tw` and `tw.check(.dynamic_alloc)` are omitted (wireframe
+  decision: test-only fault injection; the tripwire test and the three
+  FailingAllocator tests are in `scripts/not-translated.txt`).
+- `init`: on a `resize` error (unreachable in Go) returns the zero Tabstops
+  and the error (Zig's value is undefined).
+- `deinit`: the free is the GC's; `self.* = undefined` is `*self =
+  Tabstops{}`.
+- `reset`: `@memset(..., 0)` is Go's `clear`. `while (i < self.cols - 1) :
+  (i += interval)`: `self.cols - 1` is a usize subtraction that traps in
+  Zig when `cols == 0` (only reached with `interval > 0`), so the port
+  panics ("integer overflow") before the loop; `i += interval` traps on
+  overflow in Zig, so the port checks `i > maxUint - interval` before
+  adding. `usize` here is Go `uint` (the platform width, as Zig's on each
+  target; nothing in this file is recorded data).

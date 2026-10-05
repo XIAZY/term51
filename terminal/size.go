@@ -1,9 +1,7 @@
-// WIREFRAME for src/terminal/size.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Port of src/terminal/size.zig (Ghostty v1.3.1).
 //
-// This file declares types and constants only. size.zig has no function
-// that survives the rules below, so there is nothing to implement here
-// later; the header keeps the wireframe wording so the file is reviewed with
-// the others. See the header of color.go for the rules.
+// This file declares types and constants only: size.zig has no function
+// that survives the rules below.
 //
 // File naming: size.zig is a namespace file, so its declarations take the
 // prefix `Size`: `size.CellCountInt` is `SizeCellCountInt`.

@@ -1,14 +1,8 @@
-// WIREFRAME for src/terminal/PageList.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Ported from src/terminal/PageList.zig (Ghostty v1.3.1).
 //
 // Maintains a linked list of pages to make up a terminal screen
 // and provides higher level operations on top of those pages to
 // make it slightly easier to work with.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
 //
 // File naming: PageList.zig is a file-level struct, so the type is
 // `PageList` and its constructor is `PageListInit`. What is nested in it
@@ -142,6 +136,14 @@
 //     `Pin.downOverflow` and `Pin.upOverflow` return. They are two
 //     separate but identical anonymous types in Zig and one type here;
 //   - the `...Tag` types of the tagged unions and the `String` methods.
+//
+// Added by the implementation (not Zig declarations, each says what it
+// stands for): `pageListSatSub` (`-|` on usize), `pageListRotateOnce`
+// (fastmem.rotateOnce), `pageListIncreaseCapacityDouble` (the body of
+// increaseCapacity's `inline else`), `pageListCastCellCount` and
+// `pageListPinOverflowOverflow` (downOverflow/upOverflow helpers), the
+// names arrays of the enums, and the field `PageList.term51_resizing`
+// (docs/mapping.md "candidate B", see the field).
 //
 // # Omitted
 //

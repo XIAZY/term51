@@ -27,3 +27,39 @@ File: `terminal/bitmap_allocator.go`.
 
 Tests: bitmap_allocator_test.go 74 + corpus_bitmap_test.go 3, all pass
 natively and on 32-bit ARM (qemu).
+
+## `hash_map.zig`
+
+File: `terminal/hash_map.go`. The wireframe's structure (metadata slice +
+shared `hdr` pointer, value receivers, `hashMapEntrySizes`, `keyIndex`) is
+kept unchanged; no signature changed.
+
+| Zig | Go | Notes |
+|---|---|---|
+| `AutoContext.hash` = `getAutoHashFn(K)`: `Wyhash.hash(0, std.mem.asBytes(&key))` (every key type used has a unique representation) | type switch on `any(key)` writing the key little-endian at its Zig width into an 8-byte stack buffer, then `stdHashWyhashHash(0, buf[:n])` | u8/i8 1, u16/i16 2, u32/i32 4, u64/i64 8 bytes; Go `uint`/`int` (usize/isize) always 8 (int sign-extended). Any other key type panics `not ported`. The switch is a per-call run-time step standing for Zig's comptime width: Go cannot specialise a method of the empty generic struct `hashMapAutoContext[K]` per type argument, and the struct has no field to hold a choice made once. A defined type (e.g. `type X uint32`) would hit the default; the library's keys are `SizeOffsetInt` (alias of uint32) |
+| `AutoContext.eql` = `std.meta.eql(a, b)` | `a == b` | integers |
+| `Metadata` packed struct, `@as(u8, @bitCast(self))` in isFree / isTombstone | method `bitCast()` (not a Zig declaration): `fingerprint&0x7f \| (used&1)<<7` | the masks drop what a u7 / u1 cannot hold |
+| `takeFingerprint`: `@truncate(hash >> (64 - 7))` | `uint8(hash >> 57)` | |
+| `self.metadata.?` (null unwrap, a safety panic) | `assert(self.metadata != nil)` in `header()` and `initMetadatas()`; `removeByIndex` and the probe loops index the slice (a nil slice panics on the index) | Go-only panic tests `TestHashMap_panic_*_null_metadata` |
+| `self.metadata.? + idx` then `metadata[0]` (unchecked many-pointer) | `self.metadata[idx]` | idx is masked below capacity = len(metadata) |
+| `const mask = self.capacity() - 1` (u32) | `assert(capacity >= 1)` before the subtraction | in putAssumeCapacityNoClobberContext, getIndex, getOrPutAssumeCapacityAdapted (capacity-0 panic tests) |
+| `self.capacity() - self.header().size` in growIfNeeded | `assert(capacity >= size)` | Go-only test: a full map overfilled by an assume-capacity put |
+| `self.count() + additional_size` in ensureUnusedCapacity | `assert(additional_size <= MaxUint32 - count)` | |
+| `header().size += 1` / `-= 1` (u32) | assert before (`< MaxUint32` / `> 0`) | removeByIndex panic test |
+| `x.* = undefined` (fetchRemoveAdapted, removeByIndex, getOrPutAssumeCapacityAdapted) | Go zero value of K / V | mapping table: `undefined` is the zero value |
+| `@memset(metadata[0 .. capacity], 0)` (initMetadatas) | `clear(self.metadata[0:self.Capacity()])` | |
+| Iterator `while (metadata != end) : ({ metadata += 1; it.index += 1; })` | `for ; len(metadata) != 0; metadata, it.index = metadata[1:], it.index+1` over `metadata[it.index:cap]` | the return inside the body skips the post statement as in Zig |
+| FieldIterator `metadata += 1; items += 1` | reslice `[1:]` of both | |
+| keyIterator / valueIterator with null metadata: `metadata` and `items` `undefined` | nil slices, `len: 0` | |
+| `init`: metadata at `buf + @sizeOf(Header)`, keys/values at `layout.keys_start` / `vals_start` | `make` of each, `layout.capacity` long; header allocated and pointed at by `hdr` | capacity 0 gives a non-nil empty metadata slice (wireframe REQUIREMENT) |
+| `OffsetHashMap.init`: `getOffset(..., m.metadata.?)`; `map(base)`: `self.metadata.ptr(base)` | copy `metadata` and `hdr` from / to the unmanaged map | |
+| `removeByPtr`: `if (@sizeOf(K) > 0) (@intFromPtr(key_ptr) - @intFromPtr(self.keys())) / @sizeOf(K) else 0` | `keyIndex` holds the whole expression, with package `unsafe` as the wireframe allows (`unsafe.Sizeof(*key_ptr)`, `unsafe.Pointer`, `unsafe.SliceData`) | panics when the pointer is before `keys` (Zig's `-` trap) or the element at the computed index is not `key_ptr` (wireframe REQUIREMENT; Go-only foreign-pointer test) |
+| comptime `key_align` / `val_align` (`1` for a zero-sized type), `header_align` (4), `base_align` (max) | computed at the top of `hashMapLayoutForCapacity` from `hashMapEntrySizes` | the function is the only user; a page computes it once per layout |
+| `std.mem.alignForward(usize, x, a)` in layoutForCapacity | local closure `alignForward`, asserting a power-of-two alignment (std) | no overflow possible: cap <= 2^31 |
+| `assert(new_capacity == 0 or std.math.isPowerOfTwo(new_capacity))` | `assert(new_capacity == 0 \|\| new_capacity&(new_capacity-1) == 0)` | Go-only panic tests (layoutForCapacity, OffsetHashMap.layout) |
+| The Context-less wrappers (`put`, `get`, ... : compile error unless `@sizeOf(Context) == 0`, then `undefined` context) | `var ctx C` (zero value) | |
+| `getOrPutAdapted`'s compile-time check | comment only | |
+
+Tests: hash_map_test.go 101 + hash_map_2_test.go 51 +
+corpus_hashmap_test.go 1 (data/hashmap/hashmap_data.txt), all pass natively
+and on 32-bit ARM (qemu).

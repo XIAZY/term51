@@ -1141,8 +1141,16 @@ Tag `String()` methods use names arrays (`hyperlinkHyperlinkIdTagNames`,
 - The reference-counted set is generic over all four of Zig's parameters, has
   no memory base, keeps `cap`, `table_cap` and `table_mask` as counts (the
   byte offsets are dropped), treats a zero-capacity set as empty (lookups find
-  nothing, adds return `ErrOutOfMemory`), and uses integer arithmetic that must
-  reproduce `data/sets/capacities.txt` (every capacity 0 to 65,536).
+  nothing, adds return `ErrOutOfMemory`), and keeps upstream's float
+  formulas (`capacityForCount`'s `ceil((n+1)/0.8125)`, the `0.8125 *
+  table_cap` items cap, the `cap * 0.9` rehash threshold), each product
+  explicitly rounded so Go cannot fuse it (project lead, 2026-10-05: the
+  faithful choice, replacing the earlier "integer arithmetic" wording). They
+  must reproduce `data/sets/capacities.txt` (every capacity 0 to 65,536), and
+  do, natively and on 32-bit ARM. `scripts/check-no-fma.sh` covers them: it
+  checks the test binary too, because generic set code such as
+  `RefCountedSetLayoutInit` is only instantiated by the tests until the page
+  layer uses it.
 - Hashes (`Style.hash`, `PageEntry.hash`) must reproduce
   `data/sets/style_hash.txt` and `data/sets/hyperlink_hash.txt`: they decide
   when a set reports that it is full and so drive page growth. `Style.hash`

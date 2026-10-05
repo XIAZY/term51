@@ -34,9 +34,15 @@
 // Bytes. `std.mem.asBytes(&key)` is the key's memory in native byte order,
 // which is little-endian on every port target (arm64, 32-bit ARM) and on the
 // 64-bit build that recorded the data; the Go code writes little-endian
-// explicitly. usize is 8 bytes (the recorded data come from a 64-bit build):
-// stdHashAutoHashHashUsize hashes 8 bytes on every platform, including
-// 32-bit ARM where Zig's own usize, and so its hash, would be 4 bytes.
+// explicitly.
+//
+// usize: this port follows the 64-bit reference ON PURPOSE (project lead
+// ruling). The recorded data come from a 64-bit build, so
+// stdHashAutoHashHashUsize hashes a usize as 8 bytes on every platform,
+// including 32-bit ARM. A Zig build for 32-bit ARM would hash 4 bytes there
+// and give different hashes (for example every PageEntry.hash, whose slices
+// end with their length as a usize); the port deliberately does not match
+// such a build.
 //
 // Not ported: the instantiations for other types (pointers hashed by
 // address, optionals, arrays, vectors, structs, unions, error unions,

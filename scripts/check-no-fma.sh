@@ -15,12 +15,18 @@ GO=${GO:-/usr/local/go/bin/go}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 status=0
+#
+# Both the package and its test binary are checked: a generic function is
+# only compiled where it is instantiated, and some (RefCountedSetLayoutInit,
+# for instance) are instantiated only by the tests until the files that use
+# them are ported.
 check() {
     name=$1
     pattern=$2
     shift 2
     env "$@" "$GO" build -o "$tmp/$name.a" ./terminal
-    if "$GO" tool objdump -s 'terminal\.' "$tmp/$name.a" | grep -E "$pattern" > "$tmp/$name.txt"; then
+    env "$@" "$GO" test -c -o "$tmp/$name.test" ./terminal
+    if { "$GO" tool objdump -s 'terminal\.' "$tmp/$name.a"; "$GO" tool objdump -s 'terminal\.' "$tmp/$name.test"; } | grep -E "$pattern" > "$tmp/$name.txt"; then
         echo "fused multiply-add instructions in the $name build:"
         awk '{print "  " $1, $4}' "$tmp/$name.txt"
         status=1

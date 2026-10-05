@@ -1494,10 +1494,9 @@ where this is off. See the optimisation list.
   merged). No translated test turned out to be layout-only beyond the 11
   already listed.
 - `data/layout/page_layout.txt` (27,060 lines: 505 capacities with every
-  Layout field and maxCols, and 3,325 `Capacity.adjust` results) matched
-  line for line natively and on 32-bit ARM, checked with a throw-away test
-  (not committed). Suggest a Go-only corpus test like
-  TestStyle_corpus_hash; nothing reads the file today.
+  Layout field and maxCols, and 3,325 `Capacity.adjust` results) is checked
+  line for line by the Go-only `TestPage_corpus_layout`
+  (`corpus_page_layout_test.go`), natively and on 32-bit ARM.
 
 ## Tests
 

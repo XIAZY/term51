@@ -85,7 +85,7 @@ terminal/page.zig | term51: Page.clone: an empty page clones to an empty page | 
 terminal/page.zig | term51: Page.cloneBuf: clones into a caller provided buffer | Page.cloneBuf has no Go counterpart (no memory base in Go)
 terminal/page.zig | term51: Page.cloneBuf: a larger buffer is only used up to the page size | Page.cloneBuf has no Go counterpart (no memory base in Go)
 terminal/page.zig | term51: Cell.isZero: comptime evaluation sees leftover bits of Cell{} | tests Zig 0.15.2 comptime evaluation of the default cell (compiler-specific, not library logic); Go has no comptime evaluation
-terminal/page.zig | term51: Page.layout: dump exact data when TERM51_LAYOUT_DUMP_DIR is set | gated data dump (writes data/layout/page_layout.txt); skipped in Zig when the variable is not set
+terminal/page.zig | term51: Page.layout: dump exact data when TERM51_LAYOUT_DUMP_DIR is set | gated data dump (writes data/layout/page_layout.txt); skipped in Zig when the variable is not set; corpus_page_layout_test.go (TestPage_corpus_layout) checks the data
 terminal/PageList.zig | PageList init error | fault-injection test (tripwire init_tw / initPages_tw FailPoints with error.OutOfMemory); there is no allocator to fail in the Go port
 terminal/PageList.zig | PageList resize reflow less cols copy kitty placeholder | Kitty placeholder reflow test (kitty_virtual_placeholder / kitty graphics is compiled out in the library build)
 terminal/PageList.zig | PageList resize reflow more cols clears kitty placeholder | Kitty placeholder reflow test (kitty_virtual_placeholder / kitty graphics is compiled out in the library build)

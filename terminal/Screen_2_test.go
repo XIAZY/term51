@@ -1163,7 +1163,9 @@ func TestSc2_Screen_increaseCapacity_non_cursor_page_returns_early(t *testing.T)
 	// the first page since we're just adding rows.
 	first_page_node := s.pages.pages.first
 	first_page_node.data.PauseIntegrityChecks(true)
-	for i := 0; i < int(first_page_node.data.capacity.rows)-int(first_page_node.data.size.rows); i++ {
+	// Zig: for (0..n) evaluates n once.
+	n := int(first_page_node.data.capacity.rows) - int(first_page_node.data.size.rows)
+	for i := 0; i < n; i++ {
 		_, err := s.pages.Grow()
 		zigTry(t, err)
 	}

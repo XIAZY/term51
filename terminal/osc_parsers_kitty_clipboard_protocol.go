@@ -1,11 +1,9 @@
-// WIREFRAME for src/terminal/osc/parsers/kitty_clipboard_protocol.zig
-// (Ghostty v1.3.1). NOT YET PORTED.
+// Ported from src/terminal/osc/parsers/kitty_clipboard_protocol.zig
+// (Ghostty v1.3.1).
 //
 // Kitty's clipboard protocol (OSC 5522)
 // Specification: https://sw.kovidgoyal.net/kitty/clipboard/
 // https://rockorager.dev/misc/bracketed-paste-mime/
-//
-// Types and signatures only; see the header of color.go for the rules.
 //
 // File naming: `osc/parsers/kitty_clipboard_protocol.zig` becomes
 // `osc_parsers_kitty_clipboard_protocol.go` in package terminal, and its
@@ -19,9 +17,13 @@
 //     OSCParsersKittyClipboardProtocolOptionValue, which holds one result
 //     field per Option value.
 //   - `const log = std.log.scoped(.kitty_clipboard_protocol)`: the port uses
-//     warn("kitty_clipboard_protocol", ...).
+//     warn("kitty_clipboard_protocol", ...). Upstream never logs in this
+//     file.
+//   - The imports `build_options` and `encoding`, unused upstream.
 
 package terminal
+
+import "bytes"
 
 // OSCParsersKittyClipboardProtocolOSC is
 // osc.parsers.kitty_clipboard_protocol.OSC.
@@ -46,7 +48,7 @@ type OSCParsersKittyClipboardProtocolOSC struct {
 func (self OSCParsersKittyClipboardProtocolOSC) ReadOption(
 	key OSCParsersKittyClipboardProtocolOption,
 ) OSCParsersKittyClipboardProtocolOptionValue {
-	panic(notImplemented)
+	return key.Read(self.metadata)
 }
 
 // OSCParsersKittyClipboardProtocolLocation is
@@ -61,13 +63,25 @@ const (
 
 // String returns the Zig tag name (@tagName), the name that
 // std.meta.stringToEnum matches in Location.init.
-func (self OSCParsersKittyClipboardProtocolLocation) String() string { panic(notImplemented) }
+func (self OSCParsersKittyClipboardProtocolLocation) String() string {
+	return oscParsersKittyClipboardProtocolLocationNames[self]
+}
+
+var oscParsersKittyClipboardProtocolLocationNames = [oscParsersKittyClipboardProtocolLocationCount]string{
+	OSCParsersKittyClipboardProtocolLocationPrimary: "primary",
+}
 
 // OSCParsersKittyClipboardProtocolLocationInit is
 // osc.parsers.kitty_clipboard_protocol.Location.init:
 // std.meta.stringToEnum(Location, str).
 func OSCParsersKittyClipboardProtocolLocationInit(str []uint8) Optional[OSCParsersKittyClipboardProtocolLocation] {
-	panic(notImplemented)
+	// std.meta.stringToEnum: the value whose tag name equals str exactly.
+	for i := OSCParsersKittyClipboardProtocolLocation(0); i < oscParsersKittyClipboardProtocolLocationCount; i++ {
+		if string(str) == i.String() {
+			return Some(i)
+		}
+	}
+	return None[OSCParsersKittyClipboardProtocolLocation]()
 }
 
 // OSCParsersKittyClipboardProtocolOperation is
@@ -85,13 +99,28 @@ const (
 
 // String returns the Zig tag name (@tagName), the name that
 // std.meta.stringToEnum matches in Operation.init.
-func (self OSCParsersKittyClipboardProtocolOperation) String() string { panic(notImplemented) }
+func (self OSCParsersKittyClipboardProtocolOperation) String() string {
+	return oscParsersKittyClipboardProtocolOperationNames[self]
+}
+
+var oscParsersKittyClipboardProtocolOperationNames = [oscParsersKittyClipboardProtocolOperationCount]string{
+	OSCParsersKittyClipboardProtocolOperationRead:   "read",
+	OSCParsersKittyClipboardProtocolOperationWalias: "walias",
+	OSCParsersKittyClipboardProtocolOperationWdata:  "wdata",
+	OSCParsersKittyClipboardProtocolOperationWrite:  "write",
+}
 
 // OSCParsersKittyClipboardProtocolOperationInit is
 // osc.parsers.kitty_clipboard_protocol.Operation.init:
 // std.meta.stringToEnum(Operation, str).
 func OSCParsersKittyClipboardProtocolOperationInit(str []uint8) Optional[OSCParsersKittyClipboardProtocolOperation] {
-	panic(notImplemented)
+	// std.meta.stringToEnum: the value whose tag name equals str exactly.
+	for i := OSCParsersKittyClipboardProtocolOperation(0); i < oscParsersKittyClipboardProtocolOperationCount; i++ {
+		if string(str) == i.String() {
+			return Some(i)
+		}
+	}
+	return None[OSCParsersKittyClipboardProtocolOperation]()
 }
 
 // OSCParsersKittyClipboardProtocolStatus is
@@ -114,13 +143,32 @@ const (
 
 // String returns the Zig tag name (@tagName), the name that
 // std.meta.stringToEnum matches in Status.init.
-func (self OSCParsersKittyClipboardProtocolStatus) String() string { panic(notImplemented) }
+func (self OSCParsersKittyClipboardProtocolStatus) String() string {
+	return oscParsersKittyClipboardProtocolStatusNames[self]
+}
+
+var oscParsersKittyClipboardProtocolStatusNames = [oscParsersKittyClipboardProtocolStatusCount]string{
+	OSCParsersKittyClipboardProtocolStatusDATA:   "DATA",
+	OSCParsersKittyClipboardProtocolStatusDONE:   "DONE",
+	OSCParsersKittyClipboardProtocolStatusEBUSY:  "EBUSY",
+	OSCParsersKittyClipboardProtocolStatusEINVAL: "EINVAL",
+	OSCParsersKittyClipboardProtocolStatusEIO:    "EIO",
+	OSCParsersKittyClipboardProtocolStatusENOSYS: "ENOSYS",
+	OSCParsersKittyClipboardProtocolStatusEPERM:  "EPERM",
+	OSCParsersKittyClipboardProtocolStatusOK:     "OK",
+}
 
 // OSCParsersKittyClipboardProtocolStatusInit is
 // osc.parsers.kitty_clipboard_protocol.Status.init:
 // std.meta.stringToEnum(Status, str).
 func OSCParsersKittyClipboardProtocolStatusInit(str []uint8) Optional[OSCParsersKittyClipboardProtocolStatus] {
-	panic(notImplemented)
+	// std.meta.stringToEnum: the value whose tag name equals str exactly.
+	for i := OSCParsersKittyClipboardProtocolStatus(0); i < oscParsersKittyClipboardProtocolStatusCount; i++ {
+		if string(str) == i.String() {
+			return Some(i)
+		}
+	}
+	return None[OSCParsersKittyClipboardProtocolStatus]()
 }
 
 // OSCParsersKittyClipboardProtocolOption is
@@ -142,7 +190,20 @@ const (
 
 // String returns the Zig tag name (@tagName), which Option.read uses as the
 // key to look for in the metadata.
-func (self OSCParsersKittyClipboardProtocolOption) String() string { panic(notImplemented) }
+func (self OSCParsersKittyClipboardProtocolOption) String() string {
+	return oscParsersKittyClipboardProtocolOptionNames[self]
+}
+
+var oscParsersKittyClipboardProtocolOptionNames = [oscParsersKittyClipboardProtocolOptionCount]string{
+	OSCParsersKittyClipboardProtocolOptionId:       "id",
+	OSCParsersKittyClipboardProtocolOptionLoc:      "loc",
+	OSCParsersKittyClipboardProtocolOptionMime:     "mime",
+	OSCParsersKittyClipboardProtocolOptionName:     "name",
+	OSCParsersKittyClipboardProtocolOptionPassword: "password",
+	OSCParsersKittyClipboardProtocolOptionPw:       "pw",
+	OSCParsersKittyClipboardProtocolOptionStatus:   "status",
+	OSCParsersKittyClipboardProtocolOptionType:     "type",
+}
 
 // OSCParsersKittyClipboardProtocolOptionValue is the Go counterpart of
 // osc.parsers.kitty_clipboard_protocol.Option.Type, the comptime function
@@ -169,6 +230,17 @@ type OSCParsersKittyClipboardProtocolOptionValue struct {
 	Type     Optional[OSCParsersKittyClipboardProtocolOperation]
 }
 
+// oscParsersKittyClipboardProtocolIsWhitespace is std.ascii.isWhitespace:
+// ' ' and '\t'...'\r'.
+func oscParsersKittyClipboardProtocolIsWhitespace(c uint8) bool {
+	return c == ' ' || (c >= '\t' && c <= '\r')
+}
+
+// oscParsersKittyClipboardProtocolAsciiWhitespace is std.ascii.whitespace,
+// as a cutset for bytes.Trim (std.mem.trim). Every byte is ASCII, so
+// bytes.Trim compares byte by byte.
+const oscParsersKittyClipboardProtocolAsciiWhitespace = " \t\n\r\x0b\x0c"
+
 // Read is osc.parsers.kitty_clipboard_protocol.Option.read: read the option
 // value from the raw metadata string.
 //
@@ -178,7 +250,88 @@ type OSCParsersKittyClipboardProtocolOptionValue struct {
 func (key OSCParsersKittyClipboardProtocolOption) Read(
 	metadata []uint8,
 ) OSCParsersKittyClipboardProtocolOptionValue {
-	panic(notImplemented)
+	var result OSCParsersKittyClipboardProtocolOptionValue
+
+	// Zig: a labeled block `value:` that breaks with the value or returns
+	// null from the function.
+	var value []uint8
+	found := false
+	pos := 0
+	for pos < len(metadata) {
+		// skip any whitespace
+		for pos < len(metadata) && oscParsersKittyClipboardProtocolIsWhitespace(metadata[pos]) {
+			pos += 1
+		}
+		// bail if we are out of metadata
+		if pos >= len(metadata) {
+			return result
+		}
+		if !bytes.HasPrefix(metadata[pos:], []uint8(key.String())) {
+			// this isn't the key we are looking for, skip to the next option, or bail if
+			// there is no next option
+			//
+			// Zig: std.mem.indexOfScalarPos(u8, metadata, pos, ':').
+			idx := bytes.IndexByte(metadata[pos:], ':')
+			if idx < 0 {
+				return result
+			}
+			pos = pos + idx
+			pos += 1
+			continue
+		}
+		// skip past the key
+		pos += len(key.String())
+		// skip any whitespace
+		for pos < len(metadata) && oscParsersKittyClipboardProtocolIsWhitespace(metadata[pos]) {
+			pos += 1
+		}
+		// bail if we are out of metadata
+		if pos >= len(metadata) {
+			return result
+		}
+		// a valid option has an '='
+		if metadata[pos] != '=' {
+			return result
+		}
+		// the end of the value is bounded by a ':' or the end of the metadata
+		end := len(metadata)
+		if idx := bytes.IndexByte(metadata[pos:], ':'); idx >= 0 {
+			end = pos + idx
+		}
+		start := pos + 1
+		// strip any leading or trailing whitespace
+		value = bytes.Trim(metadata[start:end], oscParsersKittyClipboardProtocolAsciiWhitespace)
+		found = true
+		break
+	}
+	if !found {
+		// the key was not found
+		return result
+	}
+
+	// return the parsed value
+	switch key {
+	case OSCParsersKittyClipboardProtocolOptionId:
+		result.Id = oscParsersKittyClipboardProtocolParseIdentifier(value)
+	case OSCParsersKittyClipboardProtocolOptionLoc:
+		result.Loc = OSCParsersKittyClipboardProtocolLocationInit(value)
+	case OSCParsersKittyClipboardProtocolOptionMime:
+		result.Mime = Some(value)
+	case OSCParsersKittyClipboardProtocolOptionName:
+		result.Name = Some(value)
+	case OSCParsersKittyClipboardProtocolOptionPassword:
+		result.Password = Some(value)
+	case OSCParsersKittyClipboardProtocolOptionPw:
+		result.Pw = Some(value)
+	case OSCParsersKittyClipboardProtocolOptionStatus:
+		result.Status = OSCParsersKittyClipboardProtocolStatusInit(value)
+	case OSCParsersKittyClipboardProtocolOptionType:
+		result.Type = OSCParsersKittyClipboardProtocolOperationInit(value)
+	default:
+		// Zig's switch is exhaustive over a comptime Option.
+		panic("unreachable")
+	}
+	return result
 }
 
 // oscParsersKittyClipboardProtocolValidIdentifierCharacters is
@@ -189,14 +342,26 @@ const oscParsersKittyClipboardProtocolValidIdentifierCharacters = "abcdefghijklm
 // oscParsersKittyClipboardProtocolIsValidIdentifier is
 // osc.parsers.kitty_clipboard_protocol.isValidIdentifier.
 func oscParsersKittyClipboardProtocolIsValidIdentifier(str []uint8) bool {
-	panic(notImplemented)
+	if len(str) == 0 {
+		return false
+	}
+	// Zig: std.mem.indexOfNone(u8, str, valid_identifier_characters) == null.
+	for _, c := range str {
+		if bytes.IndexByte([]uint8(oscParsersKittyClipboardProtocolValidIdentifierCharacters), c) < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // oscParsersKittyClipboardProtocolParseIdentifier is
 // osc.parsers.kitty_clipboard_protocol.parseIdentifier: str if it is a valid
 // identifier, otherwise null.
 func oscParsersKittyClipboardProtocolParseIdentifier(str []uint8) Optional[[]uint8] {
-	panic(notImplemented)
+	if oscParsersKittyClipboardProtocolIsValidIdentifier(str) {
+		return Some(str)
+	}
+	return None[[]uint8]()
 }
 
 // OSCParsersKittyClipboardProtocolParse is
@@ -205,5 +370,32 @@ func oscParsersKittyClipboardProtocolParseIdentifier(str []uint8) Optional[[]uin
 // The result is nil for Zig's null; otherwise it points at the parser's own
 // command.
 func OSCParsersKittyClipboardProtocolParse(parser *OSCParser, terminator_ch Optional[uint8]) *OSCCommand {
-	panic(notImplemented)
+	assert(parser.state == OSCParserState5522)
+
+	writer := parser.writer
+	if writer == nil {
+		parser.state = OSCParserStateInvalid
+		return nil
+	}
+
+	data := writer.buffered()
+
+	var metadata []uint8
+	var payload Optional[[]uint8]
+	if start := bytes.IndexByte(data, ';'); start < 0 {
+		metadata, payload = data, None[[]uint8]()
+	} else {
+		metadata, payload = data[0:start], Some(data[start+1:len(data)])
+	}
+
+	parser.command = OSCCommand{
+		Tag: OSCCommandKeyKittyClipboardProtocol,
+		KittyClipboardProtocol: OSCParsersKittyClipboardProtocolOSC{
+			metadata:   metadata,
+			payload:    payload,
+			terminator: OSCTerminatorInit(terminator_ch),
+		},
+	}
+
+	return &parser.command
 }

@@ -119,14 +119,13 @@
 // (the port uses warn("screen", ...)).
 // No C ABI declaration exists in this file.
 //
-// # What the implementation needs from files that are not ported yet
+// # What the implementation needs from other files
 //
 //   - `selectionString` (line 2448) and `dumpString` (line 3129) are
 //     written against the formatter.go wireframe (`ScreenFormatter`); they
 //     panic "not implemented" until formatter.go is ported;
 //   - `testWriteString` (line 3207) reads the width of a codepoint above
-//     0xFF from `unicode.table` (src/unicode), which has no Go port yet:
-//     that one call site is `panic(notImplemented) // needs unicode`.
+//     0xFF from `unicode.table` (`UnicodeTable.Get`, unicode_props_table.go).
 //
 // # Build options
 //
@@ -4499,8 +4498,8 @@ func (self *Screen) TestWriteString(text []uint8) error {
 		if c <= 0xFF {
 			width = 1
 		} else {
-			// Zig: @intCast(unicode.table.get(c).width)
-			panic(notImplemented) // needs unicode
+			// Zig: @intCast(unicode.table.get(c).width), a u2 to usize.
+			width = uint(UnicodeTable.Get(c).width)
 		}
 		if width == 0 {
 			// Zig: the labeled block `cell:`.

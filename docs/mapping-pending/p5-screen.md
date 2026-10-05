@@ -97,8 +97,9 @@ be added (Screen_2_test.go is read-only for the porter).
   does, so the accepted set is the same and the iterator only sees valid
   input. (Not wrapped under a Zig name: it is one use in a test helper; the
   lead may prefer a `stdUnicodeUtf8View` wrapper.)
-- `unicode.table.get(c).width` for `c > 0xFF`: `panic(notImplemented) //
-  needs unicode` (P5 brief), the only such call site in Screen.go.
+- `unicode.table.get(c).width` for `c > 0xFF`: `UnicodeTable.Get(c).width`
+  (unicode_props_table.go), converted to `uint` (Zig's `@intCast` of the u2
+  to usize cannot fail).
 
 #### `std.mem.indexOfAny` (`terminal/std_mem.go`)
 

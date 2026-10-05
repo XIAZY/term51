@@ -52,14 +52,14 @@ func TestSaPagelist_simple_search(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 

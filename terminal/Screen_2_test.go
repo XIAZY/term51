@@ -198,8 +198,8 @@ func sc2IncreaseCapacity(t *testing.T, s *Screen, node *PageListNode, adj PageLi
 // sel.start()/sel.end()).?)` assertions.
 func sc2ExpectSelection(t *testing.T, s *Screen, tag PointTag, sel Selection, start Point, end Point) {
 	t.Helper()
-	expectEqual(t, start, sc2PointFromPin(t, s, tag, sel.Start()))
-	expectEqual(t, end, sc2PointFromPin(t, s, tag, sel.End()))
+	expectEqualPoint(t, start, sc2PointFromPin(t, s, tag, sel.Start()))
+	expectEqualPoint(t, end, sc2PointFromPin(t, s, tag, sel.End()))
 }
 
 // ---------------------------------------------------------------------------

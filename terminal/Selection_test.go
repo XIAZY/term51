@@ -46,7 +46,7 @@ func ssSelAt(t *testing.T, s *Screen, sx SizeCellCountInt, sy uint32, ex SizeCel
 // .x = x, .y = y } }, s.pages.pointFromPin(.screen, p).?)`.
 func ssExpectScreenPoint(t *testing.T, s *Screen, p PageListPin, x SizeCellCountInt, y uint32) {
 	t.Helper()
-	expectEqual(t, ssScreen(x, y), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p)))
+	expectEqualPoint(t, ssScreen(x, y), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p)))
 }
 
 // Zig: test "Selection: adjust right"
@@ -474,28 +474,28 @@ func TestSelection_topLeft(t *testing.T) {
 		sel := ssSelAt(t, s, 1, 1, 3, 1, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqual(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
 	}
 	{
 		// reverse
 		sel := ssSelAt(t, s, 3, 1, 1, 1, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqual(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
 	}
 	{
 		// mirrored_forward
 		sel := ssSelAt(t, s, 3, 1, 1, 3, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqual(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
 	}
 	{
 		// mirrored_reverse
 		sel := ssSelAt(t, s, 1, 3, 3, 1, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqual(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
 	}
 }
 
@@ -510,28 +510,28 @@ func TestSelection_bottomRight(t *testing.T) {
 		sel := ssSelAt(t, s, 1, 1, 3, 1, false)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqual(t, Some(ssScreen(3, 1)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 1)), s.pages.PointFromPin(PointTagScreen, br))
 	}
 	{
 		// reverse
 		sel := ssSelAt(t, s, 3, 1, 1, 1, false)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqual(t, Some(ssScreen(3, 1)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 1)), s.pages.PointFromPin(PointTagScreen, br))
 	}
 	{
 		// mirrored_forward
 		sel := ssSelAt(t, s, 3, 1, 1, 3, true)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqual(t, Some(ssScreen(3, 3)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 3)), s.pages.PointFromPin(PointTagScreen, br))
 	}
 	{
 		// mirrored_reverse
 		sel := ssSelAt(t, s, 1, 3, 3, 1, true)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqual(t, Some(ssScreen(3, 3)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 3)), s.pages.PointFromPin(PointTagScreen, br))
 	}
 }
 

@@ -35,14 +35,14 @@ func TestSaActive_simple_search(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -73,8 +73,8 @@ func TestSaActive_clear_screen_and_search(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -448,7 +448,7 @@ func TestSaActive_term51_ActiveSearch_update_history_rows_in_the_same_page_are_s
 
 	h2 := zigUnwrap(t, search.Next())
 	saExpectHighlight(t, h2, 0, 3, []saChunk{{node: p, start: 14, end: 15}})
-	expectEqual(t, saActivePoint(0, 9), zigUnwrap(t, pages.PointFromPin(PointTagActive, h2.Untracked().start)))
+	expectEqualPoint(t, saActivePoint(0, 9), zigUnwrap(t, pages.PointFromPin(PointTagActive, h2.Untracked().start)))
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
 

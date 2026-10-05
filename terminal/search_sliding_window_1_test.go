@@ -136,8 +136,8 @@ func sw1ExpectNext(
 	t.Helper()
 	h := zigUnwrap(t, w.Next())
 	sel := h.Untracked()
-	expectEqual(t, sw1Active(sx, sy), sw1ActivePt(t, pages, sel.start))
-	expectEqual(t, sw1Active(ex, ey), sw1ActivePt(t, pages, sel.end))
+	expectEqualPoint(t, sw1Active(sx, sy), sw1ActivePt(t, pages, sel.start))
+	expectEqualPoint(t, sw1Active(ex, ey), sw1ActivePt(t, pages, sel.end))
 }
 
 // sw1Dirs is `.{ SlidingWindow.Direction.forward, SlidingWindow.Direction.reverse }`

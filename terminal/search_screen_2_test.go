@@ -219,11 +219,11 @@ func ss2ThreePages(t *testing.T, s *StreamReadonlyStream, list *PageList, p1 str
 func ss2ExpectAt(t *testing.T, list *PageList, hl HighlightFlattened, sx uint, sy uint, ex uint, ey uint) {
 	t.Helper()
 	u := hl.Untracked()
-	expectEqual(t, Point{Tag: PointTagScreen, Screen: PointCoordinate{
+	expectEqualPoint(t, Point{Tag: PointTagScreen, Screen: PointCoordinate{
 		x: SizeCellCountInt(sx),
 		y: uint32(sy),
 	}}, zigUnwrap(t, list.PointFromPin(PointTagScreen, u.start)))
-	expectEqual(t, Point{Tag: PointTagScreen, Screen: PointCoordinate{
+	expectEqualPoint(t, Point{Tag: PointTagScreen, Screen: PointCoordinate{
 		x: SizeCellCountInt(ex),
 		y: uint32(ey),
 	}}, zigUnwrap(t, list.PointFromPin(PointTagScreen, u.end)))

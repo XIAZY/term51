@@ -144,8 +144,8 @@ func sc4RExpectSel(
 	sel := sel_.Value
 	expect(t, !sel.Tracked(), "!sel.tracked()")
 	expect(t, !sel.rectangle, "!sel.rectangle")
-	expectEqual(t, sc4ScreenPt(x0, y0), sc4RPt(t, s, sel.Start()))
-	expectEqual(t, sc4ScreenPt(x1, y1), sc4RPt(t, s, sel.End()))
+	expectEqualPoint(t, sc4ScreenPt(x0, y0), sc4RPt(t, s, sel.Start()))
+	expectEqualPoint(t, sc4ScreenPt(x1, y1), sc4RPt(t, s, sel.End()))
 }
 
 // sc4RSelStr is term51RSelStr: selectionString for the given screen
@@ -277,8 +277,8 @@ func TestSc4_select_untracked_selection_becomes_tracked_and_keeps_bounds(t *test
 	expect(t, s.dirty.selection, "s.dirty.selection")
 
 	// Start/end order is preserved (a backwards selection stays backwards).
-	expectEqual(t, sc4ScreenPt(3, 1), sc4RPt(t, s, sel.Start()))
-	expectEqual(t, sc4ScreenPt(1, 0), sc4RPt(t, s, sel.End()))
+	expectEqualPoint(t, sc4ScreenPt(3, 1), sc4RPt(t, s, sel.Start()))
+	expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, sel.End()))
 
 	// The tracked pins are distinct objects from the input pins.
 	expect(t, sel.bounds.Tracked.start != sel.bounds.Tracked.end, "sel.bounds.tracked.start != sel.bounds.tracked.end")
@@ -335,8 +335,8 @@ func TestSc4_select_replacing_a_selection_untracks_the_previous_one(t *testing.T
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 1), sc4RPin(t, s, 4, 1), false))))
 	expect(t, s.dirty.selection, "s.dirty.selection")
 	expectEqual(t, base+2, s.pages.CountTrackedPins())
-	expectEqual(t, sc4ScreenPt(0, 1), sc4RPt(t, s, zigUnwrap(t, s.selection).Start()))
-	expectEqual(t, sc4ScreenPt(4, 1), sc4RPt(t, s, zigUnwrap(t, s.selection).End()))
+	expectEqualPoint(t, sc4ScreenPt(0, 1), sc4RPt(t, s, zigUnwrap(t, s.selection).Start()))
+	expectEqualPoint(t, sc4ScreenPt(4, 1), sc4RPt(t, s, zigUnwrap(t, s.selection).End()))
 
 	// Selecting identical bounds again still marks the screen dirty.
 	s.dirty.selection = false
@@ -608,10 +608,10 @@ func TestSc4_selectionString_map_has_one_pin_per_output_byte(t *testing.T) {
 	expect(t, &map_.string[0] != &text[0], "map.string.ptr != text.ptr")
 	expectEqual(t, len(text), len(map_.map_))
 
-	expectEqual(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.map_[0]))
-	expectEqual(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.map_[1]))
-	expectEqual(t, sc4ScreenPt(0, 1), sc4RPt(t, s, map_.map_[3]))
-	expectEqual(t, sc4ScreenPt(1, 1), sc4RPt(t, s, map_.map_[4]))
+	expectEqualPoint(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.map_[0]))
+	expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.map_[1]))
+	expectEqualPoint(t, sc4ScreenPt(0, 1), sc4RPt(t, s, map_.map_[3]))
+	expectEqualPoint(t, sc4ScreenPt(1, 1), sc4RPt(t, s, map_.map_[4]))
 }
 
 // Zig: test "term51: selectionString: map maps every byte of a multibyte character"
@@ -630,11 +630,11 @@ func TestSc4_selectionString_map_maps_every_byte_of_a_multibyte_character(t *tes
 
 	expectEqualStrings(t, "a世b", string(text))
 	expectEqual(t, 5, len(map_.map_))
-	expectEqual(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.map_[0]))
+	expectEqualPoint(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.map_[0]))
 	for i := 1; i < 4; i++ {
-		expectEqual(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.map_[i]))
+		expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.map_[i]))
 	}
-	expectEqual(t, sc4ScreenPt(3, 0), sc4RPt(t, s, map_.map_[4]))
+	expectEqualPoint(t, sc4ScreenPt(3, 0), sc4RPt(t, s, map_.map_[4]))
 }
 
 // Zig: test "term51: selectionString: map is untouched when not requested and empty selection map"

@@ -360,7 +360,7 @@ func TestPl2_PageList_resize_no_reflow_more_rows_adds_blank_rows_if_cursor_at_bo
 	// Active should be on row 3
 	{
 		pt := zigUnwrap(t, s.GetCell(pl2Active(0, 0))).ScreenPoint()
-		expectEqual(t, pl2Screen(0, 2), pt)
+		expectEqualPoint(t, pl2Screen(0, 2), pt)
 	}
 
 	// Put a tracked pin in the history
@@ -391,7 +391,7 @@ func TestPl2_PageList_resize_no_reflow_more_rows_adds_blank_rows_if_cursor_at_bo
 	// Active should be at the same place it was.
 	{
 		pt := zigUnwrap(t, s.GetCell(pl2Active(0, 0))).ScreenPoint()
-		expectEqual(t, pl2Screen(0, 2), pt)
+		expectEqualPoint(t, pl2Screen(0, 2), pt)
 	}
 
 	// Go through our active, we should get only 3,4,5
@@ -461,7 +461,7 @@ func TestPl2_PageList_resize_reflow_more_cols_wrapped_rows(t *testing.T) {
 	// Active should still be on top
 	{
 		pt := zigUnwrap(t, s.GetCell(pl2Active(0, 0))).ScreenPoint()
-		expectEqual(t, pl2Screen(0, 0), pt)
+		expectEqualPoint(t, pl2Screen(0, 0), pt)
 	}
 
 	it := s.RowIterator(PageListDirectionRightDown, pl2Screen(0, 0), None[Point]())
@@ -774,7 +774,7 @@ func TestPl2_PageList_resize_reflow_more_cols_wrap_across_page_boundary_cursor_i
 	expectEqual(t, end_rows, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(3, 9), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(3, 9), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 
 	{
 		p2 := pl2Pin(t, s, pl2Active(0, 9))
@@ -892,7 +892,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_across_page_boundary_cursor_i
 	//     +-------+
 
 	// Our cursor should remain on the same cell
-	expectEqual(t, pl2Active(3, 5), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(3, 5), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 
 	{
 		// PAGE 0 ROW 7895, ACTIVE 3
@@ -998,7 +998,7 @@ func TestPl2_PageList_resize_reflow_more_cols_cursor_in_wrapped_row(t *testing.T
 	expectEqual(t, 4, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow more cols cursor in not wrapped row"
@@ -1040,7 +1040,7 @@ func TestPl2_PageList_resize_reflow_more_cols_cursor_in_not_wrapped_row(t *testi
 	expectEqual(t, 4, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(1, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(1, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow more cols cursor in wrapped row that isn't unwrapped"
@@ -1093,7 +1093,7 @@ func TestPl2_PageList_resize_reflow_more_cols_cursor_in_wrapped_row_that_isn_t_u
 	expectEqual(t, 4, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(1, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(1, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow more cols no reflow preserves semantic prompt"
@@ -1720,7 +1720,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 	// Active moves due to scrollback
 	{
 		pt := zigUnwrap(t, s.GetCell(pl2Active(0, 0))).ScreenPoint()
-		expectEqual(t, pl2Screen(0, 2), pt)
+		expectEqualPoint(t, pl2Screen(0, 2), pt)
 	}
 
 	it := s.RowIterator(PageListDirectionRightDown, pl2Screen(0, 0), None[Point]())
@@ -1788,7 +1788,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 	// Active moves due to scrollback
 	{
 		pt := zigUnwrap(t, s.GetCell(pl2Active(0, 0))).ScreenPoint()
-		expectEqual(t, pl2Screen(0, 2), pt)
+		expectEqualPoint(t, pl2Screen(0, 2), pt)
 	}
 
 	expect(t, s.pages.first == s.pages.last, "s.pages.first == s.pages.last")
@@ -1865,7 +1865,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_wrapped_row(t *testing.T
 	expectEqual(t, 4, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow less cols wraps spacer head"
@@ -1997,7 +1997,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_unchanged_row(t *testing
 	expectEqual(t, 2, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(1, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(1, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow less cols cursor in blank cell"
@@ -2025,7 +2025,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_blank_cell(t *testing.T)
 	expectEqual(t, 2, s.totalRows())
 
 	// Our cursor should not move
-	expectEqual(t, pl2Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow less cols cursor in final blank cell"
@@ -2053,7 +2053,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_final_blank_cell(t *test
 	expectEqual(t, 2, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow less cols cursor in wrapped blank cell"
@@ -2081,7 +2081,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_wrapped_blank_cell(t *te
 	expectEqual(t, 2, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow less cols blank lines"
@@ -2256,7 +2256,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_not_on_last_line_preserves_
 	expectEqual(t, 10, s.totalRows())
 
 	// Our cursor should move to the first row
-	expectEqual(t, pl2Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl2Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize reflow less cols copy style"

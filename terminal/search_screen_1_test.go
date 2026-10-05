@@ -105,7 +105,7 @@ func ss1Active(x uint, y uint) Point {
 // list.pointFromPin(tag, pin).?)`.
 func ss1ExpectPoint(tt *testing.T, list *PageList, tag PointTag, pin PageListPin, want Point) {
 	tt.Helper()
-	expectEqual(tt, want, zigUnwrap(tt, list.PointFromPin(tag, pin)))
+	expectEqualPoint(tt, want, zigUnwrap(tt, list.PointFromPin(tag, pin)))
 }
 
 // ss1NonNil is `node.?`.
@@ -192,8 +192,8 @@ func ss1ThreePages(tt *testing.T, s *StreamReadonlyStream, list *PageList, p1 st
 func ss1ExpectAt(tt *testing.T, list *PageList, hl HighlightFlattened, sx uint, sy uint, ex uint, ey uint) {
 	tt.Helper()
 	u := hl.Untracked()
-	expectEqual(tt, ss1Screen(sx, sy), zigUnwrap(tt, list.PointFromPin(PointTagScreen, u.start)))
-	expectEqual(tt, ss1Screen(ex, ey), zigUnwrap(tt, list.PointFromPin(PointTagScreen, u.end)))
+	expectEqualPoint(tt, ss1Screen(sx, sy), zigUnwrap(tt, list.PointFromPin(PointTagScreen, u.start)))
+	expectEqualPoint(tt, ss1Screen(ex, ey), zigUnwrap(tt, list.PointFromPin(PointTagScreen, u.end)))
 }
 
 // ss1ExpectSel is term51AMExpectSel: expect the selected match to be at the

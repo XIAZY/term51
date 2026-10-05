@@ -92,7 +92,7 @@ func TestStringMap_term51_deinit_map_produced_by_Screen_selectionString(t *testi
 	expected_x := [...]SizeCellCountInt{0, 1, 1, 1, 3}
 	for i, p := range m.map_ {
 		x := expected_x[i]
-		expectEqual(t,
+		expectEqualPoint(t,
 			ssScreen(x, 0),
 			zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p)),
 		)

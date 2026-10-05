@@ -1157,6 +1157,27 @@ Tag `String()` methods use names arrays (`hyperlinkHyperlinkIdTagNames`,
   needs Zig's `std.hash.int`; `PageEntry.hash` needs Wyhash with `autoHash`
   semantics, neither of which the Go standard library has.
 
+## Points are compared by tag and active coordinate (project lead, 2026-10-05)
+
+`point.Point` is a Zig `union(Tag)`; the Go `Point` is a struct with all four
+payload fields (`Active`, `Viewport`, `Screen`, `History`), of which only the
+one named by `Tag` is meaningful. Go's `==` would also compare the three
+inactive fields, so points are never compared with `==`: code compares
+`Tag` and `Coord()` (`PointCoordinate.Eql`), and tests use
+`expectEqualPoint` / `expectEqualOptionalPoint`
+(`terminal/zig_expect_point_test.go`), which are Zig's `testing.expectEqual`
+on a union: the tags, then only the active payload. On 2026-10-05 a
+type-checked scan of the package and its tests found no `==` or `!=` on a
+`Point` (or a struct or array containing one) and no `Point` map key in
+non-test code; the 294 test assertions that used the generic `expectEqual`
+on `Point` (286) or `Optional[Point]` (8) were switched to the two helpers.
+
+`Style` flags follow the same idea for widths: `Style.Eql` (and so
+`Default`) compares the flags as the masked u16 that `Style.hash` uses
+(`styleFlags.bits`), so a Go value with bits above `underline`'s u3 or
+`_padding`'s u5 compares and hashes as its Zig bits
+(`TestStyle_go_only_flags_out_of_range_bits_are_masked`).
+
 ## Page-layer bookkeeping (decision: option A, final)
 
 Confirmed by the project owner on 2026-10-04. The port keeps upstream's byte

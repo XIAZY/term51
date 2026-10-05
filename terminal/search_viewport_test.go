@@ -72,14 +72,14 @@ func TestSaViewport_simple_search(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -112,8 +112,8 @@ func TestSaViewport_clear_screen_and_search(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -164,8 +164,8 @@ func TestSaViewport_clear_screen_and_search_dirty_tracking(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqual(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
+		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -205,8 +205,8 @@ func TestSaViewport_history_search_no_active_area(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqual(t, saScreenPoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, sel.start)))
-		expectEqual(t, saScreenPoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, sel.end)))
+		expectEqualPoint(t, saScreenPoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, sel.start)))
+		expectEqualPoint(t, saScreenPoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, sel.end)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 

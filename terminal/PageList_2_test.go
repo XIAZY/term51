@@ -2964,7 +2964,9 @@ func TestPl2_PageList_compact_oversized_page(t *testing.T) {
 	// Grow until we have multiple pages
 	page1_node := s.pages.first
 	page1_node.data.PauseIntegrityChecks(true)
-	for i := uint(0); i < uint(page1_node.data.capacity.rows-page1_node.data.size.rows); i++ {
+	// Zig: `for (0..n)` evaluates n once, before the loop; grow changes it.
+	n := uint(page1_node.data.capacity.rows - page1_node.data.size.rows)
+	for i := uint(0); i < n; i++ {
 		pl2Grow(t, s)
 	}
 	page1_node.data.PauseIntegrityChecks(false)

@@ -12,7 +12,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 GO=${GO:-/usr/local/go/bin/go}
-tmp=$(mktemp -d)
+# Scratch on disk, not in /tmp (a shared RAM disk on the build machine):
+# $T51_SCRATCH, or build/ in the repository (ignored by git).
+scratch=${T51_SCRATCH:-$(pwd)/build}
+mkdir -p "$scratch"
+tmp=$(mktemp -d "$scratch/check-no-fma.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 status=0
 #

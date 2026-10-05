@@ -1,10 +1,4 @@
-// WIREFRAME for src/terminal/point.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/terminal/point.zig (Ghostty v1.3.1).
 //
 // File naming: point.zig is a namespace file, so its declarations take the
 // prefix `Point`: `point.Tag` is `PointTag`, `point.Point` is `Point`
@@ -63,10 +57,24 @@ const (
 	// the line just before the top of "active". This contains only
 	// the scrollback history.
 	PointTagHistory
+
+	// pointTagCount is the number of tags: Zig's
+	// @typeInfo(Tag).@"enum".fields.len.
+	pointTagCount = iota
 )
 
-// String returns the Zig tag name (@tagName).
-func (self PointTag) String() string { panic(notImplemented) }
+var pointTagNames = [pointTagCount]string{
+	"active",
+	"viewport",
+	"screen",
+	"history",
+}
+
+// String returns the Zig tag name (@tagName). A value outside the enum
+// panics, as @tagName of an invalid value does.
+func (self PointTag) String() string {
+	return pointTagNames[self]
+}
 
 // Point is point.Point: an x/y point in the terminal for some
 // definition of location (tag).
@@ -83,7 +91,23 @@ type Point struct {
 }
 
 // Coord is point.Point.coord: the coordinate of whichever variant is active.
-func (self Point) Coord() PointCoordinate { panic(notImplemented) }
+//
+// Zig: `pub inline fn`; one switch prong for all four tags captures the
+// payload. A tag outside the enum is unreachable in Zig.
+func (self Point) Coord() PointCoordinate {
+	switch self.Tag {
+	case PointTagActive:
+		return self.Active
+	case PointTagViewport:
+		return self.Viewport
+	case PointTagScreen:
+		return self.Screen
+	case PointTagHistory:
+		return self.History
+	default:
+		panic("unreachable")
+	}
+}
 
 // PointCoordinate is point.Coordinate.
 type PointCoordinate struct {
@@ -98,4 +122,6 @@ type PointCoordinate struct {
 }
 
 // Eql is point.Coordinate.eql.
-func (self PointCoordinate) Eql(other PointCoordinate) bool { panic(notImplemented) }
+func (self PointCoordinate) Eql(other PointCoordinate) bool {
+	return self.x == other.x && self.y == other.y
+}

@@ -81,3 +81,10 @@ mismatches.
 32-bit ARM: area tests in full and the default split (the sampled default
 run: 20 cases per suite plus the first case of each marker kind; offsets
 1..64 and 3 seeded per feed), started 2026-10-05 21:28Z. Counts follow.
+The sampled default split on ARM is the project lead's ruling (2026-10-05):
+the split risk is architecture-independent by construction (`NextSlice` is a
+per-byte loop on every platform), and the full ARM area run covers the
+32-bit-specific behaviour.
+
+Sign-off: the stream layer was signed off by the project lead on these
+native results (2026-10-05); the ARM area run confirms it.

@@ -71,6 +71,7 @@ func ke1FlagsAll() KittyKeyFlags {
 
 // Zig: test "KittySequence: backspace"
 func TestKe1_KittySequence_backspace(t *testing.T) {
+	testPlatform(t, "linux")
 	// Plain
 	{
 		seq := inputKeyEncodeKittySequence{key: 127, final: 'u'}
@@ -96,6 +97,7 @@ func TestKe1_KittySequence_backspace(t *testing.T) {
 
 // Zig: test "KittySequence: text"
 func TestKe1_KittySequence_text(t *testing.T) {
+	testPlatform(t, "linux")
 	// Plain
 	{
 		seq := inputKeyEncodeKittySequence{
@@ -131,6 +133,7 @@ func TestKe1_KittySequence_text(t *testing.T) {
 
 // Zig: test "KittySequence: text with control characters"
 func TestKe1_KittySequence_text_with_control_characters(t *testing.T) {
+	testPlatform(t, "linux")
 	// By itself
 	{
 		seq := inputKeyEncodeKittySequence{
@@ -154,18 +157,21 @@ func TestKe1_KittySequence_text_with_control_characters(t *testing.T) {
 
 // Zig: test "KittySequence: special no mods"
 func TestKe1_KittySequence_special_no_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeKittySequence{key: 1, final: 'A'}
 	expectEqualStrings(t, "\x1B[A", ke1Seq(t, seq))
 }
 
 // Zig: test "KittySequence: special mods only"
 func TestKe1_KittySequence_special_mods_only(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeKittySequence{key: 1, final: 'A', mods: inputKeyEncodeKittyMods{shift: true}}
 	expectEqualStrings(t, "\x1B[1;2A", ke1Seq(t, seq))
 }
 
 // Zig: test "KittySequence: special mods and event"
 func TestKe1_KittySequence_special_mods_and_event(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeKittySequence{
 		key:   1,
 		final: 'A',
@@ -177,6 +183,7 @@ func TestKe1_KittySequence_special_mods_and_event(t *testing.T) {
 
 // Zig: test "kitty: plain text"
 func TestKe1_kitty_plain_text(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyKeyA,
@@ -190,6 +197,7 @@ func TestKe1_kitty_plain_text(t *testing.T) {
 
 // Zig: test "kitty: repeat with just disambiguate"
 func TestKe1_kitty_repeat_with_just_disambiguate(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		key:    InputKeyKeyKeyA,
 		action: InputKeyActionRepeat,
@@ -203,6 +211,7 @@ func TestKe1_kitty_repeat_with_just_disambiguate(t *testing.T) {
 
 // Zig: test "kitty: enter, backspace, tab"
 func TestKe1_kitty_enter_backspace_tab(t *testing.T) {
+	testPlatform(t, "linux")
 	{
 		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
 			kitty_flags: KittyKeyFlags{disambiguate: true},
@@ -277,6 +286,7 @@ func TestKe1_kitty_enter_backspace_tab(t *testing.T) {
 
 // Zig: test "kitty: shift+backspace emits CSI u"
 func TestKe1_kitty_shift_backspace_emits_CSI_u(t *testing.T) {
+	testPlatform(t, "linux")
 	// Backspace with shift modifier should emit CSI u sequence, not raw 0x7F.
 	// This is important for programs that want to distinguish shift+backspace.
 	got := ke1Kitty(t, InputKeyKeyEvent{
@@ -292,6 +302,7 @@ func TestKe1_kitty_shift_backspace_emits_CSI_u(t *testing.T) {
 
 // Zig: test "kitty: shift+enter emits CSI u"
 func TestKe1_kitty_shift_enter_emits_CSI_u(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyEnter,
@@ -305,6 +316,7 @@ func TestKe1_kitty_shift_enter_emits_CSI_u(t *testing.T) {
 
 // Zig: test "kitty: shift+tab emits CSI u"
 func TestKe1_kitty_shift_tab_emits_CSI_u(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyTab,
@@ -318,6 +330,7 @@ func TestKe1_kitty_shift_tab_emits_CSI_u(t *testing.T) {
 
 // Zig: test "kitty: enter with all flags"
 func TestKe1_kitty_enter_with_all_flags(t *testing.T) {
+	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
 		kitty_flags: ke1FlagsAll(),
 	})
@@ -326,6 +339,7 @@ func TestKe1_kitty_enter_with_all_flags(t *testing.T) {
 
 // Zig: test "kitty: ctrl with all flags"
 func TestKe1_kitty_ctrl_with_all_flags(t *testing.T) {
+	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyControlLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("")}, InputKeyEncodeOptions{
 		kitty_flags: ke1FlagsAll(),
 	})
@@ -334,6 +348,7 @@ func TestKe1_kitty_ctrl_with_all_flags(t *testing.T) {
 
 // Zig: test "kitty: ctrl release with ctrl mod set"
 func TestKe1_kitty_ctrl_release_with_ctrl_mod_set(t *testing.T) {
+	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionRelease,
 		key:    InputKeyKeyControlLeft,
@@ -347,6 +362,7 @@ func TestKe1_kitty_ctrl_release_with_ctrl_mod_set(t *testing.T) {
 
 // Zig: test "kitty: delete"
 func TestKe1_kitty_delete(t *testing.T) {
+	testPlatform(t, "linux")
 	{
 		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDelete, mods: InputKeyMods{}, utf8: []uint8("\x7F")}, InputKeyEncodeOptions{
 			kitty_flags: KittyKeyFlags{disambiguate: true},
@@ -357,6 +373,7 @@ func TestKe1_kitty_delete(t *testing.T) {
 
 // Zig: test "kitty: composing with no modifier"
 func TestKe1_kitty_composing_with_no_modifier(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:    InputKeyActionPress,
 		key:       InputKeyKeyKeyA,
@@ -370,6 +387,7 @@ func TestKe1_kitty_composing_with_no_modifier(t *testing.T) {
 
 // Zig: test "kitty: composing with modifier"
 func TestKe1_kitty_composing_with_modifier(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:    InputKeyActionPress,
 		key:       InputKeyKeyShiftLeft,
@@ -383,6 +401,7 @@ func TestKe1_kitty_composing_with_modifier(t *testing.T) {
 
 // Zig: test "kitty: composed text with report all"
 func TestKe1_kitty_composed_text_with_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyUnidentified,
@@ -396,6 +415,7 @@ func TestKe1_kitty_composed_text_with_report_all(t *testing.T) {
 
 // Zig: test "kitty: shift+a on US keyboard"
 func TestKe1_kitty_shift_a_on_US_keyboard(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyKeyA,
@@ -413,6 +433,7 @@ func TestKe1_kitty_shift_a_on_US_keyboard(t *testing.T) {
 
 // Zig: test "kitty: matching unshifted codepoint"
 func TestKe1_kitty_matching_unshifted_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyKeyA,
@@ -434,6 +455,7 @@ func TestKe1_kitty_matching_unshifted_codepoint(t *testing.T) {
 
 // Zig: test "kitty: report alternates with caps"
 func TestKe1_kitty_report_alternates_with_caps(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyKeyJ,
@@ -453,6 +475,7 @@ func TestKe1_kitty_report_alternates_with_caps(t *testing.T) {
 
 // Zig: test "kitty: report alternates colon (shift+';')"
 func TestKe1_kitty_report_alternates_colon_shift_semicolon(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeySemicolon,
@@ -472,6 +495,7 @@ func TestKe1_kitty_report_alternates_colon_shift_semicolon(t *testing.T) {
 
 // Zig: test "kitty: report alternates with ru layout"
 func TestKe1_kitty_report_alternates_with_ru_layout(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeySemicolon,
@@ -491,6 +515,7 @@ func TestKe1_kitty_report_alternates_with_ru_layout(t *testing.T) {
 
 // Zig: test "kitty: report alternates with ru layout shifted"
 func TestKe1_kitty_report_alternates_with_ru_layout_shifted(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeySemicolon,
@@ -510,6 +535,7 @@ func TestKe1_kitty_report_alternates_with_ru_layout_shifted(t *testing.T) {
 
 // Zig: test "kitty: report alternates with ru layout caps lock"
 func TestKe1_kitty_report_alternates_with_ru_layout_caps_lock(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeySemicolon,
@@ -529,6 +555,7 @@ func TestKe1_kitty_report_alternates_with_ru_layout_caps_lock(t *testing.T) {
 
 // Zig: test "kitty: report alternates with hu layout release"
 func TestKe1_kitty_report_alternates_with_hu_layout_release(t *testing.T) {
+	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionRelease,
 		key:                 InputKeyKeyBracketLeft,
@@ -551,6 +578,7 @@ func TestKe1_kitty_report_alternates_with_hu_layout_release(t *testing.T) {
 //
 // Zig: test "kitty: up arrow with utf8"
 func TestKe1_kitty_up_arrow_with_utf8(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyArrowUp,
@@ -564,6 +592,7 @@ func TestKe1_kitty_up_arrow_with_utf8(t *testing.T) {
 
 // Zig: test "kitty: shift+tab"
 func TestKe1_kitty_shift_tab(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyTab,
@@ -577,6 +606,7 @@ func TestKe1_kitty_shift_tab(t *testing.T) {
 
 // Zig: test "kitty: left shift"
 func TestKe1_kitty_left_shift(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyShiftLeft,
@@ -590,6 +620,7 @@ func TestKe1_kitty_left_shift(t *testing.T) {
 
 // Zig: test "kitty: left shift with report all"
 func TestKe1_kitty_left_shift_with_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyShiftLeft,
@@ -603,6 +634,7 @@ func TestKe1_kitty_left_shift_with_report_all(t *testing.T) {
 
 // Zig: test "kitty: report associated with modifiers"
 func TestKe1_kitty_report_associated_with_modifiers(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyKeyJ,
@@ -622,6 +654,7 @@ func TestKe1_kitty_report_associated_with_modifiers(t *testing.T) {
 
 // Zig: test "kitty: report associated"
 func TestKe1_kitty_report_associated(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyKeyJ,
@@ -641,6 +674,7 @@ func TestKe1_kitty_report_associated(t *testing.T) {
 
 // Zig: test "kitty: report associated on release"
 func TestKe1_kitty_report_associated_on_release(t *testing.T) {
+	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionRelease,
 		key:                 InputKeyKeyKeyJ,
@@ -661,6 +695,7 @@ func TestKe1_kitty_report_associated_on_release(t *testing.T) {
 
 // Zig: test "kitty: alternates omit control characters"
 func TestKe1_kitty_alternates_omit_control_characters(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyDelete,
@@ -678,6 +713,7 @@ func TestKe1_kitty_alternates_omit_control_characters(t *testing.T) {
 
 // Zig: test "kitty: enter with utf8 (dead key state)"
 func TestKe1_kitty_enter_with_utf8_dead_key_state(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyEnter,
@@ -695,6 +731,7 @@ func TestKe1_kitty_enter_with_utf8_dead_key_state(t *testing.T) {
 
 // Zig: test "kitty: keypad number"
 func TestKe1_kitty_keypad_number(t *testing.T) {
+	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyNumpad1,
@@ -708,6 +745,7 @@ func TestKe1_kitty_keypad_number(t *testing.T) {
 
 // Zig: test "kitty: backspace with utf8 (dead key state)"
 func TestKe1_kitty_backspace_with_utf8_dead_key_state(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyBackspace,
@@ -721,6 +759,7 @@ func TestKe1_kitty_backspace_with_utf8_dead_key_state(t *testing.T) {
 
 // Zig: test "legacy: backspace with utf8 (dead key state)"
 func TestKe1_legacy_backspace_with_utf8_dead_key_state(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyBackspace,
@@ -732,6 +771,7 @@ func TestKe1_legacy_backspace_with_utf8_dead_key_state(t *testing.T) {
 
 // Zig: test "legacy: enter with utf8 (dead key state)"
 func TestKe1_legacy_enter_with_utf8_dead_key_state(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyEnter,
@@ -743,6 +783,7 @@ func TestKe1_legacy_enter_with_utf8_dead_key_state(t *testing.T) {
 
 // Zig: test "legacy: esc with utf8 (dead key state)"
 func TestKe1_legacy_esc_with_utf8_dead_key_state(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyEscape,
@@ -754,6 +795,7 @@ func TestKe1_legacy_esc_with_utf8_dead_key_state(t *testing.T) {
 
 // Zig: test "legacy: ctrl+shift+minus (underscore on US)"
 func TestKe1_legacy_ctrl_shift_minus_underscore_on_US(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyMinus,
@@ -765,6 +807,7 @@ func TestKe1_legacy_ctrl_shift_minus_underscore_on_US(t *testing.T) {
 
 // Zig: test "legacy: ctrl+alt+c"
 func TestKe1_legacy_ctrl_alt_c(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyKeyC,
@@ -776,6 +819,7 @@ func TestKe1_legacy_ctrl_alt_c(t *testing.T) {
 
 // Zig: test "legacy: alt+c"
 func TestKe1_legacy_alt_c(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyKeyC,
@@ -790,6 +834,7 @@ func TestKe1_legacy_alt_c(t *testing.T) {
 
 // Zig: test "legacy: alt+e only unshifted"
 func TestKe1_legacy_alt_e_only_unshifted(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:              InputKeyActionPress,
 		key:                 InputKeyKeyKeyE,
@@ -804,6 +849,7 @@ func TestKe1_legacy_alt_e_only_unshifted(t *testing.T) {
 
 // Zig: test "legacy: alt+ф"
 func TestKe1_legacy_alt_ф(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyKeyF,
@@ -817,6 +863,7 @@ func TestKe1_legacy_alt_ф(t *testing.T) {
 
 // Zig: test "legacy: ctrl+c"
 func TestKe1_legacy_ctrl_c(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyKeyC,
@@ -828,6 +875,7 @@ func TestKe1_legacy_ctrl_c(t *testing.T) {
 
 // Zig: test "legacy: ctrl+space"
 func TestKe1_legacy_ctrl_space(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeySpace,
@@ -839,6 +887,7 @@ func TestKe1_legacy_ctrl_space(t *testing.T) {
 
 // Zig: test "legacy: ctrl+shift+backspace"
 func TestKe1_legacy_ctrl_shift_backspace(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyBackspace,
@@ -849,6 +898,7 @@ func TestKe1_legacy_ctrl_shift_backspace(t *testing.T) {
 
 // Zig: test "legacy: ctrl+shift+char with modify other state 2"
 func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyKeyH,
@@ -862,6 +912,7 @@ func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2(t *testing.T) {
 
 // Zig: test "legacy: ctrl+shift+char with modify other state 2 and consumed mods"
 func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2_and_consumed_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyKeyH,
@@ -876,6 +927,7 @@ func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2_and_consumed_mods(
 
 // Zig: test "legacy: alt+digit with modify other state 2"
 func TestKe1_legacy_alt_digit_with_modify_other_state_2(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyDigit8,
@@ -891,6 +943,7 @@ func TestKe1_legacy_alt_digit_with_modify_other_state_2(t *testing.T) {
 
 // Zig: test "legacy: fixterm awkward letters"
 func TestKe1_legacy_fixterm_awkward_letters(t *testing.T) {
+	testPlatform(t, "linux")
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
 			action: InputKeyActionPress,
@@ -935,6 +988,7 @@ func TestKe1_legacy_fixterm_awkward_letters(t *testing.T) {
 //
 // Zig: test "legacy: ctrl+shift+letter ascii"
 func TestKe1_legacy_ctrl_shift_letter_ascii(t *testing.T) {
+	testPlatform(t, "linux")
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
 			action:              InputKeyActionPress,
@@ -949,6 +1003,7 @@ func TestKe1_legacy_ctrl_shift_letter_ascii(t *testing.T) {
 
 // Zig: test "legacy: shift+function key should use all mods"
 func TestKe1_legacy_shift_function_key_should_use_all_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyArrowUp,
@@ -960,6 +1015,7 @@ func TestKe1_legacy_shift_function_key_should_use_all_mods(t *testing.T) {
 
 // Zig: test "legacy: keypad enter"
 func TestKe1_legacy_keypad_enter(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyNumpadEnter,
@@ -971,6 +1027,7 @@ func TestKe1_legacy_keypad_enter(t *testing.T) {
 
 // Zig: test "legacy: keypad 1"
 func TestKe1_legacy_keypad_1(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyNumpad1,
@@ -983,6 +1040,7 @@ func TestKe1_legacy_keypad_1(t *testing.T) {
 
 // Zig: test "legacy: keypad 1 with application keypad"
 func TestKe1_legacy_keypad_1_with_application_keypad(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyNumpad1,
@@ -997,6 +1055,7 @@ func TestKe1_legacy_keypad_1_with_application_keypad(t *testing.T) {
 
 // Zig: test "legacy: keypad 1 with application keypad and numlock"
 func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyNumpad1,
@@ -1011,6 +1070,7 @@ func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock(t *testing.T) {
 
 // Zig: test "legacy: keypad 1 with application keypad and numlock ignore"
 func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock_ignore(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action:        InputKeyActionPress,
 		key:           InputKeyKeyNumpad1,
@@ -1026,6 +1086,7 @@ func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock_ignore(t *testi
 
 // Zig: test "legacy: f1"
 func TestKe1_legacy_f1(t *testing.T) {
+	testPlatform(t, "linux")
 	// F1
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
@@ -1084,6 +1145,7 @@ func TestKe1_legacy_f1(t *testing.T) {
 
 // Zig: test "legacy: left_shift+tab"
 func TestKe1_legacy_left_shift_tab(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyTab,
@@ -1097,6 +1159,7 @@ func TestKe1_legacy_left_shift_tab(t *testing.T) {
 
 // Zig: test "legacy: right_shift+tab"
 func TestKe1_legacy_right_shift_tab(t *testing.T) {
+	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
 		action: InputKeyActionPress,
 		key:    InputKeyKeyTab,

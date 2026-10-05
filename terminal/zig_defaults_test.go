@@ -83,3 +83,16 @@ func terminalOptionsDefault(cols SizeCellCountInt, rows SizeCellCountInt) Termin
 func terminalFlagsDefault() TerminalFlags {
 	return TerminalFlags{focused: true}
 }
+
+// testPlatform sets platformGOOS (the platform whose behaviour the keyboard
+// encoders follow: "linux" for the non-Darwin branch, "darwin" for macOS,
+// "ios" for the Apple-but-not-macOS mix) for the test and restores it when
+// the test ends. Tests that use it must not run in parallel. Every encoder
+// test calls it first, so no test depends on the machine it runs on; a test
+// that needs another platform for a part of its body calls it again.
+func testPlatform(t *testing.T, goos string) {
+	t.Helper()
+	old := platformGOOS
+	platformGOOS = goos
+	t.Cleanup(func() { platformGOOS = old })
+}

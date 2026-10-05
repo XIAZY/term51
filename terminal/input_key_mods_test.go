@@ -120,6 +120,7 @@ func kmModName(mod InputKeyModsMod) string {
 
 // Zig: test (unnamed, key_mods.zig:160)
 func TestKm_unnamed_key_mods_zig_160(t *testing.T) {
+	testPlatform(t, "linux")
 	// For our own understanding
 	expectEqual(t, uint16(0b0), (kmMods{}).Int())
 	expectEqual(t, uint16(0b0000_0001), (kmMods{shift: true}).Int())
@@ -127,6 +128,7 @@ func TestKm_unnamed_key_mods_zig_160(t *testing.T) {
 
 // Zig: test "RemapSet: unsided remap creates both left and right mappings"
 func TestKm_RemapSet_unsided_remap_creates_both_left_and_right_mappings(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=super")
@@ -155,6 +157,7 @@ func TestKm_RemapSet_unsided_remap_creates_both_left_and_right_mappings(t *testi
 
 // Zig: test "RemapSet: sided from only maps that side"
 func TestKm_RemapSet_sided_from_only_maps_that_side(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -171,6 +174,7 @@ func TestKm_RemapSet_sided_from_only_maps_that_side(t *testing.T) {
 
 // Zig: test "RemapSet: sided to"
 func TestKm_RemapSet_sided_to(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -184,6 +188,7 @@ func TestKm_RemapSet_sided_to(t *testing.T) {
 
 // Zig: test "RemapSet: both sides specified"
 func TestKm_RemapSet_both_sides_specified(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -197,6 +202,7 @@ func TestKm_RemapSet_both_sides_specified(t *testing.T) {
 
 // Zig: test "RemapSet: multiple parses accumulate"
 func TestKm_RemapSet_multiple_parses_accumulate(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -215,6 +221,7 @@ func TestKm_RemapSet_multiple_parses_accumulate(t *testing.T) {
 
 // Zig: test "RemapSet: error on missing assignment"
 func TestKm_RemapSet_error_on_missing_assignment(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -224,6 +231,7 @@ func TestKm_RemapSet_error_on_missing_assignment(t *testing.T) {
 
 // Zig: test "RemapSet: error on invalid modifier"
 func TestKm_RemapSet_error_on_invalid_modifier(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -234,6 +242,7 @@ func TestKm_RemapSet_error_on_invalid_modifier(t *testing.T) {
 
 // Zig: test "RemapSet: isRemapped checks mask"
 func TestKm_RemapSet_isRemapped_checks_mask(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -247,6 +256,7 @@ func TestKm_RemapSet_isRemapped_checks_mask(t *testing.T) {
 
 // Zig: test "RemapSet: clone creates independent copy"
 func TestKm_RemapSet_clone_creates_independent_copy(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -263,6 +273,7 @@ func TestKm_RemapSet_clone_creates_independent_copy(t *testing.T) {
 
 // Zig: test "RemapSet: equal compares correctly"
 func TestKm_RemapSet_equal_compares_correctly(t *testing.T) {
+	testPlatform(t, "linux")
 	set1 := InputKeyModsRemapSetEmpty
 	defer set1.Deinit()
 
@@ -283,6 +294,7 @@ func TestKm_RemapSet_equal_compares_correctly(t *testing.T) {
 
 // Zig: test "RemapSet: parseCLI basic"
 func TestKm_RemapSet_parseCLI_basic(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -292,6 +304,7 @@ func TestKm_RemapSet_parseCLI_basic(t *testing.T) {
 
 // Zig: test "RemapSet: parseCLI empty clears"
 func TestKm_RemapSet_parseCLI_empty_clears(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -304,6 +317,7 @@ func TestKm_RemapSet_parseCLI_empty_clears(t *testing.T) {
 
 // Zig: test "RemapSet: parseCLI invalid"
 func TestKm_RemapSet_parseCLI_invalid(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -313,6 +327,7 @@ func TestKm_RemapSet_parseCLI_invalid(t *testing.T) {
 
 // Zig: test "RemapSet: parse aliased modifiers"
 func TestKm_RemapSet_parse_aliased_modifiers(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -326,6 +341,7 @@ func TestKm_RemapSet_parse_aliased_modifiers(t *testing.T) {
 
 // Zig: test "RemapSet: parse aliased modifiers command"
 func TestKm_RemapSet_parse_aliased_modifiers_command(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -339,6 +355,7 @@ func TestKm_RemapSet_parse_aliased_modifiers_command(t *testing.T) {
 
 // Zig: test "RemapSet: parse aliased modifiers opt and option"
 func TestKm_RemapSet_parse_aliased_modifiers_opt_and_option(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -361,6 +378,7 @@ func TestKm_RemapSet_parse_aliased_modifiers_opt_and_option(t *testing.T) {
 
 // Zig: test "RemapSet: parse aliased modifiers control"
 func TestKm_RemapSet_parse_aliased_modifiers_control(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -374,6 +392,7 @@ func TestKm_RemapSet_parse_aliased_modifiers_control(t *testing.T) {
 
 // Zig: test "RemapSet: parse aliased modifiers on target side"
 func TestKm_RemapSet_parse_aliased_modifiers_on_target_side(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -392,6 +411,7 @@ func TestKm_RemapSet_parse_aliased_modifiers_on_target_side(t *testing.T) {
 
 // Zig: test "term51: Mod: values and Side"
 func TestKm_term51_Mod_values_and_Side(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig: @typeInfo(Mod).@"enum".fields; here the count constant and String.
 	expectEqual(t, 4, inputKeyModsModCount)
 	expectEqualStrings(t, "shift", InputKeyModsMod(0).String())
@@ -411,6 +431,7 @@ func TestKm_term51_Mod_values_and_Side(t *testing.T) {
 
 // Zig: test "term51: alias: table contents"
 func TestKm_term51_alias_table_contents(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, 5, len(InputKeyModsAlias))
 	expectEqualStrings(t, "cmd", string(InputKeyModsAlias[0].x0))
 	expectEqual(t, InputKeyModsModSuper, InputKeyModsAlias[0].x1)
@@ -429,6 +450,7 @@ func TestKm_term51_alias_table_contents(t *testing.T) {
 
 // Zig: test "term51: Mods.int: bit position of every field"
 func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, uint16(0), (kmMods{}).Int())
 	// Zig: inline for over the six field names, with @field(m, name) = true.
 	fields := [...]struct {
@@ -475,6 +497,7 @@ func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
 
 // Zig: test "term51: Mods: side_mask"
 func TestKm_term51_Mods_side_mask(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, uint16(0x3C0), InputKeyModsModsSideMask.Int())
 	expect(t, !InputKeyModsModsSideMask.shift, "!Mods.side_mask.shift")
 	expect(t, !InputKeyModsModsSideMask.ctrl, "!Mods.side_mask.ctrl")
@@ -490,6 +513,7 @@ func TestKm_term51_Mods_side_mask(t *testing.T) {
 
 // Zig: test "term51: Mods.Side: defaults and bit layout"
 func TestKm_term51_Mods_Side_defaults_and_bit_layout(t *testing.T) {
+	testPlatform(t, "linux")
 	d := kmSides{}
 	expectEqual(t, uint8(0), d.Int())
 	expectEqual(t, kmLeft, d.shift)
@@ -508,6 +532,7 @@ func TestKm_term51_Mods_Side_defaults_and_bit_layout(t *testing.T) {
 
 // Zig: test "term51: Mods.Keys.int: every bit"
 func TestKm_term51_Mods_Keys_int_every_bit(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, uint8(0), (InputKeyModsModsKeys{}).Int())
 	expectEqual(t, uint8(0b0001), (InputKeyModsModsKeys{shift: true}).Int())
 	expectEqual(t, uint8(0b0010), (InputKeyModsModsKeys{ctrl: true}).Int())
@@ -523,6 +548,7 @@ func TestKm_term51_Mods_Keys_int_every_bit(t *testing.T) {
 
 // Zig: test "term51: Mods.empty: defaults and every bit"
 func TestKm_term51_Mods_empty_defaults_and_every_bit(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, (kmMods{}).Empty(), "(Mods{}).empty()")
 	for i := uint(0); i < 16; i++ {
 		m := kmModsFromInt(uint16(1) << i)
@@ -541,6 +567,7 @@ func TestKm_term51_Mods_empty_defaults_and_every_bit(t *testing.T) {
 
 // Zig: test "term51: Mods.equal: every bit and symmetry"
 func TestKm_term51_Mods_equal_every_bit_and_symmetry(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := uint(0); i < 16; i++ {
 		a := kmModsFromInt(uint16(1) << i)
 		expect(t, a.Equal(a), "a.equal(a)")
@@ -562,6 +589,7 @@ func TestKm_term51_Mods_equal_every_bit_and_symmetry(t *testing.T) {
 
 // Zig: test "term51: Mods.keys: only the low four bits"
 func TestKm_term51_Mods_keys_only_the_low_four_bits(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := uint(0); i < 16; i++ {
 		m := kmModsFromInt(uint16(1) << i)
 		var expected uint8
@@ -581,6 +609,7 @@ func TestKm_term51_Mods_keys_only_the_low_four_bits(t *testing.T) {
 
 // Zig: test "term51: Mods.binding: drops locks, sides and padding"
 func TestKm_term51_Mods_binding_drops_locks_sides_and_padding(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := uint(0); i < 16; i++ {
 		m := kmModsFromInt(uint16(1) << i)
 		var expected uint16
@@ -602,6 +631,7 @@ func TestKm_term51_Mods_binding_drops_locks_sides_and_padding(t *testing.T) {
 
 // Zig: test "term51: Mods.unset: self and not other"
 func TestKm_term51_Mods_unset_self_and_not_other(t *testing.T) {
+	testPlatform(t, "linux")
 	all := kmModsFromInt(0xFFFF)
 	expectEqual(t, kmMods{}, all.Unset(all))
 	expectEqual(t, all, all.Unset(kmMods{}))
@@ -638,6 +668,7 @@ func TestKm_term51_Mods_unset_self_and_not_other(t *testing.T) {
 
 // Zig: test "term51: Mods.withoutLocks: clears only caps and num lock"
 func TestKm_term51_Mods_withoutLocks_clears_only_caps_and_num_lock(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, kmMods{}, (kmMods{caps_lock: true, num_lock: true}).WithoutLocks())
 	expectEqual(t, kmMods{}, (kmMods{caps_lock: true}).WithoutLocks())
 	expectEqual(t, kmMods{}, (kmMods{num_lock: true}).WithoutLocks())
@@ -653,6 +684,7 @@ func TestKm_term51_Mods_withoutLocks_clears_only_caps_and_num_lock(t *testing.T)
 
 // Zig: test "term51: Mods.translation: option as alt"
 func TestKm_term51_Mods_translation_option_as_alt(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig: const is_darwin = comptime builtin.target.os.tag.isDarwin();
 	// Go follows the non-Darwin branch.
 	options := [...]InputConfigOptionAsAlt{
@@ -690,6 +722,7 @@ func TestKm_term51_Mods_translation_option_as_alt(t *testing.T) {
 
 // Zig: test "term51: Mods.ctrlOrSuper: checks ctrl or super per platform"
 func TestKm_term51_Mods_ctrlOrSuper_checks_ctrl_or_super_per_platform(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig: const is_darwin = comptime builtin.target.os.tag.isDarwin();
 	// Go follows the non-Darwin branch.
 	const is_darwin = false
@@ -706,6 +739,7 @@ func TestKm_term51_Mods_ctrlOrSuper_checks_ctrl_or_super_per_platform(t *testing
 
 // Zig: test "term51: RemapSet: empty value"
 func TestKm_term51_RemapSet_empty_value(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	expectEqual(t, uint(0), set.map_.Count())
 	expectEqual(t, uint16(0), kmMask(&set))
@@ -715,6 +749,7 @@ func TestKm_term51_RemapSet_empty_value(t *testing.T) {
 
 // Zig: test "term51: RemapSet.deinit: frees the map"
 func TestKm_term51_RemapSet_deinit_frees_the_map(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig: std.testing.allocator fails the test on a leak; Go has no leak
 	// check, the calls are kept.
 	set := InputKeyModsRemapSetEmpty
@@ -729,6 +764,7 @@ func TestKm_term51_RemapSet_deinit_frees_the_map(t *testing.T) {
 
 // Zig: test "term51: RemapSet.initMods: every mod and side"
 func TestKm_term51_RemapSet_initMods_every_mod_and_side(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, uint16(0x001), inputKeyModsRemapSetInitMods(InputKeyModsModShift, kmLeft).Int())
 	expectEqual(t, uint16(0x002), inputKeyModsRemapSetInitMods(InputKeyModsModCtrl, kmLeft).Int())
 	expectEqual(t, uint16(0x004), inputKeyModsRemapSetInitMods(InputKeyModsModAlt, kmLeft).Int())
@@ -755,6 +791,7 @@ func kmExpectParsedMod(t *testing.T, input string, mod InputKeyModsMod, side Opt
 
 // Zig: test "term51: RemapSet.parseMod: unsided names and aliases"
 func TestKm_term51_RemapSet_parseMod_unsided_names_and_aliases(t *testing.T) {
+	testPlatform(t, "linux")
 	none := None[InputKeyModsModSide]()
 	kmExpectParsedMod(t, "shift", InputKeyModsModShift, none)
 	kmExpectParsedMod(t, "ctrl", InputKeyModsModCtrl, none)
@@ -769,6 +806,7 @@ func TestKm_term51_RemapSet_parseMod_unsided_names_and_aliases(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parseMod: sided names and aliases"
 func TestKm_term51_RemapSet_parseMod_sided_names_and_aliases(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig: inline for (.{ "left", "right" }) |side_name|
 	sides := [...]struct {
 		name string
@@ -790,6 +828,7 @@ func TestKm_term51_RemapSet_parseMod_sided_names_and_aliases(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parseMod: invalid input"
 func TestKm_term51_RemapSet_parseMod_invalid_input(t *testing.T) {
+	testPlatform(t, "linux")
 	bad := [...]string{
 		"",      // empty
 		"_",     // empty side and empty mod
@@ -824,6 +863,7 @@ func TestKm_term51_RemapSet_parseMod_invalid_input(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parseMod: empty side prefix is accepted as unsided"
 func TestKm_term51_RemapSet_parseMod_empty_side_prefix_is_accepted_as_unsided(t *testing.T) {
+	testPlatform(t, "linux")
 	// "_ctrl" splits at the underscore into an empty side and "ctrl".
 	// An empty side string means "no side", so this parses like "ctrl".
 	kmExpectParsedMod(t, "_ctrl", InputKeyModsModCtrl, None[InputKeyModsModSide]())
@@ -832,6 +872,7 @@ func TestKm_term51_RemapSet_parseMod_empty_side_prefix_is_accepted_as_unsided(t 
 
 // Zig: test "term51: RemapSet.parse: unsided from creates left and right entries"
 func TestKm_term51_RemapSet_parse_unsided_from_creates_left_and_right_entries(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -854,6 +895,7 @@ func TestKm_term51_RemapSet_parse_unsided_from_creates_left_and_right_entries(t 
 
 // Zig: test "term51: RemapSet.parse: sided from creates one entry"
 func TestKm_term51_RemapSet_parse_sided_from_creates_one_entry(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -879,6 +921,7 @@ func TestKm_term51_RemapSet_parse_sided_from_creates_one_entry(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parse: to side defaults to left"
 func TestKm_term51_RemapSet_parse_to_side_defaults_to_left(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -903,6 +946,7 @@ func TestKm_term51_RemapSet_parse_to_side_defaults_to_left(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parse: mask only tracks the from side"
 func TestKm_term51_RemapSet_parse_mask_only_tracks_the_from_side(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "left_ctrl=right_super")
@@ -913,6 +957,7 @@ func TestKm_term51_RemapSet_parse_mask_only_tracks_the_from_side(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parse: same from replaces the previous target"
 func TestKm_term51_RemapSet_parse_same_from_replaces_the_previous_target(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -943,6 +988,7 @@ func TestKm_term51_RemapSet_parse_same_from_replaces_the_previous_target(t *test
 
 // Zig: test "term51: RemapSet.parse: every from and to combination"
 func TestKm_term51_RemapSet_parse_every_from_and_to_combination(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, from := range kmMods4 {
 		for _, from_side := range kmSides2 {
 			for _, to := range kmMods4 {
@@ -968,6 +1014,7 @@ func TestKm_term51_RemapSet_parse_every_from_and_to_combination(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parse: errors"
 func TestKm_term51_RemapSet_parse_errors(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1000,6 +1047,7 @@ func TestKm_term51_RemapSet_parse_errors(t *testing.T) {
 
 // Zig: test "term51: RemapSet.parse: failed parse keeps previous entries"
 func TestKm_term51_RemapSet_parse_failed_parse_keeps_previous_entries(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1016,6 +1064,7 @@ func TestKm_term51_RemapSet_parse_failed_parse_keeps_previous_entries(t *testing
 
 // Zig: test "term51: RemapSet.parseCLI: null and empty reset the set"
 func TestKm_term51_RemapSet_parseCLI_null_and_empty_reset_the_set(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1041,6 +1090,7 @@ func TestKm_term51_RemapSet_parseCLI_null_and_empty_reset_the_set(t *testing.T) 
 
 // Zig: test "term51: RemapSet.parseCLI: accumulates and maps errors to InvalidValue"
 func TestKm_term51_RemapSet_parseCLI_accumulates_and_maps_errors_to_InvalidValue(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1062,6 +1112,7 @@ func TestKm_term51_RemapSet_parseCLI_accumulates_and_maps_errors_to_InvalidValue
 
 // Zig: test "term51: RemapSet.finalize: right sided entries come first"
 func TestKm_term51_RemapSet_finalize_right_sided_entries_come_first(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1104,6 +1155,7 @@ func TestKm_term51_RemapSet_finalize_right_sided_entries_come_first(t *testing.T
 
 // Zig: test "term51: RemapSet.finalize: empty and single element"
 func TestKm_term51_RemapSet_finalize_empty_and_single_element(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	set.Finalize()
@@ -1117,6 +1169,7 @@ func TestKm_term51_RemapSet_finalize_empty_and_single_element(t *testing.T) {
 
 // Zig: test "term51: RemapSet.clone: deep and independent"
 func TestKm_term51_RemapSet_clone_deep_and_independent(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=super")
@@ -1153,6 +1206,7 @@ func TestKm_term51_RemapSet_clone_deep_and_independent(t *testing.T) {
 
 // Zig: test "term51: RemapSet.clone: empty set"
 func TestKm_term51_RemapSet_clone_empty_set(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	cloned, err := set.Clone()
 	zigTry(t, err)
@@ -1166,6 +1220,7 @@ func TestKm_term51_RemapSet_clone_empty_set(t *testing.T) {
 
 // Zig: test "term51: RemapSet.equal: counts keys and values"
 func TestKm_term51_RemapSet_equal_counts_keys_and_values(t *testing.T) {
+	testPlatform(t, "linux")
 	a := InputKeyModsRemapSetEmpty
 	defer a.Deinit()
 	b := InputKeyModsRemapSetEmpty
@@ -1214,6 +1269,7 @@ func TestKm_term51_RemapSet_equal_counts_keys_and_values(t *testing.T) {
 
 // Zig: test "term51: RemapSet.equal: insertion order and mask are not compared"
 func TestKm_term51_RemapSet_equal_insertion_order_and_mask_are_not_compared(t *testing.T) {
+	testPlatform(t, "linux")
 	a := InputKeyModsRemapSetEmpty
 	defer a.Deinit()
 	b := InputKeyModsRemapSetEmpty
@@ -1248,6 +1304,7 @@ func kmExpectFormatMod(t *testing.T, mods kmMods, expected string) {
 
 // Zig: test "term51: RemapSet.formatMod: every mod and side"
 func TestKm_term51_RemapSet_formatMod_every_mod_and_side(t *testing.T) {
+	testPlatform(t, "linux")
 	kmExpectFormatMod(t, inputKeyModsRemapSetInitMods(InputKeyModsModShift, kmLeft), "left_shift")
 	kmExpectFormatMod(t, inputKeyModsRemapSetInitMods(InputKeyModsModShift, kmRight), "right_shift")
 	kmExpectFormatMod(t, inputKeyModsRemapSetInitMods(InputKeyModsModCtrl, kmLeft), "left_ctrl")
@@ -1260,6 +1317,7 @@ func TestKm_term51_RemapSet_formatMod_every_mod_and_side(t *testing.T) {
 
 // Zig: test "term51: RemapSet.formatMod: only the first set mod is written"
 func TestKm_term51_RemapSet_formatMod_only_the_first_set_mod_is_written(t *testing.T) {
+	testPlatform(t, "linux")
 	// Priority order is shift, ctrl, alt, super.
 	kmExpectFormatMod(t, kmMods{shift: true, ctrl: true, alt: true, super: true}, "left_shift")
 	kmExpectFormatMod(t, kmMods{ctrl: true, alt: true, super: true}, "left_ctrl")
@@ -1278,6 +1336,7 @@ func TestKm_term51_RemapSet_formatMod_only_the_first_set_mod_is_written(t *testi
 
 // Zig: test "term51: RemapSet.formatMod: nothing set writes nothing"
 func TestKm_term51_RemapSet_formatMod_nothing_set_writes_nothing(t *testing.T) {
+	testPlatform(t, "linux")
 	kmExpectFormatMod(t, kmMods{}, "")
 	// Locks and side bits alone do not produce output.
 	kmExpectFormatMod(t, kmMods{caps_lock: true, num_lock: true}, "")
@@ -1286,6 +1345,7 @@ func TestKm_term51_RemapSet_formatMod_nothing_set_writes_nothing(t *testing.T) {
 
 // Zig: test "term51: RemapSet.formatMod: writer errors are returned"
 func TestKm_term51_RemapSet_formatMod_writer_errors_are_returned(t *testing.T) {
+	testPlatform(t, "linux")
 	var buf [4]uint8
 	fbs := inputKeyModsFixedBufferStreamInit(buf[:])
 	kmExpectError(t,
@@ -1300,6 +1360,7 @@ func TestKm_term51_RemapSet_formatMod_writer_errors_are_returned(t *testing.T) {
 
 // Zig: test "term51: RemapSet.formatEntry: empty set emits a void entry"
 func TestKm_term51_RemapSet_formatEntry_empty_set_emits_a_void_entry(t *testing.T) {
+	testPlatform(t, "linux")
 	var rec kmRecorder
 
 	set := InputKeyModsRemapSetEmpty
@@ -1310,6 +1371,7 @@ func TestKm_term51_RemapSet_formatEntry_empty_set_emits_a_void_entry(t *testing.
 
 // Zig: test "term51: RemapSet.formatEntry: one line per mapping in map order"
 func TestKm_term51_RemapSet_formatEntry_one_line_per_mapping_in_map_order(t *testing.T) {
+	testPlatform(t, "linux")
 	var rec kmRecorder
 
 	set := InputKeyModsRemapSetEmpty
@@ -1327,6 +1389,7 @@ func TestKm_term51_RemapSet_formatEntry_one_line_per_mapping_in_map_order(t *tes
 
 // Zig: test "term51: RemapSet.formatEntry: single and right sided entries"
 func TestKm_term51_RemapSet_formatEntry_single_and_right_sided_entries(t *testing.T) {
+	testPlatform(t, "linux")
 	var rec kmRecorder
 
 	set := InputKeyModsRemapSetEmpty
@@ -1348,6 +1411,7 @@ func TestKm_term51_RemapSet_formatEntry_single_and_right_sided_entries(t *testin
 
 // Zig: test "term51: RemapSet.formatEntry: round trip of every combination"
 func TestKm_term51_RemapSet_formatEntry_round_trip_of_every_combination(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, from := range kmMods4 {
 		for _, from_side := range kmSides2 {
 			for _, to := range kmMods4 {
@@ -1373,6 +1437,7 @@ func TestKm_term51_RemapSet_formatEntry_round_trip_of_every_combination(t *testi
 
 // Zig: test "term51: RemapSet.formatEntry: formatter errors are returned"
 func TestKm_term51_RemapSet_formatEntry_formatter_errors_are_returned(t *testing.T) {
+	testPlatform(t, "linux")
 	var fail kmFailFormatter
 
 	empty := InputKeyModsRemapSetEmpty
@@ -1386,6 +1451,7 @@ func TestKm_term51_RemapSet_formatEntry_formatter_errors_are_returned(t *testing
 
 // Zig: test "term51: RemapSet.isRemapped: depends on the mask only"
 func TestKm_term51_RemapSet_isRemapped_depends_on_the_mask_only(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1410,6 +1476,7 @@ func TestKm_term51_RemapSet_isRemapped_depends_on_the_mask_only(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: unremapped mods are returned unchanged"
 func TestKm_term51_RemapSet_apply_unremapped_mods_are_returned_unchanged(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
@@ -1426,6 +1493,7 @@ func TestKm_term51_RemapSet_apply_unremapped_mods_are_returned_unchanged(t *test
 
 // Zig: test "term51: RemapSet.apply: keeps other mods, locks and sides"
 func TestKm_term51_RemapSet_apply_keeps_other_mods_locks_and_sides(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=super")
@@ -1452,6 +1520,7 @@ func TestKm_term51_RemapSet_apply_keeps_other_mods_locks_and_sides(t *testing.T)
 
 // Zig: test "term51: RemapSet.apply: right sided from and to"
 func TestKm_term51_RemapSet_apply_right_sided_from_and_to(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "right_ctrl=right_alt")
@@ -1470,6 +1539,7 @@ func TestKm_term51_RemapSet_apply_right_sided_from_and_to(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: right from to a left target"
 func TestKm_term51_RemapSet_apply_right_from_to_a_left_target(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "right_ctrl=shift")
@@ -1482,6 +1552,7 @@ func TestKm_term51_RemapSet_apply_right_from_to_a_left_target(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: left from to a right target"
 func TestKm_term51_RemapSet_apply_left_from_to_a_right_target(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "left_ctrl=right_shift")
@@ -1494,6 +1565,7 @@ func TestKm_term51_RemapSet_apply_left_from_to_a_right_target(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: remaps are not chained"
 func TestKm_term51_RemapSet_apply_remaps_are_not_chained(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=alt")
@@ -1506,6 +1578,7 @@ func TestKm_term51_RemapSet_apply_remaps_are_not_chained(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: every unsided single mod"
 func TestKm_term51_RemapSet_apply_every_unsided_single_mod(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, from := range kmMods4 {
 		for _, to := range kmMods4 {
 			// The closure runs the deferred Deinit per iteration.
@@ -1529,6 +1602,7 @@ func TestKm_term51_RemapSet_apply_every_unsided_single_mod(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: pressed target keeps its own side bit"
 func TestKm_term51_RemapSet_apply_pressed_target_keeps_its_own_side_bit(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "left_ctrl=alt")
@@ -1545,6 +1619,7 @@ func TestKm_term51_RemapSet_apply_pressed_target_keeps_its_own_side_bit(t *testi
 
 // Zig: test "term51: RemapSet.apply: first matching entry wins and finalize sets the order"
 func TestKm_term51_RemapSet_apply_first_matching_entry_wins_and_finalize_sets_the_order(t *testing.T) {
+	testPlatform(t, "linux")
 	// ctrl=alt matches left ctrl, right_alt=shift matches right alt.
 	// Both match {left ctrl, right alt}; the first entry in map order wins.
 	input := kmMods{ctrl: true, alt: true, sides: kmSides{alt: kmRight}}
@@ -1577,6 +1652,7 @@ func TestKm_term51_RemapSet_apply_first_matching_entry_wins_and_finalize_sets_th
 
 // Zig: test "term51: RemapSet.apply: swap of two mods"
 func TestKm_term51_RemapSet_apply_swap_of_two_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=alt")
@@ -1592,6 +1668,7 @@ func TestKm_term51_RemapSet_apply_swap_of_two_mods(t *testing.T) {
 
 // Zig: test "term51: RemapSet.apply: same mod target is the identity"
 func TestKm_term51_RemapSet_apply_same_mod_target_is_the_identity(t *testing.T) {
+	testPlatform(t, "linux")
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=ctrl")
@@ -1609,6 +1686,7 @@ func TestKm_term51_RemapSet_apply_same_mod_target_is_the_identity(t *testing.T) 
 
 // Zig: test "term51: RemapSet.Mask: default and layout"
 func TestKm_term51_RemapSet_Mask_default_and_layout(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	expectEqual(t, uint16(0), mask.Int())
 	expectEqual(t, InputKeyModsModsKeys{}, mask.keys)
@@ -1623,6 +1701,7 @@ func TestKm_term51_RemapSet_Mask_default_and_layout(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.update: left sided mod"
 func TestKm_term51_RemapSet_Mask_update_left_sided_mod(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{ctrl: true})
 	expectEqual(t, uint16(0x022), mask.Int())
@@ -1633,6 +1712,7 @@ func TestKm_term51_RemapSet_Mask_update_left_sided_mod(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.update: right sided mod"
 func TestKm_term51_RemapSet_Mask_update_right_sided_mod(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}})
 	expectEqual(t, uint16(0x202), mask.Int())
@@ -1643,6 +1723,7 @@ func TestKm_term51_RemapSet_Mask_update_right_sided_mod(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.update: every mod and side"
 func TestKm_term51_RemapSet_Mask_update_every_mod_and_side(t *testing.T) {
+	testPlatform(t, "linux")
 	for i, mod := range kmMods4 {
 		bit := uint16(1) << i
 		left := InputKeyModsRemapSetMask{}
@@ -1657,6 +1738,7 @@ func TestKm_term51_RemapSet_Mask_update_every_mod_and_side(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.update: accumulates with OR"
 func TestKm_term51_RemapSet_Mask_update_accumulates_with_OR(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{ctrl: true})
 	mask.Update(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}})
@@ -1674,6 +1756,7 @@ func TestKm_term51_RemapSet_Mask_update_accumulates_with_OR(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.update: multiple keys in one value"
 func TestKm_term51_RemapSet_Mask_update_multiple_keys_in_one_value(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{shift: true, alt: true, sides: kmSides{alt: kmRight}})
 	// keys 0b0101, left 0b0001 (shift on the left), right 0b0100 (alt).
@@ -1682,6 +1765,7 @@ func TestKm_term51_RemapSet_Mask_update_multiple_keys_in_one_value(t *testing.T)
 
 // Zig: test "term51: RemapSet.Mask.update: ignores locks, stray sides and empty mods"
 func TestKm_term51_RemapSet_Mask_update_ignores_locks_stray_sides_and_empty_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{})
 	expectEqual(t, uint16(0), mask.Int())
@@ -1701,6 +1785,7 @@ func TestKm_term51_RemapSet_Mask_update_ignores_locks_stray_sides_and_empty_mods
 
 // Zig: test "term51: RemapSet.Mask.match: left sided remap"
 func TestKm_term51_RemapSet_Mask_match_left_sided_remap(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{ctrl: true})
 
@@ -1718,6 +1803,7 @@ func TestKm_term51_RemapSet_Mask_match_left_sided_remap(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.match: right sided remap"
 func TestKm_term51_RemapSet_Mask_match_right_sided_remap(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{alt: true, sides: kmSides{alt: kmRight}})
 
@@ -1729,6 +1815,7 @@ func TestKm_term51_RemapSet_Mask_match_right_sided_remap(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.match: both sides remapped"
 func TestKm_term51_RemapSet_Mask_match_both_sides_remapped(t *testing.T) {
+	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{super: true})
 	mask.Update(kmMods{super: true, sides: kmSides{super: kmRight}})
@@ -1740,6 +1827,7 @@ func TestKm_term51_RemapSet_Mask_match_both_sides_remapped(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.match: sides are tracked per mod"
 func TestKm_term51_RemapSet_Mask_match_sides_are_tracked_per_mod(t *testing.T) {
+	testPlatform(t, "linux")
 	// left ctrl and right alt are remapped.
 	mask := InputKeyModsRemapSetMask{}
 	mask.Update(kmMods{ctrl: true})
@@ -1771,6 +1859,7 @@ func TestKm_term51_RemapSet_Mask_match_sides_are_tracked_per_mod(t *testing.T) {
 
 // Zig: test "term51: RemapSet.Mask.match: every mod and side against every mask"
 func TestKm_term51_RemapSet_Mask_match_every_mod_and_side_against_every_mask(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, mask_mod := range kmMods4 {
 		for _, mask_side := range kmSides2 {
 			mask := InputKeyModsRemapSetMask{}
@@ -1790,6 +1879,7 @@ func TestKm_term51_RemapSet_Mask_match_every_mod_and_side_against_every_mask(t *
 
 // Zig: test "term51: RemapSet.Mask.match: empty mask and inconsistent mask"
 func TestKm_term51_RemapSet_Mask_match_empty_mask_and_inconsistent_mask(t *testing.T) {
+	testPlatform(t, "linux")
 	empty := InputKeyModsRemapSetMask{}
 	expect(t, !empty.Match(kmMods{}), "!empty.match(.{})")
 	expect(t, !empty.Match(kmMods{ctrl: true}), "!empty.match(.{ .ctrl = true })")
@@ -1807,6 +1897,7 @@ func TestKm_term51_RemapSet_Mask_match_empty_mask_and_inconsistent_mask(t *testi
 
 // Go-only: panic test: RemapSet.apply: the mask matched but no entry did (unreachable)
 func TestKm_panic_RemapSet_apply_mask_matched_but_no_entry_did(t *testing.T) {
+	testPlatform(t, "linux")
 	// The mask says ctrl is remapped but the map is empty: Zig falls off the
 	// end of the loop into `unreachable`.
 	set := InputKeyModsRemapSetEmpty

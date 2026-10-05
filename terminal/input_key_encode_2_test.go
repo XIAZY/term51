@@ -290,6 +290,7 @@ var ke2Rows = []ke2KeyRow{
 
 // Zig: test "legacy: hu layout ctrl+ő sends proper codepoint"
 func TestKe2_legacy_hu_layout_ctrl_sends_proper_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	var buf [128]uint8
 	writer := oscWriterFixed(buf[:])
 	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBracketLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("ő"), unshifted_codepoint: 337}, InputKeyEncodeOptions{}))
@@ -299,6 +300,7 @@ func TestKe2_legacy_hu_layout_ctrl_sends_proper_codepoint(t *testing.T) {
 
 // Zig: test "legacy: backspace with DEL utf8"
 func TestKe2_legacy_backspace_with_DEL_utf8(t *testing.T) {
+	testPlatform(t, "linux")
 	var buf [128]uint8
 	writer := oscWriterFixed(buf[:])
 	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{
@@ -312,71 +314,83 @@ func TestKe2_legacy_backspace_with_DEL_utf8(t *testing.T) {
 
 // Zig: test "ctrlseq: normal ctrl c"
 func TestKe2_ctrlseq_normal_ctrl_c(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{ctrl: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: normal ctrl c, right control"
 func TestKe2_ctrlseq_normal_ctrl_c_right_control(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{ctrl: true, sides: InputKeyModsModsSide{ctrl: InputKeyModsModSideRight}})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: alt should be allowed"
 func TestKe2_ctrlseq_alt_should_be_allowed(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{alt: true, ctrl: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: no ctrl does nothing"
 func TestKe2_ctrlseq_no_ctrl_does_nothing(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{}).Valid, "ctrlSeq(.unidentified, \"c\", 'c', .{}) == null")
 }
 
 // Zig: test "ctrlseq: shifted non-character"
 func TestKe2_ctrlseq_shifted_non_character(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("_"), '-', InputKeyMods{ctrl: true, shift: true})
 	expectEqual(t, uint8(0x1F), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: caps ascii letter"
 func TestKe2_ctrlseq_caps_ascii_letter(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{ctrl: true, caps_lock: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: shift does not generate ctrl seq"
 func TestKe2_ctrlseq_shift_does_not_generate_ctrl_seq(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{shift: true}).Valid, "ctrlSeq(.unidentified, \"C\", 'c', .{ .shift = true }) == null")
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{shift: true, ctrl: true}).Valid, "ctrlSeq(.unidentified, \"C\", 'c', .{ .shift = true, .ctrl = true }) == null")
 }
 
 // Zig: test "ctrlseq: russian ctrl c"
 func TestKe2_ctrlseq_russian_ctrl_c(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{ctrl: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: russian shifted ctrl c"
 func TestKe2_ctrlseq_russian_shifted_ctrl_c(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{ctrl: true, shift: true})
 	expect(t, !seq.Valid, "seq == null")
 }
 
 // Zig: test "ctrlseq: russian alt ctrl c"
 func TestKe2_ctrlseq_russian_alt_ctrl_c(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{ctrl: true, alt: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: right ctrl c"
 func TestKe2_ctrlseq_right_ctrl_c(t *testing.T) {
+	testPlatform(t, "linux")
 	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 'c', InputKeyMods{ctrl: true, sides: InputKeyModsModsSide{ctrl: InputKeyModsModSideRight}})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "term51: Options.fromTerminal: terminal defaults"
 func TestKe2_term51_Options_fromTerminal_terminal_defaults(t *testing.T) {
+	testPlatform(t, "linux")
 	term := ke2Terminal(t)
 	defer term.Deinit()
 
@@ -393,6 +407,7 @@ func TestKe2_term51_Options_fromTerminal_terminal_defaults(t *testing.T) {
 
 // Zig: test "term51: Options.fromTerminal: Options.default values"
 func TestKe2_term51_Options_fromTerminal_Options_default_values(t *testing.T) {
+	testPlatform(t, "linux")
 	d := InputKeyEncodeOptionsDefault
 	expect(t, !d.cursor_key_application, "!d.cursor_key_application")
 	expect(t, !d.keypad_key_application, "!d.keypad_key_application")
@@ -409,6 +424,7 @@ func TestKe2_term51_Options_fromTerminal_Options_default_values(t *testing.T) {
 
 // Zig: test "term51: Options.fromTerminal: each mode maps to its own field"
 func TestKe2_term51_Options_fromTerminal_each_mode_maps_to_its_own_field(t *testing.T) {
+	testPlatform(t, "linux")
 	term := ke2Terminal(t)
 	defer term.Deinit()
 	// cursor_keys -> cursor_key_application only
@@ -468,6 +484,7 @@ func TestKe2_term51_Options_fromTerminal_each_mode_maps_to_its_own_field(t *test
 
 // Zig: test "term51: Options.fromTerminal: kitty flags follow the active screen stack"
 func TestKe2_term51_Options_fromTerminal_kitty_flags_follow_the_active_screen_stack(t *testing.T) {
+	testPlatform(t, "linux")
 	term := ke2Terminal(t)
 	defer term.Deinit()
 
@@ -518,6 +535,7 @@ func TestKe2_term51_Options_fromTerminal_kitty_flags_follow_the_active_screen_st
 
 // Zig: test "term51: CsiUMods.fromInput: every shift/ctrl/alt combination"
 func TestKe2_term51_CsiUMods_fromInput_every_shift_ctrl_alt_combination(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := uint8(0); ; bits++ {
 		mods := InputKeyMods{
 			shift: (bits & 1) != 0,
@@ -538,6 +556,7 @@ func TestKe2_term51_CsiUMods_fromInput_every_shift_ctrl_alt_combination(t *testi
 
 // Zig: test "term51: CsiUMods.fromInput: ignores super, locks and sides"
 func TestKe2_term51_CsiUMods_fromInput_ignores_super_locks_and_sides(t *testing.T) {
+	testPlatform(t, "linux")
 	c := inputKeyEncodeCsiUModsFromInput(InputKeyMods{
 		super:     true,
 		caps_lock: true,
@@ -563,6 +582,7 @@ func TestKe2_term51_CsiUMods_fromInput_ignores_super_locks_and_sides(t *testing.
 
 // Zig: test "term51: CsiUMods.int: bit positions"
 func TestKe2_term51_CsiUMods_int_bit_positions(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, uint8(0), (inputKeyEncodeCsiUMods{}).Int())
 	expectEqual(t, uint8(1), (inputKeyEncodeCsiUMods{shift: true}).Int())
 	expectEqual(t, uint8(2), (inputKeyEncodeCsiUMods{alt: true}).Int())
@@ -575,6 +595,7 @@ func TestKe2_term51_CsiUMods_int_bit_positions(t *testing.T) {
 
 // Zig: test "term51: CsiUMods.seqInt: all eight values"
 func TestKe2_term51_CsiUMods_seqInt_all_eight_values(t *testing.T) {
+	testPlatform(t, "linux")
 	for raw := uint8(0); ; raw++ {
 		c := inputKeyEncodeCsiUModsFromInt(raw)
 		expectEqual(t, raw+1, c.SeqInt())
@@ -588,6 +609,7 @@ func TestKe2_term51_CsiUMods_seqInt_all_eight_values(t *testing.T) {
 
 // Zig: test "term51: KittyMods.fromInput: each modifier alone"
 func TestKe2_term51_KittyMods_fromInput_each_modifier_alone(t *testing.T) {
+	testPlatform(t, "linux")
 	none := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{})
 	expectEqual(t, uint8(0), none.Int())
 
@@ -606,6 +628,7 @@ func TestKe2_term51_KittyMods_fromInput_each_modifier_alone(t *testing.T) {
 
 // Zig: test "term51: KittyMods.fromInput: all 64 combinations, hyper and meta never set"
 func TestKe2_term51_KittyMods_fromInput_all_64_combinations_hyper_and_meta_never_set(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := uint8(0); bits < 64; bits++ {
 		b := bits
 		m := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, ke2Mods(b))
@@ -617,6 +640,7 @@ func TestKe2_term51_KittyMods_fromInput_all_64_combinations_hyper_and_meta_never
 
 // Zig: test "term51: KittyMods.fromInput: ignores action, key, sides and padding"
 func TestKe2_term51_KittyMods_fromInput_ignores_action_key_sides_and_padding(t *testing.T) {
+	testPlatform(t, "linux")
 	mods := InputKeyMods{ctrl: true, shift: true}
 	base := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, mods)
 	expectEqual(t, uint8(5), base.Int())
@@ -639,6 +663,7 @@ func TestKe2_term51_KittyMods_fromInput_ignores_action_key_sides_and_padding(t *
 
 // Zig: test "term51: KittyMods.int: bit positions"
 func TestKe2_term51_KittyMods_int_bit_positions(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, uint8(0), (inputKeyEncodeKittyMods{}).Int())
 	expectEqual(t, uint8(1), (inputKeyEncodeKittyMods{shift: true}).Int())
 	expectEqual(t, uint8(2), (inputKeyEncodeKittyMods{alt: true}).Int())
@@ -662,6 +687,7 @@ func TestKe2_term51_KittyMods_int_bit_positions(t *testing.T) {
 
 // Zig: test "term51: KittyMods.seqInt: every bit pattern is the bitmask plus one"
 func TestKe2_term51_KittyMods_seqInt_every_bit_pattern_is_the_bitmask_plus_one(t *testing.T) {
+	testPlatform(t, "linux")
 	for raw := uint16(0); raw < 256; raw++ {
 		m := inputKeyEncodeKittyModsFromInt(uint8(raw))
 		expectEqual(t, raw, uint16(m.Int()))
@@ -687,6 +713,7 @@ func TestKe2_term51_KittyMods_seqInt_every_bit_pattern_is_the_bitmask_plus_one(t
 
 // Zig: test "term51: KittyMods.preventsText: each modifier"
 func TestKe2_term51_KittyMods_preventsText_each_modifier(t *testing.T) {
+	testPlatform(t, "linux")
 	cases := []struct {
 		m         inputKeyEncodeKittyMods
 		alt_true  bool
@@ -714,6 +741,7 @@ func TestKe2_term51_KittyMods_preventsText_each_modifier(t *testing.T) {
 
 // Zig: test "term51: KittyMods.preventsText: all 256 bit patterns"
 func TestKe2_term51_KittyMods_preventsText_all_256_bit_patterns(t *testing.T) {
+	testPlatform(t, "linux")
 	for raw := uint16(0); raw < 256; raw++ {
 		r := uint8(raw)
 		m := inputKeyEncodeKittyModsFromInt(r)
@@ -727,6 +755,7 @@ func TestKe2_term51_KittyMods_preventsText_all_256_bit_patterns(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encode: dispatches on final byte"
 func TestKe2_term51_KittySequence_encode_dispatches_on_final_byte(t *testing.T) {
+	testPlatform(t, "linux")
 	// 'u' and '~' use the full form.
 	ke2ExpectSeq(t, "\x1b[97u", inputKeyEncodeKittySequence{key: 97, final: 'u'})
 	ke2ExpectSeq(t, "\x1b[3~", inputKeyEncodeKittySequence{key: 3, final: '~'})
@@ -741,6 +770,7 @@ func TestKe2_term51_KittySequence_encode_dispatches_on_final_byte(t *testing.T) 
 
 // Zig: test "term51: KittySequence.encodeFull: key codes"
 func TestKe2_term51_KittySequence_encodeFull_key_codes(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2ExpectSeq(t, "\x1b[0u", inputKeyEncodeKittySequence{key: 0, final: 'u'})
 	ke2ExpectSeq(t, "\x1b[1u", inputKeyEncodeKittySequence{key: 1, final: 'u'})
 	ke2ExpectSeq(t, "\x1b[1114111u", inputKeyEncodeKittySequence{key: 0x10FFFF, final: 'u'})
@@ -752,6 +782,7 @@ func TestKe2_term51_KittySequence_encodeFull_key_codes(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeFull: modifiers"
 func TestKe2_term51_KittySequence_encodeFull_modifiers(t *testing.T) {
+	testPlatform(t, "linux")
 	// mods == 1 (none) is omitted, otherwise written as the seqInt value.
 	ke2ExpectSeq(t, "\x1b[97;2u", inputKeyEncodeKittySequence{key: 97, final: 'u', mods: inputKeyEncodeKittyMods{shift: true}})
 	ke2ExpectSeq(t, "\x1b[97;3u", inputKeyEncodeKittySequence{key: 97, final: 'u', mods: inputKeyEncodeKittyMods{alt: true}})
@@ -767,6 +798,7 @@ func TestKe2_term51_KittySequence_encodeFull_modifiers(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeFull: event types"
 func TestKe2_term51_KittySequence_encodeFull_event_types(t *testing.T) {
+	testPlatform(t, "linux")
 	// none and press with no modifiers emit no modifier section at all.
 	ke2ExpectSeq(t, "\x1b[97u", inputKeyEncodeKittySequence{key: 97, final: 'u', event: inputKeyEncodeKittySequenceEventNone})
 	ke2ExpectSeq(t, "\x1b[97u", inputKeyEncodeKittySequence{key: 97, final: 'u', event: inputKeyEncodeKittySequenceEventPress})
@@ -787,6 +819,7 @@ func TestKe2_term51_KittySequence_encodeFull_event_types(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeFull: alternates"
 func TestKe2_term51_KittySequence_encodeFull_alternates(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2ExpectSeq(t, "\x1b[97:65u", inputKeyEncodeKittySequence{key: 97, final: 'u', alternates: [2]Optional[uint32]{Some(uint32(65)), {}}})
 	ke2ExpectSeq(t, "\x1b[97::98u", inputKeyEncodeKittySequence{key: 97, final: 'u', alternates: [2]Optional[uint32]{{}, Some(uint32(98))}})
 	ke2ExpectSeq(t, "\x1b[97:65:98u", inputKeyEncodeKittySequence{key: 97, final: 'u', alternates: [2]Optional[uint32]{Some(uint32(65)), Some(uint32(98))}})
@@ -801,6 +834,7 @@ func TestKe2_term51_KittySequence_encodeFull_alternates(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeFull: associated text"
 func TestKe2_term51_KittySequence_encodeFull_associated_text(t *testing.T) {
+	testPlatform(t, "linux")
 	// No modifier section was emitted so two semicolons introduce the text.
 	ke2ExpectSeq(t, "\x1b[97;;97u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("a")})
 	ke2ExpectSeq(t, "\x1b[97;;97u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("a"), event: inputKeyEncodeKittySequenceEventPress})
@@ -827,6 +861,7 @@ func TestKe2_term51_KittySequence_encodeFull_associated_text(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeFull: control characters in text"
 func TestKe2_term51_KittySequence_encodeFull_control_characters_in_text(t *testing.T) {
+	testPlatform(t, "linux")
 	// Controls are skipped, the rest keeps its separators.
 	ke2ExpectSeq(t, "\x1b[97;;97:98u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("a\x01b")})
 	ke2ExpectSeq(t, "\x1b[97;;97u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("\x01a")})
@@ -842,6 +877,7 @@ func TestKe2_term51_KittySequence_encodeFull_control_characters_in_text(t *testi
 
 // Zig: test "term51: KittySequence.encodeFull: invalid or empty text is dropped"
 func TestKe2_term51_KittySequence_encodeFull_invalid_or_empty_text_is_dropped(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2ExpectSeq(t, "\x1b[97u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("")})
 	ke2ExpectSeq(t, "\x1b[97u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("\xff")})
 	ke2ExpectSeq(t, "\x1b[97u", inputKeyEncodeKittySequence{key: 97, final: 'u', text: []uint8("a\xff")})
@@ -854,6 +890,7 @@ func TestKe2_term51_KittySequence_encodeFull_invalid_or_empty_text_is_dropped(t 
 
 // Zig: test "term51: KittySequence.encodeFull: everything together"
 func TestKe2_term51_KittySequence_encodeFull_everything_together(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2ExpectSeq(t, "\x1b[97:65:98;2:2;65:66u", inputKeyEncodeKittySequence{key: 97, final: 'u', alternates: [2]Optional[uint32]{Some(uint32(65)), Some(uint32(98))}, mods: inputKeyEncodeKittyMods{shift: true}, event: inputKeyEncodeKittySequenceEventRepeat, text: []uint8("AB")})
 	ke2ExpectSeq(t, "\x1b[3:1:2;2;120~", inputKeyEncodeKittySequence{key: 3, final: '~', alternates: [2]Optional[uint32]{Some(uint32(1)), Some(uint32(2))}, mods: inputKeyEncodeKittyMods{shift: true}, event: inputKeyEncodeKittySequenceEventPress, text: []uint8("x")})
 	ke2ExpectSeq(t, "\x1b[97::98;;97u", inputKeyEncodeKittySequence{key: 97, final: 'u', alternates: [2]Optional[uint32]{{}, Some(uint32(98))}, event: inputKeyEncodeKittySequenceEventPress, text: []uint8("a")})
@@ -861,6 +898,7 @@ func TestKe2_term51_KittySequence_encodeFull_everything_together(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeSpecial: forms"
 func TestKe2_term51_KittySequence_encodeSpecial_forms(t *testing.T) {
+	testPlatform(t, "linux")
 	// No mods, no event.
 	ke2ExpectSeq(t, "\x1b[A", inputKeyEncodeKittySequence{key: 1, final: 'A'})
 	ke2ExpectSeq(t, "\x1b[H", inputKeyEncodeKittySequence{key: 1, final: 'H'})
@@ -879,6 +917,7 @@ func TestKe2_term51_KittySequence_encodeSpecial_forms(t *testing.T) {
 
 // Zig: test "term51: KittySequence.encodeSpecial: ignores key code, alternates and text"
 func TestKe2_term51_KittySequence_encodeSpecial_ignores_key_code_alternates_and_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2ExpectSeq(t, "\x1b[A", inputKeyEncodeKittySequence{key: 99999, final: 'A', alternates: [2]Optional[uint32]{Some(uint32(65)), Some(uint32(66))}, text: []uint8("abc")})
 	ke2ExpectSeq(t, "\x1b[1;2:3A", inputKeyEncodeKittySequence{key: 0, final: 'A', alternates: [2]Optional[uint32]{Some(uint32(65)), {}}, text: []uint8("abc"), mods: inputKeyEncodeKittyMods{shift: true}, event: inputKeyEncodeKittySequenceEventRelease})
 	// Non-ASCII final byte is written as a raw byte.
@@ -887,6 +926,7 @@ func TestKe2_term51_KittySequence_encodeSpecial_ignores_key_code_alternates_and_
 
 // Zig: test "term51: kitty: disabled flags fall back to legacy"
 func TestKe2_term51_kitty_disabled_flags_fall_back_to_legacy(t *testing.T) {
+	testPlatform(t, "linux")
 	none := InputKeyEncodeOptions{}
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts: none, want: "\x1b"},
@@ -905,6 +945,7 @@ func TestKe2_term51_kitty_disabled_flags_fall_back_to_legacy(t *testing.T) {
 
 // Zig: test "term51: kitty: release events need report_events"
 func TestKe2_term51_kitty_release_events_need_report_events(t *testing.T) {
+	testPlatform(t, "linux")
 	a_rel := InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}
 	// Without report_events nothing is sent, whatever else is set.
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
@@ -932,6 +973,7 @@ func TestKe2_term51_kitty_release_events_need_report_events(t *testing.T) {
 
 // Zig: test "term51: kitty: release of enter, backspace and tab needs report_all"
 func TestKe2_term51_kitty_release_of_enter_backspace_and_tab_needs_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range []InputKeyKey{InputKeyKeyEnter, InputKeyKeyBackspace, InputKeyKeyTab} {
 		ev := InputKeyKeyEvent{action: InputKeyActionRelease, key: k}
 		ke2Expect(t, inputKeyEncodeKitty, "", ev, ke2Events)
@@ -951,6 +993,7 @@ func TestKe2_term51_kitty_release_of_enter_backspace_and_tab_needs_report_all(t 
 
 // Zig: test "term51: kitty: press and repeat events"
 func TestKe2_term51_kitty_press_and_repeat_events(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// report_events: press has no ":1" in the full form, repeat does.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27u"},
@@ -976,6 +1019,7 @@ func TestKe2_term51_kitty_press_and_repeat_events(t *testing.T) {
 
 // Zig: test "term51: kitty: every key of the Kitty table with report_all"
 func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, r := range ke2Rows {
 		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2DisAll)
 		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2AllOnly)
@@ -987,6 +1031,7 @@ func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_report_all(t *testin
 
 // Zig: test "term51: kitty: every key of the Kitty table with disambiguate only"
 func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_disambiguate_only(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, r := range ke2Rows {
 		var want string
 		if r.modifier {
@@ -1010,6 +1055,7 @@ func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_disambiguate_only(t 
 
 // Zig: test "term51: kitty: every key of the Kitty table with ctrl"
 func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_ctrl(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, r := range ke2Rows {
 		last := r.seq[len(r.seq)-1]
 		var want string
@@ -1028,6 +1074,7 @@ func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_ctrl(t *testing.T) {
 
 // Zig: test "term51: kitty: keys outside the table use the unshifted codepoint"
 func TestKe2_term51_kitty_keys_outside_the_table_use_the_unshifted_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		if _, ok := ke2Row(k); ok {
 			continue
@@ -1045,6 +1092,7 @@ func TestKe2_term51_kitty_keys_outside_the_table_use_the_unshifted_codepoint(t *
 
 // Zig: test "term51: kitty: unshifted codepoint boundaries"
 func TestKe2_term51_kitty_unshifted_codepoint_boundaries(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA}, opts: ke2DisAll, want: ""},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 1}, opts: ke2DisAll, want: "\x1b[1u"},
@@ -1060,6 +1108,7 @@ func TestKe2_term51_kitty_unshifted_codepoint_boundaries(t *testing.T) {
 
 // Zig: test "term51: kitty: composing only passes modifier keys with report_all"
 func TestKe2_term51_kitty_composing_only_passes_modifier_keys_with_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// Modifier key while composing: needs report_all.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, composing: true}, opts: ke2Dis, want: ""},
@@ -1091,6 +1140,7 @@ func TestKe2_term51_kitty_composing_only_passes_modifier_keys_with_report_all(t 
 
 // Zig: test "term51: kitty: enter and backspace with utf8 text"
 func TestKe2_term51_kitty_enter_and_backspace_with_utf8_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// Enter with committed text sends the text (IME confirmation).
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("ab")}, opts: ke2Dis, want: "ab"},
@@ -1139,6 +1189,7 @@ func TestKe2_term51_kitty_enter_and_backspace_with_utf8_text(t *testing.T) {
 
 // Zig: test "term51: kitty: enter, tab and backspace in legacy form need empty binding mods"
 func TestKe2_term51_kitty_enter_tab_and_backspace_in_legacy_form_need_empty_binding_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter}, opts: ke2Dis, want: "\r"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab}, opts: ke2Dis, want: "\t"},
@@ -1167,6 +1218,7 @@ func TestKe2_term51_kitty_enter_tab_and_backspace_in_legacy_form_need_empty_bind
 
 // Zig: test "term51: kitty: plain text is sent directly"
 func TestKe2_term51_kitty_plain_text_is_sent_directly(t *testing.T) {
+	testPlatform(t, "linux")
 	a := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: a, opts: ke2Dis, want: "a"},
@@ -1204,6 +1256,7 @@ func TestKe2_term51_kitty_plain_text_is_sent_directly(t *testing.T) {
 
 // Zig: test "term51: kitty: control characters and invalid utf8 are not plain text"
 func TestKe2_term51_kitty_control_characters_and_invalid_utf8_are_not_plain_text(t *testing.T) {
+	testPlatform(t, "linux")
 	k_a := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 'a'}
 	texts := []string{
 		"\x00", "\x01", "\x1b", "\x1f", "\x7f", "a\x01", "\x01a", "ab\x7f",
@@ -1237,6 +1290,7 @@ func TestKe2_term51_kitty_control_characters_and_invalid_utf8_are_not_plain_text
 
 // Zig: test "term51: kitty: no table entry and no unshifted codepoint passes text through"
 func TestKe2_term51_kitty_no_table_entry_and_no_unshifted_codepoint_passes_text_through(t *testing.T) {
+	testPlatform(t, "linux")
 	opts_list := []InputKeyEncodeOptions{ke2Dis, ke2DisAll, ke2Assoc, ke2Full, ke2Alts}
 	for _, o := range opts_list {
 		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x")}, o)
@@ -1260,6 +1314,7 @@ func TestKe2_term51_kitty_no_table_entry_and_no_unshifted_codepoint_passes_text_
 
 // Zig: test "term51: kitty: modifier keys need report_all"
 func TestKe2_term51_kitty_modifier_keys_need_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, r := range ke2Rows {
 		if !r.modifier {
 			continue
@@ -1293,6 +1348,7 @@ func TestKe2_term51_kitty_modifier_keys_need_report_all(t *testing.T) {
 
 // Zig: test "term51: kitty: modifier combinations with report_all"
 func TestKe2_term51_kitty_modifier_combinations_with_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := uint8(0); bits < 64; bits++ {
 		b := bits
 		m := ke2KittyValue(b)
@@ -1339,6 +1395,7 @@ func TestKe2_term51_kitty_modifier_combinations_with_report_all(t *testing.T) {
 
 // Zig: test "term51: kitty: consumed mods only affect the plain text decisions"
 func TestKe2_term51_kitty_consumed_mods_only_affect_the_plain_text_decisions(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// The CSI u modifier value always uses all mods, never subtracting
 		// the consumed ones.
@@ -1360,6 +1417,7 @@ func TestKe2_term51_kitty_consumed_mods_only_affect_the_plain_text_decisions(t *
 
 // Zig: test "term51: kitty: report_events special form for the table with report_all"
 func TestKe2_term51_kitty_report_events_special_form_for_the_table_with_report_all(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, r := range ke2Rows {
 		last := r.seq[len(r.seq)-1]
 		var press string
@@ -1388,6 +1446,7 @@ func TestKe2_term51_kitty_report_events_special_form_for_the_table_with_report_a
 
 // Zig: test "term51: kitty: alternate keys"
 func TestKe2_term51_kitty_alternate_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// No alternates when nothing differs.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
@@ -1444,6 +1503,7 @@ func TestKe2_term51_kitty_alternate_keys(t *testing.T) {
 
 // Zig: test "term51: kitty: alternate keys are skipped for control key codes"
 func TestKe2_term51_kitty_alternate_keys_are_skipped_for_control_key_codes(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// Table keys whose code is a control (<0x20 or 0x7f): never alternates.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[27;2u"},
@@ -1466,6 +1526,7 @@ func TestKe2_term51_kitty_alternate_keys_are_skipped_for_control_key_codes(t *te
 
 // Zig: test "term51: kitty: associated text"
 func TestKe2_term51_kitty_associated_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97u"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
@@ -1510,6 +1571,7 @@ func TestKe2_term51_kitty_associated_text(t *testing.T) {
 
 // Zig: test "term51: kitty: macos_option_as_alt and associated text with alt"
 func TestKe2_term51_kitty_macos_option_as_alt_and_associated_text_with_alt(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
 		for _, sides := range []InputKeyModsModsSide{{}, {alt: InputKeyModsModSideRight}} {
 			opts := InputKeyEncodeOptions{
@@ -1560,6 +1622,7 @@ func TestKe2_term51_kitty_macos_option_as_alt_and_associated_text_with_alt(t *te
 
 // Zig: test "term51: kitty: option flags other than kitty_flags are ignored"
 func TestKe2_term51_kitty_option_flags_other_than_kitty_flags_are_ignored(t *testing.T) {
+	testPlatform(t, "linux")
 	base := ke2DisAll
 	o := base
 	o.cursor_key_application = true
@@ -1578,6 +1641,7 @@ func TestKe2_term51_kitty_option_flags_other_than_kitty_flags_are_ignored(t *tes
 
 // Zig: test "term51: kitty: sides and padding bits never change the output"
 func TestKe2_term51_kitty_sides_and_padding_bits_never_change_the_output(t *testing.T) {
+	testPlatform(t, "linux")
 	var sides_all InputKeyModsModsSide
 	sides_all = InputKeyModsModsSideFromInt(0xF)
 	ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), unshifted_codepoint: 'a', mods: InputKeyMods{shift: true, ctrl: true}}
@@ -1600,6 +1664,7 @@ func TestKe2_term51_kitty_sides_and_padding_bits_never_change_the_output(t *test
 
 // Zig: test "term51: kitty: write errors with a too small buffer"
 func TestKe2_term51_kitty_write_errors_with_a_too_small_buffer(t *testing.T) {
+	testPlatform(t, "linux")
 	// An empty buffer fails for every non-empty output, in every code path.
 	var empty [0]uint8
 	cases := []struct {
@@ -1637,6 +1702,7 @@ func TestKe2_term51_kitty_write_errors_with_a_too_small_buffer(t *testing.T) {
 
 // Zig: test "term51: encode: disabled kitty flags use legacy, any flag uses kitty"
 func TestKe2_term51_encode_disabled_kitty_flags_use_legacy_any_flag_uses_kitty(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := uint8(0); bits < 32; bits++ {
 		flags := KittyKeyFlagsFromInt(bits)
 		opts := InputKeyEncodeOptions{kitty_flags: flags}

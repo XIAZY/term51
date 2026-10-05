@@ -326,18 +326,21 @@ func kmKeyCodepoint(k InputKeyKey) Optional[uint32] {
 
 // Zig: test "fromASCII should not return keypad keys"
 func TestKmKey_fromASCII_should_not_return_keypad_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, zigUnwrap(t, InputKeyKeyFromASCII('0')) == InputKeyKeyDigit0, "Key.fromASCII('0').? == .digit_0")
 	expect(t, !InputKeyKeyFromASCII('*').Valid, "Key.fromASCII('*') == null")
 }
 
 // Zig: test "keypad keys"
 func TestKmKey_keypad_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, InputKeyKeyNumpad0.Keypad(), "Key.numpad_0.keypad()")
 	expect(t, !InputKeyKeyDigit1.Keypad(), "!Key.digit_1.keypad()")
 }
 
 // Zig: test "w3c"
 func TestKmKey_w3c(t *testing.T) {
+	testPlatform(t, "linux")
 	// All our keys should convert to and from the W3C format.
 	// We don't support every key in the W3C spec, so we only
 	// check the enum fields.
@@ -349,6 +352,7 @@ func TestKmKey_w3c(t *testing.T) {
 
 // Zig: test "ctrlOrSuper"
 func TestKmKey_ctrlOrSuper(t *testing.T) {
+	testPlatform(t, "linux")
 	m := InputKeyCtrlOrSuper(InputKeyMods{})
 
 	expect(t, m.CtrlOrSuper(), "m.ctrlOrSuper()")
@@ -356,6 +360,7 @@ func TestKmKey_ctrlOrSuper(t *testing.T) {
 
 // Zig: test "term51: Action: every value and its integer"
 func TestKmKey_term51_Action_every_value_and_its_integer(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, int32(0), int32(InputKeyActionRelease))
 	expectEqual(t, int32(1), int32(InputKeyActionPress))
 	expectEqual(t, int32(2), int32(InputKeyActionRepeat))
@@ -368,6 +373,7 @@ func TestKmKey_term51_Action_every_value_and_its_integer(t *testing.T) {
 
 // Zig: test "term51: Key: every value, count and integer"
 func TestKmKey_term51_Key_every_value_count_and_integer(t *testing.T) {
+	testPlatform(t, "linux")
 	fields := InputKeyKeyValues()
 	expectEqual(t, 176, len(fields))
 	expectEqual(t, 176, inputKeyKeyCount)
@@ -393,6 +399,7 @@ func TestKmKey_term51_Key_every_value_count_and_integer(t *testing.T) {
 
 // Zig: test "term51: KeyEvent: field defaults"
 func TestKmKey_term51_KeyEvent_field_defaults(t *testing.T) {
+	testPlatform(t, "linux")
 	ev := kmKeyEventDefault()
 	expectEqual(t, InputKeyActionPress, ev.action)
 	expectEqual(t, InputKeyKeyUnidentified, ev.key)
@@ -405,6 +412,7 @@ func TestKmKey_term51_KeyEvent_field_defaults(t *testing.T) {
 
 // Zig: test "term51: KeyEvent.effectiveMods: empty utf8 returns mods untouched"
 func TestKmKey_term51_KeyEvent_effectiveMods_empty_utf8_returns_mods_untouched(t *testing.T) {
+	testPlatform(t, "linux")
 	ev := kmKeyEventDefault()
 	ev.mods = InputKeyMods{shift: true, ctrl: true, caps_lock: true}
 	ev.consumed_mods = InputKeyMods{shift: true, ctrl: true}
@@ -417,6 +425,7 @@ func TestKmKey_term51_KeyEvent_effectiveMods_empty_utf8_returns_mods_untouched(t
 
 // Zig: test "term51: KeyEvent.effectiveMods: utf8 subtracts consumed mods"
 func TestKmKey_term51_KeyEvent_effectiveMods_utf8_subtracts_consumed_mods(t *testing.T) {
+	testPlatform(t, "linux")
 	{
 		ev := kmKeyEventDefault()
 		ev.utf8 = []uint8("A")
@@ -456,6 +465,7 @@ func TestKmKey_term51_KeyEvent_effectiveMods_utf8_subtracts_consumed_mods(t *tes
 
 // Zig: test "term51: KeyEvent.effectiveMods: composing does not change the result"
 func TestKmKey_term51_KeyEvent_effectiveMods_composing_does_not_change_the_result(t *testing.T) {
+	testPlatform(t, "linux")
 	ev := kmKeyEventDefault()
 	ev.utf8 = []uint8("x")
 	ev.composing = true
@@ -466,6 +476,7 @@ func TestKmKey_term51_KeyEvent_effectiveMods_composing_does_not_change_the_resul
 
 // Zig: test "term51: KeyEvent.effectiveMods: consumed side bits are cleared too"
 func TestKmKey_term51_KeyEvent_effectiveMods_consumed_side_bits_are_cleared_too(t *testing.T) {
+	testPlatform(t, "linux")
 	// Mods.unset is a plain bit operation, so consumed side bits clear the
 	// matching side bits of mods even though the key bit itself is separate.
 	ev := kmKeyEventDefault()
@@ -487,6 +498,7 @@ func TestKmKey_term51_KeyEvent_effectiveMods_consumed_side_bits_are_cleared_too(
 
 // Zig: test "term51: KeyEvent.bindingHash: equal inputs hash equal"
 func TestKmKey_term51_KeyEvent_bindingHash_equal_inputs_hash_equal(t *testing.T) {
+	testPlatform(t, "linux")
 	a := kmKeyEventDefault()
 	a.key = InputKeyKeyKeyA
 	a.mods = InputKeyMods{ctrl: true}
@@ -504,6 +516,7 @@ func TestKmKey_term51_KeyEvent_bindingHash_equal_inputs_hash_equal(t *testing.T)
 
 // Zig: test "term51: KeyEvent.bindingHash: key codepoint and binding mods change the hash"
 func TestKmKey_term51_KeyEvent_bindingHash_key_codepoint_and_binding_mods_change_the_hash(t *testing.T) {
+	testPlatform(t, "linux")
 	base := kmKeyEventDefault()
 	base.key = InputKeyKeyKeyA
 	base.unshifted_codepoint = 'a'
@@ -538,6 +551,7 @@ func TestKmKey_term51_KeyEvent_bindingHash_key_codepoint_and_binding_mods_change
 
 // Zig: test "term51: KeyEvent.bindingHash: irrelevant fields are ignored"
 func TestKmKey_term51_KeyEvent_bindingHash_irrelevant_fields_are_ignored(t *testing.T) {
+	testPlatform(t, "linux")
 	base := kmKeyEventDefault()
 	base.key = InputKeyKeyEnter
 	base.mods = InputKeyMods{ctrl: true}
@@ -580,6 +594,7 @@ func TestKmKey_term51_KeyEvent_bindingHash_irrelevant_fields_are_ignored(t *test
 
 // Zig: test "term51: Key.fromASCII: every byte"
 func TestKmKey_term51_Key_fromASCII_every_byte(t *testing.T) {
+	testPlatform(t, "linux")
 	found := 0
 	for ch := 0; ch < 256; ch++ {
 		c := uint8(ch)
@@ -629,6 +644,7 @@ func TestKmKey_term51_Key_fromASCII_every_byte(t *testing.T) {
 
 // Zig: test "term51: Key.fromASCII: specific values and keypad exclusion"
 func TestKmKey_term51_Key_fromASCII_specific_values_and_keypad_exclusion(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, InputKeyKeyKeyA, zigUnwrap(t, InputKeyKeyFromASCII('a')))
 	expectEqual(t, InputKeyKeyKeyZ, zigUnwrap(t, InputKeyKeyFromASCII('z')))
 	expectEqual(t, InputKeyKeyDigit0, zigUnwrap(t, InputKeyKeyFromASCII('0')))
@@ -657,6 +673,7 @@ func TestKmKey_term51_Key_fromASCII_specific_values_and_keypad_exclusion(t *test
 
 // Zig: test "term51: Key.fromASCII: result is never a keypad key"
 func TestKmKey_term51_Key_fromASCII_result_is_never_a_keypad_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for ch := 0; ch < 256; ch++ {
 		if r := InputKeyKeyFromASCII(uint8(ch)); r.Valid {
 			k := r.Value
@@ -669,6 +686,7 @@ func TestKmKey_term51_Key_fromASCII_result_is_never_a_keypad_key(t *testing.T) {
 
 // Zig: test "term51: Key.fromW3C: exact strings for every key"
 func TestKmKey_term51_Key_fromW3C_exact_strings_for_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, row := range kmKeyTable {
 		expectEqual(t, row.x0, zigUnwrap(t, InputKeyKeyFromW3C([]uint8(row.x2))))
 	}
@@ -676,6 +694,7 @@ func TestKmKey_term51_Key_fromW3C_exact_strings_for_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.fromW3C: special cases"
 func TestKmKey_term51_Key_fromW3C_special_cases(t *testing.T) {
+	testPlatform(t, "linux")
 	// Whole string lowercased matches an enum name directly.
 	expectEqual(t, InputKeyKeyEscape, zigUnwrap(t, InputKeyKeyFromW3C([]uint8("Escape"))))
 	expectEqual(t, InputKeyKeyEscape, zigUnwrap(t, InputKeyKeyFromW3C([]uint8("escape"))))
@@ -707,6 +726,7 @@ func TestKmKey_term51_Key_fromW3C_special_cases(t *testing.T) {
 
 // Zig: test "term51: Key.fromW3C: invalid input returns null"
 func TestKmKey_term51_Key_fromW3C_invalid_input_returns_null(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, !InputKeyKeyFromW3C([]uint8("")).Valid, `Key.fromW3C("") == null`)
 	expect(t, !InputKeyKeyFromW3C([]uint8("Nope")).Valid, `Key.fromW3C("Nope") == null`)
 	expect(t, !InputKeyKeyFromW3C([]uint8("KeyAA")).Valid, `Key.fromW3C("KeyAA") == null`)
@@ -728,6 +748,7 @@ func TestKmKey_term51_Key_fromW3C_invalid_input_returns_null(t *testing.T) {
 
 // Zig: test "term51: Key.fromW3C: length limit of 128 bytes"
 func TestKmKey_term51_Key_fromW3C_length_limit_of_128_bytes(t *testing.T) {
+	testPlatform(t, "linux")
 	// 128 bytes is processed (and does not match); 129 is rejected up front.
 	long := strings.Repeat("a", 129)
 	expect(t, !InputKeyKeyFromW3C([]uint8(long[0:128])).Valid, "Key.fromW3C(long[0..128]) == null")
@@ -741,6 +762,7 @@ func TestKmKey_term51_Key_fromW3C_length_limit_of_128_bytes(t *testing.T) {
 
 // Zig: test "term51: Key.w3c: exact string for every key"
 func TestKmKey_term51_Key_w3c_exact_string_for_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, row := range kmKeyTable {
 		expectEqualStrings(t, row.x2, string(row.x0.W3c()))
 	}
@@ -755,6 +777,7 @@ func TestKmKey_term51_Key_w3c_exact_string_for_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.printable: every key"
 func TestKmKey_term51_Key_printable_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		expectEqual(t, kmKeyCodepoint(k).Valid, k.Printable())
 	}
@@ -776,6 +799,7 @@ func TestKmKey_term51_Key_printable_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.codepoint: every key"
 func TestKmKey_term51_Key_codepoint_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		expectEqual(t, kmKeyCodepoint(k), k.Codepoint())
 	}
@@ -795,6 +819,7 @@ func TestKmKey_term51_Key_codepoint_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.modifier: every key"
 func TestKmKey_term51_Key_modifier_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		var expected bool
 		switch k {
@@ -823,6 +848,7 @@ func TestKmKey_term51_Key_modifier_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.shouldBeRemappable: every key"
 func TestKmKey_term51_Key_shouldBeRemappable_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	// Writing system keys are enum values 1 through 50 (backquote..slash)
 	// and are the only ones that are not remappable.
 	for _, row := range kmKeyTable {
@@ -847,6 +873,7 @@ func TestKmKey_term51_Key_shouldBeRemappable_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.keypad: every key"
 func TestKmKey_term51_Key_keypad_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	// The numpad_ keys are the contiguous values 80 (numpad_0) through 119
 	// (numpad_page_down); num_lock (79) and escape (120) are not keypad.
 	for _, row := range kmKeyTable {
@@ -869,6 +896,7 @@ func TestKmKey_term51_Key_keypad_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.ctrlOrSuper: every key"
 func TestKmKey_term51_Key_ctrlOrSuper_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		// Zig-only (Darwin): expected = k == .meta_left or k == .meta_right
 		expected := k == InputKeyKeyControlLeft || k == InputKeyKeyControlRight
@@ -887,6 +915,7 @@ func TestKmKey_term51_Key_ctrlOrSuper_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.leftOrRightShift: every key"
 func TestKmKey_term51_Key_leftOrRightShift_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		expectEqual(t,
 			k == InputKeyKeyShiftLeft || k == InputKeyKeyShiftRight,
@@ -902,6 +931,7 @@ func TestKmKey_term51_Key_leftOrRightShift_every_key(t *testing.T) {
 
 // Zig: test "term51: Key.leftOrRightAlt: every key"
 func TestKmKey_term51_Key_leftOrRightAlt_every_key(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		expectEqual(t,
 			k == InputKeyKeyAltLeft || k == InputKeyKeyAltRight,
@@ -917,6 +947,7 @@ func TestKmKey_term51_Key_leftOrRightAlt_every_key(t *testing.T) {
 
 // Zig: test "term51: ctrlOrSuper: sets exactly one of ctrl or super"
 func TestKmKey_term51_ctrlOrSuper_sets_exactly_one_of_ctrl_or_super(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig: const is_darwin = comptime builtin.target.os.tag.isDarwin();
 	// Go follows the non-Darwin branch.
 	const is_darwin = false

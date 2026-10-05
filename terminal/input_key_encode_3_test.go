@@ -592,6 +592,7 @@ var ke3ACMokAltOpts = InputKeyEncodeOptions{
 
 // Zig: test "term51: encode: each kitty flag alone selects kitty"
 func TestKe3_term51_encode_each_kitty_flag_alone_selects_kitty(t *testing.T) {
+	testPlatform(t, "linux")
 	flags := []KittyKeyFlags{
 		{disambiguate: true},
 		{report_events: true},
@@ -609,6 +610,7 @@ func TestKe3_term51_encode_each_kitty_flag_alone_selects_kitty(t *testing.T) {
 
 // Zig: test "term51: encode: matches kitty and legacy exactly"
 func TestKe3_term51_encode_matches_kitty_and_legacy_exactly(t *testing.T) {
+	testPlatform(t, "linux")
 	events := []InputKeyKeyEvent{
 		InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape},
 		InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp},
@@ -637,6 +639,7 @@ func TestKe3_term51_encode_matches_kitty_and_legacy_exactly(t *testing.T) {
 
 // Zig: test "term51: encode: legacy options"
 func TestKe3_term51_encode_legacy_options(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ABRunCases(t, InputKeyEncodeEncode, []ke3ABCase{
 		// cursor_key_application
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: InputKeyEncodeOptions{}, want: "\x1b[A"},
@@ -666,6 +669,7 @@ func TestKe3_term51_encode_legacy_options(t *testing.T) {
 
 // Zig: test "term51: encode: macos_option_as_alt with every value"
 func TestKe3_term51_encode_macos_option_as_alt_with_every_value(t *testing.T) {
+	testPlatform(t, "linux")
 	ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true}, unshifted_codepoint: 'c'}
 	evr := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}, unshifted_codepoint: 'c'}
 	for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
@@ -685,6 +689,7 @@ func TestKe3_term51_encode_macos_option_as_alt_with_every_value(t *testing.T) {
 
 // Zig: test "term51: encode: actions and composing"
 func TestKe3_term51_encode_actions_and_composing(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ABRunCases(t, InputKeyEncodeEncode, []ke3ABCase{
 		// Legacy only encodes press and repeat and never while composing.
 		{ev: InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRelease}, opts: InputKeyEncodeOptions{}, want: ""},
@@ -700,6 +705,7 @@ func TestKe3_term51_encode_actions_and_composing(t *testing.T) {
 
 // Zig: test "term51: encode: write errors are propagated"
 func TestKe3_term51_encode_write_errors_are_propagated(t *testing.T) {
+	testPlatform(t, "linux")
 	var empty [0]uint8
 	w := oscWriterFixed(empty[:])
 	ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{}))
@@ -721,6 +727,7 @@ func TestKe3_term51_encode_write_errors_are_propagated(t *testing.T) {
 
 // Zig: test "term51: pcStyleFunctionKey: cursor and function keys with every modifier combination"
 func TestKe3_term51_pcStyleFunctionKey_cursor_and_function_keys_with_every_modifier_combination(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, c := range ke3ACPcCases {
 		for _, cursor := range ke3Bools {
 			for _, kpApp := range ke3Bools {
@@ -756,6 +763,7 @@ func TestKe3_term51_pcStyleFunctionKey_cursor_and_function_keys_with_every_modif
 
 // Zig: test "term51: pcStyleFunctionKey: literal sequences"
 func TestKe3_term51_pcStyleFunctionKey_literal_sequences(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqualStrings(t, "\x1b[A", string(ke3Pc(t, InputKeyKeyArrowUp, InputKeyMods{}, false, false, false, false)))
 	expectEqualStrings(t, "\x1bOA", string(ke3Pc(t, InputKeyKeyArrowUp, InputKeyMods{}, true, false, false, false)))
 	expectEqualStrings(t, "\x1b[1;2A", string(ke3Pc(t, InputKeyKeyArrowUp, InputKeyMods{shift: true}, false, false, false, false)))
@@ -777,6 +785,7 @@ func TestKe3_term51_pcStyleFunctionKey_literal_sequences(t *testing.T) {
 
 // Zig: test "term51: pcStyleFunctionKey: lock keys and sides are ignored"
 func TestKe3_term51_pcStyleFunctionKey_lock_keys_and_sides_are_ignored(t *testing.T) {
+	testPlatform(t, "linux")
 	allRight := InputKeyModsModsSide{shift: InputKeyModsModSideRight, ctrl: InputKeyModsModSideRight, alt: InputKeyModsModSideRight, super: InputKeyModsModSideRight}
 
 	// Only locks and/or sides: same as no modifiers.
@@ -798,6 +807,7 @@ func TestKe3_term51_pcStyleFunctionKey_lock_keys_and_sides_are_ignored(t *testin
 
 // Zig: test "term51: pcStyleFunctionKey: keypad keys in application mode"
 func TestKe3_term51_pcStyleFunctionKey_keypad_keys_in_application_mode(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, c := range ke3ACKpCases {
 		for _, cursor := range ke3Bools {
 			for _, mok := range ke3Bools {
@@ -822,6 +832,7 @@ func TestKe3_term51_pcStyleFunctionKey_keypad_keys_in_application_mode(t *testin
 
 // Zig: test "term51: pcStyleFunctionKey: keypad keys outside application mode"
 func TestKe3_term51_pcStyleFunctionKey_keypad_keys_outside_application_mode(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, c := range ke3ACKpCases {
 		// Not requested: normal (numerical) keypad mode.
 		// Requested but numlock ignored (mode 1035): also normal.
@@ -847,6 +858,7 @@ func TestKe3_term51_pcStyleFunctionKey_keypad_keys_outside_application_mode(t *t
 
 // Zig: test "term51: pcStyleFunctionKey: numpad enter"
 func TestKe3_term51_pcStyleFunctionKey_numpad_enter(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqualStrings(t, "\r", string(ke3Pc(t, InputKeyKeyNumpadEnter, InputKeyMods{}, false, false, false, false)))
 	expectEqualStrings(t, "\r", string(ke3Pc(t, InputKeyKeyNumpadEnter, InputKeyMods{ctrl: true}, false, false, false, false)))
 	expectEqualStrings(t, "\r", string(ke3Pc(t, InputKeyKeyNumpadEnter, InputKeyMods{shift: true, alt: true}, false, false, false, true)))
@@ -860,6 +872,7 @@ func TestKe3_term51_pcStyleFunctionKey_numpad_enter(t *testing.T) {
 
 // Zig: test "term51: pcStyleFunctionKey: keypad digits and operators"
 func TestKe3_term51_pcStyleFunctionKey_keypad_digits_and_operators(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3PcNull(t, InputKeyKeyNumpad1, InputKeyMods{}, false, false, false, false)
 	expectEqualStrings(t, "\x1bOq", string(ke3Pc(t, InputKeyKeyNumpad1, InputKeyMods{}, false, true, false, false)))
 	ke3PcNull(t, InputKeyKeyNumpad1, InputKeyMods{}, false, true, true, false)
@@ -879,6 +892,7 @@ func TestKe3_term51_pcStyleFunctionKey_keypad_digits_and_operators(t *testing.T)
 
 // Zig: test "term51: pcStyleFunctionKey: backspace entries by modifier and modify other keys"
 func TestKe3_term51_pcStyleFunctionKey_backspace_entries_by_modifier_and_modify_other_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := 0; bits < 16; bits++ {
 		mods := ke3ACMods(bits)
 		for _, cursor := range ke3Bools {
@@ -896,6 +910,7 @@ func TestKe3_term51_pcStyleFunctionKey_backspace_entries_by_modifier_and_modify_
 
 // Zig: test "term51: pcStyleFunctionKey: tab entries by modifier and modify other keys"
 func TestKe3_term51_pcStyleFunctionKey_tab_entries_by_modifier_and_modify_other_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := 0; bits < 16; bits++ {
 		mods := ke3ACMods(bits)
 		for _, cursor := range ke3Bools {
@@ -911,6 +926,7 @@ func TestKe3_term51_pcStyleFunctionKey_tab_entries_by_modifier_and_modify_other_
 
 // Zig: test "term51: pcStyleFunctionKey: enter entries by modifier and modify other keys"
 func TestKe3_term51_pcStyleFunctionKey_enter_entries_by_modifier_and_modify_other_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := 0; bits < 16; bits++ {
 		mods := ke3ACMods(bits)
 		for _, cursor := range ke3Bools {
@@ -926,6 +942,7 @@ func TestKe3_term51_pcStyleFunctionKey_enter_entries_by_modifier_and_modify_othe
 
 // Zig: test "term51: pcStyleFunctionKey: escape entries by modifier"
 func TestKe3_term51_pcStyleFunctionKey_escape_entries_by_modifier(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := 0; bits < 16; bits++ {
 		mods := ke3ACMods(bits)
 		for _, mok := range ke3Bools {
@@ -939,6 +956,7 @@ func TestKe3_term51_pcStyleFunctionKey_escape_entries_by_modifier(t *testing.T) 
 
 // Zig: test "term51: pcStyleFunctionKey: backspace tab enter escape literals"
 func TestKe3_term51_pcStyleFunctionKey_backspace_tab_enter_escape_literals(t *testing.T) {
+	testPlatform(t, "linux")
 	// The mods_empty_is_any fallback: ctrl+alt+shift+backspace has no
 	// matching modify-other-keys-normal entry and falls to the plain DEL.
 	expectEqualStrings(t, "\x7f", string(ke3Pc(t, InputKeyKeyBackspace, ke3ACMods(7), false, false, false, false)))
@@ -959,6 +977,7 @@ func TestKe3_term51_pcStyleFunctionKey_backspace_tab_enter_escape_literals(t *te
 
 // Zig: test "term51: pcStyleFunctionKey: keys without entries return null"
 func TestKe3_term51_pcStyleFunctionKey_keys_without_entries_return_null(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		if ke3IndexOfKey(ke3ACKeysWithEntries, k) {
 			continue
@@ -985,6 +1004,7 @@ func TestKe3_term51_pcStyleFunctionKey_keys_without_entries_return_null(t *testi
 
 // Zig: test "term51: pcStyleFunctionKey: every key with entries matches with no modifiers"
 func TestKe3_term51_pcStyleFunctionKey_every_key_with_entries_matches_with_no_modifiers(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range ke3ACKeysWithEntries {
 		// Keypad keys only match in application mode (or enter, always).
 		got := inputKeyEncodePcStyleFunctionKey(k, InputKeyMods{}, false, true, false, false)
@@ -1001,6 +1021,7 @@ func TestKe3_term51_pcStyleFunctionKey_every_key_with_entries_matches_with_no_mo
 
 // Zig: test "term51: ctrlSeq: every single byte with exactly ctrl"
 func TestKe3_term51_ctrlSeq_every_single_byte_with_exactly_ctrl(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := 0; i < 256; i++ {
 		s := [1]uint8{uint8(i)}
 		want := ke3ACCtrlExpected(uint8(i))
@@ -1013,6 +1034,7 @@ func TestKe3_term51_ctrlSeq_every_single_byte_with_exactly_ctrl(t *testing.T) {
 
 // Zig: test "term51: ctrlSeq: literal outputs"
 func TestKe3_term51_ctrlSeq_literal_outputs(t *testing.T) {
+	testPlatform(t, "linux")
 	expectEqual(t, Some[uint8](0), inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8(" "), 0, InputKeyMods{ctrl: true}))
 	expectEqual(t, Some[uint8](31), inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("/"), 0, InputKeyMods{ctrl: true}))
 	expectEqual(t, Some[uint8](48), inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("0"), 0, InputKeyMods{ctrl: true}))
@@ -1042,6 +1064,7 @@ func TestKe3_term51_ctrlSeq_literal_outputs(t *testing.T) {
 
 // Zig: test "term51: ctrlSeq: lock keys, sides and alt do not matter"
 func TestKe3_term51_ctrlSeq_lock_keys_sides_and_alt_do_not_matter(t *testing.T) {
+	testPlatform(t, "linux")
 	variants := []InputKeyMods{
 		InputKeyMods{ctrl: true, caps_lock: true},
 		InputKeyMods{ctrl: true, num_lock: true},
@@ -1061,6 +1084,7 @@ func TestKe3_term51_ctrlSeq_lock_keys_sides_and_alt_do_not_matter(t *testing.T) 
 
 // Zig: test "term51: ctrlSeq: shift is dropped except for letters and at-sign"
 func TestKe3_term51_ctrlSeq_shift_is_dropped_except_for_letters_and_at_sign(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := 0; i < 256; i++ {
 		s := [1]uint8{uint8(i)}
 		keepShift := (i >= 'A' && i <= 'Z') || i == '@'
@@ -1085,6 +1109,7 @@ func TestKe3_term51_ctrlSeq_shift_is_dropped_except_for_letters_and_at_sign(t *t
 
 // Zig: test "term51: ctrlSeq: without ctrl never matches"
 func TestKe3_term51_ctrlSeq_without_ctrl_never_matches(t *testing.T) {
+	testPlatform(t, "linux")
 	variants := []InputKeyMods{
 		InputKeyMods{},
 		InputKeyMods{shift: true},
@@ -1109,6 +1134,7 @@ func TestKe3_term51_ctrlSeq_without_ctrl_never_matches(t *testing.T) {
 
 // Zig: test "term51: ctrlSeq: super or hyper-like extra modifiers prevent a match"
 func TestKe3_term51_ctrlSeq_super_or_hyper_like_extra_modifiers_prevent_a_match(t *testing.T) {
+	testPlatform(t, "linux")
 	variants := []InputKeyMods{
 		InputKeyMods{ctrl: true, super: true},
 		InputKeyMods{ctrl: true, super: true, alt: true},
@@ -1128,6 +1154,7 @@ func TestKe3_term51_ctrlSeq_super_or_hyper_like_extra_modifiers_prevent_a_match(
 
 // Zig: test "term51: ctrlSeq: uppercase letters use the unshifted codepoint"
 func TestKe3_term51_ctrlSeq_uppercase_letters_use_the_unshifted_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	for c := uint8('A'); c <= 'Z'; c++ {
 		s := [1]uint8{c}
 		lower := uint32(c) + 32
@@ -1149,6 +1176,7 @@ func TestKe3_term51_ctrlSeq_uppercase_letters_use_the_unshifted_codepoint(t *tes
 
 // Zig: test "term51: ctrlSeq: unshifted codepoint boundaries"
 func TestKe3_term51_ctrlSeq_unshifted_codepoint_boundaries(t *testing.T) {
+	testPlatform(t, "linux")
 	// 0xFF is the last codepoint that fits a byte; it maps to nothing.
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 0xFF, InputKeyMods{ctrl: true}).Valid, "ctrlSeq(.unidentified, \"C\", 0xFF, .{ .ctrl = true }) == null")
 	// 0x100 is the first that does not.
@@ -1172,6 +1200,7 @@ func TestKe3_term51_ctrlSeq_unshifted_codepoint_boundaries(t *testing.T) {
 
 // Zig: test "term51: ctrlSeq: logical key used when utf8 is not a single byte"
 func TestKe3_term51_ctrlSeq_logical_key_used_when_utf8_is_not_a_single_byte(t *testing.T) {
+	testPlatform(t, "linux")
 	for _, k := range InputKeyKeyValues() {
 		want := ke3ACCtrlKeyExpected(k)
 		// Empty text.
@@ -1197,6 +1226,7 @@ func TestKe3_term51_ctrlSeq_logical_key_used_when_utf8_is_not_a_single_byte(t *t
 
 // Zig: test "term51: ctrlSeq: unidentified key with non single byte text"
 func TestKe3_term51_ctrlSeq_unidentified_key_with_non_single_byte_text(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8(""), 0, InputKeyMods{ctrl: true}).Valid, "ctrlSeq(.unidentified, \"\", 0, .{ .ctrl = true }) == null")
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8(""), 'c', InputKeyMods{ctrl: true}).Valid, "ctrlSeq(.unidentified, \"\", 'c', .{ .ctrl = true }) == null")
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("cc"), 'c', InputKeyMods{ctrl: true}).Valid, "ctrlSeq(.unidentified, \"cc\", 'c', .{ .ctrl = true }) == null")
@@ -1206,6 +1236,7 @@ func TestKe3_term51_ctrlSeq_unidentified_key_with_non_single_byte_text(t *testin
 
 // Zig: test "term51: ctrlSeq: single byte text takes priority over the logical key"
 func TestKe3_term51_ctrlSeq_single_byte_text_takes_priority_over_the_logical_key(t *testing.T) {
+	testPlatform(t, "linux")
 	// The text byte decides, even when the key would map elsewhere or nowhere.
 	expectEqual(t, Some[uint8](3), inputKeyEncodeCtrlSeq(InputKeyKeyKeyA, []uint8("c"), 'a', InputKeyMods{ctrl: true}))
 	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("i"), 'i', InputKeyMods{ctrl: true}).Valid, "ctrlSeq(.key_c, \"i\", 'i', .{ .ctrl = true }) == null")
@@ -1216,6 +1247,7 @@ func TestKe3_term51_ctrlSeq_single_byte_text_takes_priority_over_the_logical_key
 
 // Zig: test "term51: ctrlSeq: keys without a codepoint"
 func TestKe3_term51_ctrlSeq_keys_without_a_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	keys := []InputKeyKey{InputKeyKeyArrowUp, InputKeyKeyEnter, InputKeyKeyEscape, InputKeyKeyBackspace, InputKeyKeyF1, InputKeyKeyF25, InputKeyKeyShiftLeft, InputKeyKeyControlRight, InputKeyKeyAltLeft, InputKeyKeyMetaLeft, InputKeyKeyCapsLock, InputKeyKeyDelete, InputKeyKeyPageDown, InputKeyKeyNumpadEnter, InputKeyKeyNumpadUp, InputKeyKeyContextMenu, InputKeyKeyAudioVolumeMute}
 	for _, k := range keys {
 		expect(t, !inputKeyEncodeCtrlSeq(k, []uint8(""), 0, InputKeyMods{ctrl: true}).Valid, "ctrlSeq(k, \"\", 0, .{ .ctrl = true }) == null")
@@ -1227,6 +1259,7 @@ func TestKe3_term51_ctrlSeq_keys_without_a_codepoint(t *testing.T) {
 
 // Zig: test "term51: isControl: every codepoint up to the first non-ASCII block"
 func TestKe3_term51_isControl_every_codepoint_up_to_the_first_non_ASCII_block(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := 0; i < 0x200; i++ {
 		want := i < 0x20 || i == 0x7F
 		expectEqual(t, want, inputKeyEncodeIsControl(uint32(i)))
@@ -1246,6 +1279,7 @@ func TestKe3_term51_isControl_every_codepoint_up_to_the_first_non_ASCII_block(t 
 
 // Zig: test "term51: isControlUtf8: single bytes"
 func TestKe3_term51_isControlUtf8_single_bytes(t *testing.T) {
+	testPlatform(t, "linux")
 	for i := 0; i < 256; i++ {
 		s := [1]uint8{uint8(i)}
 		want := i < 0x20 || i == 0x7F
@@ -1255,6 +1289,7 @@ func TestKe3_term51_isControlUtf8_single_bytes(t *testing.T) {
 
 // Zig: test "term51: isControlUtf8: empty and multi byte strings"
 func TestKe3_term51_isControlUtf8_empty_and_multi_byte_strings(t *testing.T) {
+	testPlatform(t, "linux")
 	expect(t, !inputKeyEncodeIsControlUtf8([]uint8("")), "!isControlUtf8(\"\")")
 	expect(t, !inputKeyEncodeIsControlUtf8([]uint8("\x01\x01")), "!isControlUtf8(\"\\x01\\x01\")")
 	expect(t, !inputKeyEncodeIsControlUtf8([]uint8("\r\n")), "!isControlUtf8(\"\\r\\n\")")
@@ -1270,6 +1305,7 @@ func TestKe3_term51_isControlUtf8_empty_and_multi_byte_strings(t *testing.T) {
 
 // Zig: test "term51: copyToBuf: exact fit, shorter source, and one short"
 func TestKe3_term51_copyToBuf_exact_fit_shorter_source_and_one_short(t *testing.T) {
+	testPlatform(t, "linux")
 	var buf [8]uint8
 
 	// Exact fit.
@@ -1316,6 +1352,7 @@ func ke3Memset(buf []uint8, v uint8) {
 
 // Zig: test "term51: copyToBuf: empty buffers and empty source"
 func TestKe3_term51_copyToBuf_empty_buffers_and_empty_source(t *testing.T) {
+	testPlatform(t, "linux")
 	var buf [4]uint8
 	ke3Memset(buf[:], 0xAA)
 
@@ -1347,6 +1384,7 @@ func TestKe3_term51_copyToBuf_empty_buffers_and_empty_source(t *testing.T) {
 
 // Zig: test "term51: legacyAltPrefix: requires alt and alt_esc_prefix"
 func TestKe3_term51_legacyAltPrefix_requires_alt_and_alt_esc_prefix(t *testing.T) {
+	testPlatform(t, "linux")
 	ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{alt: true}, utf8: []uint8("c"), unshifted_codepoint: 'c'}
 	on := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltTrue}
 	off := InputKeyEncodeOptions{alt_esc_prefix: false, macos_option_as_alt: InputConfigOptionAsAltTrue}
@@ -1367,6 +1405,7 @@ func TestKe3_term51_legacyAltPrefix_requires_alt_and_alt_esc_prefix(t *testing.T
 
 // Zig: test "term51: legacyAltPrefix: byte selection from utf8 and unshifted codepoint"
 func TestKe3_term51_legacyAltPrefix_byte_selection_from_utf8_and_unshifted_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	on := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltTrue}
 	alt := InputKeyMods{alt: true}
 
@@ -1396,6 +1435,7 @@ func TestKe3_term51_legacyAltPrefix_byte_selection_from_utf8_and_unshifted_codep
 
 // Zig: test "term51: legacyAltPrefix: macos_option_as_alt and alt side"
 func TestKe3_term51_legacyAltPrefix_macos_option_as_alt_and_alt_side(t *testing.T) {
+	testPlatform(t, "linux")
 	altLeft := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideLeft}}
 	altRight := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}
 	ev := InputKeyKeyEvent{action: InputKeyActionPress, utf8: []uint8("c")}
@@ -1424,6 +1464,7 @@ func TestKe3_term51_legacyAltPrefix_macos_option_as_alt_and_alt_side(t *testing.
 
 // Zig: test "term51: legacy: only press and repeat produce output"
 func TestKe3_term51_legacy_only_press_and_repeat_produce_output(t *testing.T) {
+	testPlatform(t, "linux")
 	events := []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, opts: InputKeyEncodeOptions{}, want: "a"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter}, opts: InputKeyEncodeOptions{}, want: "\r"},
@@ -1456,6 +1497,7 @@ func TestKe3_term51_legacy_only_press_and_repeat_produce_output(t *testing.T) {
 
 // Zig: test "term51: legacy: composing produces no output"
 func TestKe3_term51_legacy_composing_produces_no_output(t *testing.T) {
+	testPlatform(t, "linux")
 	events := []InputKeyKeyEvent{
 		InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")},
 		InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\xc3\xa9")},
@@ -1486,6 +1528,7 @@ func TestKe3_term51_legacy_composing_produces_no_output(t *testing.T) {
 
 // Zig: test "term51: legacy: pc style keys take priority over text and ctrl sequences"
 func TestKe3_term51_legacy_pc_style_keys_take_priority_over_text_and_ctrl_sequences(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, mods: InputKeyMods{ctrl: true}}, opts: InputKeyEncodeOptions{}, want: "\x1b[27;5;9~"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{ctrl: true}, utf8: []uint8("\r")}, opts: InputKeyEncodeOptions{}, want: "\x1b[27;5;13~"},
@@ -1509,6 +1552,7 @@ func TestKe3_term51_legacy_pc_style_keys_take_priority_over_text_and_ctrl_sequen
 
 // Zig: test "term51: legacy: backspace with text"
 func TestKe3_term51_legacy_backspace_with_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		// Control characters are ignored and the key sequence is sent.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x7f")}, opts: InputKeyEncodeOptions{}, want: "\x7f"},
@@ -1537,6 +1581,7 @@ func TestKe3_term51_legacy_backspace_with_text(t *testing.T) {
 
 // Zig: test "term51: legacy: enter with text"
 func TestKe3_term51_legacy_enter_with_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\r")}, opts: InputKeyEncodeOptions{}, want: "\r"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\n")}, opts: InputKeyEncodeOptions{}, want: "\r"},
@@ -1560,6 +1605,7 @@ func TestKe3_term51_legacy_enter_with_text(t *testing.T) {
 
 // Zig: test "term51: legacy: escape with text"
 func TestKe3_term51_legacy_escape_with_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, utf8: []uint8("\x1b")}, opts: InputKeyEncodeOptions{}, want: "\x1b"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, utf8: []uint8("\x00")}, opts: InputKeyEncodeOptions{}, want: "\x1b"},
@@ -1577,6 +1623,7 @@ func TestKe3_term51_legacy_escape_with_text(t *testing.T) {
 
 // Zig: test "term51: legacy: plain text for letters, digits, punctuation and unicode"
 func TestKe3_term51_legacy_plain_text_for_letters_digits_punctuation_and_unicode(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: InputKeyEncodeOptions{}, want: "a"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("A"), unshifted_codepoint: 'a'}, opts: InputKeyEncodeOptions{}, want: "A"},
@@ -1614,6 +1661,7 @@ func TestKe3_term51_legacy_plain_text_for_letters_digits_punctuation_and_unicode
 
 // Zig: test "term51: legacy: super with text"
 func TestKe3_term51_legacy_super_with_text(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig-only (Darwin): on macOS super_text and super_shift are "".
 	superText := "b"
 	superShift := "B"
@@ -1636,6 +1684,7 @@ func TestKe3_term51_legacy_super_with_text(t *testing.T) {
 
 // Zig: test "term51: legacy: ctrl sequences and alt prefix"
 func TestKe3_term51_legacy_ctrl_sequences_and_alt_prefix(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true}, utf8: []uint8("c")}, opts: InputKeyEncodeOptions{}, want: "\x03"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true, caps_lock: true, num_lock: true}, utf8: []uint8("c")}, opts: InputKeyEncodeOptions{}, want: "\x03"},
@@ -1693,6 +1742,7 @@ func TestKe3_term51_legacy_ctrl_sequences_and_alt_prefix(t *testing.T) {
 
 // Zig: test "term51: legacy: alt prefix without text uses the unshifted codepoint"
 func TestKe3_term51_legacy_alt_prefix_without_text_uses_the_unshifted_codepoint(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyE, mods: InputKeyMods{alt: true}, unshifted_codepoint: 'e'}, opts: ke3ACAltOpts, want: "\x1be"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyE, mods: InputKeyMods{alt: true, shift: true}, unshifted_codepoint: 'e'}, opts: ke3ACAltOpts, want: "\x1be"},
@@ -1723,6 +1773,7 @@ func TestKe3_term51_legacy_alt_prefix_without_text_uses_the_unshifted_codepoint(
 
 // Zig: test "term51: legacy: alt prefix with text"
 func TestKe3_term51_legacy_alt_prefix_with_text(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		// Single byte text.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{alt: true}, utf8: []uint8("c")}, opts: ke3ACAltOpts, want: "\x1bc"},
@@ -1754,6 +1805,7 @@ func TestKe3_term51_legacy_alt_prefix_with_text(t *testing.T) {
 
 // Zig: test "term51: legacy: modify other keys state 2 and macos option"
 func TestKe3_term51_legacy_modify_other_keys_state_2_and_macos_option(t *testing.T) {
+	testPlatform(t, "linux")
 	const M = "\x1b[27;3;49~"
 	// Alt held, text "1": the CSI 27 sequence on every platform where alt
 	// is kept as alt; on macOS the option setting decides.
@@ -1772,6 +1824,7 @@ func TestKe3_term51_legacy_modify_other_keys_state_2_and_macos_option(t *testing
 
 // Zig: test "term51: legacy: modify other keys state 2 conditions"
 func TestKe3_term51_legacy_modify_other_keys_state_2_conditions(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		// Control input range 0x40..0x7F with a modifier.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("A"), unshifted_codepoint: 'a'}, opts: ke3ACMokOpts, want: "\x1b[27;2;65~"},
@@ -1853,6 +1906,7 @@ var ke3ACModLetterOn = [16]string{
 
 // Zig: test "term51: legacy: modify other keys state 2 for every modifier combination"
 func TestKe3_term51_legacy_modify_other_keys_state_2_for_every_modifier_combination(t *testing.T) {
+	testPlatform(t, "linux")
 	for bits := 0; bits < 16; bits++ {
 		ke3ACExpect(
 			t,
@@ -1871,6 +1925,7 @@ func TestKe3_term51_legacy_modify_other_keys_state_2_for_every_modifier_combinat
 
 // Zig: test "term51: legacy: letter with every modifier combination without modify other keys"
 func TestKe3_term51_legacy_letter_with_every_modifier_combination_without_modify_other_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	// Zig-only (Darwin): on macOS st is "".
 	st := "a"
 	off := [16]string{
@@ -1918,6 +1973,7 @@ func TestKe3_term51_legacy_letter_with_every_modifier_combination_without_modify
 
 // Zig: test "term51: legacy: ctrl CSI u fallback"
 func TestKe3_term51_legacy_ctrl_CSI_u_fallback(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyI, mods: InputKeyMods{ctrl: true}, utf8: []uint8("i"), unshifted_codepoint: 'i'}, opts: InputKeyEncodeOptions{}, want: "\x1b[105;5u"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyI, mods: InputKeyMods{ctrl: true, alt: true}, utf8: []uint8("i"), unshifted_codepoint: 'i'}, opts: InputKeyEncodeOptions{}, want: "\x1b[105;7u"},
@@ -1958,6 +2014,7 @@ func TestKe3_term51_legacy_ctrl_CSI_u_fallback(t *testing.T) {
 
 // Zig: test "term51: legacy: modifier keys alone produce nothing"
 func TestKe3_term51_legacy_modifier_keys_alone_produce_nothing(t *testing.T) {
+	testPlatform(t, "linux")
 	modkeys := []InputKeyKey{InputKeyKeyShiftLeft, InputKeyKeyShiftRight, InputKeyKeyControlLeft, InputKeyKeyControlRight, InputKeyKeyAltLeft, InputKeyKeyAltRight, InputKeyKeyMetaLeft, InputKeyKeyMetaRight, InputKeyKeyCapsLock, InputKeyKeyNumLock, InputKeyKeyFn, InputKeyKeyFnLock}
 	allOpts := []InputKeyEncodeOptions{
 		{},
@@ -1978,6 +2035,7 @@ func TestKe3_term51_legacy_modifier_keys_alone_produce_nothing(t *testing.T) {
 
 // Zig: test "term51: legacy: keys with no encoding produce nothing without text"
 func TestKe3_term51_legacy_keys_with_no_encoding_produce_nothing_without_text(t *testing.T) {
+	testPlatform(t, "linux")
 	keys := []InputKeyKey{InputKeyKeyUnidentified, InputKeyKeyKeyA, InputKeyKeyDigit1, InputKeyKeySpace, InputKeyKeyF13, InputKeyKeyF14, InputKeyKeyF20, InputKeyKeyF25, InputKeyKeyContextMenu, InputKeyKeyPrintScreen, InputKeyKeyScrollLock, InputKeyKeyPause, InputKeyKeyNumpadEqual, InputKeyKeyNumpadComma, InputKeyKeyNumpadClear, InputKeyKeyHelp, InputKeyKeyConvert, InputKeyKeyPower, InputKeyKeyIntlRo, InputKeyKeyMediaStop}
 	opts := []InputKeyEncodeOptions{{}, ke3ACMokAltOpts, {cursor_key_application: true, keypad_key_application: true}}
 	for _, k := range keys {
@@ -1991,6 +2049,7 @@ func TestKe3_term51_legacy_keys_with_no_encoding_produce_nothing_without_text(t 
 
 // Zig: test "term51: legacy: function keys F1 to F25"
 func TestKe3_term51_legacy_function_keys_F1_to_F25(t *testing.T) {
+	testPlatform(t, "linux")
 	type Fk struct {
 		x0 InputKeyKey
 		x1 string
@@ -2032,6 +2091,7 @@ func TestKe3_term51_legacy_function_keys_F1_to_F25(t *testing.T) {
 
 // Zig: test "term51: legacy: navigation keys and cursor key application mode"
 func TestKe3_term51_legacy_navigation_keys_and_cursor_key_application_mode(t *testing.T) {
+	testPlatform(t, "linux")
 	type Nk struct {
 		x0 InputKeyKey
 		x1 string
@@ -2073,6 +2133,7 @@ func TestKe3_term51_legacy_navigation_keys_and_cursor_key_application_mode(t *te
 
 // Zig: test "term51: legacy: keypad keys"
 func TestKe3_term51_legacy_keypad_keys(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACRunCases(t, []ke3ACCase{
 		// Numerical mode: text is written; no text means nothing.
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpad1, utf8: []uint8("1")}, opts: InputKeyEncodeOptions{}, want: "1"},
@@ -2112,6 +2173,7 @@ func TestKe3_term51_legacy_keypad_keys(t *testing.T) {
 
 // Zig: test "term51: legacy: output too small for each write point"
 func TestKe3_term51_legacy_output_too_small_for_each_write_point(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ACExpectFit(t, "\x1b[1;2A", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, mods: InputKeyMods{shift: true}}, InputKeyEncodeOptions{})
 	ke3ACExpectFit(t, "\x1bOP", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF1}, InputKeyEncodeOptions{})
 	ke3ACExpectFit(t, "\x7f", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace}, InputKeyEncodeOptions{})
@@ -2140,6 +2202,7 @@ func TestKe3_term51_legacy_output_too_small_for_each_write_point(t *testing.T) {
 
 // Zig: test "term51: legacy: ctrl sequence with alt writes the ESC before failing"
 func TestKe3_term51_legacy_ctrl_sequence_with_alt_writes_the_ESC_before_failing(t *testing.T) {
+	testPlatform(t, "linux")
 	var buf [1]uint8
 	w := oscWriterFixed(buf[:])
 	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeLegacy(&w, InputKeyKeyEvent{
@@ -2167,6 +2230,7 @@ func TestKe3_term51_legacy_ctrl_sequence_with_alt_writes_the_ESC_before_failing(
 
 // Zig: test "term51: legacy: empty buffer works when there is no output"
 func TestKe3_term51_legacy_empty_buffer_works_when_there_is_no_output(t *testing.T) {
+	testPlatform(t, "linux")
 	var empty [0]uint8
 	events := []InputKeyKeyEvent{
 		InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("a")},
@@ -2201,6 +2265,7 @@ func TestKe3_term51_legacy_empty_buffer_works_when_there_is_no_output(t *testing
 // Go-only: panic test: inputKeyEncodePcStyleFunctionKey: a key outside the
 // key table indexes past function_keys.keys (std.EnumArray.get)
 func TestKe3_panic_pcStyleFunctionKey_key_outside_the_table(t *testing.T) {
+	testPlatform(t, "linux")
 	ke3ExpectPanic(t, func() {
 		inputKeyEncodePcStyleFunctionKey(InputKeyKey(inputKeyKeyCount), InputKeyMods{}, false, false, false, false)
 	})

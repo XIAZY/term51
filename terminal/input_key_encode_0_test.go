@@ -10,6 +10,7 @@ import "testing"
 
 // Zig: test "modifier sequence values"
 func TestKe0_modifier_sequence_values_CsiUMods(t *testing.T) {
+	testPlatform(t, "linux")
 	// This is all sort of trivially seen by looking at the code but
 	// we want to make sure we never regress this.
 	mods := inputKeyEncodeCsiUMods{}
@@ -39,6 +40,7 @@ func TestKe0_modifier_sequence_values_CsiUMods(t *testing.T) {
 
 // Zig: test "modifier sequence values"
 func TestKe0_modifier_sequence_values_KittyMods(t *testing.T) {
+	testPlatform(t, "linux")
 	// This is all sort of trivially seen by looking at the code but
 	// we want to make sure we never regress this.
 	mods := inputKeyEncodeKittyMods{}

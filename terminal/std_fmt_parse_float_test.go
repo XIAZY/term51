@@ -71,7 +71,7 @@ func pf_approxEqAbs(x float64, y float64, tolerance float64) bool {
 	return math.Abs(x-y) <= tolerance
 }
 
-// Zig: test parseFloat
+// Zig: test parseFloat (lib/std/fmt/parse_float.zig)
 func TestStdFmtParseFloat_parseFloat(t *testing.T) {
 	// T = f64 (the only ported instantiation)
 	pf_expectInvalid(t, "")
@@ -127,7 +127,7 @@ func TestStdFmtParseFloat_parseFloat(t *testing.T) {
 	expect(t, pf_approxEqAbs(pf_parse(t, "2.71828182845904523536"), float64(2.718281828459045), pf_epsilon), `approxEqAbs(T, try parseFloat(T, "2.71828182845904523536"), @as(T, 2.718281828459045), epsilon)`)
 }
 
-// Zig: test "nan and inf"
+// Zig: test "nan and inf" (lib/std/fmt/parse_float.zig)
 func TestStdFmtParseFloat_nan_and_inf(t *testing.T) {
 	// T = f64, Z = u64
 	expectEqual(t, math.Float64bits(pf_parse(t, "nAn")), math.Float64bits(colorStdMathNanF64()))
@@ -135,13 +135,13 @@ func TestStdFmtParseFloat_nan_and_inf(t *testing.T) {
 	expectEqual(t, pf_parse(t, "-INF"), -math.Inf(1))
 }
 
-// Zig: test "largest normals"
+// Zig: test "largest normals" (lib/std/fmt/parse_float.zig)
 func TestStdFmtParseFloat_largest_normals(t *testing.T) {
 	// Only the f64 line; the f16, f32, f80 and f128 lines are not ported.
 	expectEqual(t, math.Float64bits(pf_parse(t, "1.7976931348623157E308")), 0x7fef_ffff_ffff_ffff)
 }
 
-// Zig: test "hex.special"
+// Zig: test "hex.special" (lib/std/fmt/parse_float.zig)
 func TestStdFmtParseFloat_hex_special(t *testing.T) {
 	// f32 in Zig, f64 here (see the header).
 	expect(t, math.IsNaN(pf_parse(t, "nAn")), `math.isNan(try parseFloat(f32, "nAn"))`)
@@ -153,7 +153,7 @@ func TestStdFmtParseFloat_hex_special(t *testing.T) {
 	expect(t, math.IsInf(pf_parse(t, "-0x9999p9999"), -1), `math.isNegativeInf(try parseFloat(f32, "-0x9999p9999"))`)
 }
 
-// Zig: test "hex.zero"
+// Zig: test "hex.zero" (lib/std/fmt/parse_float.zig)
 func TestStdFmtParseFloat_hex_zero(t *testing.T) {
 	// f32 in Zig, f64 here (see the header). 0.0 == -0.0, as in Zig.
 	expectEqual(t, float64(0.0), pf_parse(t, "0x0"))
@@ -163,7 +163,7 @@ func TestStdFmtParseFloat_hex_zero(t *testing.T) {
 	expectEqual(t, float64(0.0), pf_parse(t, "0x0.00000p666"))
 }
 
-// Zig: test "hex.f64"
+// Zig: test "hex.f64" (lib/std/fmt/parse_float.zig)
 func TestStdFmtParseFloat_hex_f64(t *testing.T) {
 	expectEqual(t, pf_parse(t, "0x1p0"), 1.0)
 	expectEqual(t, pf_parse(t, "-0x1p-1"), -0.5)

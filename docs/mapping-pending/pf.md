@@ -145,7 +145,7 @@ Where Zig would trap and Go would wrap silently, the port asserts:
 `BiasedFp.toFloat` (e >= 0), the `@intCast` usize -> i32 conversions and the
 `i -= 1` and `d.num_digits -= n_trailing_zeros` subtractions in
 `Decimal.parse`. None of them can fail for any input (reasoning in the
-comments; the 11.6 million compared inputs never trip them). Other checked
+comments; the 11.6 million compared inputs never trip them, natively or on 32-bit ARM). Other checked
 operations are proven not to overflow by upstream's own comments
 (`parse8Digits`) or by bounds (shift amounts, `Decimal` digit arithmetic in
 u64 with shifts of at most 60); Go's index checks cover the array accesses.
@@ -179,9 +179,53 @@ Compared bit for bit (f64 bits, or ERR) with Zig 0.15.2 `std.fmt.parseFloat(f64)
 using the project lead's harness (copy in `/home/xia/wt/pf-scratch/pfdiff-pf`,
 streamed, nothing stored):
 
-RESULTS_TABLE
+| Family | What | Inputs | Zig ERR | Diffs native (arm64) | Diffs 32-bit ARM (qemu) |
+|---|---|---:|---:|---:|---:|
+| targeted | hand-written edge cases (signs, `inf`/`nan` spellings, hex with/without `p`, underscores valid/invalid, under/overflow) | 123 | 61 | 0 | 0 |
+| rgb | the 255 channel boundaries with and without `_`, `rgbi:` domain | 510 | 0 | 0 | 0 |
+| bytes | every byte value inserted/substituted at every position of 8 templates | 14,336 | 13,833 | 0 | 0 |
+| long | very long inputs (up to 200,000 digits, with and without `_`, decimal and hex) with compensating exponents | 297 | 0 | 0 | 0 |
+| intensity | random values in [0, 1] with long digit strings | 200,000 | 63,949 | 0 | 0 |
+| random | random decimal and hex strings, random `_` | 300,000 | 24,124 | 0 | 0 |
+| halfway | exact midpoints between adjacent doubles, perturbed and truncated, with and without `_` | 1,394,822 | 412,252 | 0 | 0 |
+| extra | midpoints with `_` (>19 digits) at the intensity boundaries, huge exponents, hex, inf/nan, malformed | 1,639,789 | 209,253 | 0 | 0 |
+| exh6 | every 6-character string over three 11/8-letter alphabets | 3,805,266 | 3,795,432 | 0 | 0 |
+| exh5 | every string of up to 5 characters over a 21-letter alphabet | 4,288,305 | 4,275,771 | 0 | 0 |
+| **total** | | **11,643,449** | | **0** | **0** |
+
+The Go side is the current `std_fmt_parse_float.go` (package line changed
+to `main`), built natively and with `GOARCH=arm GOARM=7`, run under
+`qemu-arm-static`; the whole set ran on both. Defect-focused check
+(`/home/xia/wt/pf-scratch/defect`): `RGB.parse` built from upstream
+`color.zig` with Zig 0.15.2 against `terminal.ColorRGBParse`, natively and
+on 32-bit ARM: identical on the 10 `rgbi:` strings of `list.txt` and on all
+1,020 generated candidates (`cands.txt`: for each channel boundary k, the
+midpoint + `001` with `_` after `0.0`, after `0.0` and two digits later,
+near the end, and without `_`); 360 of the 765 underscored candidates give
+a channel one lower than the correctly rounded value, none of the 255
+without `_`.
+
+Tests: `terminal/std_fmt_parse_float_test.go` translates the six tests of
+`parse_float.zig` that have an f64 part (`parseFloat`, `nan and inf`,
+`largest normals` (f64 line), `hex.special` and `hex.zero` (written for f32
+in Zig, width-independent, run on f64), `hex.f64`); not translated:
+`#11169` (f128), `many_digits hex` (f32 vs f128), `hex.f16`, `hex.f32`,
+`hex.f80`, `hex.f128`. `parse_float/*.zig` have no tests.
+`scripts/check-test-mapping.py` does not check std files (as for
+`std_hash_*_test.go`). Two Go-only tests pin the defect bits and the large
+exponents. The defect is also pinned through `rgbi:` by the term51 test
+`term51: RGB.fromIntensity: underscores can lower a channel by one (zig std
+defect)` (term51 patch 0022, translated in `color_test.go`) and by the
+recorded suite `osc/rgbi_float` (57 cases: OSC 11, OSC 4 and OSC 21 with
+each string, with and without `_`).
 
 ## Corrections for the colours section of `docs/mapping.md`
+
+Applied on `impl/pf`: item 1 by a short corrected subsection that points
+here (replace it by the section above when folding), item 2 as written.
+The stale `color.go` comment (old lines 1196-1200) went with the removed
+`colorStdFmtParseFloatF64`; `color.go`'s header now says Zig's result is
+not always correctly rounded.
 
 1. Lines 528-547 ("`std.fmt.parseFloat(f64)` (used by `RGB.fromIntensity`)"):
    the sentence at lines 537-539, "Decimal values are converted by

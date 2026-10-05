@@ -1,7 +1,7 @@
 // Tests translated one for one from src/terminal/Parser.zig (Ghostty v1.3.1
 // plus the term51 additional tests). Each Go test carries the exact Zig title
 // in a "// Zig: test" comment. Tests that need a working OSC parser are in
-// Parser_osc_test.go behind the build tag osc_ported.
+// Parser_osc_test.go.
 //
 // Translation notes:
 //   - `try testing.expect(x)` is expect(t, x, "<the Zig expression>"), and

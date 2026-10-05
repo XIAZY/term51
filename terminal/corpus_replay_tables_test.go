@@ -11,6 +11,8 @@ package terminal
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -86,9 +88,31 @@ func tablesCompare(t *testing.T, name string, got, want []byte) {
 	t.Errorf("MISMATCH tables/%s line %d\n  got:  %s\n  want: %s", name, diff.line, diff.got, diff.want)
 }
 
+// tablesCheckManifest checks a table file against golden/MANIFEST: its sha256
+// and its number of lines.
+func tablesCheckManifest(t *testing.T, name string, text []byte) {
+	t.Helper()
+	key := "tables/" + name + ".txt"
+	want, ok := corpusManifest(t)[key]
+	if !ok || want.unit != "lines" {
+		t.Fatalf("%s is not in golden/MANIFEST with a line count", key)
+	}
+	if sum := sha256.Sum256(text); hex.EncodeToString(sum[:]) != want.sha256 {
+		t.Errorf("%s: sha256 is %x, MANIFEST says %s", key, sum, want.sha256)
+	}
+	if n := bytes.Count(text, []byte("\n")); n != want.count {
+		t.Errorf("%s: %d lines, MANIFEST says lines=%d", key, n, want.count)
+	}
+}
+
 // TestCorpusReplayTables compares the three static tables with
 // golden/tables/{parse_table,default_palette,modes}.txt.
 func TestCorpusReplayTables(t *testing.T) {
+	cfg, err := corpusConfigFrom(os.Getenv, testing.Short())
+	if err != nil {
+		t.Fatal(err)
+	}
+	compared := 0
 	for _, tab := range []struct {
 		name  string
 		write func(*bytes.Buffer)
@@ -98,11 +122,11 @@ func TestCorpusReplayTables(t *testing.T) {
 		{"modes", tablesModes},
 	} {
 		t.Run(tab.name, func(t *testing.T) {
-			want, err := os.ReadFile(filepath.Join(corpusDir(t), "golden", "tables", tab.name+".txt"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			want := corpusReadAll(t, filepath.Join("golden", "tables", tab.name+".txt"))
+			tablesCheckManifest(t, tab.name, want)
 			tablesCompare(t, tab.name, tablesProduce(tab.write), want)
+			compared++
 		})
 	}
+	corpusFailIfEmpty(t, cfg, "the tables test", compared)
 }

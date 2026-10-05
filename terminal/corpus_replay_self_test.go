@@ -3,14 +3,56 @@ package terminal
 // Tests of the corpus replayer's own plumbing (corpus_replay*_test.go). None
 // of them needs the port: they run today. `go test ./terminal -run
 // CorpusReplaySelf`.
+//
+// Where a check compares with an expected text, the text is a recorded line of
+// the golden files (dumpSelfGoldenLines) as far as the port is not needed to
+// reproduce it.
+//
+// TODO(recorded): the checks that still use hand-written values, and why:
+//   - TestCorpusReplaySelfDumpAny: the types are made up for the test (a
+//     dumper has no recorded input of its own); the bool sets, flags, scrolling
+//     region and colors of the real types are in
+//     TestCorpusReplaySelfDumpAgainstGolden, from recorded lines.
+//   - TestCorpusReplaySelfWriters: isPlainAscii, cellIsDefault and
+//     cellAttrsDefault on hand-built cells: the recorded lines only show the
+//     result of these functions on whole rows, which needs the port's pages
+//     (page.GetCells and the row iterator are not implemented). The `\x5c`
+//     (backslash) and control-byte escapes of writeEscaped: the golden files
+//     have only high bytes (`\x9c`, `\xfb`) in the first sections. The
+//     `underline:` flag of writeStyle and the cell lines with `wide=` or
+//     `sem=`: their text is an enum name, and the String() of the enums is
+//     the port's. The cell lines with `style=`, `g=` and `link=` need a page
+//     (dumpScreenCell reads the style, grapheme and hyperlink sets).
+//   - TestCorpusReplaySelfNames: zigName and zigCamel on made-up names; the
+//     recorded names are used through dumpSelfSetBools (zigName) and
+//     TestCorpusReplaySelfUnionsAgainstZig (zigCamel, zigFieldName), against
+//     the Zig source rather than the recorded dumps, because the dumps of
+//     tagged unions are the action traces (kind actions), stage 2b.
+//   - dumpUnwrap and boolInt (in TestCorpusReplaySelfWriters): no recorded
+//     counterpart (they are Zig's `.?` and @intFromBool).
+//   - the selection, report, config and parsing tests in this file and in
+//     corpus_replay_self2_test.go build their inputs: they test the
+//     replayer's own logic, which the recorder does not have (sampling,
+//     reports), or the recorder's functions on inputs written to hit an edge
+//     (parseSuite: the corpus case files, which the test also parses, are
+//     covered by TestCorpusReplaySelfParseAllAreas).
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -510,17 +552,22 @@ func TestCorpusReplaySelfSectionsReader(t *testing.T) {
 
 // The section files of every area and kind read back in the order of the case
 // file, at least the first sections (the first 256 KB; all of them, counted
-// against the case file, with TERM51_FULL=1).
+// against the case file, with TERM51_FULL=1). The files read whole (all of
+// them with TERM51_FULL=1, the dcs and esc ones always) are checked against
+// golden/MANIFEST: the number of sections and the sha256 of the uncompressed
+// text.
 func TestCorpusReplaySelfSectionFiles(t *testing.T) {
 	full := os.Getenv("TERM51_FULL") != ""
-	files, sections := 0, 0
+	manifest := corpusManifest(t)
+	files, sections, verified := 0, 0, 0
 	for _, area := range corpusAreas {
 		for _, suite := range corpusSuiteNames(t, area) {
 			parsed := corpusReadSuite(t, area, suite)
 			for _, kind := range parsed.kinds.kinds() {
 				name := corpusGoldenName(suite, kind)
 				var s *corpusSections
-				if full {
+				whole := full || area.name == "dcs" || area.name == "esc"
+				if whole {
 					s = corpusSectionsFile(t, area, name)
 				} else {
 					s = corpusSectionsWindow(t, area, name, 256<<10)
@@ -539,8 +586,15 @@ func TestCorpusReplaySelfSectionFiles(t *testing.T) {
 					}
 					n++
 				}
+				if whole {
+					key := area.name + "/" + name
+					if err := s.verify(key, manifest[key], true); err != nil {
+						t.Errorf("%v", err)
+					}
+					verified++
+				}
 				s.Close()
-				if (full || n == len(parsed.cases)) && n != len(parsed.cases) {
+				if (whole || n == len(parsed.cases)) && n != len(parsed.cases) {
 					t.Errorf("%s/%s: %d sections, the case file has %d", area.name, name, n, len(parsed.cases))
 				}
 				if n == 0 {
@@ -551,7 +605,7 @@ func TestCorpusReplaySelfSectionFiles(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("%d output files, %d sections read (full=%v)", files, sections, full)
+	t.Logf("%d output files, %d sections read (full=%v), %d checked against the MANIFEST", files, sections, full, verified)
 	inManifest := 0
 	for path := range corpusManifest(t) {
 		area, _, _ := strings.Cut(path, "/")
@@ -615,6 +669,8 @@ const (
 	dumpSelfTagNone dumpSelfTag = iota
 	dumpSelfTagCursorUp
 	dumpSelfTagPin
+	dumpSelfTag8Bg
+	dumpSelfTagOrphan
 )
 
 func (self dumpSelfTag) String() string {
@@ -625,6 +681,10 @@ func (self dumpSelfTag) String() string {
 		return "cursor_up"
 	case dumpSelfTagPin:
 		return "pin"
+	case dumpSelfTag8Bg:
+		return "8_bg"
+	case dumpSelfTagOrphan:
+		return "orphan"
 	}
 	return ""
 }
@@ -657,6 +717,12 @@ type dumpSelfUnion struct {
 	Tag      dumpSelfTag
 	CursorUp uint8
 	Pin      dumpSelfInner
+	X8Bg     uint8
+}
+
+// dumpSelfUnregistered is a union type that is not in dumpVoidTags.
+type dumpSelfUnregistered struct {
+	Tag dumpSelfTag
 }
 
 type dumpSelfNames struct {
@@ -674,6 +740,9 @@ func dumpSelfText(prefix string, v any) string {
 }
 
 func TestCorpusReplaySelfDumpAny(t *testing.T) {
+	// dumpSelfUnion: `none` is void; `orphan` is not and has no field.
+	dumpVoidTags[reflect.TypeOf(dumpSelfUnion{})] = []string{"none"}
+	defer delete(dumpVoidTags, reflect.TypeOf(dumpSelfUnion{}))
 	n := 5
 	for _, c := range []struct {
 		name string
@@ -698,6 +767,7 @@ func TestCorpusReplaySelfDumpAny(t *testing.T) {
 		{"union void", dumpSelfUnion{Tag: dumpSelfTagNone, CursorUp: 9}, "p=none\n"},
 		{"union", dumpSelfUnion{Tag: dumpSelfTagCursorUp, CursorUp: 9}, "p=cursor_up\np.cursor_up=9\n"},
 		{"union struct", dumpSelfUnion{Tag: dumpSelfTagPin, Pin: dumpSelfInner{x: 1}}, "p=pin\np.pin.x=1\np.pin.y=0\n"},
+		{"union digit tag", dumpSelfUnion{Tag: dumpSelfTag8Bg, X8Bg: 3}, "p=8_bg\np.8_bg=3\n"},
 		{"bytes", []uint8("a\\\x00\x7f\n~"), "p=a\\x5c\\x00\\x7f\\x0a~\n"},
 		{"empty bytes", []uint8{}, "p=\n"},
 		{"byte array", [3]uint8{0x41, 0x1b, 0x5c}, "p=A\\x1b\\x5c\n"},
@@ -742,6 +812,31 @@ func TestCorpusReplaySelfDumpAny(t *testing.T) {
 		}()
 		dumpSelfText("p", "text")
 	}()
+
+	// A non-void tag without a payload field, and a union type that is not
+	// listed, panic with the type and the tag: the payload line is never
+	// silently left out.
+	for _, c := range []struct {
+		name string
+		v    any
+		want []string
+	}{
+		{"payload field missing", dumpSelfUnion{Tag: dumpSelfTagOrphan}, []string{"dumpSelfUnion", `"orphan"`, "Orphan"}},
+		{"unlisted type", dumpSelfUnregistered{Tag: dumpSelfTagPin}, []string{"dumpSelfUnregistered", "dumpVoidTags", `"pin"`}},
+	} {
+		func() {
+			defer func() {
+				r := fmt.Sprint(recover())
+				for _, w := range c.want {
+					if !strings.Contains(r, w) {
+						t.Errorf("%s: panic %q lacks %q", c.name, r, w)
+					}
+				}
+			}()
+			dumpSelfText("p", c.v)
+			t.Errorf("%s: no panic", c.name)
+		}()
+	}
 }
 
 func nan() float64 { z := 0.0; return z / z }
@@ -767,34 +862,20 @@ func TestCorpusReplaySelfNames(t *testing.T) {
 			t.Errorf("zigCamel(%q) = %q, want %q", in, got, want)
 		}
 	}
+	for in, want := range map[string]string{"cursor_up": "CursorUp", "8_bg": "X8Bg", "256_underline_color": "X256UnderlineColor"} {
+		if got := zigFieldName(in); got != want {
+			t.Errorf("zigFieldName(%q) = %q, want %q", in, got, want)
+		}
+	}
 }
 
 func TestCorpusReplaySelfWriters(t *testing.T) {
+	// Hand-written (see the TODO at the top): the bytes that the first
+	// sections of the golden files do not have.
 	var buf bytes.Buffer
 	writeEscaped(&buf, []uint8("a\\b\x00\xff~ "))
 	if got, want := buf.String(), `a\x5cb\x00\xff~ `; got != want {
 		t.Errorf("writeEscaped %q, want %q", got, want)
-	}
-
-	for _, c := range []struct {
-		name string
-		s    Style
-		want string
-	}{
-		{"default", Style{}, "{fg=none,bg=none,ul=none,flags=none}"},
-		{"colors", Style{
-			fg_color:        StyleColor{Tag: StyleColorPalette, Palette: 5},
-			bg_color:        StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: 0x0a, g: 0xbb, b: 0xff}},
-			underline_color: StyleColor{Tag: StyleColorPalette, Palette: 255},
-		}, "{fg=pal:5,bg=rgb:0abbff,ul=pal:255,flags=none}"},
-		{"flags", Style{flags: styleFlags{bold: true, overline: true, blink: true}},
-			"{fg=none,bg=none,ul=none,flags=bold|blink|overline}"},
-	} {
-		buf.Reset()
-		writeStyle(&buf, c.s)
-		if buf.String() != c.want {
-			t.Errorf("%s: %q, want %q", c.name, buf.String(), c.want)
-		}
 	}
 
 	plain := PageCell{content_tag: PageCellContentTagCodepoint}
@@ -846,23 +927,6 @@ func TestCorpusReplaySelfWriters(t *testing.T) {
 		}
 	}
 
-	// The cell lines that need no lookup in the page.
-	for _, c := range []struct {
-		cell PageCell
-		want string
-	}{
-		{ctrl, " c 4: cp=1f\n"},
-		{prot, " c 4: cp=41 protected\n"},
-		{bg, " c 4: bgpal=9\n"},
-		{PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{1, 0xab, 0xff}}},
-			" c 4: bgrgb=01abff\n"},
-	} {
-		buf.Reset()
-		dumpScreenCell(&buf, 4, &c.cell, nil)
-		if buf.String() != c.want {
-			t.Errorf("dumpScreenCell = %q, want %q", buf.String(), c.want)
-		}
-	}
 	if boolInt(true) != 1 || boolInt(false) != 0 {
 		t.Error("boolInt")
 	}
@@ -982,7 +1046,28 @@ func TestCorpusReplaySelfDumpAgainstGolden(t *testing.T) {
 		t.Errorf("term.flags fields\n recorded %v\n Go       %v", flags, fields)
 	}
 	// Scrolling region and the unset dynamic colors.
-	if got := dumpSelfText("term.scrolling_region", TerminalScrollingRegion{top: 0, bottom: 4, left: 0, right: 9}); got != strings.Join(region, "\n")+"\n" {
+	// The region is rebuilt from the recorded values.
+	var sr TerminalScrollingRegion
+	for _, l := range region {
+		name, v, _ := strings.Cut(strings.TrimPrefix(l, "term.scrolling_region."), "=")
+		n, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			t.Fatalf("recorded line %q", l)
+		}
+		switch name {
+		case "top":
+			sr.top = SizeCellCountInt(n)
+		case "bottom":
+			sr.bottom = SizeCellCountInt(n)
+		case "left":
+			sr.left = SizeCellCountInt(n)
+		case "right":
+			sr.right = SizeCellCountInt(n)
+		default:
+			t.Fatalf("recorded line %q", l)
+		}
+	}
+	if got := dumpSelfText("term.scrolling_region", sr); got != strings.Join(region, "\n")+"\n" {
 		t.Errorf("scrolling region %q, recorded %q", got, region)
 	}
 	var unset string
@@ -993,16 +1078,612 @@ func TestCorpusReplaySelfDumpAgainstGolden(t *testing.T) {
 		t.Errorf("unset colors %q, recorded %q", unset, colors)
 	}
 
-	// A set dynamic color: r, g, b in this order, decimal.
-	for _, l := range dumpSelfGoldenLines(t, "osc", "all.golden.gz") {
-		if strings.HasPrefix(l, "term.colors.foreground.override.r=") {
-			want := "term.colors.foreground.override.r=255\nterm.colors.foreground.override.g=10\nterm.colors.foreground.override.b=0\n"
-			got := dumpSelfText("term.colors.foreground", ColorDynamicRGB{override: Some(ColorRGB{r: 255, g: 10, b: 0})})
-			if !strings.HasPrefix(got, want) || !strings.HasSuffix(got, "term.colors.foreground.default=null\n") {
-				t.Errorf("set color %q", got)
+	// A set dynamic color: r, g, b in this order, decimal, then the default.
+	// Every distinct recorded set color of the first sections of the osc
+	// suites is rebuilt from its r, g and b and dumped again.
+	checked := map[string]bool{}
+	for _, suite := range []string{"all", "color_state", "unterminated"} {
+		lines := dumpSelfGoldenLines(t, "osc", suite+".golden.gz")
+		for i, l := range lines {
+			prefix, _, found := strings.Cut(l, ".override.r=")
+			if !found || !strings.HasPrefix(prefix, "term.colors.") || i+3 >= len(lines) {
+				continue
 			}
-			return
+			recorded := strings.Join(lines[i:i+4], "\n") + "\n"
+			if checked[recorded] {
+				continue
+			}
+			checked[recorded] = true
+			var rgb [3]uint8
+			for k, c := range []string{"r", "g", "b"} {
+				v, found := strings.CutPrefix(lines[i+k], prefix+".override."+c+"=")
+				n, err := strconv.ParseUint(v, 10, 8)
+				if !found || err != nil {
+					t.Fatalf("recorded color line %q", lines[i+k])
+				}
+				rgb[k] = uint8(n)
+			}
+			if lines[i+3] != prefix+".default=null" {
+				t.Fatalf("recorded color: %q after the override", lines[i+3])
+			}
+			got := dumpSelfText(prefix, ColorDynamicRGB{override: Some(ColorRGB{r: rgb[0], g: rgb[1], b: rgb[2]})})
+			if got != recorded {
+				t.Errorf("set color %q, recorded %q", got, recorded)
+			}
 		}
 	}
-	t.Error("no set foreground color in the osc/all golden window")
+	if len(checked) < 2 {
+		t.Errorf("only %d distinct set colors in the osc golden windows", len(checked))
+	}
+	t.Logf("%d distinct recorded set colors", len(checked))
+}
+
+// ---------------------------------------------------------------------------
+// Tagged unions: the payload of every tag is dumped or void.
+
+// zigUnionField is one field of a Zig union: the tag name, and whether its
+// payload type is void.
+type zigUnionField struct {
+	name string
+	void bool
+}
+
+// zigUnion is a tagged union of the Zig source.
+type zigUnion struct {
+	where  string // file:line
+	fields []zigUnionField
+}
+
+// zigStripLine removes what is not code from a line of Zig: comments, the
+// contents of string and character literals; a multi-line string line (`\\`)
+// is empty.
+func zigStripLine(line string) string {
+	if strings.HasPrefix(strings.TrimSpace(line), `\\`) {
+		return ""
+	}
+	var sb strings.Builder
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		switch {
+		case c == '/' && i+1 < len(line) && line[i+1] == '/':
+			return sb.String()
+		case c == '"' && i > 0 && line[i-1] == '@':
+			// An @"quoted name" is code: keep it.
+			end := strings.IndexByte(line[i+1:], '"')
+			if end < 0 {
+				return sb.String()
+			}
+			sb.WriteString(line[i : i+end+2])
+			i += end + 1
+		case c == '"' || c == '\'':
+			sb.WriteByte(c)
+			for i++; i < len(line) && line[i] != c; i++ {
+				if line[i] == '\\' {
+					i++
+				}
+			}
+			sb.WriteByte(c)
+		default:
+			sb.WriteByte(c)
+		}
+	}
+	return sb.String()
+}
+
+var (
+	zigUnionStart = regexp.MustCompile(`\bunion\s*\(\s*(enum(\s*\([^)]*\))?|[A-Za-z_][A-Za-z0-9_.]*)\s*\)\s*\{\s*$`)
+	zigFieldStart = regexp.MustCompile(`^(@"[^"]+"|[A-Za-z_][A-Za-z0-9_]*)\s*(:|,|$)`)
+	zigNotAField  = map[string]bool{"pub": true, "const": true, "var": true, "fn": true, "test": true, "comptime": true,
+		"inline": true, "extern": true, "export": true, "usingnamespace": true}
+)
+
+// zigScanUnions finds the tagged unions of a Zig source text, with their
+// fields. A field is a line at the top level of the union body that starts
+// with a name and has `:` or `,` after it; its payload is void when it has no
+// `:` or the type is `void`.
+func zigScanUnions(where, text string) []zigUnion {
+	lines := strings.Split(text, "\n")
+	var out []zigUnion
+	for i := 0; i < len(lines); i++ {
+		if !zigUnionStart.MatchString(zigStripLine(lines[i])) {
+			continue
+		}
+		u := zigUnion{where: fmt.Sprintf("%s:%d", where, i+1)}
+		depth := 1
+		for j := i + 1; j < len(lines) && depth > 0; j++ {
+			code := strings.TrimSpace(zigStripLine(lines[j]))
+			if depth == 1 {
+				if m := zigFieldStart.FindStringSubmatch(code); m != nil && !zigNotAField[m[1]] {
+					name := strings.TrimSuffix(strings.TrimPrefix(m[1], `@"`), `"`)
+					typ := ""
+					if m[2] == ":" {
+						typ = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(code[len(m[1]):][1:]), ","))
+					}
+					u.fields = append(u.fields, zigUnionField{name: name, void: m[2] != ":" || typ == "void"})
+				}
+			}
+			// Parentheses and brackets nest too: `lib.Enum(\n lib_target,` is
+			// not a field.
+			depth += strings.Count(code, "{") + strings.Count(code, "(") + strings.Count(code, "[") -
+				strings.Count(code, "}") - strings.Count(code, ")") - strings.Count(code, "]")
+		}
+		out = append(out, u)
+	}
+	return out
+}
+
+// zigSourceUnions are the tagged unions of the Zig source of the terminal
+// package of the pinned upstream (term51/third_party/ghostty/src/terminal).
+func zigSourceUnions(t *testing.T) []zigUnion {
+	t.Helper()
+	root := filepath.Join(corpusDir(t), "third_party", "ghostty", "src", "terminal")
+	var out []zigUnion
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".zig") {
+			return err
+		}
+		text, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(root, path)
+		out = append(out, zigScanUnions(rel, string(text))...)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// goTagNames are the tags of the Go tag types of the package, from the
+// declarations of their constants (String() is not usable before the port):
+// the constants of type T named T<Value> (or without the `Tag` of T), as the
+// suffixes <Value>.
+func goTagNames(t *testing.T) map[string][]string {
+	t.Helper()
+	out := map[string][]string{}
+	for _, f := range parsePackageSources(t) {
+		for _, decl := range f.Decls {
+			gd, ok := decl.(*ast.GenDecl)
+			if !ok || gd.Tok != token.CONST {
+				continue
+			}
+			typ := ""
+			for _, spec := range gd.Specs {
+				vs := spec.(*ast.ValueSpec)
+				if id, ok := vs.Type.(*ast.Ident); ok {
+					typ = id.Name
+				} else if vs.Type != nil || len(vs.Values) > 0 {
+					typ = ""
+				}
+				for _, n := range vs.Names {
+					if typ == "" {
+						continue
+					}
+					// T<Value>, or without the `Tag` of the type name.
+					for _, prefix := range []string{typ, strings.TrimSuffix(typ, "Tag")} {
+						rest, ok := strings.CutPrefix(n.Name, prefix)
+						if ok && rest != "" && (rest[0] >= 'A' && rest[0] <= 'Z' || rest[0] >= '0' && rest[0] <= '9') {
+							out[typ] = append(out[typ], rest)
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
+// parsePackageSources parses the non-test .go files of the package.
+func parsePackageSources(t *testing.T) []*ast.File {
+	t.Helper()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fset := token.NewFileSet()
+	var out []*ast.File
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(fset, e.Name(), nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// dumpUnionTypes are the tagged-union types reachable from a type by fields,
+// pointers, slices and arrays, the type itself included.
+func dumpUnionTypes(root reflect.Type) []reflect.Type {
+	var out []reflect.Type
+	seen := map[reflect.Type]bool{}
+	var walk func(rt reflect.Type)
+	walk = func(rt reflect.Type) {
+		if seen[rt] {
+			return
+		}
+		seen[rt] = true
+		switch rt.Kind() {
+		case reflect.Struct:
+			if dumpIsUnion(rt) {
+				out = append(out, rt)
+			}
+			for i := 0; i < rt.NumField(); i++ {
+				walk(rt.Field(i).Type)
+			}
+		case reflect.Pointer, reflect.Slice, reflect.Array:
+			walk(rt.Elem())
+		}
+	}
+	walk(root)
+	return out
+}
+
+// Every tagged union reachable from the stream action: for each tag the Zig
+// source says whether its payload is void, and the Go type has a payload
+// field (named by zigFieldName) exactly for the others; dumpVoidTags lists
+// exactly the void tags and exactly these types. A failure names the type and
+// the tag.
+func TestCorpusReplaySelfUnionsAgainstZig(t *testing.T) {
+	zigUnions := zigSourceUnions(t)
+	goTags := goTagNames(t)
+	types := dumpUnionTypes(reflect.TypeOf(StreamAction{}))
+	if len(types) < 6 {
+		t.Errorf("only %d union types reachable from StreamAction: %v", len(types), types)
+	}
+	registered := map[reflect.Type]bool{}
+	for _, ut := range types {
+		registered[ut] = true
+		tagType := ut.Field(0).Type.Name()
+		tags := goTags[tagType]
+		if len(tags) == 0 {
+			t.Errorf("%s: no constants of its tag type %s found in the source", ut, tagType)
+			continue
+		}
+		// The Zig unions whose tags are these.
+		var match []zigUnion
+		for _, zu := range zigUnions {
+			names := make([]string, len(zu.fields))
+			for i, f := range zu.fields {
+				names[i] = zigCamel(f.name)
+			}
+			if slices.Equal(sortedCopy(names), sortedCopy(tags)) {
+				match = append(match, zu)
+			}
+		}
+		if len(match) == 0 {
+			t.Errorf("%s: no union of the Zig source has the tags %v", ut, tags)
+			continue
+		}
+		void := map[string]bool{}
+		for _, f := range match[0].fields {
+			void[f.name] = f.void
+		}
+		for _, zu := range match[1:] {
+			for _, f := range zu.fields {
+				if void[f.name] != f.void {
+					t.Errorf("%s: the Zig unions %s and %s have the same tags and differ on the tag %q",
+						ut, match[0].where, zu.where, f.name)
+				}
+			}
+		}
+		var voids []string
+		for _, f := range match[0].fields {
+			_, hasField := ut.FieldByName(zigFieldName(f.name))
+			switch {
+			case f.void && hasField:
+				t.Errorf("%s: tag %q is void in %s, but the type has the field %s", ut, f.name, match[0].where, zigFieldName(f.name))
+			case !f.void && !hasField:
+				t.Errorf("%s: tag %q has a payload in %s, but the type has no field %s", ut, f.name, match[0].where, zigFieldName(f.name))
+			}
+			if f.void {
+				voids = append(voids, f.name)
+			}
+		}
+		// Fields that are no tag.
+		for i := 1; i < ut.NumField(); i++ {
+			ok := false
+			for _, f := range match[0].fields {
+				ok = ok || zigFieldName(f.name) == ut.Field(i).Name
+			}
+			if !ok {
+				t.Errorf("%s: the field %s is the payload of no tag", ut, ut.Field(i).Name)
+			}
+		}
+		reg, ok := dumpVoidTags[ut]
+		if !ok {
+			t.Errorf("%s: not in dumpVoidTags; its void tags are %q", ut, voids)
+		} else if !slices.Equal(sortedCopy(reg), sortedCopy(voids)) {
+			t.Errorf("%s: dumpVoidTags has %q, the Zig source %q", ut, sortedCopy(reg), sortedCopy(voids))
+		}
+	}
+	for ut := range dumpVoidTags {
+		if !registered[ut] {
+			t.Errorf("dumpVoidTags has %s, which is not reachable from StreamAction", ut)
+		}
+	}
+}
+
+func sortedCopy(s []string) []string {
+	out := slices.Clone(s)
+	sort.Strings(out)
+	return out
+}
+
+func TestCorpusReplaySelfZigScanUnions(t *testing.T) {
+	text := "pub const A = union(enum) {\n" +
+		"    /// doc { comment\n" +
+		"    plain,\n" +
+		"    with_payload: u8,\n" +
+		"    @\"8_bg\": u8,\n" +
+		"    void_typed: void,\n" +
+		"    inline_struct: struct {\n" +
+		"        x: u8,\n" +
+		"        y,\n" +
+		"    },\n" +
+		"    str: []const u8, // trailing \"{\" comment\n" +
+		"\n" +
+		"    pub const Key = enum { a, b };\n" +
+		"    pub fn f() void { const z = \"}\"; }\n" +
+		"};\n" +
+		"const B = union(Key) { one, two: u8 };\n" +
+		"const C = union { not_tagged: u8 };\n" +
+		"pub const D = union(enum(u8)) {\n" +
+		"    d1,\n" +
+		"};\n"
+	got := zigScanUnions("t.zig", text)
+	want := [][]zigUnionField{
+		{{"plain", true}, {"with_payload", false}, {"8_bg", false}, {"void_typed", true}, {"inline_struct", false}, {"str", false}},
+		{{"d1", true}},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("%d unions, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if !reflect.DeepEqual(got[i].fields, want[i]) {
+			t.Errorf("union %d: %+v, want %+v", i, got[i].fields, want[i])
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// The writers against the recorded lines.
+
+// dumpSelfGoldenLinesN is dumpSelfGoldenLines with a window of `limit` bytes.
+func dumpSelfGoldenLinesN(t *testing.T, area, name string, limit int64) []string {
+	t.Helper()
+	s := corpusSectionsWindow(t, corpusAreaByName(t, area), name, limit)
+	defer s.Close()
+	var lines []string
+	for {
+		_, text, ok, err := s.read(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			return lines
+		}
+		lines = append(lines, strings.Split(string(text), "\n")...)
+	}
+}
+
+// dumpSelfUnescape is the inverse of writeEscaped: `\xNN` is the byte NN.
+func dumpSelfUnescape(t *testing.T, s string) []byte {
+	t.Helper()
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] != '\\' {
+			out = append(out, s[i])
+			continue
+		}
+		if i+4 > len(s) || s[i+1] != 'x' {
+			t.Fatalf("bad escape in %q", s)
+		}
+		b, err := hex.DecodeString(s[i+2 : i+4])
+		if err != nil {
+			t.Fatalf("bad escape in %q: %v", s, err)
+		}
+		out = append(out, b...)
+		i += 3
+	}
+	return out
+}
+
+// dumpSelfParseColor is the inverse of writeColor.
+func dumpSelfParseColor(s string) (StyleColor, bool) {
+	switch {
+	case s == "none":
+		return StyleColor{Tag: StyleColorNone}, true
+	case strings.HasPrefix(s, "pal:"):
+		n, err := strconv.ParseUint(s[len("pal:"):], 10, 8)
+		return StyleColor{Tag: StyleColorPalette, Palette: uint8(n)}, err == nil
+	case strings.HasPrefix(s, "rgb:") && len(s) == len("rgb:")+6:
+		v, err := strconv.ParseUint(s[len("rgb:"):], 16, 32)
+		return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: uint8(v >> 16), g: uint8(v >> 8), b: uint8(v)}}, err == nil
+	}
+	return StyleColor{}, false
+}
+
+// dumpSelfParseStyle is the inverse of writeStyle, for the styles without an
+// underline (the name of the underline is the port's String()).
+func dumpSelfParseStyle(s string) (Style, bool) {
+	body, ok := strings.CutPrefix(s, "{fg=")
+	if !ok || !strings.HasSuffix(body, "}") {
+		return Style{}, false
+	}
+	body = strings.TrimSuffix(body, "}")
+	fg, rest, ok1 := strings.Cut(body, ",bg=")
+	bg, rest, ok2 := strings.Cut(rest, ",ul=")
+	ul, flags, ok3 := strings.Cut(rest, ",flags=")
+	if !ok1 || !ok2 || !ok3 || strings.Contains(flags, "underline:") {
+		return Style{}, false
+	}
+	var st Style
+	var good [3]bool
+	st.fg_color, good[0] = dumpSelfParseColor(fg)
+	st.bg_color, good[1] = dumpSelfParseColor(bg)
+	st.underline_color, good[2] = dumpSelfParseColor(ul)
+	if !good[0] || !good[1] || !good[2] {
+		return Style{}, false
+	}
+	if flags != "none" {
+		for _, f := range strings.Split(flags, "|") {
+			switch f {
+			case "bold":
+				st.flags.bold = true
+			case "italic":
+				st.flags.italic = true
+			case "faint":
+				st.flags.faint = true
+			case "blink":
+				st.flags.blink = true
+			case "inverse":
+				st.flags.inverse = true
+			case "invisible":
+				st.flags.invisible = true
+			case "strikethrough":
+				st.flags.strikethrough = true
+			case "overline":
+				st.flags.overline = true
+			default:
+				return Style{}, false
+			}
+		}
+	}
+	return st, true
+}
+
+// writeStyle (and writeColor) against the styles of the recorded dumps: every
+// distinct style of the first sections of text/sgr_*, text/style_churn and
+// csi/cbt that has no underline is parsed back and written again.
+func TestCorpusReplaySelfWriteStyleRecorded(t *testing.T) {
+	styleRe := regexp.MustCompile(`style=(\{[^}]*\})`)
+	seen := map[string]bool{}
+	skipped := 0
+	for _, f := range []struct{ area, name string }{
+		{"text", "sgr_single.golden.gz"}, {"text", "sgr_pairs.golden.gz"}, {"text", "sgr_extended.golden.gz"},
+		{"text", "style_churn.golden.gz"}, {"csi", "cbt.golden.gz"},
+	} {
+		for _, line := range dumpSelfGoldenLines(t, f.area, f.name) {
+			m := styleRe.FindStringSubmatch(line)
+			if m == nil || seen[m[1]] {
+				continue
+			}
+			seen[m[1]] = true
+			st, ok := dumpSelfParseStyle(m[1])
+			if !ok {
+				skipped++ // an underline: see the TODO(recorded) list
+				continue
+			}
+			var buf bytes.Buffer
+			writeStyle(&buf, st)
+			if buf.String() != m[1] {
+				t.Errorf("writeStyle = %q, recorded %q", buf.String(), m[1])
+			}
+		}
+	}
+	t.Logf("%d distinct recorded styles, %d with an underline not checked", len(seen), skipped)
+	// The three kinds of colors and a flag of each position are in the data.
+	for _, want := range []string{"fg=pal:", "bg=pal:", "ul=pal:", "rgb:", "flags=bold", "|overline", "flags=none"} {
+		found := false
+		for st := range seen {
+			found = found || strings.Contains(st, want)
+		}
+		if !found {
+			t.Errorf("no recorded style contains %q: the test does not cover it", want)
+		}
+	}
+	if len(seen)-skipped < 20 {
+		t.Errorf("only %d recorded styles without an underline", len(seen)-skipped)
+	}
+}
+
+// dumpScreenCell against the recorded ` c <x>:` lines that need no page
+// lookup and no enum name: the cells with a codepoint, a palette or RGB
+// background, and the protected flag.
+func TestCorpusReplaySelfDumpScreenCellRecorded(t *testing.T) {
+	cellRe := regexp.MustCompile(`^ c (\d+): (cp=([0-9a-f]+)|bgpal=(\d+)|bgrgb=([0-9a-f]{6}))( protected)?$`)
+	shapes := map[string]bool{}
+	checked := 0
+	for _, f := range []struct {
+		area, name string
+		limit      int64
+	}{
+		{"csi", "cbt.golden.gz", 256 << 10}, {"csi", "decsca.golden.gz", 256 << 10},
+		{"text", "style_churn.golden.gz", 256 << 10}, {"fuzz", "structured_medium.golden.gz", 2 << 20},
+	} {
+		for _, line := range dumpSelfGoldenLinesN(t, f.area, f.name, f.limit) {
+			m := cellRe.FindStringSubmatch(line)
+			if m == nil {
+				continue
+			}
+			x, _ := strconv.Atoi(m[1])
+			var cell PageCell
+			switch {
+			case m[3] != "":
+				v, _ := strconv.ParseUint(m[3], 16, 32)
+				cell.content_tag = PageCellContentTagCodepoint
+				cell.content.codepoint = uint32(v)
+				shapes["cp"] = true
+			case m[4] != "":
+				v, _ := strconv.ParseUint(m[4], 10, 8)
+				cell.content_tag = PageCellContentTagBgColorPalette
+				cell.content.color_palette = uint8(v)
+				shapes["bgpal"] = true
+			default:
+				v, _ := strconv.ParseUint(m[5], 16, 32)
+				cell.content_tag = PageCellContentTagBgColorRgb
+				cell.content.color_rgb = PageCellRGB{uint8(v >> 16), uint8(v >> 8), uint8(v)}
+				shapes["bgrgb"] = true
+			}
+			if m[6] != "" {
+				cell.protected = true
+				shapes["protected"] = true
+			}
+			var buf bytes.Buffer
+			dumpScreenCell(&buf, x, &cell, nil)
+			if buf.String() != line+"\n" {
+				t.Errorf("dumpScreenCell = %q, recorded %q", buf.String(), line)
+			}
+			checked++
+		}
+	}
+	for _, want := range []string{"cp", "bgpal", "bgrgb", "protected"} {
+		if !shapes[want] {
+			t.Errorf("no recorded cell line of the shape %q: the test does not cover it", want)
+		}
+	}
+	t.Logf("%d recorded cell lines", checked)
+}
+
+// writeEscaped against the recorded escaped strings: the uri of the cursor
+// hyperlink in the fuzz suites, which has bytes above 0x7e.
+func TestCorpusReplaySelfWriteEscapedRecorded(t *testing.T) {
+	n, escaped := 0, 0
+	for _, name := range []string{"chunked.golden.gz", "mutated.golden.gz", "with_resize.golden.gz"} {
+		for _, line := range dumpSelfGoldenLinesN(t, "fuzz", name, 1<<20) {
+			uri, ok := strings.CutPrefix(line, "screen.cursor.hyperlink=explicit:q uri=")
+			if !ok {
+				continue
+			}
+			var buf bytes.Buffer
+			writeEscaped(&buf, dumpSelfUnescape(t, uri))
+			if buf.String() != uri {
+				t.Errorf("writeEscaped = %q, recorded %q", buf.String(), uri)
+			}
+			n++
+			if strings.Contains(uri, `\x`) {
+				escaped++
+			}
+		}
+	}
+	if n == 0 || escaped == 0 {
+		t.Errorf("%d recorded uri lines, %d with an escape", n, escaped)
+	}
 }

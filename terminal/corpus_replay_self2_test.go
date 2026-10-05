@@ -6,13 +6,22 @@ package terminal
 
 import (
 	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/token"
 	"hash/fnv"
+	"io"
 	"math"
+	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -652,5 +661,511 @@ func TestCorpusReplaySelfTablesFiles(t *testing.T) {
 	}
 	if _, ok := corpusCompare([]byte("a\nb\n"), []byte("a\nc\n"), nil); ok {
 		t.Errorf("tables compare: a difference was not seen")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// std.fmt.parseInt.
+
+func TestCorpusReplaySelfZigParseInt(t *testing.T) {
+	type tc struct {
+		s      string
+		bits   int
+		signed bool
+		want   int64 // for an unsigned type that fits in int64
+		err    error
+	}
+	u := func(s string, bits int, want int64, err error) tc { return tc{s, bits, false, want, err} }
+	i := func(s string, bits int, want int64, err error) tc { return tc{s, bits, true, want, err} }
+	ov, ic := errZigOverflow, errZigInvalidCharacter
+	for _, c := range []tc{
+		// The tests of parseInt in fmt.zig (base 10 ones).
+		i("-10", 32, -10, nil), i("+10", 32, 10, nil), u("+10", 32, 10, nil), u("-10", 32, 0, ov),
+		u(" 10", 32, 0, ic), u("10 ", 32, 0, ic), u("_10_", 32, 0, ic), u("0x_10_", 32, 0, ic),
+		u("0x10_", 32, 0, ic), u("0x_10", 32, 0, ic), u("0x10", 32, 0, ic), u("0b1", 32, 0, ic), u("0o7", 32, 0, ic),
+		u("255", 8, 255, nil), u("256", 8, 0, ov),
+		u("-0", 8, 0, nil), u("+0", 8, 0, nil), u("-00", 8, 0, nil), u("-0_0", 8, 0, nil), u("-01", 8, 0, ov), u("-1", 8, 0, ov),
+		i("-1", 1, -1, nil), i("-128", 8, -128, nil), i("-129", 8, 0, ov), i("127", 8, 127, nil), i("128", 8, 0, ov),
+		i("-4398046511104", 43, -4398046511104, nil), i("-4398046511105", 43, 0, ov), i("4398046511103", 43, 4398046511103, nil),
+		u("", 32, 0, ic), i("", 32, 0, ic), u("+", 32, 0, ic), i("+", 32, 0, ic), u("-", 32, 0, ic), i("-", 32, 0, ic),
+		// parseUnsigned's: digits with separators, leading zeros.
+		u("050124", 16, 50124, nil), u("65535", 16, 65535, nil), u("65_535", 16, 65535, nil), u("65536", 16, 0, ov),
+		u("1_1_1", 8, 111, nil), u("1__1", 8, 11, nil),
+		// Separators first or last, after a sign too.
+		u("_1", 8, 0, ic), u("1_", 8, 0, ic), u("_", 8, 0, ic), u("+_1", 8, 0, ic), u("-_1", 8, 0, ic), i("-1_", 8, 0, ic),
+		// Signs.
+		u("+-1", 8, 0, ic), u("-+1", 8, 0, ic), u("--1", 8, 0, ic), u("++1", 8, 0, ic), u("1-", 8, 0, ic), u("1+1", 8, 0, ic),
+		// The error is the first one in text order, with the accumulator of
+		// max(8, bits) bits.
+		u("300x", 8, 0, ov), u("x300", 8, 0, ic), u("25x", 8, 0, ic), u("2", 1, 0, ov), u("1", 1, 1, nil), u("0", 1, 0, nil),
+		u("10", 1, 0, ov), u("01", 1, 1, nil), u("31", 5, 31, nil), u("32", 5, 0, ov), u("32x", 5, 0, ic), u("100", 5, 0, ov),
+		u("2097151", 21, 2097151, nil), u("2097152", 21, 0, ov), u("1048576", 21, 1048576, nil),
+		// Other characters.
+		u("1\x00", 8, 0, ic), u("é", 8, 0, ic), u("1.5", 8, 0, ic), u("٣", 8, 0, ic),
+		// 64 bits.
+		u("9223372036854775807", 64, 9223372036854775807, nil), i("9223372036854775807", 64, 9223372036854775807, nil),
+		i("9223372036854775808", 64, 0, ov), i("-9223372036854775808", 64, -9223372036854775808, nil),
+		i("-9223372036854775809", 64, 0, ov), u("18446744073709551616", 64, 0, ov), u("99999999999999999999", 64, 0, ov),
+		u("000000000000000000000000000000001", 64, 1, nil),
+	} {
+		var got int64
+		var err error
+		if c.signed {
+			got, err = zigParseSigned(c.s, c.bits)
+		} else {
+			var v uint64
+			v, err = zigParseUint(c.s, c.bits)
+			got = int64(v)
+		}
+		if err != c.err || err == nil && got != c.want {
+			t.Errorf("parseInt(%q, bits=%d, signed=%v) = %d, %v; want %d, %v", c.s, c.bits, c.signed, got, err, c.want, c.err)
+		}
+	}
+	if v, err := zigParseUint("18446744073709551615", 64); err != nil || v != math.MaxUint64 {
+		t.Errorf("max u64: %d %v", v, err)
+	}
+	if z, err := zigParseInt("-0", 8, false); err != nil || z.Neg || z.Mag != 0 {
+		t.Errorf("-0: %+v %v", z, err)
+	}
+	if z, err := zigParseInt("-7", 8, true); err != nil || !z.Neg || z.Mag != 7 || z.Int() != -7 {
+		t.Errorf("-7: %+v %v", z, err)
+	}
+}
+
+// The recorder passes base 10 to every std.fmt.parseInt, with these types, so
+// zigParseInt needs no base prefixes (docs: harness/src/main.zig,
+// input.zig). If the recorder starts to use base 0, or another type, this
+// test fails: the replayer's parsers must follow.
+func TestCorpusReplaySelfZigParseIntSites(t *testing.T) {
+	site := regexp.MustCompile(`std\.fmt\.parseInt\(\s*([a-z0-9]+)\s*,(.*),\s*([0-9a-z]+)\s*\)`)
+	for file, want := range map[string]string{
+		"main.zig":  "u16 u16 usize u16 u16 isize",
+		"input.zig": "u16 u16 u1 u21 u8 u5 u1",
+	} {
+		text, err := os.ReadFile(filepath.Join(corpusDir(t), "harness", "src", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var types []string
+		for _, m := range site.FindAllStringSubmatch(string(text), -1) {
+			if m[3] != "10" {
+				t.Errorf("%s: parseInt(%s, ...) with base %s: zigParseInt only does base 10", file, m[1], m[3])
+			}
+			types = append(types, m[1])
+		}
+		if got := strings.Join(types, " "); got != want {
+			t.Errorf("%s: parseInt types %q, the replayer is written for %q", file, got, want)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Error names.
+
+// zigErrorNameExceptions are the sentinels of the port whose text is not the
+// identifier without its `Err` prefix: name -> the Zig error name it carries.
+// Each entry says why. None today: every sentinel is `Err` + the Zig name.
+var zigErrorNameExceptions = map[string]string{}
+
+// Every `Err*` variable of the non-test files of the package is declared as
+// `var ErrX = errors.New("<Zig name>")`, so that err.Error() is Zig's
+// @errorName (docs/mapping.md: the port never wraps errors); zigSentinels
+// lists exactly these variables; nothing else in the package creates an error
+// with errors.New, wraps with fmt.Errorf("...%w...") or joins.
+func TestCorpusReplaySelfErrorSentinels(t *testing.T) {
+	declared := map[string]string{} // Err name -> text
+	news := 0
+	for _, f := range parsePackageSources(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := sel.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			switch pkg.Name + "." + sel.Sel.Name {
+			case "errors.New":
+				news++
+			case "errors.Join":
+				t.Errorf("%s: errors.Join: the port never wraps errors", f.Name.Name)
+			case "fmt.Errorf":
+				if lit, ok := call.Args[0].(*ast.BasicLit); ok && strings.Contains(lit.Value, "%w") {
+					t.Errorf("fmt.Errorf with %%w: the port never wraps errors: %s", lit.Value)
+				}
+			}
+			return true
+		})
+		for _, decl := range f.Decls {
+			gd, ok := decl.(*ast.GenDecl)
+			if !ok || gd.Tok != token.VAR {
+				continue
+			}
+			for _, spec := range gd.Specs {
+				vs := spec.(*ast.ValueSpec)
+				for i, name := range vs.Names {
+					if !strings.HasPrefix(name.Name, "Err") {
+						continue
+					}
+					text, ok := errorsNewText(vs, i)
+					if !ok {
+						t.Errorf("%s is not declared as errors.New(\"<text>\")", name.Name)
+						continue
+					}
+					declared[name.Name] = text
+				}
+			}
+		}
+	}
+	if news != len(declared) {
+		t.Errorf("%d errors.New calls in the package, %d Err* declarations: an error is created elsewhere", news, len(declared))
+	}
+	usedException := map[string]bool{}
+	for name, text := range declared {
+		want := strings.TrimPrefix(name, "Err")
+		if ex, ok := zigErrorNameExceptions[name]; ok {
+			want = ex
+			usedException[name] = true
+		}
+		if text != want {
+			t.Errorf("%s carries the text %q; the Zig error name is %q", name, text, want)
+		}
+	}
+	for name := range zigErrorNameExceptions {
+		if !usedException[name] {
+			t.Errorf("zigErrorNameExceptions has %s, which is not declared", name)
+		}
+	}
+	// The registry of zigErrorName: the same names, and the variables.
+	listed := map[string]bool{}
+	for _, s := range zigSentinels {
+		listed[s.name] = true
+		text, ok := declared[s.name]
+		switch {
+		case !ok:
+			t.Errorf("zigSentinels lists %s, which is not declared", s.name)
+		case s.err == nil || s.err.Error() != text:
+			t.Errorf("zigSentinels: %s is not the variable of that name (%v)", s.name, s.err)
+		}
+	}
+	for name := range declared {
+		if !listed[name] {
+			t.Errorf("%s is not in zigSentinels (corpus_replay_run_test.go): add it", name)
+		}
+	}
+	if len(declared) < 40 {
+		t.Errorf("only %d sentinels found", len(declared))
+	}
+}
+
+// errorsNewText is the string of `errors.New("...")`, the value i of a var
+// spec.
+func errorsNewText(vs *ast.ValueSpec, i int) (string, bool) {
+	if i >= len(vs.Values) {
+		return "", false
+	}
+	call, ok := vs.Values[i].(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return "", false
+	}
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "errors" || sel.Sel.Name != "New" {
+		return "", false
+	}
+	lit, ok := call.Args[0].(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		return "", false
+	}
+	text, err := strconv.Unquote(lit.Value)
+	return text, err == nil
+}
+
+func TestCorpusReplaySelfZigErrorName(t *testing.T) {
+	if got := zigErrorName(ErrOutOfMemory); got != "OutOfMemory" {
+		t.Errorf("zigErrorName(ErrOutOfMemory) = %q", got)
+	}
+	if got := zigErrorName(ErrViewportPinInsufficientRows); got != "ViewportPinInsufficientRows" {
+		t.Errorf("zigErrorName(ErrViewportPinInsufficientRows) = %q", got)
+	}
+	for _, c := range []struct {
+		name string
+		err  error
+		want []string
+	}{
+		{"wrapped", fmt.Errorf("resize: %w", ErrOutOfMemory), []string{"*fmt.wrapError", "resize: OutOfMemory", "wraps *errors.errorString"}},
+		{"foreign", errors.New("OutOfMemory"), []string{"*errors.errorString", `"OutOfMemory"`, "not a bare sentinel"}},
+		{"replayer", errReplayBadCase, []string{"BadCase"}},
+	} {
+		func() {
+			defer func() {
+				r := fmt.Sprint(recover())
+				for _, w := range c.want {
+					if !strings.Contains(r, w) {
+						t.Errorf("%s: panic %q lacks %q", c.name, r, w)
+					}
+				}
+			}()
+			zigErrorName(c.err)
+			t.Errorf("%s: no panic", c.name)
+		}()
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Empty runs.
+
+type corpusSelfErrorer struct{ errs []string }
+
+func (e *corpusSelfErrorer) Helper() {}
+func (e *corpusSelfErrorer) Errorf(format string, args ...any) {
+	e.errs = append(e.errs, fmt.Sprintf(format, args...))
+}
+
+func TestCorpusReplaySelfFailIfEmpty(t *testing.T) {
+	var e corpusSelfErrorer
+	corpusFailIfEmpty(&e, corpusConfig{}, "the test", 3)
+	if len(e.errs) != 0 {
+		t.Errorf("a test that ran 3 cases failed: %v", e.errs)
+	}
+	corpusFailIfEmpty(&e, corpusConfig{}, "the test", 0)
+	if len(e.errs) != 1 || !strings.Contains(e.errs[0], "the test ran no case") || !strings.Contains(e.errs[0], "TERM51_ALLOW_EMPTY") {
+		t.Errorf("an empty test: %v", e.errs)
+	}
+	e = corpusSelfErrorer{}
+	cfg, err := corpusConfigFrom(func(k string) string {
+		if k == "TERM51_ALLOW_EMPTY" {
+			return "1"
+		}
+		return ""
+	}, false)
+	if err != nil || !cfg.allowEmpty {
+		t.Fatalf("TERM51_ALLOW_EMPTY: %+v %v", cfg, err)
+	}
+	corpusFailIfEmpty(&e, cfg, "the test", 0)
+	if len(e.errs) != 0 {
+		t.Errorf("TERM51_ALLOW_EMPTY did not allow: %v", e.errs)
+	}
+
+	// A filter that matches nothing, on the real corpus: no case is selected.
+	cfg, err = corpusConfigFrom(func(k string) string {
+		if k == "TERM51_ONLY" {
+			return "^csi/cup/no_such_case$"
+		}
+		return ""
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	area := corpusAreaByName(t, "csi")
+	run := &corpusRun{cfg: cfg, area: area}
+	parsed := corpusReadSuite(t, area, "cup")
+	if sel := run.selectCases(t, "cup", parsed, []replayKind{replayKindGolden}); len(sel) != 0 {
+		t.Errorf("a filter that matches nothing selected %v", sel)
+	}
+	// Sampling n = 0 means all, so an empty selection only comes from a filter
+	// or an empty suite: corpusSelect of nothing.
+	if got := corpusSelect(0, 20, nil); len(got) != 0 {
+		t.Errorf("corpusSelect(0, ...) = %v", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// The golden files against the MANIFEST.
+
+func TestCorpusReplaySelfSectionsVerify(t *testing.T) {
+	text := "## case a\nl1\n## case b\nl2\n## case c\n"
+	sum := sha256.Sum256([]byte(text))
+	good := corpusManifestEntry{sha256: hex.EncodeToString(sum[:]), unit: "cases", count: 3}
+	open := func(data string) *corpusSections {
+		h := sha256.New()
+		s := corpusSectionsReader(io.TeeReader(strings.NewReader(data), h))
+		s.hash = h
+		return s
+	}
+
+	s := open(text)
+	if err := s.verify("x", good, true); err != nil {
+		t.Errorf("a good file: %v", err)
+	}
+	// Reading some sections and then draining reads the rest.
+	s = open(text)
+	if _, _, err := s.section(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.verify("x", good, true); err != nil {
+		t.Errorf("a good file, drained after a partial read: %v", err)
+	}
+	// Without draining, a file that was not read to its end is not checked,
+	// one that was is.
+	s = open(text)
+	s.section(1)
+	if err := s.verify("x", corpusManifestEntry{sha256: "bad", unit: "cases", count: 9}, false); err != nil {
+		t.Errorf("a partial read without drain was checked: %v", err)
+	}
+	s = open(text)
+	s.count()
+	if err := s.verify("x", corpusManifestEntry{sha256: "bad", unit: "cases", count: 3}, false); err == nil || !strings.Contains(err.Error(), "sha256") {
+		t.Errorf("a file read to its end with a bad hash: %v", err)
+	}
+	// A truncated file: the sha256 and the count differ.
+	s = open(text[:len(text)-len("## case c\n")])
+	if err := s.verify("x", good, true); err == nil || !strings.Contains(err.Error(), "sha256") {
+		t.Errorf("a truncated file: %v", err)
+	}
+	// The right text with a wrong count in the MANIFEST.
+	bad := good
+	bad.count = 4
+	if err := open(text).verify("x", bad, true); err == nil || !strings.Contains(err.Error(), "3 `## case` sections, MANIFEST says cases=4") {
+		t.Errorf("a wrong count: %v", err)
+	}
+	// An entry without a case count (not a golden file of an area).
+	if err := open(text).verify("x", corpusManifestEntry{sha256: good.sha256}, true); err == nil {
+		t.Errorf("an entry without cases= was accepted")
+	}
+	// A window, and an in-memory reader without a hash, are not checked.
+	if err := corpusSectionsReader(strings.NewReader(text)).verify("x", bad, true); err != nil {
+		t.Errorf("a reader without a hash was checked: %v", err)
+	}
+	// An edited file with the same number of sections.
+	if err := open(strings.Replace(text, "l1", "l9", 1)).verify("x", good, true); err == nil || !strings.Contains(err.Error(), "sha256") {
+		t.Errorf("an edited file: %v", err)
+	}
+	// A gzip stream that is cut: the error comes from the reader.
+	var gzbuf bytes.Buffer
+	zw := gzip.NewWriter(&gzbuf)
+	zw.Write([]byte(text))
+	zw.Close()
+	cut := gzbuf.Bytes()[:gzbuf.Len()-8]
+	zr, err := gzip.NewReader(bytes.NewReader(cut))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := sha256.New()
+	s = corpusSectionsReader(io.TeeReader(zr, h))
+	s.hash = h
+	if err := s.verify("x", good, true); err == nil {
+		t.Errorf("a cut gzip stream was accepted")
+	}
+
+	// The tuning of the drain: a TERM51_ONLY filter without TERM51_FULL does
+	// not read to the end.
+	for env, want := range map[string]bool{"": true, "TERM51_FULL=1": true, "TERM51_ONLY=x": false, "TERM51_ONLY=x TERM51_FULL=1": true} {
+		vars := map[string]string{}
+		for _, kv := range strings.Fields(env) {
+			k, v, _ := strings.Cut(kv, "=")
+			vars[k] = v
+		}
+		cfg, err := corpusConfigFrom(func(k string) string { return vars[k] }, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.drains() != want {
+			t.Errorf("drains() with %q = %v, want %v", env, cfg.drains(), want)
+		}
+	}
+}
+
+// The MANIFEST lines of the three kinds of files parse into hash, unit and
+// count.
+func TestCorpusReplaySelfManifestEntries(t *testing.T) {
+	m := corpusManifest(t)
+	if e := m["csi/cbt.golden.gz"]; e.unit != "cases" || e.count != 1115 || len(e.sha256) != 64 {
+		t.Errorf("csi/cbt.golden.gz: %+v", e)
+	}
+	if e := m["tables/modes.txt"]; e.unit != "lines" || e.count != 40 {
+		t.Errorf("tables/modes.txt: %+v", e)
+	}
+	if e := m["input/paste.out.gz"]; e.unit != "requests" || e.count == 0 {
+		t.Errorf("input/paste.out.gz: %+v", e)
+	}
+	for _, mode := range []inputMode{inputModeMacos, inputModeIos} {
+		if e := inputManifest(t, mode)["input/paste.out.gz"]; e.unit != "requests" || e.sha256 != m["input/paste.out.gz"].sha256 {
+			t.Errorf("%s input/paste.out.gz: %+v", mode.name, e)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// The split runner: the whole run first.
+
+type splitSelfReporter struct {
+	errs  []string
+	fails int
+}
+
+func (r *splitSelfReporter) Helper()             {}
+func (r *splitSelfReporter) Error(args ...any)   { r.errs = append(r.errs, fmt.Sprint(args...)) }
+func (r *splitSelfReporter) Fail()               { r.fails++ }
+func (r *splitSelfReporter) Logf(string, ...any) {}
+
+func TestCorpusReplaySelfSplitCheckWholeFirst(t *testing.T) {
+	c := replayNamed{name: "c", ops: []replayOp{{Tag: replayOpFeed, Feed: []uint8("ABCDE")}}}
+	want := []byte("## case c\nx\n")
+	differ := []byte("## case c\ny\n")
+	// Variants of the case: bytewise and the offsets 1..4.
+	nVariants := len(splitVariants("csi", "cup", c, splitConfig{allUpTo: 64, head: 64, seeded: 3}))
+	if nVariants != 5 {
+		t.Fatalf("%d variants", nVariants)
+	}
+	defer func(f func(replayNamed, replayKind, feedMode) []byte) { splitProduceFn = f }(splitProduceFn)
+
+	check := func(produce func(mode feedMode) []byte) (*splitSelfReporter, *splitStats, []feedMode, int) {
+		var modes []feedMode
+		splitProduceFn = func(_ replayNamed, _ replayKind, mode feedMode) []byte {
+			modes = append(modes, mode)
+			return produce(mode)
+		}
+		rep := &splitSelfReporter{}
+		run := &corpusRun{area: corpusArea{name: "csi"}}
+		st := &splitStats{}
+		n := splitCheck(rep, run, st, nil, splitConfig{allUpTo: 64, head: 64, seeded: 3}, "cup", c, replayKindGolden, want)
+		return rep, st, modes, n
+	}
+
+	// Everything equal: the whole run first, then the five variants.
+	rep, st, modes, n := check(func(feedMode) []byte { return want })
+	if n != 0 || len(rep.errs) != 0 || rep.fails != 0 || st.variants != 5 || st.skipped != 0 || st.whole != 0 || len(modes) != 6 ||
+		modes[0].Tag != feedModeWhole || modes[1].Tag != feedModeBytewise {
+		t.Errorf("all equal: n=%d errs=%v st=%+v modes=%v", n, rep.errs, st, modes)
+	}
+
+	// The whole run differs: reported once, as whole, the variants skipped
+	// (not even run) and counted.
+	rep, st, modes, n = check(func(feedMode) []byte { return differ })
+	if n != 1 || len(rep.errs) != 1 || st.variants != 0 || st.skipped != 5 || st.whole != 1 || len(modes) != 1 || modes[0].Tag != feedModeWhole ||
+		st.mismatch[replayKindGolden] != 1 {
+		t.Errorf("whole differs: n=%d errs=%v st=%+v modes=%v", n, rep.errs, st, modes)
+	}
+	if len(rep.errs) == 1 && !strings.HasPrefix(rep.errs[0], "MISMATCH csi/cup case=c kind=golden split=whole dump=- line 2\n  got:  y\n  want: x") {
+		t.Errorf("whole-run report %q", rep.errs[0])
+	}
+
+	// The whole run matches and one variant differs: the report has the split
+	// and the seed; the other variants are still replayed.
+	rep, st, _, n = check(func(m feedMode) []byte {
+		if m.Tag == feedModeSplit && m.At == 2 {
+			return differ
+		}
+		return want
+	})
+	if n != 1 || len(rep.errs) != 1 || st.variants != 5 || st.skipped != 0 || st.whole != 0 ||
+		!strings.HasPrefix(rep.errs[0], "MISMATCH csi/cup case=c kind=golden split=op:0,at:2,seed=0x") {
+		t.Errorf("one variant differs: n=%d errs=%v st=%+v", n, rep.errs, st)
+	}
+
+	// The summary line names the skipped variants and the whole runs.
+	st = &splitStats{corpusSuiteStats: corpusSuiteStats{cases: 9, run: 3}, variants: 40, known: 1, skipped: 12, whole: 2}
+	st.mismatch[replayKindGolden] = 3
+	if got, want := splitSummary("csi", "cup", st),
+		"SPLIT csi/cup cases=9 run=3 variants=40 known=1 skipped=12 whole=2 mismatch=3 (golden=3)"; got != want {
+		t.Errorf("summary %q, want %q", got, want)
 	}
 }

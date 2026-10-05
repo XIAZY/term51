@@ -16,8 +16,13 @@ package terminal
 //     unnamed value that Zig's std.enums.tagName reports as null;
 //   - Go has no tagged union: a struct whose first field is `Tag` (an integer
 //     type) is one, and its payload is the field named by the CamelCase of
-//     the tag (`cursor_up` is `CursorUp`); a tag without such a field is a
-//     void payload (see zigCamel);
+//     the tag (`cursor_up` is `CursorUp`, `8_bg` is `X8Bg`, see zigFieldName). A tag whose Zig
+//     payload is void has no field. Which tags are void is not visible to
+//     reflection, so every union type that dumpAny reaches is listed in
+//     dumpVoidTags with its void tags (checked against the Zig source by
+//     TestCorpusReplaySelfUnionsAgainstZig); dumpUnion panics, with the type
+//     and the tag, for a union that is not listed and for a non-void tag
+//     without a payload field, instead of leaving the line out;
 //   - Go field names that differ from the Zig ones are mapped by zigName;
 //   - Zig's SegmentedList and ArrayList special cases of dumpAny do not exist
 //     in Go (a slice is already the list of its items);
@@ -29,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -552,8 +558,7 @@ func zigName(name string) string {
 	return name
 }
 
-// zigCamel is the Go name of the payload field of a tagged union for the
-// tag `tag`: `cursor_up` is `CursorUp`.
+// zigCamel is the CamelCase of a tag: `cursor_up` is `CursorUp`.
 func zigCamel(tag string) string {
 	var sb strings.Builder
 	for _, part := range strings.Split(tag, "_") {
@@ -564,6 +569,17 @@ func zigCamel(tag string) string {
 		sb.WriteString(part[1:])
 	}
 	return sb.String()
+}
+
+// zigFieldName is the name of the payload field of a tagged union for the tag
+// `tag`: zigCamel, with an `X` in front when the tag starts with a digit
+// (docs/mapping.md: `8_bg` is `X8Bg`, `256_fg` is `X256Fg`).
+func zigFieldName(tag string) string {
+	name := zigCamel(tag)
+	if name != "" && name[0] >= '0' && name[0] <= '9' {
+		return "X" + name
+	}
+	return name
 }
 
 // dumpIsOptional is Zig's `.optional`: Optional[T].
@@ -689,8 +705,38 @@ func dumpFloat(f float64, bits int) string {
 	return strconv.FormatFloat(f, 'f', -1, bits)
 }
 
+// dumpVoidTags lists every tagged-union type that dumpAny can reach, with the
+// tags (Zig names) whose payload type is void: for those the Zig prints the
+// `prefix=<tag>` line and nothing else. The union types of the stream action
+// (StreamAction and the unions of its payloads) are listed; a union of another
+// recorded value is added here when its dump is ported.
+// TestCorpusReplaySelfUnionsAgainstZig compares the table with the unions of
+// the Zig source, tag by tag.
+var dumpVoidTags = map[reflect.Type][]string{
+	reflect.TypeOf(StreamAction{}): {
+		"bell", "backspace", "linefeed", "carriage_return", "enquiry",
+		"tab_clear_current", "tab_clear_all", "tab_set", "tab_reset",
+		"index", "next_line", "reverse_index", "full_reset",
+		"left_and_right_margin_ambiguous", "save_cursor", "restore_cursor",
+		"protected_mode_off", "protected_mode_iso", "protected_mode_dec",
+		"xtversion", "kitty_keyboard_query", "dcs_unhook",
+		"apc_start", "apc_end", "end_hyperlink", "decaln",
+	},
+	reflect.TypeOf(SGRAttribute{}): {
+		"unset", "bold", "reset_bold", "italic", "reset_italic", "faint",
+		"reset_underline_color", "overline", "reset_overline", "blink",
+		"reset_blink", "inverse", "reset_inverse", "invisible",
+		"reset_invisible", "strikethrough", "reset_strikethrough",
+		"reset_fg", "reset_bg",
+	},
+	reflect.TypeOf(KittyColorOSCRequest{}):   {},
+	reflect.TypeOf(KittyColorKind{}):         {},
+	reflect.TypeOf(OSCParsersColorRequest{}): {"reset_palette", "reset_special"},
+	reflect.TypeOf(OSCParsersColorTarget{}):  {},
+}
+
 // dumpUnion is the `.@"union"` arm: `prefix=<tag>`, then the payload of the
-// tag as `prefix.<tag>`.
+// tag as `prefix.<tag>` unless it is void (see dumpVoidTags).
 func dumpUnion(w *bytes.Buffer, prefix string, v reflect.Value) {
 	tag := dumpField(v, 0)
 	name, ok := dumpTagName(tag)
@@ -698,9 +744,19 @@ func dumpUnion(w *bytes.Buffer, prefix string, v reflect.Value) {
 		panic("dumpAny: tagged union with an unnamed tag at " + prefix)
 	}
 	fmt.Fprintf(w, "%s=%s\n", prefix, name)
-	if f, ok := v.Type().FieldByName(zigCamel(name)); ok {
-		dumpValue(w, prefix+"."+name, dumpField(v, f.Index[0]))
+	voids, ok := dumpVoidTags[v.Type()]
+	if !ok {
+		panic(fmt.Sprintf("dumpAny: union type %s is not in dumpVoidTags (tag %q at %s)", v.Type(), name, prefix))
 	}
+	if slices.Contains(voids, name) {
+		return
+	}
+	f, ok := v.Type().FieldByName(zigFieldName(name))
+	if !ok {
+		panic(fmt.Sprintf("dumpAny: union type %s: tag %q is not void in Zig but the type has no field %s (at %s)",
+			v.Type(), name, zigFieldName(name), prefix))
+	}
+	dumpValue(w, prefix+"."+name, dumpField(v, f.Index[0]))
 }
 
 // dumpAllBools is Zig's allBools (dump.zig:470): more than one field that

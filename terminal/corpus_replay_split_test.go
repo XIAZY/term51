@@ -14,6 +14,13 @@ package terminal
 // kinds of the area's row of corpusAreas (golden now; actions and
 // actions_noalloc with stage 2b).
 //
+// The WHOLE run of a case is replayed and compared with the golden section
+// first. If it already differs, that is reported once, as a whole-run
+// mismatch (`split=whole`, the same difference TestCorpusReplay<Area> reports)
+// and the variants of the case are skipped: so a report with a split in it is
+// a difference that comes from the cut. The skipped variants are counted in the
+// suite line.
+//
 // # Which offsets
 //
 // All offsets of all feeds are 22.6 million variants and 1.0e12 byte-feeds
@@ -57,10 +64,13 @@ package terminal
 //
 // The suite line:
 //
-//	SPLIT csi/cup cases=1330 run=20 variants=1234 known=0 mismatch=0
+//	SPLIT csi/cup cases=1330 run=20 variants=1234 known=0 skipped=57 whole=1 mismatch=3
 //
 // (cases in the suite, cases run, variants replayed, variants accepted by the
-// known file, variants that differ). It is always logged.
+// known file, variants not replayed because the whole run of their case
+// differs, cases whose whole run differs, differences: the whole runs that
+// differ and the variants that differ). It is always logged. A test that runs
+// no case fails (corpusFailIfEmpty).
 
 import (
 	"bytes"
@@ -334,6 +344,9 @@ func (k splitKnown) accepts(area, suite, caseName string, kind replayKind, v spl
 // ---------------------------------------------------------------------------
 // The runner.
 
+// splitProduceFn is the producer of splitCheck; the self-tests replace it.
+var splitProduceFn = splitProduce
+
 // splitProduce is produceSuite for one case and one variant, as the text of
 // one section; a panic of the port becomes a line of the text (as in
 // corpusProduce).
@@ -373,8 +386,12 @@ func splitReport(t corpusReporter, run *corpusRun, st *splitStats, m corpusMisma
 // splitStats are the counters of one suite of a split run.
 type splitStats struct {
 	corpusSuiteStats
-	variants int
+	variants int // replayed (the whole runs are not counted)
 	known    int
+	// Cases whose whole run differs from the golden section, and the variants
+	// of those cases that were not replayed for it.
+	whole   int
+	skipped int
 }
 
 func splitSummary(area, suite string, st *splitStats) string {
@@ -384,27 +401,48 @@ func splitSummary(area, suite string, st *splitStats) string {
 			kinds = append(kinds, fmt.Sprintf("%s=%d", k, st.mismatch[k]))
 		}
 	}
-	line := fmt.Sprintf("SPLIT %s/%s cases=%d run=%d variants=%d known=%d mismatch=%d",
-		area, suite, st.cases, st.run, st.variants, st.known, st.mismatches())
+	line := fmt.Sprintf("SPLIT %s/%s cases=%d run=%d variants=%d known=%d skipped=%d whole=%d mismatch=%d",
+		area, suite, st.cases, st.run, st.variants, st.known, st.skipped, st.whole, st.mismatches())
 	if len(kinds) > 0 {
 		line += " (" + strings.Join(kinds, " ") + ")"
 	}
 	return line
 }
 
+// splitReporter is the part of *testing.T that splitCheck uses.
+type splitReporter interface {
+	corpusReporter
+	Logf(format string, args ...any)
+}
+
 // Mirrors harness/src/main.zig:349 splitCheck
 //
-// The replay of one case and kind in all the variants of the plan; it returns
-// the number of variants that differ from the recorded section `want` (the
-// Zig compares with its own whole run). The report of a mismatch has the
-// variant and its seed.
-func splitCheck(t *testing.T, run *corpusRun, st *splitStats, known splitKnown, cfg splitConfig,
+// The replay of one case and kind: first the whole run, which is compared with
+// the recorded section `want` (in the Zig the whole run is the base of the
+// comparison and is not itself compared); then, if it matches, all the
+// variants of the plan, each compared with `want`. It returns the number of
+// differences: 1 for a whole run that differs (its variants are skipped and
+// counted), else the number of variants that differ. The report of a variant
+// has the variant and its seed.
+func splitCheck(t splitReporter, run *corpusRun, st *splitStats, known splitKnown, cfg splitConfig,
 	suite string, c replayNamed, kind replayKind, want []byte) int {
 	t.Helper()
 	area := run.area.name
+	variants := splitVariants(area, suite, c, cfg)
+
+	whole := splitProduceFn(c, kind, feedMode{Tag: feedModeWhole})
+	if diff, equal := corpusCompare(whole, want, run.cfg.skip()); !equal {
+		m := corpusMismatch{area: area, suite: suite, caseName: c.name, kind: kind, split: "whole", diff: diff}
+		splitReport(t, run, st, m, true)
+		run.writeDiff(t, m, whole, want)
+		st.whole++
+		st.skipped += len(variants)
+		return 1
+	}
+
 	failed := 0
-	for _, v := range splitVariants(area, suite, c, cfg) {
-		got := splitProduce(c, kind, v.mode())
+	for _, v := range variants {
+		got := splitProduceFn(c, kind, v.mode())
 		st.variants++
 		diff, equal := corpusCompare(got, want, run.cfg.skip())
 		if equal {
@@ -451,6 +489,7 @@ func (run *corpusRun) replaySplitSuite(t *testing.T, cfg splitConfig, known spli
 		c := parsed.cases[idx]
 		t.Run(c.name, func(t *testing.T) {
 			st.run++
+			run.ran.Add(1)
 			for i, kind := range kinds {
 				name, want, err := sections[i].section(idx)
 				switch {
@@ -464,6 +503,7 @@ func (run *corpusRun) replaySplitSuite(t *testing.T, cfg splitConfig, known spli
 			}
 		})
 	}
+	run.verifySections(t, suite, kinds, sections)
 	t.Log(splitSummary(area.name, suite, st))
 }
 
@@ -472,6 +512,7 @@ func (run *corpusRun) replaySplitSuite(t *testing.T, cfg splitConfig, known spli
 func corpusSplitArea(t *testing.T, name string) {
 	area := corpusAreaByName(t, name)
 	run := newCorpusRun(t, area)
+	t.Cleanup(func() { corpusFailIfEmpty(t, run.cfg, "split replay of area "+name, int(run.ran.Load())) })
 	cfg, err := splitConfigFrom(os.Getenv, run.cfg.exhaustive())
 	if err != nil {
 		t.Fatal(err)

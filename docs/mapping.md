@@ -32,6 +32,12 @@ Set by the project lead; they take precedence over anything below.
    included. Deliberate fixes come after everything passes
    (`term51/docs/deliberate-fixes.md`).
 8. SIMD fast paths are not ported; the scalar path is the reference.
+9. The port never wraps errors (no `fmt.Errorf` with `%w`, no `errors.Join`):
+   it returns the bare sentinel, so `err.Error()` is Zig's `@errorName`. Every
+   sentinel is `var Err<ZigName> = errors.New("<ZigName>")`; the corpus
+   replayer prints errors with `zigErrorName`, which panics for anything that
+   is not one of the package's sentinels, and
+   `TestCorpusReplaySelfErrorSentinels` checks every declaration.
 
 ## Names
 

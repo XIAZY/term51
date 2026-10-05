@@ -17,6 +17,7 @@ package terminal
 //	TERM51_ONLY=<regexp>   on `input/<mode>/<file>/<index>` (index from 0)
 //	TERM51_FAIL_LIST=file  appends `input/<mode>/<file>:<index>:input`
 //	TERM51_REPORT_MAX=n    reports per file (default 10); per test 5n
+//	TERM51_ALLOW_EMPTY=1   a test that checked no request is not a failure
 //
 // A report:
 //
@@ -27,6 +28,7 @@ package terminal
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -138,7 +140,7 @@ func inputKeyParse(it *replayTokens) (inputKeyArgs, error) {
 		if err != nil {
 			return 0, err
 		}
-		return replayParseUint(s, bits)
+		return zigParseUint(s, bits)
 	}
 	if a.keyName, err = word(); err != nil {
 		return a, err
@@ -256,7 +258,7 @@ func inputKey(it *replayTokens, w *bytes.Buffer) error {
 	aw := oscWriterAllocatingInit()
 	defer aw.deinit()
 	if err := InputKeyEncodeEncode(&aw.writer, event, opts); err != nil {
-		fmt.Fprintf(w, "=> !%s\n", err.Error())
+		fmt.Fprintf(w, "=> !%s\n", zigErrorName(err))
 		return nil
 	}
 	w.WriteString("=> ")
@@ -271,7 +273,7 @@ func inputPaste(it *replayTokens, w *bytes.Buffer) error {
 	if !ok {
 		return errReplayBadCase
 	}
-	bracketed, err := replayParseUint(s, 1)
+	bracketed, err := zigParseUint(s, 1)
 	if err != nil {
 		return err
 	}
@@ -363,13 +365,53 @@ func inputPairs(lines []string) ([]inputRequest, error) {
 	return out, nil
 }
 
-// inputReadFile reads the requests of a file of a mode.
+// inputManifests caches the MANIFEST of each mode (golden*/MANIFEST).
+var inputManifests struct {
+	sync.Mutex
+	m map[string]map[string]corpusManifestEntry
+}
+
+// inputManifest is the MANIFEST that lists the files of a mode.
+func inputManifest(t testing.TB, mode inputMode) map[string]corpusManifestEntry {
+	t.Helper()
+	inputManifests.Lock()
+	defer inputManifests.Unlock()
+	rel := filepath.Join(filepath.Dir(mode.dir), "MANIFEST")
+	if inputManifests.m == nil {
+		inputManifests.m = map[string]map[string]corpusManifestEntry{}
+	}
+	if inputManifests.m[rel] == nil {
+		inputManifests.m[rel] = corpusManifestAt(t, rel)
+	}
+	return inputManifests.m[rel]
+}
+
+// inputReadFile reads the requests of a file of a mode. The whole file is
+// read, so its sha256 and its number of requests are checked against the
+// MANIFEST of the mode (the golden files of the areas are checked in
+// corpusSections.verify): a truncated file must not shrink the corpus.
 func inputReadFile(t testing.TB, mode inputMode, file string) []inputRequest {
 	t.Helper()
 	rel := filepath.Join(mode.dir, file+".out.gz")
-	reqs, err := inputPairs(corpusLines(t, rel))
+	text := corpusReadAll(t, rel)
+	key := "input/" + file + ".out.gz"
+	want, ok := inputManifest(t, mode)[key]
+	if !ok || want.unit != "requests" {
+		t.Fatalf("%s is not in the MANIFEST of %s with a request count", key, mode.name)
+	}
+	if sum := sha256.Sum256(text); hex.EncodeToString(sum[:]) != want.sha256 {
+		t.Fatalf("%s: sha256 of the uncompressed text is %x, MANIFEST says %s", rel, sum, want.sha256)
+	}
+	var lines []string
+	if len(text) > 0 {
+		lines = strings.Split(strings.TrimSuffix(string(text), "\n"), "\n")
+	}
+	reqs, err := inputPairs(lines)
 	if err != nil {
 		t.Fatalf("%s: %v", rel, err)
+	}
+	if len(reqs) != want.count {
+		t.Fatalf("%s: %d requests, MANIFEST says requests=%d", rel, len(reqs), want.count)
 	}
 	return reqs
 }
@@ -423,6 +465,7 @@ func corpusReplayInputFile(t *testing.T, run *corpusRun, mode inputMode, file st
 	reqs := inputReadFile(t, mode, file)
 	_, sampleSet := os.LookupEnv("TERM51_SAMPLE")
 	selected := inputSelect(run.cfg, sampleSet, area, file, len(reqs))
+	run.ran.Add(int64(len(selected)))
 	reported, mismatch := 0, 0
 	for _, i := range selected {
 		r := reqs[i]
@@ -465,6 +508,8 @@ func corpusReplayInput(t *testing.T, mode inputMode) {
 		t.Fatal(err)
 	}
 	run := &corpusRun{cfg: cfg}
+	// Cleanup runs when the subtests are done.
+	t.Cleanup(func() { corpusFailIfEmpty(t, cfg, "input replay "+mode.name, int(run.ran.Load())) })
 	for _, file := range inputFiles(t, mode) {
 		t.Run(file, func(t *testing.T) { corpusReplayInputFile(t, run, mode, file) })
 	}

@@ -14,11 +14,19 @@ package terminal
 //     expect_crash is replayed and its output starts with
 //     "!recorded-from-corrected-upstream";
 //   - a case marked transient_invariant is replayed the release way (the Go
-//     Terminal.Resize defers the pin check) and AssertIntegrity is called on
-//     every present screen's pages after each resize op and at the end
-//     (runCaseTransientInvariant sets the flag, assertIntegrity does it).
-//     This is the Go counterpart of the Debug recorder's "enforce when
-//     resize() returns" (docs/replayer-design.md section 6);
+//     Terminal.Resize defers the pin check) and PageList.verifyIntegrity, the
+//     function that returns the error, is called on every present screen's
+//     pages after each resize op and at the end; any error fails the case
+//     (runCaseTransientInvariant sets the flag, verifyScreensIntegrity does
+//     it). It is NOT assertIntegrity: upstream gates that behind
+//     build_options.slow_runtime_safety, and a port that copies the gating
+//     would make the check of the 951 transient cases a silent no-op. This is
+//     the Go counterpart of the Debug recorder's "enforce when resize()
+//     returns" (docs/replayer-design.md section 6);
+//   - an error that Zig prints with @errorName (a feed or resize error, a key
+//     encoder error) is printed by zigErrorName, which accepts only the bare
+//     sentinels of the package (docs/mapping.md: the port never wraps
+//     errors);
 //   - the trace kinds (actions, actions_noalloc, parser: runTrace) are not
 //     replayed yet (stage 2): produce returns errReplayKindNotRun for them.
 
@@ -69,7 +77,7 @@ type runCaseState struct {
 	feedIdx   uint
 	mode      feedMode
 	w         *bytes.Buffer
-	integrity bool // transient_invariant: call assertIntegrity (Go only)
+	integrity bool // transient_invariant: verify the integrity (Go only)
 }
 
 // Mirrors harness/src/main.zig:211 runCase
@@ -124,7 +132,7 @@ func runCase(ops []replayOp, mode feedMode, w *bytes.Buffer) error {
 		dumpTerminal(w, st.t, "end")
 	}
 	if st.integrity {
-		assertIntegrity(st.t)
+		return verifyScreensIntegrity(st.t)
 	}
 	return nil
 }
@@ -195,13 +203,17 @@ func runCaseFeed(st *runCaseState, bytes_ []uint8) {
 }
 
 // Mirrors harness/src/main.zig:258 runCase, arm .resize
-func runCaseResize(st *runCaseState, v replayOpResizeArgs) {
+//
+// The returned error is Go only: a failed integrity check of a
+// transient_invariant case (the resize error itself is part of the output).
+func runCaseResize(st *runCaseState, v replayOpResizeArgs) error {
 	if err := st.t.Resize(v.cols, v.rows); err != nil {
-		fmt.Fprintf(st.w, "!resize error=%s\n", err.Error())
+		fmt.Fprintf(st.w, "!resize error=%s\n", zigErrorName(err))
 	}
 	if st.integrity {
-		assertIntegrity(st.t)
+		return verifyScreensIntegrity(st.t)
 	}
+	return nil
 }
 
 // Mirrors harness/src/main.zig:264 runCase, arm .scroll_top
@@ -239,20 +251,109 @@ func runCaseUpstreamInvalid(st *runCaseState) {
 
 // Mirrors harness/src/main.zig:273 runCase, arm .transient_invariant
 //
-// Go only: the Zig arm is empty. Here it switches on the AssertIntegrity
-// calls (see the file header). The marker is the first op of its case.
+// Go only: the Zig arm is empty. Here it switches on the integrity checks
+// (see the file header). The marker is the first op of its case.
 func runCaseTransientInvariant(st *runCaseState) {
 	st.integrity = true
 }
 
-// assertIntegrity calls AssertIntegrity on the pages of every present
-// screen: the check of the transient_invariant cases (see the file header).
-func assertIntegrity(t *Terminal) {
+// verifyScreensIntegrity calls PageList.verifyIntegrity on the pages of every
+// present screen: the check of the transient_invariant cases (see the file
+// header). The first error is returned, with the screen and the Zig name of
+// the error.
+func verifyScreensIntegrity(t *Terminal) error {
 	for _, key := range []ScreenSetKey{ScreenSetKeyPrimary, ScreenSetKeyAlternate} {
 		if screen := t.screens.Get(key); screen != nil {
-			screen.pages.AssertIntegrity()
+			if err := screen.pages.verifyIntegrity(); err != nil {
+				return fmt.Errorf("integrity check failed on screen %s: %s", key.String(), zigErrorName(err))
+			}
 		}
 	}
+	return nil
+}
+
+// zigErrorName is `@errorName(err)` for an error of the port. The port never
+// wraps errors (docs/mapping.md): it returns the bare sentinel, whose text is
+// the Zig error name (TestCorpusReplaySelfErrorSentinels checks every
+// sentinel). Anything else, a wrapped sentinel or an error of another origin,
+// is a bug of the port or of the replayer and fails loudly, with its type, by a
+// panic that corpusProduce turns into a `!panic:` line of the output.
+func zigErrorName(err error) string {
+	for _, s := range zigSentinels {
+		if err == s.err {
+			return err.Error()
+		}
+	}
+	panic(fmt.Sprintf("zigErrorName: %T %q is not a bare sentinel of the package%s", err, err.Error(), wrappedNote(err)))
+}
+
+// wrappedNote says if an error that is not a sentinel wraps one.
+func wrappedNote(err error) string {
+	if u := errors.Unwrap(err); u != nil {
+		return fmt.Sprintf(" (wraps %T %q)", u, u.Error())
+	}
+	return ""
+}
+
+// zigSentinels lists every `Err*` variable of the non-test files of the
+// package, by name. TestCorpusReplaySelfErrorSentinels parses the source and
+// compares this list with the declarations, so a new sentinel that is not
+// added here fails the test, and each text with its Zig error name.
+var zigSentinels = []struct {
+	name string
+	err  error
+}{
+	{"ErrOutOfMemory", ErrOutOfMemory},
+	{"ErrMissingOperation", ErrMissingOperation},
+	{"ErrNoDefaultValue", ErrNoDefaultValue},
+	{"ErrInvalidFormat", ErrInvalidFormat},
+	{"ErrNoSpaceLeft", ErrNoSpaceLeft},
+	{"ErrUnknownKey", ErrUnknownKey},
+	{"ErrInvalidValue", ErrInvalidValue},
+	{"ErrDecodeError", ErrDecodeError},
+	{"ErrNeedsRehash", ErrNeedsRehash},
+	{"ErrZeroRowCount", ErrZeroRowCount},
+	{"ErrZeroColCount", ErrZeroColCount},
+	{"ErrUnmarkedGraphemeRow", ErrUnmarkedGraphemeRow},
+	{"ErrMissingGraphemeData", ErrMissingGraphemeData},
+	{"ErrInvalidGraphemeCount", ErrInvalidGraphemeCount},
+	{"ErrUnmarkedGraphemeCell", ErrUnmarkedGraphemeCell},
+	{"ErrMissingStyle", ErrMissingStyle},
+	{"ErrUnmarkedStyleRow", ErrUnmarkedStyleRow},
+	{"ErrMismatchedStyleRef", ErrMismatchedStyleRef},
+	{"ErrInvalidStyleCount", ErrInvalidStyleCount},
+	{"ErrMissingHyperlinkData", ErrMissingHyperlinkData},
+	{"ErrMismatchedHyperlinkRef", ErrMismatchedHyperlinkRef},
+	{"ErrUnmarkedHyperlinkCell", ErrUnmarkedHyperlinkCell},
+	{"ErrUnmarkedHyperlinkRow", ErrUnmarkedHyperlinkRow},
+	{"ErrInvalidSpacerTailLocation", ErrInvalidSpacerTailLocation},
+	{"ErrInvalidSpacerHeadLocation", ErrInvalidSpacerHeadLocation},
+	{"ErrUnwrappedSpacerHead", ErrUnwrappedSpacerHead},
+	{"ErrStyleSetOutOfMemory", ErrStyleSetOutOfMemory},
+	{"ErrStyleSetNeedsRehash", ErrStyleSetNeedsRehash},
+	{"ErrStringAllocOutOfMemory", ErrStringAllocOutOfMemory},
+	{"ErrHyperlinkSetOutOfMemory", ErrHyperlinkSetOutOfMemory},
+	{"ErrHyperlinkSetNeedsRehash", ErrHyperlinkSetNeedsRehash},
+	{"ErrHyperlinkMapOutOfMemory", ErrHyperlinkMapOutOfMemory},
+	{"ErrGraphemeMapOutOfMemory", ErrGraphemeMapOutOfMemory},
+	{"ErrGraphemeAllocOutOfMemory", ErrGraphemeAllocOutOfMemory},
+	{"ErrStringsOutOfMemory", ErrStringsOutOfMemory},
+	{"ErrSetOutOfMemory", ErrSetOutOfMemory},
+	{"ErrSetNeedsRehash", ErrSetNeedsRehash},
+	{"ErrMissingAssignment", ErrMissingAssignment},
+	{"ErrInvalidMod", ErrInvalidMod},
+	{"ErrWriteFailed", ErrWriteFailed},
+	{"ErrPageSerialInvalid", ErrPageSerialInvalid},
+	{"ErrTotalRowsMismatch", ErrTotalRowsMismatch},
+	{"ErrTrackedPinInvalid", ErrTrackedPinInvalid},
+	{"ErrViewportPinOffsetMismatch", ErrViewportPinOffsetMismatch},
+	{"ErrViewportPinInsufficientRows", ErrViewportPinInsufficientRows},
+	{"ErrOutOfSpace", ErrOutOfSpace},
+	{"ErrFeedRequired", ErrFeedRequired},
+	{"ErrSearchComplete", ErrSearchComplete},
+	{"ErrUnknownPoint", ErrUnknownPoint},
+	{"ErrInvalidUtf8", ErrInvalidUtf8},
+	{"ErrMutableRequired", ErrMutableRequired},
 }
 
 // Mirrors harness/src/main.zig:286 feed
@@ -260,7 +361,7 @@ func assertIntegrity(t *Terminal) {
 // A feed error is part of the recorded output.
 func feed[H StreamHandler](stream *Stream[H], bytes_ []uint8, w *bytes.Buffer) {
 	if err := stream.NextSlice(bytes_); err != nil {
-		fmt.Fprintf(w, "!feed error=%s\n", err.Error())
+		fmt.Fprintf(w, "!feed error=%s\n", zigErrorName(err))
 	}
 }
 

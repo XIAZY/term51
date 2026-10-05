@@ -52,11 +52,35 @@ package terminal
 //	TERM51_DIFF_DIR=dir   write the full got and want of every mismatch
 //	TERM51_REPORT_MAX=n   reports per suite (default 10); per test 5n (50)
 //	TERM51_STRICT=1       compare the lines of corpusSkipPrefixes too
+//	TERM51_ALLOW_EMPTY=1  a test that ran no case is not a failure (see below)
 //	LIBGHOSTTY_VT_CORPUS  the term51 checkout
 //
-// The selection of cases is deterministic (corpusSelect): the cases i*(n-1)/(N-1),
-// plus the first case of each marker kind (expect_crash, upstream_invalid,
-// transient_invariant) of the suite.
+// The selection of cases of a suite is deterministic (corpusSelect). Of N
+// cases (with -short, of the N' cases that lie completely in the window of the
+// golden files) n are picked: for i = 0..n-1 the case i*(N-1)/(n-1) (integer
+// division; n = 1 picks the case 0), so the first and the last are always in;
+// n <= 0 or n >= N picks all. Then the first case of each marker kind
+// (expect_crash, upstream_invalid, transient_invariant) of the suite is added;
+// the result is sorted, without duplicates.
+//
+// # Completeness of the golden files
+//
+// corpusCheckManifest compares the number of cases of every case file with the
+// `cases=N` of golden/MANIFEST. A run that reads a golden file to its end
+// (every run but -short without TERM51_ONLY and TERM51_FULL; with a
+// TERM51_ONLY filter and without TERM51_FULL the end is only read when the
+// filter reaches it) also counts its `## case` sections and compares the
+// sha256 of the uncompressed text with the first column of the MANIFEST
+// (corpusSections.verify): gzip checks its own checksum only at the end of the
+// stream, so a truncated or edited golden file must not pass because a run
+// stopped early. The 2 MB window of -short is not verified.
+//
+// # Empty runs
+//
+// A test that ran no case at all (an empty selection, a TERM51_ONLY regexp
+// that matches nothing, a misspelled one) fails: corpusFailIfEmpty. With
+// TERM51_ONLY set for one area, run that area's tests (-run) or set
+// TERM51_ALLOW_EMPTY=1, which says that an empty selection is intended.
 //
 // # Reports
 //
@@ -84,10 +108,14 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
+	"math"
+	mathbits "math/bits"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -200,7 +228,7 @@ type replayOp struct {
 	Dump        string
 }
 
-// replayNamed is main.zig:84 Suite.Named.
+// replayNamed is main.zig:88 Suite.Named.
 type replayNamed struct {
 	name string
 	ops  []replayOp
@@ -233,10 +261,124 @@ func (it *replayTokens) next() (string, bool) {
 	return s[:end], true
 }
 
-// replayParseUint is std.fmt.parseInt for an unsigned type, base 10: an
-// optional leading '+' is accepted.
-func replayParseUint(s string, bits int) (uint64, error) {
-	return strconv.ParseUint(strings.TrimPrefix(s, "+"), 10, bits)
+// zigParseIntError is the error set of std.fmt.parseInt (ParseIntError).
+// They are the replayer's own sentinels, not the port's: the recorder aborts
+// on them, the replayer returns them.
+var (
+	errZigOverflow         = errors.New("Overflow")
+	errZigInvalidCharacter = errors.New("InvalidCharacter")
+)
+
+// zigInt is the result of zigParseInt: the value is -Mag when Neg, else Mag.
+type zigInt struct {
+	Neg bool
+	Mag uint64
+}
+
+// Uint is the value of an unsigned result (Neg is only set for -0 there).
+func (z zigInt) Uint() uint64 { return z.Mag }
+
+// Int is the value of a signed result.
+func (z zigInt) Int() int64 {
+	if z.Neg {
+		return int64(-z.Mag)
+	}
+	return int64(z.Mag)
+}
+
+// zigParseInt is std.fmt.parseInt(T, s, 10), where T is an integer type of
+// `bits` bits, signed or not (fmt.zig parseIntWithGenericCharacter and
+// parseIntWithSign of the pinned toolchain, 0.15.2). It mirrors them, so that
+// what the recorder accepts is accepted and nothing else:
+//
+//   - one optional '+' or '-' (so "-0" is 0 for an unsigned type, and "-5"
+//     is Overflow for it); an empty string, or only a sign, is
+//     InvalidCharacter;
+//   - '_' between digits is ignored (also in base 10), but not first or last
+//     after the sign: "_1" and "1_" are InvalidCharacter;
+//   - the digits are accumulated in a type of max(8, bits) bits, so the error
+//     is the first one in text order: "300x" for a u8 is Overflow, "x300" is
+//     InvalidCharacter; the result is then cast to T (Overflow when it does
+//     not fit, which matters for the types below 8 bits, u1 and u5 here);
+//   - nothing else: no spaces, no base prefix. The recorder passes base 10 to
+//     every parseInt (TestCorpusReplaySelfZigParseIntSites checks it), so the
+//     base 0 forms (0x, 0o, 0b) do not exist for it.
+func zigParseInt(s string, bits int, signed bool) (zigInt, error) {
+	if len(s) == 0 {
+		return zigInt{}, errZigInvalidCharacter
+	}
+	neg := false
+	switch s[0] {
+	case '+':
+		s = s[1:]
+	case '-':
+		neg = true
+		s = s[1:]
+	}
+	if len(s) == 0 {
+		return zigInt{}, errZigInvalidCharacter
+	}
+	// The limit of the magnitude in the accumulator, and in the result type.
+	limit := func(bits int) uint64 {
+		switch {
+		case !signed && neg:
+			return 0
+		case !signed:
+			return math.MaxUint64 >> (64 - bits)
+		case neg:
+			return 1 << (bits - 1)
+		}
+		return 1<<(bits-1) - 1
+	}
+	accLimit := limit(max(8, bits))
+	if s[0] == '_' || s[len(s)-1] == '_' {
+		return zigInt{}, errZigInvalidCharacter
+	}
+	var acc uint64
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == '_' {
+			continue
+		}
+		if c < '0' || c > '9' {
+			return zigInt{}, errZigInvalidCharacter
+		}
+		digit := uint64(c - '0')
+		if acc != 0 {
+			hi, lo := mathbits.Mul64(acc, 10)
+			if hi != 0 || lo > accLimit {
+				return zigInt{}, errZigOverflow
+			}
+			acc = lo
+		} else if neg {
+			// The first digit of a negative number (and every zero after it).
+			if digit > accLimit {
+				return zigInt{}, errZigOverflow
+			}
+			acc = digit
+			continue
+		}
+		if acc+digit < acc || acc+digit > accLimit {
+			return zigInt{}, errZigOverflow
+		}
+		acc += digit
+	}
+	if acc > limit(bits) {
+		return zigInt{}, errZigOverflow
+	}
+	return zigInt{Neg: neg && acc != 0, Mag: acc}, nil
+}
+
+// zigParseUint is zigParseInt for an unsigned type.
+func zigParseUint(s string, bits int) (uint64, error) {
+	z, err := zigParseInt(s, bits, false)
+	return z.Uint(), err
+}
+
+// zigParseSigned is zigParseInt for a signed type.
+func zigParseSigned(s string, bits int) (int64, error) {
+	z, err := zigParseInt(s, bits, true)
+	return z.Int(), err
 }
 
 // Mirrors harness/src/main.zig:95 parseSuite
@@ -327,7 +469,7 @@ func parseOpInit(it *replayTokens) (replayOp, error) {
 		if !ok {
 			return replayOp{}, errReplayBadCase
 		}
-		n, err := replayParseUint(s, bits)
+		n, err := zigParseUint(s, bits)
 		if err != nil {
 			return replayOp{}, err
 		}
@@ -359,7 +501,7 @@ func parseOpResize(it *replayTokens) (replayOp, error) {
 		if !ok {
 			return replayOp{}, errReplayBadCase
 		}
-		n, err := replayParseUint(s, 16)
+		n, err := zigParseUint(s, 16)
 		if err != nil {
 			return replayOp{}, err
 		}
@@ -501,43 +643,63 @@ func corpusGoldenName(suite string, kind replayKind) string {
 // ---------------------------------------------------------------------------
 // The manifest: golden/MANIFEST, `<sha256>  <path>  [cases=N]`.
 
-// corpusManifest maps the path of a file below golden/ to its number of
-// cases; files without a count (the tables) are not in the map.
-func corpusManifest(t testing.TB) map[string]int {
+// corpusManifestEntry is one line of the manifest: the sha256 of the
+// uncompressed file (hex) and its count, `<unit>=<count>` in the line: unit is
+// "cases" for the files of the areas, "requests" for the input files, "lines"
+// for the tables, "" when the line has none.
+type corpusManifestEntry struct {
+	sha256 string
+	unit   string
+	count  int
+}
+
+// corpusManifest maps the path of a file below golden/ to its line.
+func corpusManifest(t testing.TB) map[string]corpusManifestEntry {
 	t.Helper()
-	out := map[string]int{}
-	for _, line := range corpusLines(t, filepath.Join("golden", "MANIFEST")) {
+	return corpusManifestAt(t, filepath.Join("golden", "MANIFEST"))
+}
+
+// corpusManifestAt reads the MANIFEST at the path rel of the corpus (the
+// golden-macos and golden-ios ones have the same form).
+func corpusManifestAt(t testing.TB, rel string) map[string]corpusManifestEntry {
+	t.Helper()
+	out := map[string]corpusManifestEntry{}
+	for _, line := range corpusLines(t, rel) {
 		if line == "" || line[0] == '#' {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) < 2 {
+		if len(fields) < 2 || len(fields) > 3 || len(fields[0]) != 64 {
 			t.Fatalf("bad MANIFEST line %q", line)
 		}
-		if len(fields) == 3 && strings.HasPrefix(fields[2], "cases=") {
-			n, err := strconv.Atoi(fields[2][len("cases="):])
-			if err != nil {
-				t.Fatalf("bad MANIFEST line %q: %v", line, err)
+		e := corpusManifestEntry{sha256: fields[0]}
+		if len(fields) == 3 {
+			unit, num, ok := strings.Cut(fields[2], "=")
+			n, err := strconv.Atoi(num)
+			if !ok || err != nil {
+				t.Fatalf("bad MANIFEST line %q", line)
 			}
-			out[fields[1]] = n
+			e.unit, e.count = unit, n
 		}
+		out[fields[1]] = e
 	}
 	return out
 }
 
 // corpusCheckManifest checks that the number of cases of every output file of
 // a suite equals the number of parsed cases: it guards against sampling a
-// truncated file.
-func corpusCheckManifest(t testing.TB, manifest map[string]int, area corpusArea, suite string, parsed replaySuite) {
+// truncated file. The sections and the sha256 of the golden file itself are
+// checked by corpusSections.verify, where the file is read.
+func corpusCheckManifest(t testing.TB, manifest map[string]corpusManifestEntry, area corpusArea, suite string, parsed replaySuite) {
 	t.Helper()
 	for _, kind := range parsed.kinds.kinds() {
 		key := area.name + "/" + corpusGoldenName(suite, kind)
-		n, ok := manifest[key]
+		e, ok := manifest[key]
 		switch {
-		case !ok:
-			t.Errorf("%s is not in golden/MANIFEST", key)
-		case n != len(parsed.cases):
-			t.Errorf("%s: MANIFEST says cases=%d, the case file has %d", key, n, len(parsed.cases))
+		case !ok || e.unit != "cases":
+			t.Errorf("%s is not in golden/MANIFEST with a case count", key)
+		case e.count != len(parsed.cases):
+			t.Errorf("%s: MANIFEST says cases=%d, the case file has %d", key, e.count, len(parsed.cases))
 		}
 	}
 }
@@ -556,7 +718,14 @@ type corpusSections struct {
 	header  []byte // the pending `## case` line, without the newline
 	have    bool   // header holds the next section
 	started bool
-	next    int // index of the next section to read
+	next    int // index of the next section to read (section)
+
+	// For the whole-file readers (corpusSectionsFile): the sha256 of what has
+	// been read from the file so far, and whether the end has been reached.
+	// Both are unset for a window or an in-memory text.
+	hash  hash.Hash
+	eof   bool
+	total int // sections read so far, by any of the methods
 }
 
 // errCorpusSectionsEnd is returned by section when the file has no more
@@ -576,6 +745,26 @@ type corpusGzipFile struct {
 func (c *corpusGzipFile) Close() error {
 	c.gz.Close()
 	return c.f.Close()
+}
+
+// corpusReadAll reads a file of the corpus whole, uncompressed when it is a
+// .gz.
+func corpusReadAll(t testing.TB, rel string) []byte {
+	t.Helper()
+	if !strings.HasSuffix(rel, ".gz") {
+		data, err := os.ReadFile(filepath.Join(corpusDir(t), rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+	r, c := corpusOpenGzip(t, rel)
+	defer c.Close()
+	data, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("%s: %v", rel, err)
+	}
+	return data
 }
 
 // corpusOpenGzip opens a .gz file below the corpus.
@@ -598,8 +787,10 @@ func corpusOpenGzip(t testing.TB, rel string) (io.Reader, io.Closer) {
 func corpusSectionsFile(t testing.TB, area corpusArea, name string) *corpusSections {
 	t.Helper()
 	r, c := corpusOpenGzip(t, filepath.Join(area.goldenDir, name))
-	s := corpusSectionsReader(r)
+	h := sha256.New()
+	s := corpusSectionsReader(io.TeeReader(r, h))
 	s.closer = c
+	s.hash = h
 	return s
 }
 
@@ -636,6 +827,7 @@ func (s *corpusSections) fillHeader() error {
 	chunk, err := s.r.ReadSlice('\n')
 	switch {
 	case err == io.EOF && len(chunk) == 0:
+		s.eof = true
 		return nil
 	case err != nil || !bytes.HasPrefix(chunk, []byte(corpusSectionPrefix)):
 		return fmt.Errorf("the file does not start with %q", corpusSectionPrefix)
@@ -658,6 +850,7 @@ func (s *corpusSections) read(keep bool) (name string, text []byte, ok bool, err
 	if !s.have {
 		return "", nil, false, nil
 	}
+	s.total++
 	name = string(s.header[len(corpusSectionPrefix):])
 	if keep {
 		text = append(text, s.header...)
@@ -683,6 +876,7 @@ func (s *corpusSections) read(keep bool) (name string, text []byte, ok bool, err
 		}
 		atLineStart = complete
 		if err == io.EOF {
+			s.eof = true
 			return name, text, true, nil
 		}
 	}
@@ -708,6 +902,36 @@ func (s *corpusSections) section(idx int) (name string, text []byte, err error) 
 			return name, text, nil
 		}
 	}
+}
+
+// verify checks a golden file that was read through corpusSectionsFile
+// against its line of golden/MANIFEST: the number of `## case` sections and
+// the sha256 of the uncompressed text. With drain it first reads the rest of
+// the file (the sections left, and the gzip checksum at its end); without it,
+// a file whose end has not been reached is not checked. A window or an
+// in-memory reader is never checked (nil).
+func (s *corpusSections) verify(key string, want corpusManifestEntry, drain bool) error {
+	if s.hash == nil {
+		return nil
+	}
+	if drain {
+		if _, err := s.count(); err != nil {
+			return fmt.Errorf("%s: %v", key, err)
+		}
+	}
+	if !s.eof {
+		return nil
+	}
+	if want.unit != "cases" {
+		return fmt.Errorf("%s: not in golden/MANIFEST with a case count", key)
+	}
+	if sum := hex.EncodeToString(s.hash.Sum(nil)); sum != want.sha256 {
+		return fmt.Errorf("%s: sha256 of the uncompressed text is %s, MANIFEST says %s", key, sum, want.sha256)
+	}
+	if s.total != want.count {
+		return fmt.Errorf("%s: %d `## case` sections, MANIFEST says cases=%d", key, s.total, want.count)
+	}
+	return nil
 }
 
 // count reads the rest of the file and returns the number of sections left.
@@ -754,6 +978,8 @@ type corpusConfig struct {
 	diffDir   string
 	reportMax int // TERM51_REPORT_MAX, 0 for the defaults
 	strict    bool
+	// TERM51_ALLOW_EMPTY: a test that ran no case is not a failure.
+	allowEmpty bool
 }
 
 // corpusConfigFrom reads the configuration with getenv (os.Getenv in a run).
@@ -765,6 +991,8 @@ func corpusConfigFrom(getenv func(string) string, short bool) (corpusConfig, err
 		failList: getenv("TERM51_FAIL_LIST"),
 		diffDir:  getenv("TERM51_DIFF_DIR"),
 		strict:   getenv("TERM51_STRICT") != "",
+
+		allowEmpty: getenv("TERM51_ALLOW_EMPTY") != "",
 	}
 	if short {
 		cfg.sample = corpusSampleShort
@@ -822,7 +1050,37 @@ func corpusReadFailList(path string) (map[string]bool, error) {
 // exhaustive reports whether every case of a suite that passes wants is run
 // (no sampling, no window): TERM51_FULL or a TERM51_ONLY filter.
 func (c corpusConfig) exhaustive() bool {
-	return c.full || c.only != nil || c.onlyList != nil
+	return c.full || c.filtered()
+}
+
+// filtered reports whether a TERM51_ONLY filter is set.
+func (c corpusConfig) filtered() bool {
+	return c.only != nil || c.onlyList != nil
+}
+
+// drains reports whether a golden file that is read in full is read to its
+// end for corpusSections.verify even when the cases selected stop earlier:
+// not when a TERM51_ONLY filter asks for a few cases and TERM51_FULL does not
+// ask for everything.
+func (c corpusConfig) drains() bool {
+	return c.full || !c.filtered()
+}
+
+// corpusErrorer is the part of testing.TB that corpusFailIfEmpty uses.
+type corpusErrorer interface {
+	Helper()
+	Errorf(format string, args ...any)
+}
+
+// corpusFailIfEmpty fails a test that ran nothing: `ran` counts the cases (or
+// requests, or tables) it replayed. An empty selection, a TERM51_ONLY filter
+// that matches nothing and a misspelled one all look like a pass otherwise.
+// TERM51_ALLOW_EMPTY says that an empty selection is intended.
+func corpusFailIfEmpty(t corpusErrorer, cfg corpusConfig, what string, ran int) {
+	t.Helper()
+	if ran == 0 && !cfg.allowEmpty {
+		t.Errorf("%s ran no case: the selection is empty (TERM51_ONLY, TERM51_SAMPLE or the area) -- set TERM51_ALLOW_EMPTY=1 if that is intended", what)
+	}
 }
 
 // wants reports whether the TERM51_ONLY filter lets a case through.
@@ -883,10 +1141,10 @@ func corpusFirstMarked(cases []replayNamed) []int {
 }
 
 // corpusSelect returns the indexes of the cases to run of a suite of `total`
-// cases: n of them spread evenly, i*(total-1)/(n-1) for i in 0..n-1 (so the
-// first and the last are always in), plus the given marked cases. n <= 0 or
-// n >= total selects all. The result is sorted without duplicates; the same
-// arguments always give the same result.
+// cases: for i in 0..n-1 the case i*(total-1)/(n-1) (integer division; the
+// first and the last are always in; n = 1 is the case 0), plus the given
+// marked cases. n <= 0 or n >= total selects all. The result is sorted without
+// duplicates; the same arguments always give the same result.
 func corpusSelect(total, n int, marked []int) []int {
 	var picks []int
 	switch {
@@ -1098,9 +1356,10 @@ func corpusSummary(area, suite string, st *corpusSuiteStats, strict bool) string
 type corpusRun struct {
 	cfg      corpusConfig
 	area     corpusArea
-	manifest map[string]int
+	manifest map[string]corpusManifestEntry
 
 	reported atomic.Int64 // reports logged in full, all suites
+	ran      atomic.Int64 // cases (requests) replayed, all suites
 	mu       sync.Mutex   // the fail list file
 }
 
@@ -1149,7 +1408,7 @@ func (run *corpusRun) appendFailList(m corpusMismatch) {
 }
 
 // writeDiff writes the full got and want of a mismatch to TERM51_DIFF_DIR.
-func (run *corpusRun) writeDiff(t *testing.T, m corpusMismatch, got, want []byte) {
+func (run *corpusRun) writeDiff(t interface{ Logf(string, ...any) }, m corpusMismatch, got, want []byte) {
 	dir := run.cfg.diffDir
 	if dir == "" {
 		return
@@ -1196,6 +1455,19 @@ func (run *corpusRun) openSections(t testing.TB, suite string, kind replayKind) 
 		return corpusSectionsWindow(t, run.area, name, corpusShortWindow)
 	}
 	return corpusSectionsFile(t, run.area, name)
+}
+
+// verifySections checks the golden files of a suite that were read in full
+// against golden/MANIFEST (corpusSections.verify), after the replay of the
+// selected cases. A window (-short) is not checked.
+func (run *corpusRun) verifySections(t testing.TB, suite string, kinds []replayKind, sections []*corpusSections) {
+	t.Helper()
+	for i, kind := range kinds {
+		key := run.area.name + "/" + corpusGoldenName(suite, kind)
+		if err := sections[i].verify(key, run.manifest[key], run.cfg.drains()); err != nil {
+			t.Errorf("golden file is not the recorded one: %v", err)
+		}
+	}
 }
 
 // selectCases chooses the cases of a suite to run (see the file header).
@@ -1251,6 +1523,7 @@ func (run *corpusRun) replaySuite(t *testing.T, suite string) {
 		c := parsed.cases[idx]
 		t.Run(c.name, func(t *testing.T) {
 			st.run++
+			run.ran.Add(1)
 			if isUpstreamInvalid(c.ops) {
 				st.skipped++
 			}
@@ -1259,6 +1532,7 @@ func (run *corpusRun) replaySuite(t *testing.T, suite string) {
 			}
 		})
 	}
+	run.verifySections(t, suite, kinds, sections)
 	t.Log(corpusSummary(area.name, suite, st, run.cfg.strict))
 }
 
@@ -1297,6 +1571,8 @@ func (run *corpusRun) replayCase(t *testing.T, st *corpusSuiteStats, suite strin
 func corpusReplayArea(t *testing.T, name string) {
 	area := corpusAreaByName(t, name)
 	run := newCorpusRun(t, area)
+	// Cleanup runs when the parallel subtests are done.
+	t.Cleanup(func() { corpusFailIfEmpty(t, run.cfg, "replay of area "+name, int(run.ran.Load())) })
 	for _, suite := range corpusSuiteNames(t, area) {
 		t.Run(suite, func(t *testing.T) {
 			t.Parallel()

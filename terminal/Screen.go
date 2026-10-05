@@ -77,6 +77,14 @@
 //   - `ErrUnknownPoint` and `ErrInvalidUtf8`: members of inferred error
 //     sets, declared at their first use.
 //
+// Added by the implementation (each says what it stands for): the names
+// arrays of the four enums; `ErrScreenCloneCursorOutside` (clone returns
+// it where upstream aborts; docs/mapping.md "Page-layer bookkeeping");
+// `screenRotateOnceR` (fastmem.rotateOnceR on rows); the method
+// `oscWriterAllocating.toOwnedSliceSentinel` (std.Io.Writer.Allocating,
+// used only by selectionString; it could move to osc.go). The std.mem
+// functions selectLine/selectAll/selectWord call are in std_mem.go.
+//
 // # ScreenCursorStyle
 //
 // Zig: `pub const CursorStyle = @import("cursor.zig").Style;`, an alias of
@@ -111,14 +119,14 @@
 // (the port uses warn("screen", ...)).
 // No C ABI declaration exists in this file.
 //
-// # What the implementation needs from files that have no Go file yet
+// # What the implementation needs from files that are not ported yet
 //
-// No signature in this file needs a type from an unported file, so nothing
-// is left undeclared. Three bodies do:
 //   - `selectionString` (line 2448) and `dumpString` (line 3129) are
-//     written with `ScreenFormatter` (formatter.zig);
+//     written against the formatter.go wireframe (`ScreenFormatter`); they
+//     panic "not implemented" until formatter.go is ported;
 //   - `testWriteString` (line 3207) reads the width of a codepoint above
-//     0xFF from `unicode.table` (src/unicode).
+//     0xFF from `unicode.table` (src/unicode), which has no Go port yet:
+//     that one call site is `panic(notImplemented) // needs unicode`.
 //
 // # Build options
 //

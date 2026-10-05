@@ -2790,7 +2790,204 @@ func (self *pageListReflowCursor) copyRowMetadata(other *PageRow) {
 // resizeWithoutReflow is PageList.resizeWithoutReflow.
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
-func (self *PageList) resizeWithoutReflow(opts PageListResize) error { panic(notImplemented) }
+func (self *PageList) resizeWithoutReflow(opts PageListResize) (err error) {
+	// We only set the new min_max_size if we're not reflowing. If we are
+	// reflowing, then resize handles this for us.
+	old_min_max_size := self.min_max_size
+	if !opts.reflow {
+		cols := self.cols
+		if opts.cols.Valid {
+			cols = opts.cols.Value
+		}
+		rows := self.rows
+		if opts.rows.Valid {
+			rows = opts.rows.Value
+		}
+		self.min_max_size = pageListMinMaxSize(cols, rows)
+	} else {
+		self.min_max_size = old_min_max_size
+	}
+	defer func() {
+		// errdefer
+		if err != nil {
+			self.min_max_size = old_min_max_size
+		}
+	}()
+
+	// Important! We have to do cols first because cols may cause us to
+	// destroy pages if we're increasing cols which will free up page_size
+	// so that when we call grow() in the row mods, we won't prune.
+	if opts.cols.Valid {
+		cols := opts.cols.Value
+		// Zig: the block's `defer assert(...)` runs when the block ends,
+		// also on an error: the block is a closure.
+		if err := func() error {
+			// Any column change without reflow should not result in row counts
+			// changing.
+			old_total_rows := self.total_rows
+			defer func() { assert(self.total_rows == old_total_rows) }()
+
+			switch {
+			case cols == self.cols:
+
+			// Making our columns smaller. We always have space for this
+			// in existing pages so we need to go through the pages,
+			// resize the columns, and clear any cells that are beyond
+			// the new size.
+			case cols < self.cols:
+				it := self.PageIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen}, None[Point]())
+				for chunk := it.Next(); chunk.Valid; chunk = it.Next() {
+					page := &chunk.Value.node.data
+					func() {
+						defer page.AssertIntegrity()
+						rows := page.rows
+						for i := range uint(page.size.rows) {
+							row := &rows[i]
+							page.ClearCells(row, uint(cols), uint(self.cols))
+						}
+
+						page.size.cols = cols
+					}()
+				}
+
+				// Update all our tracked pins. If they have an X
+				// beyond the edge, clamp it.
+				pin_keys := self.tracked_pins.Keys()
+				for _, p := range pin_keys {
+					if p.x >= cols {
+						p.x = cols - 1
+					}
+				}
+
+				self.cols = cols
+
+			// Make our columns larger. This is a bit more complicated because
+			// pages may not have the capacity for this. If they don't have
+			// the capacity we need to allocate a new page and copy the data.
+			default: // .gt
+				// See the comment in the while loop when setting self.cols
+				old_cols := self.cols
+
+				it := self.PageIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen}, None[Point]())
+				for chunk := it.Next(); chunk.Valid; chunk = it.Next() {
+					// We need to restore our old cols after we resize because
+					// we have an assertion on this and we want to be able to
+					// call this method multiple times.
+					self.cols = old_cols
+					if err := self.resizeWithoutReflowGrowCols(cols, chunk.Value); err != nil {
+						return err
+					}
+				}
+
+				self.cols = cols
+			}
+			return nil
+		}(); err != nil {
+			return err
+		}
+	}
+
+	if opts.rows.Valid {
+		rows := opts.rows.Value
+		switch {
+		case rows == self.rows:
+
+		// Making rows smaller, we simply change our rows value. Changing
+		// the row size doesn't affect anything else since max size and
+		// so on are all byte-based.
+		case rows < self.rows:
+			// If our rows are shrinking, we prefer to trim trailing
+			// blank lines from the active area instead of creating
+			// history if we can.
+			//
+			// This matches macOS Terminal.app behavior. I chose to match that
+			// behavior because it seemed fine in an ocean of differing behavior
+			// between terminal apps. I'm completely open to changing it as long
+			// as resize behavior isn't regressed in a user-hostile way.
+			trimmed := self.trimTrailingBlankRows(self.rows - rows)
+
+			// Account for our trimmed rows in the total row cache
+			assert(self.total_rows >= uint(trimmed)) // Zig: usize `-=` traps
+			self.total_rows -= uint(trimmed)
+
+			// If we didn't trim enough, just modify our row count and this
+			// will create additional history.
+			self.rows = rows
+
+		// Making rows larger we adjust our row count, and then grow
+		// to the row count.
+		default: // .gt (Zig: the labeled block `gt:`; `break :gt` is
+			// Go's `break` out of the switch)
+			// If our rows increased and our cursor is NOT at the bottom,
+			// we want to try to preserve the y value of the old cursor.
+			// In other words, we don't want to "pull down" scrollback.
+			// This is purely a UX feature.
+			//
+			// Zig: `break :cursor` when the cursor is at the bottom.
+			if opts.cursor.Valid && opts.cursor.Value.y < self.rows-1 {
+				// Cursor is not at the bottom, so we just grow our
+				// rows and we're done. Cursor does NOT change for this
+				// since we're not pulling down scrollback.
+				delta := rows - self.rows
+				self.rows = rows
+				for range delta {
+					if _, err := self.Grow(); err != nil {
+						return err
+					}
+				}
+				break // break :gt
+			}
+
+			// This must be set BEFORE any calls to grow() so that
+			// grow() doesn't prune pages that we need for the active
+			// area.
+			self.rows = rows
+
+			// Cursor is at the bottom or we don't care about cursors.
+			// In this case, if we have enough rows in our pages, we
+			// just update our rows and we're done. This effectively
+			// "pulls down" scrollback.
+			//
+			// If we don't have enough scrollback, we add the difference,
+			// to the active area.
+			var count uint = 0
+			page := self.pages.first
+			for ; page != nil; page = page.next {
+				p := page
+				count += uint(p.data.size.rows)
+				if count >= uint(rows) {
+					break
+				}
+			}
+			if page == nil {
+				// Zig: the `else` of the while, reached without a break.
+				assert(count < uint(rows))
+				for range uint(rows) - count {
+					if _, err := self.Grow(); err != nil {
+						return err
+					}
+				}
+			}
+
+			// Make sure that the viewport pin isn't below the active
+			// area, since that will lead to all sorts of problems.
+			switch self.viewport.Tag {
+			case PageListViewportPin:
+				if self.pinIsActive(*self.viewport_pin) {
+					self.viewport = PageListViewport{Tag: PageListViewportActive}
+				}
+			case PageListViewportActive, PageListViewportTop:
+			}
+		}
+
+		if pageSlowRuntimeSafety {
+			// We never have less rows than our active screen has.
+			assert(self.totalRows() >= uint(self.rows))
+		}
+	}
+
+	return nil
+}
 
 // resizeWithoutReflowGrowCols is PageList.resizeWithoutReflowGrowCols.
 //
@@ -2799,8 +2996,275 @@ func (self *PageList) resizeWithoutReflow(opts PageListResize) error { panic(not
 func (self *PageList) resizeWithoutReflowGrowCols(
 	cols SizeCellCountInt,
 	chunk PageListPageIteratorChunk,
-) error {
-	panic(notImplemented)
+) (err error) {
+	assert(cols > self.cols)
+	page := &chunk.node.data
+
+	// Update our col count
+	old_cols := self.cols
+	self.cols = cols
+	defer func() {
+		// errdefer
+		if err != nil {
+			self.cols = old_cols
+		}
+	}()
+
+	// Unlikely fast path: we have capacity in the page. This
+	// is only true if we resized to less cols earlier.
+	//
+	// Zig: the labeled block `fast:`; `break :fast` leaves it.
+	if page.capacity.cols >= cols {
+		fast := true
+		// If any row has a spacer head at the old last column, it will
+		// be invalid at the new (wider) size. Fall through to the slow
+		// path which handles spacer heads correctly via cloneRowFrom.
+		rows := page.rows[0:page.size.rows]
+		for i := range rows {
+			row := &rows[i]
+			cells := page.GetCells(row)
+			if cells[old_cols-1].wide == PageCellWideSpacerHead {
+				fast = false // break :fast
+				break
+			}
+		}
+
+		if fast {
+			page.size.cols = cols
+			return nil
+		}
+	}
+
+	// Likely slow path: we don't have capacity, so we need
+	// to allocate a page, and copy the old data into it.
+
+	// Try to fit our new column size into our existing page capacity.
+	// If that doesn't work then use a non-standard page with the
+	// given columns.
+	cap, aerr := page.capacity.Adjust(
+		PageCapacityAdjustment{cols: Some(cols)},
+	)
+	if aerr != nil {
+		// Zig: comptime assert(@TypeOf(err) == error{OutOfMemory}).
+
+		// We verify all maxed out page layouts don't overflow,
+		cap = page.capacity
+		cap.cols = cols
+
+		// We're growing columns so we can only get less rows so use
+		// the lesser of our capacity and size so we minimize wasted
+		// rows.
+		cap.rows = min(page.size.rows, cap.rows)
+	}
+
+	// On error, we need to undo all the pages we've added.
+	prev := chunk.node.prev
+	defer func() {
+		// errdefer
+		if err == nil {
+			return
+		}
+		current := chunk.node.prev
+		for current != nil {
+			p := current
+			if current == prev {
+				break
+			}
+			current = p.prev
+			self.pages.Remove(p)
+			self.destroyNode(p)
+		}
+	}()
+
+	// Keeps track of all our copied rows. Assertions at the end is that
+	// we copied exactly our page size.
+	var copied SizeCellCountInt = 0
+
+	// This function has an unfortunate side effect in that it causes memory
+	// fragmentation on rows if the columns are increasing in a way that
+	// shrinks capacity rows. If we have pages that don't divide evenly then
+	// we end up creating a final page that is not using its full capacity.
+	// If this chunk isn't the last chunk in the page list, then we've created
+	// a page where we'll never reclaim that capacity. This makes our max size
+	// calculation incorrect since we'll throw away data even though we have
+	// excess capacity. To avoid this, we try to fill our previous page
+	// first if it has capacity.
+	//
+	// This can fail for many reasons (can't fit styles/graphemes, etc.) so
+	// if it fails then we give up and drop back into creating new pages.
+	if prev_node := prev; prev_node != nil {
+		// Zig: the labeled block `prev:`; `break :prev` is a return from
+		// the closure.
+		func() {
+			prev_page := &prev_node.data
+
+			// We only want scenarios where we have excess capacity.
+			if prev_page.size.rows >= prev_page.capacity.rows {
+				return
+			}
+
+			// We can copy as much as we can to fill the capacity or our
+			// current page size.
+			length := min(
+				prev_page.capacity.rows-prev_page.size.rows,
+				page.size.rows,
+			)
+
+			src_rows := page.rows[0:length]
+			// Zig: a many-item pointer from prev_page.size.rows; the loop
+			// length is src_rows'.
+			dst_rows := prev_page.rows[prev_page.size.rows:]
+			for i := range src_rows {
+				dst_row := &dst_rows[i]
+				src_row := &src_rows[i]
+				prev_page.size.rows += 1
+				copied += 1
+				if err := prev_page.CloneRowFrom(
+					page,
+					dst_row,
+					src_row,
+				); err != nil {
+					// If an error happens, we undo our row copy and break out
+					// into creating a new page.
+					prev_page.size.rows -= 1
+					copied -= 1
+					return // break :prev
+				}
+			}
+
+			assert(copied == length)
+			assert(prev_page.size.rows <= prev_page.capacity.rows)
+
+			// Remap any tracked pins that pointed to rows we just copied to prev.
+			pin_keys := self.tracked_pins.Keys()
+			for _, p := range pin_keys {
+				if p.node != chunk.node || p.y >= length {
+					continue
+				}
+				p.node = prev_node
+				p.y += prev_page.size.rows - length
+			}
+		}()
+	}
+
+	// If we have an error, we clear the rows we just added to our prev page.
+	prev_copied := copied
+	defer func() {
+		// errdefer
+		if err == nil {
+			return
+		}
+		if prev_copied > 0 {
+			prev_page := &prev.data
+			prev_size := prev_page.size.rows - prev_copied
+			prev_rows := prev_page.rows[prev_size:prev_page.size.rows]
+			for i := range prev_rows {
+				prev_page.ClearCells(
+					&prev_rows[i],
+					0,
+					uint(prev_page.size.cols),
+				)
+			}
+			prev_page.size.rows = prev_size
+		}
+	}()
+
+	// We delete any of the nodes we added.
+	defer func() {
+		// errdefer
+		if err == nil {
+			return
+		}
+		it := chunk.node.prev
+		for it != nil {
+			node := it
+			if node == prev {
+				break
+			}
+			it = node.prev
+			self.pages.Remove(node)
+			self.destroyNode(node)
+		}
+	}()
+
+	// We need to loop because our col growth may force us
+	// to split pages.
+	for copied < page.size.rows {
+		new_node, err := self.createPage(cap)
+		if err != nil {
+			return err
+		}
+		// Zig: `defer new_node.data.assertIntegrity()` at the end of each
+		// iteration: the rest of the body is a closure.
+		func() {
+			defer new_node.data.AssertIntegrity()
+
+			// The length we can copy into the new page is at most the number
+			// of rows in our cap. But if we can finish our source page we use that.
+			length := min(cap.rows, page.size.rows-copied)
+
+			// Perform the copy
+			y_start := copied
+			src_rows := page.rows[y_start : copied+length]
+			dst_rows := new_node.data.rows[0:length]
+			for i := range dst_rows {
+				dst_row := &dst_rows[i]
+				src_row := &src_rows[i]
+				new_node.data.size.rows += 1
+				if err := new_node.data.CloneRowFrom(
+					page,
+					dst_row,
+					src_row,
+				); err == nil {
+					copied += 1
+				} else {
+					// I don't THINK this should be possible, because while our
+					// row count may diminish due to the adjustment, our
+					// prior capacity should have been sufficient to hold all the
+					// managed memory.
+					warn(
+						"page_list",
+						"unexpected cloneRowFrom failure during resizeWithoutReflowGrowCols: error.%v",
+						err,
+					)
+
+					// We can actually safely handle this though by exiting
+					// this loop early and cutting our copy short.
+					new_node.data.size.rows -= 1
+					break
+				}
+			}
+			y_end := copied
+
+			// Insert our new page
+			self.pages.InsertBefore(chunk.node, new_node)
+
+			// Update our tracked pins that pointed to this previous page.
+			pin_keys := self.tracked_pins.Keys()
+			for _, p := range pin_keys {
+				if p.node != chunk.node ||
+					p.y < y_start ||
+					p.y >= y_end {
+					continue
+				}
+				p.node = new_node
+				p.y -= y_start
+			}
+		}()
+	}
+	assert(copied == page.size.rows)
+
+	// Our prior errdeferes are invalid after this point so ensure
+	// we don't have any more errors.
+	//
+	// errdefer comptime unreachable;
+
+	// Remove the old page.
+	// Deallocate the old page.
+	self.pages.Remove(chunk.node)
+	self.destroyNode(chunk.node)
+
+	return nil
 }
 
 // trailingBlankLines is PageList.trailingBlankLines.
@@ -2810,7 +3274,31 @@ func (self *PageList) resizeWithoutReflowGrowCols(
 //
 // Zig: self is *const PageList.
 func (self *PageList) trailingBlankLines(max SizeCellCountInt) SizeCellCountInt {
-	panic(notImplemented)
+	var count SizeCellCountInt = 0
+
+	// Go through our pages backwards since we're counting trailing blanks.
+	for page := self.pages.last; page != nil; page = page.prev {
+		length := uint(page.data.size.rows)
+		rows := page.data.rows[0:length]
+		for i := range length {
+			rev_i := length - i - 1
+			cells := page.data.rowCells(&rows[rev_i])[0:page.data.size.cols]
+
+			// If the row has any text then we're done.
+			if PageCellHasTextAny(cells) {
+				return count
+			}
+
+			// Inc count, if we're beyond max then we're done.
+			assert(count < math.MaxUint16) // Zig: u16 `+=` traps
+			count += 1
+			if count >= max {
+				return count
+			}
+		}
+	}
+
+	return count
 }
 
 // trimTrailingBlankRows is PageList.trimTrailingBlankRows.
@@ -2823,7 +3311,49 @@ func (self *PageList) trailingBlankLines(max SizeCellCountInt) SizeCellCountInt 
 // number of rows trimmed, and the caller is responsible for decrementing
 // `total_rows` by this amount.
 func (self *PageList) trimTrailingBlankRows(max SizeCellCountInt) SizeCellCountInt {
-	panic(notImplemented)
+	var trimmed SizeCellCountInt = 0
+	bl_pin_ := self.GetBottomRight(PointTagScreen)
+	assert(bl_pin_.Valid) // .?
+	bl_pin := bl_pin_.Value
+	it := bl_pin.RowIterator(PageListDirectionLeftUp, None[PageListPin]())
+	for row_pin_ := it.Next(); row_pin_.Valid; row_pin_ = it.Next() {
+		row_pin := row_pin_.Value
+		cells := row_pin.Cells(PageListPinCellSubsetAll)
+
+		// If the row has any text then we're done.
+		if PageCellHasTextAny(cells) {
+			return trimmed
+		}
+
+		// If our tracked pins are in this row then we cannot trim it
+		// because it implies some sort of importance. If we trimmed this
+		// we'd invalidate this pin, as well.
+		pin_keys := self.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if p.node != row_pin.node ||
+				p.y != row_pin.y {
+				continue
+			}
+			return trimmed
+		}
+
+		// No text, we can trim this row. Because it has
+		// no text we can also be sure it has no styling
+		// so we don't need to worry about memory.
+		row_pin.node.data.size.rows -= 1
+		if row_pin.node.data.size.rows == 0 {
+			self.erasePage(row_pin.node)
+		} else {
+			row_pin.node.data.AssertIntegrity()
+		}
+
+		trimmed += 1
+		if trimmed >= max {
+			return trimmed
+		}
+	}
+
+	return trimmed
 }
 
 // PageListScroll is PageList.Scroll: scroll options.
@@ -2880,14 +3410,273 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self PageListScrollTag) String() string { panic(notImplemented) }
+func (self PageListScrollTag) String() string {
+	return pageListScrollTagNames[self]
+}
+
+// pageListScrollTagNames are the tag names of PageListScrollTag, indexed by
+// value (Zig's @tagName).
+var pageListScrollTagNames = [...]string{"active", "top", "row", "delta_row", "delta_prompt", "pin"}
 
 // Scroll is PageList.scroll.
 //
 // Scroll the viewport. This will never create new scrollback, allocate
 // pages, etc. This can only be used to move the viewport within the
 // previously allocated pages.
-func (self *PageList) Scroll(behavior PageListScroll) { panic(notImplemented) }
+func (self *PageList) Scroll(behavior PageListScroll) {
+	defer self.AssertIntegrity()
+
+	// Special case no-scrollback mode to never allow scrolling.
+	if self.explicit_max_size == 0 {
+		self.viewport = PageListViewport{Tag: PageListViewportActive}
+		return
+	}
+
+	switch behavior.Tag {
+	case PageListScrollActive:
+		self.viewport = PageListViewport{Tag: PageListViewportActive}
+	case PageListScrollTop:
+		self.viewport = PageListViewport{Tag: PageListViewportTop}
+	case PageListScrollPin:
+		p := behavior.Pin
+		if self.pinIsActive(p) {
+			self.viewport = PageListViewport{Tag: PageListViewportActive}
+			return
+		} else if self.pinIsTop(p) {
+			self.viewport = PageListViewport{Tag: PageListViewportTop}
+			return
+		}
+
+		*self.viewport_pin = p
+		self.viewport = PageListViewport{Tag: PageListViewportPin}
+		self.viewport_pin_row_offset = None[uint]() // invalidate cache
+	case PageListScrollRow:
+		// Zig: the labeled block `row:`; `break :row` is a return from
+		// the closure (nothing follows the switch).
+		n := behavior.Row
+		func() {
+			// If we're at the top, pin the top.
+			if n == 0 {
+				self.viewport = PageListViewport{Tag: PageListViewportTop}
+				return
+			}
+
+			// If we're below the top of the active area, pin the active area.
+			assert(self.total_rows >= uint(self.rows)) // Zig: usize `-` traps
+			if n >= self.total_rows-uint(self.rows) {
+				self.viewport = PageListViewport{Tag: PageListViewportActive}
+				return
+			}
+
+			// See if there are any other faster paths we can take.
+			switch self.viewport.Tag {
+			case PageListViewportTop, PageListViewportActive:
+			case PageListViewportPin:
+				if v := self.viewport_pin_row_offset; v.Valid {
+					// If we have a pin and we already calculated a row offset,
+					// then we can efficiently calculate the delta and move
+					// that much from that pin.
+					var delta int
+					{
+						// Zig: @intCast to isize traps when it does not fit.
+						assert(n <= math.MaxInt)
+						n_isize := int(n)
+						assert(v.Value <= math.MaxInt)
+						v_isize := int(v.Value)
+						delta = n_isize - v_isize
+					}
+					self.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: delta})
+					return
+				}
+			}
+
+			// We have an accurate row offset so store it to prevent
+			// calculating this again.
+			self.viewport_pin_row_offset = Some(n)
+			self.viewport = PageListViewport{Tag: PageListViewportPin}
+
+			// Slow path, we've just got to traverse the linked list and
+			// get to our row. As a slight speedup, let's pick the traversal
+			// that's likely faster based on our absolute row and total rows.
+			midpoint := self.total_rows / 2
+			if n < midpoint {
+				// Iterate forward from the first node.
+				node_it := self.pages.first
+				// Zig: std.math.cast(size.CellCountInt, n) orelse { ... }.
+				if n > math.MaxUint16 {
+					self.viewport = PageListViewport{Tag: PageListViewportActive}
+					return
+				}
+				rem := SizeCellCountInt(n)
+				for ; node_it != nil; node_it = node_it.next {
+					node := node_it
+					if rem < node.data.size.rows {
+						*self.viewport_pin = PageListPin{
+							node: node,
+							y:    rem,
+						}
+						return
+					}
+
+					rem -= node.data.size.rows
+				}
+			} else {
+				// Iterate backwards from the last node.
+				node_it := self.pages.last
+				// Zig: std.math.cast(size.CellCountInt, self.total_rows - n)
+				// orelse { ... }.
+				if self.total_rows-n > math.MaxUint16 {
+					self.viewport = PageListViewport{Tag: PageListViewportActive}
+					return
+				}
+				rem := SizeCellCountInt(self.total_rows - n)
+				for ; node_it != nil; node_it = node_it.prev {
+					node := node_it
+					if rem <= node.data.size.rows {
+						*self.viewport_pin = PageListPin{
+							node: node,
+							y:    node.data.size.rows - rem,
+						}
+						return
+					}
+
+					rem -= node.data.size.rows
+				}
+			}
+
+			// If we reached here, then we couldn't find the offset.
+			// This feels impossible? Just clamp to active, screw it lol.
+			self.viewport = PageListViewport{Tag: PageListViewportActive}
+		}()
+	case PageListScrollDeltaPrompt:
+		self.scrollPrompt(behavior.DeltaPrompt)
+	case PageListScrollDeltaRow:
+		// Zig: the labeled block `delta_row:`; `break :delta_row` is a
+		// return from the closure (nothing follows the switch).
+		n := behavior.DeltaRow
+		func() {
+			switch self.viewport.Tag {
+			// If we're at the top and we're scrolling backwards,
+			// we don't have to do anything, because there's nowhere to go.
+			case PageListViewportTop:
+				if n <= 0 {
+					return
+				}
+
+			// If we're at active and we're scrolling forwards, we don't
+			// have to do anything because it'll result in staying in
+			// the active.
+			case PageListViewportActive:
+				if n >= 0 {
+					return
+				}
+
+			// If we're already a pin type, then we can fast-path our
+			// delta by simply moving the pin. This has the added benefit
+			// that we can update our row offset cache efficiently, too.
+			case PageListViewportPin:
+				switch {
+				case n == 0:
+					return
+
+				case n < 0:
+					assert(n != math.MinInt) // Zig: `-n` traps on overflow
+					ov := self.viewport_pin.UpOverflow(uint(-n))
+					switch ov.Tag {
+					case PageListPinOverflowOffset:
+						new_pin := ov.Offset
+						*self.viewport_pin = new_pin
+						if self.viewport_pin_row_offset.Valid {
+							v := &self.viewport_pin_row_offset.Value
+							assert(*v >= uint(-n)) // Zig: usize `-=` traps
+							*v -= uint(-n)
+						}
+						return
+
+					// If we overflow up we're at the top.
+					case PageListPinOverflowOverflow:
+						self.viewport = PageListViewport{Tag: PageListViewportTop}
+						return
+					}
+
+				default: // .gt
+					ov := self.viewport_pin.DownOverflow(uint(n))
+					switch ov.Tag {
+					// If we offset its a valid pin but we still have to
+					// check if we're in the active area.
+					case PageListPinOverflowOffset:
+						new_pin := ov.Offset
+						if self.pinIsActive(new_pin) {
+							self.viewport = PageListViewport{Tag: PageListViewportActive}
+						} else {
+							*self.viewport_pin = new_pin
+							if self.viewport_pin_row_offset.Valid {
+								v := &self.viewport_pin_row_offset.Value
+								*v += uint(n)
+							}
+						}
+						return
+
+					// If we overflow down we're at active.
+					case PageListPinOverflowOverflow:
+						self.viewport = PageListViewport{Tag: PageListViewportActive}
+						return
+					}
+				}
+			}
+
+			// Slow path: we have to calculate the new pin by moving
+			// from our viewport.
+			top := self.GetTopLeft(PointTagViewport)
+			var p PageListPin
+			if n < 0 {
+				assert(n != math.MinInt) // Zig: `-n` traps on overflow
+				ov := top.UpOverflow(uint(-n))
+				switch ov.Tag {
+				case PageListPinOverflowOffset:
+					p = ov.Offset
+				case PageListPinOverflowOverflow:
+					p = ov.Overflow.end
+				}
+			} else {
+				ov := top.DownOverflow(uint(n))
+				switch ov.Tag {
+				case PageListPinOverflowOffset:
+					p = ov.Offset
+				case PageListPinOverflowOverflow:
+					p = ov.Overflow.end
+				}
+			}
+
+			// If we are still within the active area, then we pin the
+			// viewport to active. This isn't EXACTLY the same behavior as
+			// other scrolling because normally when you scroll the viewport
+			// is pinned to _that row_ even if new scrollback is created.
+			// But in a terminal when you get to the bottom and back into the
+			// active area, you usually expect that the viewport will now
+			// follow the active area.
+			if self.pinIsActive(p) {
+				self.viewport = PageListViewport{Tag: PageListViewportActive}
+				return
+			}
+
+			// If we're at the top, then just set the top. This is a lot
+			// more efficient everywhere. We must check this after the
+			// active check above because we prefer active if they overlap.
+			if self.pinIsTop(p) {
+				self.viewport = PageListViewport{Tag: PageListViewportTop}
+				return
+			}
+
+			// Pin is not active so we need to track it.
+			*self.viewport_pin = p
+			self.viewport = PageListViewport{Tag: PageListViewportPin}
+			self.viewport_pin_row_offset = None[uint]() // invalidate cache
+		}()
+	default:
+		panic("unreachable")
+	}
+}
 
 // scrollPrompt is PageList.scrollPrompt.
 //
@@ -2895,7 +3684,90 @@ func (self *PageList) Scroll(behavior PageListScroll) { panic(notImplemented) }
 // prompts (delta).
 //
 // Zig: delta is isize.
-func (self *PageList) scrollPrompt(delta int) { panic(notImplemented) }
+func (self *PageList) scrollPrompt(delta int) {
+	// If we aren't jumping any prompts then we don't need to do anything.
+	if delta == 0 {
+		return
+	}
+	var delta_start uint
+	if delta > 0 {
+		delta_start = uint(delta)
+	} else {
+		assert(delta != math.MinInt) // Zig: `-delta` traps on overflow
+		delta_start = uint(-delta)
+	}
+	delta_rem := delta_start
+
+	// We start at the row before or after our viewport depending on the
+	// delta so that we don't land back on our current viewport.
+	var start_pin PageListPin
+	{
+		tl := self.GetTopLeft(PointTagViewport)
+
+		// If we're moving up we can just move the viewport up because
+		// promptIterator handles jumpting to the start of prompts.
+		if delta <= 0 {
+			up := tl.Up(1)
+			if !up.Valid {
+				return
+			}
+			start_pin = up.Value
+		} else {
+			// If we're moving down and we're presently at some kind of
+			// prompt, we need to skip all the continuation lines because
+			// promptIterator can't know if we're cutoff or continuing.
+			adjusted_ := tl.Down(1)
+			if !adjusted_.Valid {
+				return
+			}
+			adjusted := adjusted_.Value
+			if tl.RowAndCell().row.semantic_prompt != PageRowSemanticPromptNone {
+				// Zig: the labeled block `skip:`.
+				for adjusted.RowAndCell().row.semantic_prompt == PageRowSemanticPromptPromptContinuation {
+					next := adjusted.Down(1)
+					if !next.Valid {
+						break // break :skip
+					}
+					adjusted = next.Value
+				}
+			}
+
+			start_pin = adjusted
+		}
+	}
+
+	// Go through prompts delta times
+	direction := PageListDirectionLeftUp
+	if delta > 0 {
+		direction = PageListDirectionRightDown
+	}
+	it := start_pin.PromptIterator(
+		direction,
+		None[PageListPin](),
+	)
+	var prompt_pin Optional[PageListPin]
+	for next := it.Next(); next.Valid; next = it.Next() {
+		prompt_pin = next
+		delta_rem -= 1
+		if delta_rem == 0 {
+			break
+		}
+	}
+
+	// If we found a prompt, we move to it. If the prompt is in the active
+	// area we keep our viewport as active because we can't scroll DOWN
+	// into the active area. Otherwise, we scroll up to the pin.
+	if prompt_pin.Valid {
+		p := prompt_pin.Value
+		if self.pinIsActive(p) {
+			self.viewport = PageListViewport{Tag: PageListViewportActive}
+		} else {
+			*self.viewport_pin = p
+			self.viewport = PageListViewport{Tag: PageListViewportPin}
+			self.viewport_pin_row_offset = None[uint]() // invalidate cache
+		}
+	}
+}
 
 // ScrollClear is PageList.scrollClear.
 //
@@ -2903,7 +3775,50 @@ func (self *PageList) scrollPrompt(delta int) { panic(notImplemented) }
 // This will not update the viewport.
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
-func (self *PageList) ScrollClear() error { panic(notImplemented) }
+func (self *PageList) ScrollClear() error {
+	defer self.AssertIntegrity()
+
+	// Go through the active area backwards to find the first non-empty
+	// row. We use this to determine how many rows to scroll up.
+	//
+	// Zig: the labeled block `non_empty:`, a closure here.
+	non_empty := func() uint {
+		page := self.pages.last
+		assert(page != nil) // .?
+		var n uint = 0
+		for {
+			rows := page.data.rows
+			for i := range uint(page.data.size.rows) {
+				rev_i := uint(page.data.size.rows) - i - 1
+				row := &rows[rev_i]
+				cells := page.data.rowCells(row)[0:self.cols]
+				for _, cell := range cells {
+					if !cell.IsEmpty() {
+						return uint(self.rows) - n
+					}
+				}
+
+				n += 1
+				if n > uint(self.rows) {
+					return 0
+				}
+			}
+
+			if page.prev == nil {
+				return 0
+			}
+			page = page.prev
+		}
+	}()
+
+	// Scroll
+	for range non_empty {
+		if _, err := self.Grow(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // Compact is PageList.compact.
 //
@@ -2923,7 +3838,71 @@ func (self *PageList) ScrollClear() error { panic(notImplemented) }
 //
 // Zig: Allocator.Error!?*List.Node. A nil node with a nil error is `null`.
 func (self *PageList) Compact(node *PageListNode) (*PageListNode, error) {
-	panic(notImplemented)
+	defer self.AssertIntegrity()
+	page := &node.data
+
+	// We should never have empty rows in our pagelist anyways...
+	assert(page.size.rows > 0)
+
+	// We never compact standard size or smaller pages because changing
+	// the capacity to something smaller won't save memory.
+	if pageListMemoryLen(page) <= pageListStdSize() {
+		return nil, nil
+	}
+
+	// Compute the minimum capacity required for this page's content
+	req_cap := page.ExactRowCapacity(0, uint(page.size.rows))
+	new_size := PageLayoutOf(req_cap).total_size
+	old_size := pageListMemoryLen(page)
+	if new_size >= old_size {
+		return nil, nil
+	}
+
+	// Create the new smaller page
+	new_node, err := self.createPage(req_cap)
+	if err != nil {
+		return nil, err
+	}
+	// errdefer self.destroyNode(new_node): no error is returned after
+	// this point.
+	new_page := &new_node.data
+	new_page.size = page.size
+	new_page.dirty = page.dirty
+	if err := new_page.CloneFrom(
+		page,
+		0,
+		uint(page.size.rows),
+	); err != nil {
+		// cloneFrom should not fail when compacting since req_cap is
+		// computed to exactly fit the source content and our expectation
+		// of exactRowCapacity ensures it can fit all the requested
+		// data.
+		//
+		// Zig: log.err
+		warn("page_list", "compact clone failed err=error.%v", err)
+
+		// In this case, let's gracefully degrade by pretending we
+		// didn't need to compact.
+		self.destroyNode(new_node)
+		return nil, nil
+	}
+
+	// Fix up all tracked pins to point to the new page
+	pin_keys := self.tracked_pins.Keys()
+	for _, p := range pin_keys {
+		if p.node != node {
+			continue
+		}
+		p.node = new_node
+	}
+
+	// Insert the new page and destroy the old one
+	self.pages.InsertBefore(node, new_node)
+	self.pages.Remove(node)
+	self.destroyNode(node)
+
+	new_page.AssertIntegrity()
+	return new_node, nil
 }
 
 // PageList.SplitError is OutOfMemory (allocator OOM; ErrOutOfMemory,
@@ -2945,7 +3924,103 @@ var ErrOutOfSpace = errors.New("OutOfSpace")
 // Since the split happens below the pin, the pin remains valid.
 //
 // Zig: SplitError!void.
-func (self *PageList) Split(p PageListPin) error { panic(notImplemented) }
+func (self *PageList) Split(p PageListPin) (err error) {
+	if pageSlowRuntimeSafety {
+		assert(self.PinIsValid(p))
+	}
+
+	// Ran into a bug that I can only explain via aliasing. If a tracked
+	// pin is passed in, its possible Zig will alias the memory and then
+	// when we modify it later it updates our p here. Copying the node
+	// fixes this.
+	//
+	// (Go passes p by value, so it never aliases a tracked pin.)
+	original_node := p.node
+	page := &original_node.data
+
+	// A page that is already 1 row can't be split. In the future we can
+	// theoretically maybe split by soft-wrapping multiple pages but that
+	// seems crazy and the rest of our PageList can't handle heterogeneously
+	// sized pages today.
+	if page.size.rows <= 1 {
+		return ErrOutOfSpace
+	}
+
+	// Splitting at row 0 is a no-op since there's nothing before the split point.
+	if p.y == 0 {
+		return nil
+	}
+
+	// At this point we're doing actual modification so make sure
+	// on the return that we're good.
+	defer self.AssertIntegrity()
+
+	// Create a new node with the same capacity of managed memory.
+	target, err := self.createPage(page.capacity)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// errdefer
+		if err != nil {
+			self.destroyNode(target)
+		}
+	}()
+
+	// Determine how many rows we're copying
+	y_start := p.y
+	y_end := page.size.rows
+	target.data.size.rows = y_end - y_start
+	assert(target.data.size.rows <= target.data.capacity.rows)
+
+	// Copy our old data. This should NOT fail because we have the
+	// capacity of the old page which already fits the data we requested.
+	if err := target.data.CloneFrom(page, uint(y_start), uint(y_end)); err != nil {
+		// Zig: log.err
+		warn(
+			"page_list",
+			"error cloning rows for split err=error.%v",
+			err,
+		)
+
+		// Rather than crash, we return an OutOfSpace to show that
+		// we couldn't split and let our callers gracefully handle it.
+		// Realistically though... this should not happen.
+		return ErrOutOfSpace
+	}
+
+	// From this point forward there is no going back. We have no
+	// error handling. It is possible but we haven't written it.
+	//
+	// errdefer comptime unreachable;
+
+	// Move any tracked pins from the copied rows
+	for _, tracked := range self.tracked_pins.Keys() {
+		if &tracked.node.data != page ||
+			tracked.y < p.y {
+			continue
+		}
+
+		tracked.node = target
+		tracked.y -= p.y
+		// p.x remains the same since we're copying the row as-is
+	}
+
+	// Clear our rows
+	rows := page.rows[y_start:y_end]
+	for i := range rows {
+		page.ClearCells(
+			&rows[i],
+			0,
+			uint(page.size.cols),
+		)
+	}
+	page.size.rows -= y_end - y_start
+
+	self.pages.InsertAfter(original_node, target)
+
+	return nil
+}
 
 // PageListScrollbar is PageList.Scrollbar.
 //

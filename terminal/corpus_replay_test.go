@@ -36,8 +36,9 @@ package terminal
 // # Which kinds are replayed
 //
 // A kind is compared only when its row of corpusAreas lists it and the suite
-// has it. Stage 1: the golden kind of csi (TestCorpusReplayCsi). The other
-// areas are registered but have no test function yet.
+// has it. Stage 2a: the golden kind of every area (TestCorpusReplay<Area>); a
+// suite without a golden file (parser/utf8_decode) is skipped. The trace
+// kinds (actions, actions_noalloc, parser) come with stage 2b.
 //
 // # Environment variables
 //
@@ -69,8 +70,15 @@ package terminal
 //
 //	SUITE csi/cup cases=1330 run=20 skipped=0 mismatch=3 (golden=2) skipped_lines=0
 //
-// Hooks for stage 2: the other kinds (runTrace in corpus_replay_run_test.go),
-// the split runs (feedMode already has bytewise and split), TERM51_SPLIT_MAX.
+// Other files of the replayer:
+//
+//   - corpus_replay_split_test.go  the split runs (TestCorpusReplaySplit<Area>,
+//     main.zig splitCheck), TERM51_SPLIT_MAX, TERM51_SPLIT_AT, the seeds and
+//     corpus_split_known.txt;
+//   - corpus_replay_input_test.go  the keyboard and paste corpus (input.zig);
+//   - corpus_replay_tables_test.go the static tables (tables.zig).
+//
+// Hook for stage 2b: the trace kinds (runTrace in corpus_replay_run_test.go).
 
 import (
 	"bufio"
@@ -425,9 +433,8 @@ func corpusAreaRow(name string) corpusArea {
 	}
 }
 
-// corpusAreas are the terminal areas of the corpus. Only csi has a test
-// function (TestCorpusReplayCsi); the others are the same code with another
-// row and get theirs when the first works.
+// corpusAreas are the terminal areas of the corpus, one row each; every row
+// has its test function (TestCorpusReplay<Area>, TestCorpusReplaySplit<Area>).
 var corpusAreas = []corpusArea{
 	corpusAreaRow("csi"),
 	corpusAreaRow("dcs"),
@@ -1298,4 +1305,13 @@ func corpusReplayArea(t *testing.T, name string) {
 	}
 }
 
-func TestCorpusReplayCsi(t *testing.T) { corpusReplayArea(t, "csi") }
+func TestCorpusReplayCsi(t *testing.T)    { corpusReplayArea(t, "csi") }
+func TestCorpusReplayDcs(t *testing.T)    { corpusReplayArea(t, "dcs") }
+func TestCorpusReplayEsc(t *testing.T)    { corpusReplayArea(t, "esc") }
+func TestCorpusReplayFuzz(t *testing.T)   { corpusReplayArea(t, "fuzz") }
+func TestCorpusReplayModes(t *testing.T)  { corpusReplayArea(t, "modes") }
+func TestCorpusReplayOsc(t *testing.T)    { corpusReplayArea(t, "osc") }
+func TestCorpusReplayParser(t *testing.T) { corpusReplayArea(t, "parser") }
+func TestCorpusReplayResize(t *testing.T) { corpusReplayArea(t, "resize") }
+func TestCorpusReplayScroll(t *testing.T) { corpusReplayArea(t, "scroll") }
+func TestCorpusReplayText(t *testing.T)   { corpusReplayArea(t, "text") }

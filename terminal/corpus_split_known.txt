@@ -1,0 +1,12 @@
+# Known exceptions of the split runs (corpus_replay_split_test.go): variants
+# whose output differs from the recorded one and that are accepted as upstream
+# behaviour. One variant per line, fields separated by spaces:
+#
+#   <area>/<suite> <case> <kind> <split>
+#
+# kind:  golden | actions | actions_noalloc
+# split: bytewise | op:<i>,at:<n> | op:<i>,at:* (every offset of feed op i) | *
+#
+# Empty today: no exception is known. Add a line only after `vtgold split
+# cases/<area>` (the recorder's own split check) shows the same difference on
+# the pinned upstream, and say why in a comment above it.

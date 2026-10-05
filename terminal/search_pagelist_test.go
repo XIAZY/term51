@@ -502,13 +502,17 @@ func TestSaPagelist_term51_PageListSearch_deinit_works_after_the_pin_became_garb
 	zigTry(t, err)
 	defer p.Deinit()
 	first := p.pages.first
-	for i := uint(0); i < uint(first.data.capacity.rows-first.data.size.rows); i++ {
+	// Zig: for (0..n) evaluates n once.
+	n_first := uint(first.data.capacity.rows - first.data.size.rows)
+	for i := uint(0); i < n_first; i++ {
 		saGrowNull(t, &p)
 	}
 	second, err := p.Grow()
 	zigTry(t, err)
 	expect(t, second != nil, "(try p.grow()).?")
-	for i := uint(0); i < uint(second.data.capacity.rows-second.data.size.rows); i++ {
+	// Zig: for (0..n) evaluates n once.
+	n_second := uint(second.data.capacity.rows - second.data.size.rows)
+	for i := uint(0); i < n_second; i++ {
 		saGrowNull(t, &p)
 	}
 	before := p.CountTrackedPins()
@@ -981,13 +985,17 @@ func TestSaPagelist_term51_PageListSearch_feed_pin_becomes_garbage_when_its_page
 	zigTry(t, err)
 	defer p.Deinit()
 	page1_node := p.pages.last
-	for i := uint(0); i < uint(page1_node.data.capacity.rows-page1_node.data.size.rows); i++ {
+	// Zig: for (0..n) evaluates n once.
+	n1 := uint(page1_node.data.capacity.rows - page1_node.data.size.rows)
+	for i := uint(0); i < n1; i++ {
 		saGrowNull(t, &p)
 	}
 	page2_node, err := p.Grow()
 	zigTry(t, err)
 	expect(t, page2_node != nil, "(try p.grow()).?")
-	for i := uint(0); i < uint(page2_node.data.capacity.rows-page2_node.data.size.rows); i++ {
+	// Zig: for (0..n) evaluates n once.
+	n2 := uint(page2_node.data.capacity.rows - page2_node.data.size.rows)
+	for i := uint(0); i < n2; i++ {
 		saGrowNull(t, &p)
 	}
 

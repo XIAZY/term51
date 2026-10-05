@@ -546,23 +546,19 @@ merge into `docs/mapping.md`.
   on 32-bit ARM.
 
 ##### `std.fmt.parseFloat(f64)` (used by `RGB.fromIntensity`)
-- strconv's grammar is not Zig's: Zig accepts `_` between digits (also in the
-  exponent) without a base prefix, a hex mantissa without `p` (`0x1`), and a
-  signed `nan`; strconv rejects those. `colorStdFmtParseFloatF64` ports
-  `parse_float.zig` + `parse.zig` (grammar, `Number`, `validUnderscores`,
-  `parseInfOrNan`) and `convert_hex.zig` (hex conversion, including Zig's
-  handling of more than 16 significant hex digits, which is not correctly
-  rounded: `0x1.000000000000000800000000001p-1` gives 0.5,
-  `0xFFFFFFFFFFFFFFFFFFFFp-80` gives 0x3FEFFFFFFFFFFFFE). Decimal values are
-  converted by `strconv.ParseFloat` of the same digits without underscores:
-  Zig's decimal path (fast path, Eisel-Lemire, slow path) is correctly rounded,
-  as is strconv; `ErrRange` is accepted (it carries Zig's +-inf).
-- The 8-digits-at-a-time fast path of `tryParseDigits` is not ported (same
-  result, wrapping arithmetic).
-- Checked once against Zig 0.15.2 on 60 edge inputs (signs, `.5`, `1.`,
-  underscores valid and invalid, hex with/without `p`, inf/nan spellings,
-  overflow/underflow, 20-50 digit decimals, >16-digit hex): identical bits
-  and identical accept/reject.
+- Ported in full from Zig 0.15.2 (`lib/std/fmt/parse_float.zig` and
+  `parse_float/*.zig`) as `terminal/std_fmt_parse_float.go`, entry point
+  `stdFmtParseFloatF64`; no `strconv`. strconv differs from Zig in grammar
+  (`_` separators, `0x1` without `p`, signed `nan`), in hex rounding (Zig is
+  not correctly rounded with more than 16 significant hex digits), in decimal
+  rounding (Zig's slow path, `Decimal.parse`, drops digits when the input
+  has `_` separators and returns a value one unit in the last place low:
+  `rgbi:0.0_66666666666666658802586908905141171999275684356689453125001/0/0`
+  gives red 16, strconv 17; term51 `docs/upstream-findings.md` section 21,
+  `docs/deliberate-fixes.md` entry 7), and in exponents (strconv caps them
+  at 10,000). The port reproduces all of it. Details, names and the
+  bit-for-bit comparison with Zig: the parseFloat section (pending:
+  `docs/mapping-pending/pf.md`).
 - The error (`error.InvalidCharacter`) is discarded by the only caller, so
   the Go function returns `(float64, bool)`; no new sentinel.
 
@@ -577,8 +573,9 @@ merge into `docs/mapping.md`.
   OSC port, which may declare them).
 - `std.mem.trim` and `std.mem.indexOfScalarPos` are `colorStdMemTrim` and
   `colorStdMemIndexOfScalarPos`.
-- All these stand-ins carry a `color` prefix and live at the end of
-  `color.go` to avoid name clashes with stand-ins the parallel OSC port may
+- All these stand-ins (except `std.fmt.parseFloat`, which is in
+  `std_fmt_parse_float.go` with the prefix `stdFmtParseFloat`) carry a
+  `color` prefix and live at the end of `color.go` to avoid name clashes with stand-ins the parallel OSC port may
   add; they belong in `zig.go` and should be unified with the OSC port's
   equivalents when merging.
 

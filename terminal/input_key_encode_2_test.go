@@ -24,10 +24,10 @@
 //     (uint16 for u9).
 //   - The Terminal that Zig's tests call `t` is called `term`, because the
 //     testing parameter must be `t`.
-//   - Darwin: the two tests that are skipped off macOS are not translated;
-//     the two tests that branch on `builtin.os.tag == .macos` follow the
-//     non-Darwin branch, with `// Zig-only (Darwin):` comments for the lines
-//     that exist only there. See scripts/not-translated-ke2.txt.
+//   - Darwin: the tests that Zig skips off Apple platforms and the tests
+//     that branch on `builtin.os.tag == .macos` run per platform ("linux",
+//     "darwin", "ios"), selected with testPlatform; see the `// Go-only:
+//     platform modes` comments.
 
 package terminal
 
@@ -128,10 +128,21 @@ func ke2Terminal(t *testing.T) *Terminal {
 
 // ke2AltPrevents is term51ABAltPrevents: on macOS the Option key only
 // prevents associated text when it is configured as alt (for the matching
-// side); elsewhere alt always does.
+// side); elsewhere alt always does. `builtin.os.tag == .macos` is
+// platformGOOS == "darwin" (the platform a test selects with testPlatform).
 func ke2AltPrevents(oa InputConfigOptionAsAlt, side InputKeyModsModSide) bool {
-	// Zig-only (Darwin): if (comptime builtin.os.tag == .macos) { return switch (oa) {
-	// .false => false, .true => true, .left => side == .left, .right => side == .right } }
+	if platformGOOS == "darwin" {
+		switch oa {
+		case InputConfigOptionAsAltFalse:
+			return false
+		case InputConfigOptionAsAltTrue:
+			return true
+		case InputConfigOptionAsAltLeft:
+			return side == InputKeyModsModSideLeft
+		case InputConfigOptionAsAltRight:
+			return side == InputKeyModsModSideRight
+		}
+	}
 	return true
 }
 
@@ -296,6 +307,36 @@ func TestKe2_legacy_hu_layout_ctrl_sends_proper_codepoint(t *testing.T) {
 	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBracketLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("ő"), unshifted_codepoint: 337}, InputKeyEncodeOptions{}))
 	actual := writer.buffered()
 	expectEqualStrings(t, "[337;5u", string(actual[1:]))
+}
+
+// Zig: test "legacy: super-only on macOS with text"
+// Zig skips this test unless `builtin.os.tag == .macos`: "darwin" only.
+func TestKe2_legacy_super_only_on_macOS_with_text(t *testing.T) {
+	testPlatform(t, "darwin")
+	var buf [128]uint8
+	writer := oscWriterFixed(buf[:])
+	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{
+		action: InputKeyActionPress,
+		key:    InputKeyKeyKeyB,
+		utf8:   []uint8("b"),
+		mods:   InputKeyMods{super: true},
+	}, InputKeyEncodeOptions{}))
+	expectEqualStrings(t, "", string(writer.buffered()))
+}
+
+// Zig: test "legacy: super and other mods on macOS with text"
+// Zig skips this test unless `builtin.os.tag == .macos`: "darwin" only.
+func TestKe2_legacy_super_and_other_mods_on_macOS_with_text(t *testing.T) {
+	testPlatform(t, "darwin")
+	var buf [128]uint8
+	writer := oscWriterFixed(buf[:])
+	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{
+		action: InputKeyActionPress,
+		key:    InputKeyKeyKeyB,
+		utf8:   []uint8("B"),
+		mods:   InputKeyMods{super: true, shift: true},
+	}, InputKeyEncodeOptions{}))
+	expectEqualStrings(t, "", string(writer.buffered()))
 }
 
 // Zig: test "legacy: backspace with DEL utf8"
@@ -1395,24 +1436,33 @@ func TestKe2_term51_kitty_modifier_combinations_with_report_all(t *testing.T) {
 
 // Zig: test "term51: kitty: consumed mods only affect the plain text decisions"
 func TestKe2_term51_kitty_consumed_mods_only_affect_the_plain_text_decisions(t *testing.T) {
-	testPlatform(t, "linux")
-	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		// The CSI u modifier value always uses all mods, never subtracting
-		// the consumed ones.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2DisAll, want: "\x1b[97;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
-		// Consuming a mod the event does not have changes nothing.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), consumed_mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "a"},
-		// Consumed ctrl+shift: both removed so plain text goes out.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "x"},
-		// Consuming only one of two still leaves a binding mod.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;6u"},
-		// Consumed mods do not matter without text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{ctrl: true}, consumed_mods: InputKeyMods{ctrl: true}}, opts: ke2Dis, want: "\x1b[13;5u"},
-		// Consumed mods do not change the associated text rule (alt prevents).
-		// Zig-only (Darwin): on macOS this case wants "\x1b[119;3;8721u" (want = if (builtin.os.tag == .macos) ... else ...).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyW, utf8: []uint8("\xE2\x88\x91"), mods: InputKeyMods{alt: true}, consumed_mods: InputKeyMods{alt: true}, unshifted_codepoint: 'w'}, opts: ke2Assoc, want: "\x1b[119;3u"},
-	})
+	// Go-only: platform modes
+	for _, goos := range []string{"linux", "darwin", "ios"} {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			// Zig: want = if (builtin.os.tag == .macos) "\x1b[119;3;8721u" else "\x1b[119;3u"
+			altWant := "\x1b[119;3u"
+			if goos == "darwin" {
+				altWant = "\x1b[119;3;8721u"
+			}
+			ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
+				// The CSI u modifier value always uses all mods, never subtracting
+				// the consumed ones.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2DisAll, want: "\x1b[97;2u"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
+				// Consuming a mod the event does not have changes nothing.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), consumed_mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "a"},
+				// Consumed ctrl+shift: both removed so plain text goes out.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "x"},
+				// Consuming only one of two still leaves a binding mod.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;6u"},
+				// Consumed mods do not matter without text.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{ctrl: true}, consumed_mods: InputKeyMods{ctrl: true}}, opts: ke2Dis, want: "\x1b[13;5u"},
+				// Consumed mods do not change the associated text rule (alt prevents).
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyW, utf8: []uint8("\xE2\x88\x91"), mods: InputKeyMods{alt: true}, consumed_mods: InputKeyMods{alt: true}, unshifted_codepoint: 'w'}, opts: ke2Assoc, want: altWant},
+			})
+		})
+	}
 }
 
 // Zig: test "term51: kitty: report_events special form for the table with report_all"
@@ -1571,53 +1621,60 @@ func TestKe2_term51_kitty_associated_text(t *testing.T) {
 
 // Zig: test "term51: kitty: macos_option_as_alt and associated text with alt"
 func TestKe2_term51_kitty_macos_option_as_alt_and_associated_text_with_alt(t *testing.T) {
-	testPlatform(t, "linux")
-	for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
-		for _, sides := range []InputKeyModsModsSide{{}, {alt: InputKeyModsModSideRight}} {
-			opts := InputKeyEncodeOptions{
-				kitty_flags:         KittyKeyFlags{disambiguate: true, report_all: true, report_associated: true},
-				macos_option_as_alt: oa,
-			}
-			ev := InputKeyKeyEvent{
-				action:              InputKeyActionPress,
-				key:                 InputKeyKeyKeyW,
-				mods:                InputKeyMods{alt: true, sides: sides},
-				utf8:                []uint8("∑"),
-				unshifted_codepoint: 119,
-			}
-			var want string
-			if ke2AltPrevents(oa, sides.alt) {
-				want = "\x1b[119;3u"
-			} else {
-				want = "\x1b[119;3;8721u"
-			}
-			ke2Expect(t, inputKeyEncodeKitty, want, ev, opts)
-			ke2Expect(t, InputKeyEncodeEncode, want, ev, opts)
+	// Go-only: platform modes
+	for _, goos := range []string{"linux", "darwin", "ios"} {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
+				for _, sides := range []InputKeyModsModsSide{{}, {alt: InputKeyModsModSideRight}} {
+					opts := InputKeyEncodeOptions{
+						kitty_flags:         KittyKeyFlags{disambiguate: true, report_all: true, report_associated: true},
+						macos_option_as_alt: oa,
+					}
+					ev := InputKeyKeyEvent{
+						action:              InputKeyActionPress,
+						key:                 InputKeyKeyKeyW,
+						mods:                InputKeyMods{alt: true, sides: sides},
+						utf8:                []uint8("∑"),
+						unshifted_codepoint: 119,
+					}
+					var want string
+					if ke2AltPrevents(oa, sides.alt) {
+						want = "\x1b[119;3u"
+					} else {
+						want = "\x1b[119;3;8721u"
+					}
+					ke2Expect(t, inputKeyEncodeKitty, want, ev, opts)
+					ke2Expect(t, InputKeyEncodeEncode, want, ev, opts)
 
-			// Other text-preventing modifiers are never affected.
-			ev2 := ev
-			ev2.mods.alt = false
-			ev2.mods.ctrl = true
-			ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;5u", ev2, opts)
-			ev2.mods.ctrl = false
-			ev2.mods.super = true
-			ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;9u", ev2, opts)
-			// Without alt the text is always reported.
-			ev2.mods = InputKeyMods{shift: true, sides: sides}
-			ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;2;8721u", ev2, opts)
-		}
+					// Other text-preventing modifiers are never affected.
+					ev2 := ev
+					ev2.mods.alt = false
+					ev2.mods.ctrl = true
+					ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;5u", ev2, opts)
+					ev2.mods.ctrl = false
+					ev2.mods.super = true
+					ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;9u", ev2, opts)
+					// Without alt the text is always reported.
+					ev2.mods = InputKeyMods{shift: true, sides: sides}
+					ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;2;8721u", ev2, opts)
+				}
+			}
+			// On non-macOS builds every value behaves the same (alt prevents text).
+			if goos != "darwin" {
+				ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;3u", InputKeyKeyEvent{
+					action:              InputKeyActionPress,
+					key:                 InputKeyKeyKeyW,
+					mods:                InputKeyMods{alt: true},
+					utf8:                []uint8("∑"),
+					unshifted_codepoint: 119,
+				}, InputKeyEncodeOptions{
+					kitty_flags:         KittyKeyFlags{disambiguate: true, report_all: true, report_associated: true},
+					macos_option_as_alt: InputConfigOptionAsAltFalse,
+				})
+			}
+		})
 	}
-	// On non-macOS builds every value behaves the same (alt prevents text).
-	ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;3u", InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyW,
-		mods:                InputKeyMods{alt: true},
-		utf8:                []uint8("∑"),
-		unshifted_codepoint: 119,
-	}, InputKeyEncodeOptions{
-		kitty_flags:         KittyKeyFlags{disambiguate: true, report_all: true, report_associated: true},
-		macos_option_as_alt: InputConfigOptionAsAltFalse,
-	})
 }
 
 // Zig: test "term51: kitty: option flags other than kitty_flags are ignored"

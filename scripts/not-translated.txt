@@ -168,15 +168,6 @@ terminal/render.zig | term51: RenderState.linkCells: allocation failure is OutOf
 
 # Added 2026-10-04 for the input encoder translations. Darwin entries follow the project lead's rule
 # (platform not targeted); the rest are in the approved categories. PENDING approval.
-input/key_encode.zig | kitty: report associated with alt text on macOS with option | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | kitty: report associated with alt text on macOS with alt | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | legacy: alt+x macos | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | legacy: shift+alt+. macos | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | legacy: alt+digit with modify other state 2 and macos-option-as-alt = false | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | legacy: super-only on macOS with text | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | legacy: super and other mods on macOS with text | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_encode.zig | term51: legacy: macos super and option behaviour | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch)
-input/key_mods.zig | translation macos-option-as-alt | platform not targeted (BlackBerry 10: Go follows the non-Darwin branch); the test returns SkipZigTest off Darwin
 input/key_mods.zig | RemapSet: formatEntry empty | app code: needs config/formatter.zig (entryFormatter), skipped in the library build
 input/key_mods.zig | RemapSet: formatEntry single sided | app code: needs config/formatter.zig (entryFormatter), skipped in the library build
 input/key_mods.zig | RemapSet: formatEntry unsided creates two entries | app code: needs config/formatter.zig (entryFormatter), skipped in the library build

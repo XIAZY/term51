@@ -586,9 +586,20 @@ var ke3ACMokAltOpts = InputKeyEncodeOptions{
 }
 
 // Zig: const term51ACMac = builtin.os.tag == .macos;
-// Zig-only (Darwin): term51ACMac and term51ACDarwin are comptime constants
-// that are true only on Apple targets. Go follows the non-Darwin branch, so
-// they have no Go counterpart: every `if (term51ACMac) a else b` below is b.
+// Zig: const term51ACDarwin = builtin.target.os.tag.isDarwin();
+// These are comptime constants. In Go they are the platform a test selects
+// with testPlatform: term51ACMac is platformGOOS == "darwin" (ke3ACMac) and
+// term51ACDarwin is "darwin" or "ios" (ke3ACDarwin). The tests that use
+// them run once per platform in ke3Platforms.
+
+// ke3Platforms is the three platform modes of the encoders.
+var ke3Platforms = []string{"linux", "darwin", "ios"}
+
+// ke3ACMac is term51ACMac for the platform goos.
+func ke3ACMac(goos string) bool { return goos == "darwin" }
+
+// ke3ACDarwin is term51ACDarwin for the platform goos.
+func ke3ACDarwin(goos string) bool { return goos == "darwin" || goos == "ios" }
 
 // Zig: test "term51: encode: each kitty flag alone selects kitty"
 func TestKe3_term51_encode_each_kitty_flag_alone_selects_kitty(t *testing.T) {
@@ -669,21 +680,28 @@ func TestKe3_term51_encode_legacy_options(t *testing.T) {
 
 // Zig: test "term51: encode: macos_option_as_alt with every value"
 func TestKe3_term51_encode_macos_option_as_alt_with_every_value(t *testing.T) {
-	testPlatform(t, "linux")
-	ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true}, unshifted_codepoint: 'c'}
-	evr := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}, unshifted_codepoint: 'c'}
-	for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
-		opts := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: oa}
-		// Left alt (default side).
-		// Zig-only (Darwin): on macOS left_want is "c" for .false and .right
-		// and "\x1bc" for .true and .left.
-		leftWant := "\x1bc"
-		ke3ABExpect(t, InputKeyEncodeEncode, leftWant, ev, opts)
-		// Right alt.
-		// Zig-only (Darwin): on macOS right_want is "c" for .false and .left
-		// and "\x1bc" for .true and .right.
-		rightWant := "\x1bc"
-		ke3ABExpect(t, InputKeyEncodeEncode, rightWant, evr, opts)
+	// Go-only: platform modes
+	for _, goos := range ke3Platforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true}, unshifted_codepoint: 'c'}
+			evr := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}, unshifted_codepoint: 'c'}
+			for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
+				opts := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: oa}
+				// Left alt (default side).
+				leftWant := "\x1bc"
+				if ke3ACMac(goos) && (oa == InputConfigOptionAsAltFalse || oa == InputConfigOptionAsAltRight) {
+					leftWant = "c"
+				}
+				ke3ABExpect(t, InputKeyEncodeEncode, leftWant, ev, opts)
+				// Right alt.
+				rightWant := "\x1bc"
+				if ke3ACMac(goos) && (oa == InputConfigOptionAsAltFalse || oa == InputConfigOptionAsAltLeft) {
+					rightWant = "c"
+				}
+				ke3ABExpect(t, InputKeyEncodeEncode, rightWant, evr, opts)
+			}
+		})
 	}
 }
 
@@ -1435,31 +1453,49 @@ func TestKe3_term51_legacyAltPrefix_byte_selection_from_utf8_and_unshifted_codep
 
 // Zig: test "term51: legacyAltPrefix: macos_option_as_alt and alt side"
 func TestKe3_term51_legacyAltPrefix_macos_option_as_alt_and_alt_side(t *testing.T) {
-	testPlatform(t, "linux")
-	altLeft := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideLeft}}
-	altRight := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}
-	ev := InputKeyKeyEvent{action: InputKeyActionPress, utf8: []uint8("c")}
-	opts := []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight}
+	// Go-only: platform modes
+	for _, goos := range ke3Platforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			altLeft := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideLeft}}
+			altRight := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}
+			ev := InputKeyKeyEvent{action: InputKeyActionPress, utf8: []uint8("c")}
+			opts := []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight}
 
-	// Zig-only (Darwin): the table `mac` of expected results for
-	// [option][side] on macOS: false never, true always, left only the left
-	// alt, right only the right alt.
-	for _, opt := range opts {
-		o := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: opt}
-		left := ke3Lap(t, ev, altLeft, altLeft, o)
-		right := ke3Lap(t, ev, altRight, altRight, o)
-		// Zig-only (Darwin): `if (term51ACMac)` compares left and right with
-		// mac[i][0] and mac[i][1].
-		// Everywhere else the option is not consulted at all.
-		expectEqual(t, Some[uint8]('c'), left)
-		expectEqual(t, Some[uint8]('c'), right)
+			// Expected results for [option][side] on macOS: false never, true
+			// always, left only the left alt, right only the right alt.
+			c := Some[uint8]('c')
+			n := None[uint8]()
+			mac := [4][2]Optional[uint8]{
+				{n, n},
+				{c, c},
+				{c, n},
+				{n, c},
+			}
+			for i, opt := range opts {
+				o := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: opt}
+				left := ke3Lap(t, ev, altLeft, altLeft, o)
+				right := ke3Lap(t, ev, altRight, altRight, o)
+				if ke3ACMac(goos) {
+					expectEqual(t, mac[i][0], left)
+					expectEqual(t, mac[i][1], right)
+				} else {
+					// Everywhere else the option is not consulted at all.
+					expectEqual(t, Some[uint8]('c'), left)
+					expectEqual(t, Some[uint8]('c'), right)
+				}
+			}
+
+			// The side is read from the mods argument, not the binding mods.
+			o := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltLeft}
+			got := ke3Lap(t, ev, InputKeyMods{alt: true}, altRight, o)
+			if ke3ACMac(goos) {
+				expectEqual(t, None[uint8](), got)
+			} else {
+				expectEqual(t, Some[uint8]('c'), got)
+			}
+		})
 	}
-
-	// The side is read from the mods argument, not the binding mods.
-	o := InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltLeft}
-	got := ke3Lap(t, ev, InputKeyMods{alt: true}, altRight, o)
-	// Zig-only (Darwin): the expected value is null on macOS.
-	expectEqual(t, Some[uint8]('c'), got)
 }
 
 // Zig: test "term51: legacy: only press and repeat produce output"
@@ -1661,25 +1697,33 @@ func TestKe3_term51_legacy_plain_text_for_letters_digits_punctuation_and_unicode
 
 // Zig: test "term51: legacy: super with text"
 func TestKe3_term51_legacy_super_with_text(t *testing.T) {
-	testPlatform(t, "linux")
-	// Zig-only (Darwin): on macOS super_text and super_shift are "".
-	superText := "b"
-	superShift := "B"
-	ke3ACRunCases(t, []ke3ACCase{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: superText},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, shift: true}, utf8: []uint8("B")}, opts: InputKeyEncodeOptions{}, want: superShift},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, sides: InputKeyModsModsSide{super: InputKeyModsModSideRight}}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: superText},
-		// Super with alt prefixing: the alt prefix is applied first.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, alt: true}, utf8: []uint8("b")}, opts: ke3ACAltOpts, want: "\x1bb"},
-		// Super with ctrl is encoded as CSI u regardless of the platform.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, ctrl: true}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: "\x1b[98;5u"},
-		// Super with consumed super still counts as super (all_mods).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}, consumed_mods: InputKeyMods{super: true}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: superText},
-		// Super with no text emits nothing.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}}, opts: InputKeyEncodeOptions{}, want: ""},
-		// Super with pc style keys is unaffected.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, mods: InputKeyMods{super: true}}, opts: InputKeyEncodeOptions{}, want: "\x1b[1;9A"},
-	})
+	// Go-only: platform modes
+	for _, goos := range ke3Platforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			superText := "b"
+			superShift := "B"
+			if ke3ACMac(goos) {
+				superText = ""
+				superShift = ""
+			}
+			ke3ACRunCases(t, []ke3ACCase{
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: superText},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, shift: true}, utf8: []uint8("B")}, opts: InputKeyEncodeOptions{}, want: superShift},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, sides: InputKeyModsModsSide{super: InputKeyModsModSideRight}}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: superText},
+				// Super with alt prefixing: the alt prefix is applied first.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, alt: true}, utf8: []uint8("b")}, opts: ke3ACAltOpts, want: "\x1bb"},
+				// Super with ctrl is encoded as CSI u regardless of the platform.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true, ctrl: true}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: "\x1b[98;5u"},
+				// Super with consumed super still counts as super (all_mods).
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}, consumed_mods: InputKeyMods{super: true}, utf8: []uint8("b")}, opts: InputKeyEncodeOptions{}, want: superText},
+				// Super with no text emits nothing.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}}, opts: InputKeyEncodeOptions{}, want: ""},
+				// Super with pc style keys is unaffected.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, mods: InputKeyMods{super: true}}, opts: InputKeyEncodeOptions{}, want: "\x1b[1;9A"},
+			})
+		})
+	}
 }
 
 // Zig: test "term51: legacy: ctrl sequences and alt prefix"
@@ -1805,83 +1849,116 @@ func TestKe3_term51_legacy_alt_prefix_with_text(t *testing.T) {
 
 // Zig: test "term51: legacy: modify other keys state 2 and macos option"
 func TestKe3_term51_legacy_modify_other_keys_state_2_and_macos_option(t *testing.T) {
-	testPlatform(t, "linux")
-	const M = "\x1b[27;3;49~"
-	// Alt held, text "1": the CSI 27 sequence on every platform where alt
-	// is kept as alt; on macOS the option setting decides.
-	left := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideLeft}}
-	right := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}
-	// Zig-only (Darwin): the table `mac` of expected results for
-	// [option][side]: { "1", "1" }, { M, M }, { M, "1" }, { "1", M }; it is
-	// used when term51ACDarwin is true.
-	opts := []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight}
-	for _, opt := range opts {
-		o := InputKeyEncodeOptions{modify_other_keys_state_2: true, alt_esc_prefix: true, macos_option_as_alt: opt}
-		ke3ACExpect(t, M, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: left, utf8: []uint8("1")}, o)
-		ke3ACExpect(t, M, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: right, utf8: []uint8("1")}, o)
+	// Go-only: platform modes
+	for _, goos := range ke3Platforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			const M = "\x1b[27;3;49~"
+			// Alt held, text "1", alt_esc_prefix on: the CSI 27 sequence on Linux. On macOS
+			// the option setting decides between the CSI 27 sequence and the text. On iOS
+			// (isDarwin() true, `.macos` false) key translation drops alt unless it is set
+			// as option-as-alt, so modify other keys does not apply, but the alt prefix
+			// (which only checks `.macos`) still does: ESC and the text.
+			left := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideLeft}}
+			right := InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}
+			mac := [4][2]string{
+				{"1", "1"},
+				{M, M},
+				{M, "1"},
+				{"1", M},
+			}
+			ios := [4][2]string{
+				{"\x1b1", "\x1b1"},
+				{M, M},
+				{M, "\x1b1"},
+				{"\x1b1", M},
+			}
+			opts := []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight}
+			for i, opt := range opts {
+				o := InputKeyEncodeOptions{modify_other_keys_state_2: true, alt_esc_prefix: true, macos_option_as_alt: opt}
+				wantLeft, wantRight := M, M
+				if ke3ACMac(goos) {
+					wantLeft, wantRight = mac[i][0], mac[i][1]
+				} else if ke3ACDarwin(goos) {
+					wantLeft, wantRight = ios[i][0], ios[i][1]
+				}
+				ke3ACExpect(t, wantLeft, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: left, utf8: []uint8("1")}, o)
+				ke3ACExpect(t, wantRight, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: right, utf8: []uint8("1")}, o)
+			}
+		})
 	}
 }
 
 // Zig: test "term51: legacy: modify other keys state 2 conditions"
 func TestKe3_term51_legacy_modify_other_keys_state_2_conditions(t *testing.T) {
-	testPlatform(t, "linux")
-	ke3ACRunCases(t, []ke3ACCase{
-		// Control input range 0x40..0x7F with a modifier.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("A"), unshifted_codepoint: 'a'}, opts: ke3ACMokOpts, want: "\x1b[27;2;65~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{super: true}, utf8: []uint8("a")}, opts: ke3ACMokOpts, want: "\x1b[27;9;97~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("@")}, opts: ke3ACMokOpts, want: "\x1b[27;2;64~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("~")}, opts: ke3ACMokOpts, want: "\x1b[27;2;126~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("\x7f")}, opts: ke3ACMokOpts, want: "\x1b[27;2;127~"},
-		// Just below the range with only shift: not encoded.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("?")}, opts: ke3ACMokOpts, want: "?"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("!")}, opts: ke3ACMokOpts, want: "!"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("\x01")}, opts: ke3ACMokOpts, want: "\x01"},
-		// Shift with space is allowed.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeySpace, mods: InputKeyMods{shift: true}, utf8: []uint8(" ")}, opts: ke3ACMokOpts, want: "\x1b[27;2;32~"},
-		// Anything other than shift is encoded, in or out of the range.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true}, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "\x1b[27;3;49~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{super: true}, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "\x1b[27;9;49~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{ctrl: true, shift: true}, utf8: []uint8("!"), unshifted_codepoint: '1'}, opts: ke3ACMokOpts, want: "\x1b[27;6;33~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true, shift: true}, utf8: []uint8("!"), unshifted_codepoint: '1'}, opts: ke3ACMokOpts, want: "\x1b[27;4;33~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{alt: true}, utf8: []uint8("\x01")}, opts: ke3ACMokOpts, want: "\x1b[27;3;1~"},
-		// No modifiers: nothing matches, text is written.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, opts: ke3ACMokOpts, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("~")}, opts: ke3ACMokOpts, want: "~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "1"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{caps_lock: true, num_lock: true}, utf8: []uint8("A")}, opts: ke3ACMokOpts, want: "A"},
-		// Ctrl sequences win over modify other keys.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{ctrl: true}, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "1"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true}, utf8: []uint8("c")}, opts: ke3ACMokOpts, want: "\x03"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true, alt: true}, utf8: []uint8("c")}, opts: ke3ACMokOpts, want: "\x1b\x03"},
-		// Ctrl on a letter that is not a ctrl sequence: CSI 27 instead of CSI u.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyI, mods: InputKeyMods{ctrl: true}, utf8: []uint8("i")}, opts: ke3ACMokOpts, want: "\x1b[27;5;105~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyI, mods: InputKeyMods{ctrl: true}, utf8: []uint8("i")}, opts: InputKeyEncodeOptions{}, want: "\x1b[105;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBracketLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("[")}, opts: ke3ACMokOpts, want: "\x1b[27;5;91~"},
-		// The mods are the event mods, not reduced by consumed mods.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyH, mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{shift: true}, utf8: []uint8("H")}, opts: ke3ACMokOpts, want: "\x1b[27;6;72~"},
-		// Multi byte codepoints are encoded with their codepoint value.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyE, mods: InputKeyMods{alt: true}, utf8: []uint8("\xc3\xa9")}, opts: ke3ACMokOpts, want: "\x1b[27;3;233~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{ctrl: true}, utf8: []uint8("\xf0\x9f\x98\x80")}, opts: ke3ACMokOpts, want: "\x1b[27;5;128512~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyE, mods: InputKeyMods{shift: true}, utf8: []uint8("\xc3\x89")}, opts: ke3ACMokOpts, want: "\xc3\x89"},
-		// More than one codepoint: not encoded, text is written (alt prefix
-		// only when a byte is available).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("ab")}, opts: ke3ACMokAltOpts, want: "ab"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("ab"), unshifted_codepoint: 'a'}, opts: ke3ACMokAltOpts, want: "\x1ba"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{ctrl: true}, utf8: []uint8("ab")}, opts: ke3ACMokOpts, want: "ab"},
-		// Zig-only (Darwin): `if (term51ACMac) "" else ...` here is the non-Darwin value
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{super: true}, utf8: []uint8("e\xcc\x81")}, opts: ke3ACMokOpts, want: "e\xcc\x81"},
-		// Invalid utf8: not encoded.
-		// Zig-only (Darwin): `if (term51ACMac) "" else ...` here is the non-Darwin value
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{super: true}, utf8: []uint8("\xff")}, opts: ke3ACMokOpts, want: "\xff"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("\xff")}, opts: ke3ACMokAltOpts, want: "\x1b\xff"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{ctrl: true}, utf8: []uint8("\xff")}, opts: ke3ACMokOpts, want: "\xff"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("\xc3")}, opts: ke3ACMokAltOpts, want: "\x1b\xc3"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("\xf0\x9f\x98")}, opts: ke3ACMokAltOpts, want: "\xf0\x9f\x98"},
-		// Without the mode the same events are not CSI 27.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("A")}, opts: InputKeyEncodeOptions{}, want: "A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true}, utf8: []uint8("1")}, opts: ke3ACAltNoPrefix, want: "1"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true}, utf8: []uint8("1")}, opts: ke3ACAltOpts, want: "\x1b1"},
-	})
+	// Go-only: platform modes
+	for _, goos := range ke3Platforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			// Zig: `if (term51ACMac) "" else text`: macOS never encodes text with super.
+			superUnlessMac := func(text string) string {
+				if ke3ACMac(goos) {
+					return ""
+				}
+				return text
+			}
+			ke3ACRunCases(t, []ke3ACCase{
+				// Control input range 0x40..0x7F with a modifier.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("A"), unshifted_codepoint: 'a'}, opts: ke3ACMokOpts, want: "\x1b[27;2;65~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{super: true}, utf8: []uint8("a")}, opts: ke3ACMokOpts, want: "\x1b[27;9;97~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("@")}, opts: ke3ACMokOpts, want: "\x1b[27;2;64~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("~")}, opts: ke3ACMokOpts, want: "\x1b[27;2;126~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("\x7f")}, opts: ke3ACMokOpts, want: "\x1b[27;2;127~"},
+				// Just below the range with only shift: not encoded.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("?")}, opts: ke3ACMokOpts, want: "?"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("!")}, opts: ke3ACMokOpts, want: "!"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("\x01")}, opts: ke3ACMokOpts, want: "\x01"},
+				// Shift with space is allowed.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeySpace, mods: InputKeyMods{shift: true}, utf8: []uint8(" ")}, opts: ke3ACMokOpts, want: "\x1b[27;2;32~"},
+				// Anything other than shift is encoded, in or out of the range.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true}, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "\x1b[27;3;49~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{super: true}, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "\x1b[27;9;49~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{ctrl: true, shift: true}, utf8: []uint8("!"), unshifted_codepoint: '1'}, opts: ke3ACMokOpts, want: "\x1b[27;6;33~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true, shift: true}, utf8: []uint8("!"), unshifted_codepoint: '1'}, opts: ke3ACMokOpts, want: "\x1b[27;4;33~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{alt: true}, utf8: []uint8("\x01")}, opts: ke3ACMokOpts, want: "\x1b[27;3;1~"},
+				// No modifiers: nothing matches, text is written.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, opts: ke3ACMokOpts, want: "a"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("~")}, opts: ke3ACMokOpts, want: "~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "1"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{caps_lock: true, num_lock: true}, utf8: []uint8("A")}, opts: ke3ACMokOpts, want: "A"},
+				// Ctrl sequences win over modify other keys.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{ctrl: true}, utf8: []uint8("1")}, opts: ke3ACMokOpts, want: "1"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true}, utf8: []uint8("c")}, opts: ke3ACMokOpts, want: "\x03"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true, alt: true}, utf8: []uint8("c")}, opts: ke3ACMokOpts, want: "\x1b\x03"},
+				// Ctrl on a letter that is not a ctrl sequence: CSI 27 instead of CSI u.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyI, mods: InputKeyMods{ctrl: true}, utf8: []uint8("i")}, opts: ke3ACMokOpts, want: "\x1b[27;5;105~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyI, mods: InputKeyMods{ctrl: true}, utf8: []uint8("i")}, opts: InputKeyEncodeOptions{}, want: "\x1b[105;5u"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBracketLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("[")}, opts: ke3ACMokOpts, want: "\x1b[27;5;91~"},
+				// The mods are the event mods, not reduced by consumed mods.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyH, mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{shift: true}, utf8: []uint8("H")}, opts: ke3ACMokOpts, want: "\x1b[27;6;72~"},
+				// Multi byte codepoints are encoded with their codepoint value.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyE, mods: InputKeyMods{alt: true}, utf8: []uint8("\xc3\xa9")}, opts: ke3ACMokOpts, want: "\x1b[27;3;233~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{ctrl: true}, utf8: []uint8("\xf0\x9f\x98\x80")}, opts: ke3ACMokOpts, want: "\x1b[27;5;128512~"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyE, mods: InputKeyMods{shift: true}, utf8: []uint8("\xc3\x89")}, opts: ke3ACMokOpts, want: "\xc3\x89"},
+				// More than one codepoint: not encoded, text is written (alt prefix
+				// only when a byte is available).
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("ab")}, opts: ke3ACMokAltOpts, want: "ab"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("ab"), unshifted_codepoint: 'a'}, opts: ke3ACMokAltOpts, want: "\x1ba"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{ctrl: true}, utf8: []uint8("ab")}, opts: ke3ACMokOpts, want: "ab"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{super: true}, utf8: []uint8("e\xcc\x81")}, opts: ke3ACMokOpts, want: superUnlessMac("e\xcc\x81")},
+				// Invalid utf8: not encoded.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{super: true}, utf8: []uint8("\xff")}, opts: ke3ACMokOpts, want: superUnlessMac("\xff")},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("\xff")}, opts: ke3ACMokAltOpts, want: "\x1b\xff"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{ctrl: true}, utf8: []uint8("\xff")}, opts: ke3ACMokOpts, want: "\xff"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("\xc3")}, opts: ke3ACMokAltOpts, want: "\x1b\xc3"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, mods: InputKeyMods{alt: true}, utf8: []uint8("\xf0\x9f\x98")}, opts: ke3ACMokAltOpts, want: "\xf0\x9f\x98"},
+				// Without the mode the same events are not CSI 27.
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{shift: true}, utf8: []uint8("A")}, opts: InputKeyEncodeOptions{}, want: "A"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true}, utf8: []uint8("1")}, opts: ke3ACAltNoPrefix, want: "1"},
+				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit1, mods: InputKeyMods{alt: true}, utf8: []uint8("1")}, opts: ke3ACAltOpts, want: "\x1b1"},
+			})
+		})
+	}
 }
 
 // ke3ACModLetterOn is term51ACModLetterOn.
@@ -1925,49 +2002,56 @@ func TestKe3_term51_legacy_modify_other_keys_state_2_for_every_modifier_combinat
 
 // Zig: test "term51: legacy: letter with every modifier combination without modify other keys"
 func TestKe3_term51_legacy_letter_with_every_modifier_combination_without_modify_other_keys(t *testing.T) {
-	testPlatform(t, "linux")
-	// Zig-only (Darwin): on macOS st is "".
-	st := "a"
-	off := [16]string{
-		"a",
-		"a",
-		"\x01",
-		"\x01",
-		"a",
-		"a",
-		"\x1b\x01",
-		"\x1b\x01",
-		st,
-		st,
-		"\x1b[97;5u",
-		"\x1b[97;6u",
-		st,
-		st,
-		"\x1b[97;7u",
-		"\x1b[97;8u",
-	}
-	prefixed := [16]string{
-		"a",
-		"a",
-		"\x01",
-		"\x01",
-		"\x1ba",
-		"\x1ba",
-		"\x1b\x01",
-		"\x1b\x01",
-		st,
-		st,
-		"\x1b[97;5u",
-		"\x1b[97;6u",
-		"\x1ba",
-		"\x1ba",
-		"\x1b[97;7u",
-		"\x1b[97;8u",
-	}
-	for bits := 0; bits < 16; bits++ {
-		ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: ke3ACMods(bits), utf8: []uint8("a"), unshifted_codepoint: 'a'}
-		ke3ACExpect(t, off[bits], ev, ke3ACAltNoPrefix)
-		ke3ACExpect(t, prefixed[bits], ev, ke3ACAltOpts)
+	// Go-only: platform modes
+	for _, goos := range ke3Platforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			st := "a"
+			if ke3ACMac(goos) {
+				st = ""
+			}
+			off := [16]string{
+				"a",
+				"a",
+				"\x01",
+				"\x01",
+				"a",
+				"a",
+				"\x1b\x01",
+				"\x1b\x01",
+				st,
+				st,
+				"\x1b[97;5u",
+				"\x1b[97;6u",
+				st,
+				st,
+				"\x1b[97;7u",
+				"\x1b[97;8u",
+			}
+			prefixed := [16]string{
+				"a",
+				"a",
+				"\x01",
+				"\x01",
+				"\x1ba",
+				"\x1ba",
+				"\x1b\x01",
+				"\x1b\x01",
+				st,
+				st,
+				"\x1b[97;5u",
+				"\x1b[97;6u",
+				"\x1ba",
+				"\x1ba",
+				"\x1b[97;7u",
+				"\x1b[97;8u",
+			}
+			for bits := 0; bits < 16; bits++ {
+				ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: ke3ACMods(bits), utf8: []uint8("a"), unshifted_codepoint: 'a'}
+				ke3ACExpect(t, off[bits], ev, ke3ACAltNoPrefix)
+				ke3ACExpect(t, prefixed[bits], ev, ke3ACAltOpts)
+			}
+		})
 	}
 }
 
@@ -2258,9 +2342,18 @@ func TestKe3_term51_legacy_empty_buffer_works_when_there_is_no_output(t *testing
 	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeLegacy(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, mods: InputKeyMods{ctrl: true}}, InputKeyEncodeOptions{}))
 }
 
-// Not translated: Zig test "term51: legacy: macos super and option behaviour"
-// returns error.SkipZigTest unless builtin.os.tag == .macos (platform not
-// targeted; see scripts/not-translated-ke3.txt).
+// Zig: test "term51: legacy: macos super and option behaviour"
+// Zig skips this test unless term51ACMac (`builtin.os.tag == .macos`):
+// "darwin" only.
+func TestKe3_term51_legacy_macos_super_and_option_behaviour(t *testing.T) {
+	testPlatform(t, "darwin")
+	// Option as alt = false on macOS: no alt prefix, text is kept.
+	ke3ACExpect(t, "\xc3\xa5", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{alt: true}, utf8: []uint8("\xc3\xa5"), unshifted_codepoint: 'a'}, InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltFalse})
+	// Left only: the right alt translates, the left one prefixes.
+	ke3ACExpect(t, "\x1ba", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideLeft}}, utf8: []uint8("\xc3\xa5"), unshifted_codepoint: 'a'}, InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltLeft})
+	ke3ACExpect(t, "\xc3\xa5", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{alt: true, sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}, utf8: []uint8("\xc3\xa5"), unshifted_codepoint: 'a'}, InputKeyEncodeOptions{alt_esc_prefix: true, macos_option_as_alt: InputConfigOptionAsAltLeft})
+	ke3ACExpect(t, "", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, mods: InputKeyMods{super: true}, utf8: []uint8("b")}, InputKeyEncodeOptions{})
+}
 
 // Go-only: panic test: inputKeyEncodePcStyleFunctionKey: a key outside the
 // key table indexes past function_keys.keys (std.EnumArray.get)

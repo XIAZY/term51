@@ -16,8 +16,8 @@
 //   - Zig's `kitty` and `legacy` are inputKeyEncodeKitty and
 //     inputKeyEncodeLegacy; Zig's `Options` literal `.{}` is
 //     InputKeyEncodeOptions{}, whose every field is the Zig default.
-//   - Darwin-only tests (the SkipZigTest ones that run only on macOS) are not
-//     translated; they are listed in scripts/not-translated-ke1.txt.
+//   - The tests Zig skips off Apple platforms run here under "darwin" (and
+//     "ios" where Zig gates on isDarwin()) through testPlatform.
 
 package terminal
 
@@ -632,6 +632,74 @@ func TestKe1_kitty_left_shift_with_report_all(t *testing.T) {
 	expectEqualStrings(t, "\x1b[57441u", got)
 }
 
+// Zig: test "kitty: report associated with alt text on macOS with option"
+// Zig skips this test unless `builtin.os.tag == .macos`: "darwin" only.
+func TestKe1_kitty_report_associated_with_alt_text_on_macOS_with_option(t *testing.T) {
+	testPlatform(t, "darwin")
+	got := ke1Kitty(t, InputKeyKeyEvent{
+		action:              InputKeyActionPress,
+		key:                 InputKeyKeyKeyW,
+		mods:                InputKeyMods{alt: true},
+		utf8:                []uint8("∑"),
+		unshifted_codepoint: 119,
+	}, InputKeyEncodeOptions{
+		kitty_flags: KittyKeyFlags{
+			disambiguate:      true,
+			report_all:        true,
+			report_alternates: true,
+			report_associated: true,
+		},
+		macos_option_as_alt: InputConfigOptionAsAltFalse,
+	})
+	expectEqualStrings(t, "\x1b[119;3;8721u", got)
+}
+
+// Zig: test "kitty: report associated with alt text on macOS with alt"
+// Zig skips this test unless `builtin.target.os.tag.isDarwin()`: it runs
+// under "darwin" and "ios".
+func TestKe1_kitty_report_associated_with_alt_text_on_macOS_with_alt(t *testing.T) {
+	// Go-only: platform modes
+	for _, goos := range []string{"darwin", "ios"} {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			flags := KittyKeyFlags{
+				disambiguate:      true,
+				report_all:        true,
+				report_alternates: true,
+				report_associated: true,
+			}
+			{
+				// With Alt modifier
+				got := ke1Kitty(t, InputKeyKeyEvent{
+					action:              InputKeyActionPress,
+					key:                 InputKeyKeyKeyW,
+					mods:                InputKeyMods{alt: true},
+					utf8:                []uint8("∑"),
+					unshifted_codepoint: 119,
+				}, InputKeyEncodeOptions{
+					kitty_flags:         flags,
+					macos_option_as_alt: InputConfigOptionAsAltTrue,
+				})
+				expectEqualStrings(t, "\x1b[119;3u", got)
+			}
+			{
+				// Without Alt modifier
+				got := ke1Kitty(t, InputKeyKeyEvent{
+					action:              InputKeyActionPress,
+					key:                 InputKeyKeyKeyW,
+					mods:                InputKeyMods{},
+					utf8:                []uint8("∑"),
+					unshifted_codepoint: 119,
+				}, InputKeyEncodeOptions{
+					kitty_flags:         flags,
+					macos_option_as_alt: InputConfigOptionAsAltTrue,
+				})
+				expectEqualStrings(t, "\x1b[119;;8721u", got)
+			}
+		})
+	}
+}
+
 // Zig: test "kitty: report associated with modifiers"
 func TestKe1_kitty_report_associated_with_modifiers(t *testing.T) {
 	testPlatform(t, "linux")
@@ -847,6 +915,52 @@ func TestKe1_legacy_alt_e_only_unshifted(t *testing.T) {
 	expectEqualStrings(t, "\x1Be", got)
 }
 
+// Zig: test "legacy: alt+x macos"
+// Zig skips this test unless `builtin.target.os.tag.isDarwin()`: it runs
+// under "darwin" and "ios".
+func TestKe1_legacy_alt_x_macos(t *testing.T) {
+	// Go-only: platform modes
+	for _, goos := range []string{"darwin", "ios"} {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			got := ke1Legacy(t, InputKeyKeyEvent{
+				action:              InputKeyActionPress,
+				key:                 InputKeyKeyKeyC,
+				utf8:                []uint8("≈"),
+				unshifted_codepoint: 'c',
+				mods:                InputKeyMods{alt: true},
+			}, InputKeyEncodeOptions{
+				alt_esc_prefix:      true,
+				macos_option_as_alt: InputConfigOptionAsAltTrue,
+			})
+			expectEqualStrings(t, "\x1Bc", got)
+		})
+	}
+}
+
+// Zig: test "legacy: shift+alt+. macos"
+// Zig skips this test unless `builtin.target.os.tag.isDarwin()`: it runs
+// under "darwin" and "ios".
+func TestKe1_legacy_shift_alt_period_macos(t *testing.T) {
+	// Go-only: platform modes
+	for _, goos := range []string{"darwin", "ios"} {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			got := ke1Legacy(t, InputKeyKeyEvent{
+				action:              InputKeyActionPress,
+				key:                 InputKeyKeyPeriod,
+				utf8:                []uint8(">"),
+				unshifted_codepoint: '.',
+				mods:                InputKeyMods{alt: true, shift: true},
+			}, InputKeyEncodeOptions{
+				alt_esc_prefix:      true,
+				macos_option_as_alt: InputConfigOptionAsAltTrue,
+			})
+			expectEqualStrings(t, "\x1B>", got)
+		})
+	}
+}
+
 // Zig: test "legacy: alt+ф"
 func TestKe1_legacy_alt_ф(t *testing.T) {
 	testPlatform(t, "linux")
@@ -939,6 +1053,23 @@ func TestKe1_legacy_alt_digit_with_modify_other_state_2(t *testing.T) {
 		macos_option_as_alt:       InputConfigOptionAsAltTrue,
 	})
 	expectEqualStrings(t, "\x1b[27;3;56~", got)
+}
+
+// Zig: test "legacy: alt+digit with modify other state 2 and macos-option-as-alt = false"
+// Zig skips this test unless `builtin.os.tag == .macos`: "darwin" only.
+func TestKe1_legacy_alt_digit_with_modify_other_state_2_and_macos_option_as_alt_false(t *testing.T) {
+	testPlatform(t, "darwin")
+	got := ke1Legacy(t, InputKeyKeyEvent{
+		action:        InputKeyActionPress,
+		key:           InputKeyKeyDigit8,
+		mods:          InputKeyMods{alt: true},
+		consumed_mods: InputKeyMods{alt: true},
+		utf8:          []uint8("["), // common translation of option+8 with European keyboard layouts
+	}, InputKeyEncodeOptions{
+		modify_other_keys_state_2: true,
+		macos_option_as_alt:       InputConfigOptionAsAltFalse,
+	})
+	expectEqualStrings(t, "[", got)
 }
 
 // Zig: test "legacy: fixterm awkward letters"

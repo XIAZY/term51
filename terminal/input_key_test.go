@@ -8,8 +8,10 @@
 //   - `inline for (@typeInfo(Key).@"enum".fields)` is a loop over
 //     InputKeyKeyValues(); `@tagName(key)` is `key.String()`.
 //   - `std.testing.expectEqual(?T, ...)` compares Optional values.
-//   - Platform branches follow the non-Darwin branch; the Darwin lines are
-//     kept as `// Zig-only (Darwin):` comments.
+//   - Platform branches (`builtin.target.os.tag.isDarwin()`) run once per
+//     platform mode: linux, darwin and ios (kmPlatforms, kmIsDarwin in
+//     input_key_mods_test.go). Every check in key.zig is isDarwin(), so
+//     darwin and ios expect the same values.
 //   - Checks of `@typeInfo(...).tag_type` are `// Zig-only:` comments.
 
 package terminal
@@ -351,11 +353,16 @@ func TestKmKey_w3c(t *testing.T) {
 }
 
 // Zig: test "ctrlOrSuper"
+// Go-only: platform modes (the helper sets ctrl or super by platform).
 func TestKmKey_ctrlOrSuper(t *testing.T) {
-	testPlatform(t, "linux")
-	m := InputKeyCtrlOrSuper(InputKeyMods{})
+	for _, goos := range kmPlatforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			m := InputKeyCtrlOrSuper(InputKeyMods{})
 
-	expect(t, m.CtrlOrSuper(), "m.ctrlOrSuper()")
+			expect(t, m.CtrlOrSuper(), "m.ctrlOrSuper()")
+		})
+	}
 }
 
 // Zig: test "term51: Action: every value and its integer"
@@ -895,22 +902,38 @@ func TestKmKey_term51_Key_keypad_every_key(t *testing.T) {
 // translated (Key.imguiKey is not ported). See scripts/not-translated-km.txt.
 
 // Zig: test "term51: Key.ctrlOrSuper: every key"
+// Go-only: platform modes (Key.ctrlOrSuper uses isDarwin(): darwin and ios agree).
 func TestKmKey_term51_Key_ctrlOrSuper_every_key(t *testing.T) {
-	testPlatform(t, "linux")
-	for _, k := range InputKeyKeyValues() {
-		// Zig-only (Darwin): expected = k == .meta_left or k == .meta_right
-		expected := k == InputKeyKeyControlLeft || k == InputKeyKeyControlRight
-		expectEqual(t, expected, k.CtrlOrSuper())
-	}
+	for _, goos := range kmPlatforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			is_darwin := kmIsDarwin(goos)
+			for _, k := range InputKeyKeyValues() {
+				var expected bool
+				if is_darwin {
+					expected = k == InputKeyKeyMetaLeft || k == InputKeyKeyMetaRight
+				} else {
+					expected = k == InputKeyKeyControlLeft || k == InputKeyKeyControlRight
+				}
+				expectEqual(t, expected, k.CtrlOrSuper())
+			}
 
-	// Zig-only (Darwin): if (isDarwin) { meta_left and meta_right are ctrlOrSuper, control_left and control_right are not } else {
-	expect(t, InputKeyKeyControlLeft.CtrlOrSuper(), "Key.control_left.ctrlOrSuper()")
-	expect(t, InputKeyKeyControlRight.CtrlOrSuper(), "Key.control_right.ctrlOrSuper()")
-	expect(t, !InputKeyKeyMetaLeft.CtrlOrSuper(), "!Key.meta_left.ctrlOrSuper()")
-	expect(t, !InputKeyKeyMetaRight.CtrlOrSuper(), "!Key.meta_right.ctrlOrSuper()")
-	expect(t, !InputKeyKeyShiftLeft.CtrlOrSuper(), "!Key.shift_left.ctrlOrSuper()")
-	expect(t, !InputKeyKeyAltLeft.CtrlOrSuper(), "!Key.alt_left.ctrlOrSuper()")
-	expect(t, !InputKeyKeyKeyC.CtrlOrSuper(), "!Key.key_c.ctrlOrSuper()")
+			if is_darwin {
+				expect(t, InputKeyKeyMetaLeft.CtrlOrSuper(), "Key.meta_left.ctrlOrSuper()")
+				expect(t, InputKeyKeyMetaRight.CtrlOrSuper(), "Key.meta_right.ctrlOrSuper()")
+				expect(t, !InputKeyKeyControlLeft.CtrlOrSuper(), "!Key.control_left.ctrlOrSuper()")
+				expect(t, !InputKeyKeyControlRight.CtrlOrSuper(), "!Key.control_right.ctrlOrSuper()")
+			} else {
+				expect(t, InputKeyKeyControlLeft.CtrlOrSuper(), "Key.control_left.ctrlOrSuper()")
+				expect(t, InputKeyKeyControlRight.CtrlOrSuper(), "Key.control_right.ctrlOrSuper()")
+				expect(t, !InputKeyKeyMetaLeft.CtrlOrSuper(), "!Key.meta_left.ctrlOrSuper()")
+				expect(t, !InputKeyKeyMetaRight.CtrlOrSuper(), "!Key.meta_right.ctrlOrSuper()")
+			}
+			expect(t, !InputKeyKeyShiftLeft.CtrlOrSuper(), "!Key.shift_left.ctrlOrSuper()")
+			expect(t, !InputKeyKeyAltLeft.CtrlOrSuper(), "!Key.alt_left.ctrlOrSuper()")
+			expect(t, !InputKeyKeyKeyC.CtrlOrSuper(), "!Key.key_c.ctrlOrSuper()")
+		})
+	}
 }
 
 // Zig: test "term51: Key.leftOrRightShift: every key"
@@ -946,37 +969,40 @@ func TestKmKey_term51_Key_leftOrRightAlt_every_key(t *testing.T) {
 }
 
 // Zig: test "term51: ctrlOrSuper: sets exactly one of ctrl or super"
+// Go-only: platform modes (the helper uses isDarwin(): darwin and ios agree).
 func TestKmKey_term51_ctrlOrSuper_sets_exactly_one_of_ctrl_or_super(t *testing.T) {
-	testPlatform(t, "linux")
-	// Zig: const is_darwin = comptime builtin.target.os.tag.isDarwin();
-	// Go follows the non-Darwin branch.
-	const is_darwin = false
+	for _, goos := range kmPlatforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			is_darwin := kmIsDarwin(goos)
 
-	m := InputKeyCtrlOrSuper(InputKeyMods{})
-	expectEqual(t, is_darwin, m.super)
-	expectEqual(t, !is_darwin, m.ctrl)
-	expect(t, !m.shift, "!m.shift")
-	expect(t, !m.alt, "!m.alt")
-	expect(t, !m.caps_lock, "!m.caps_lock")
-	expect(t, !m.num_lock, "!m.num_lock")
+			m := InputKeyCtrlOrSuper(InputKeyMods{})
+			expectEqual(t, is_darwin, m.super)
+			expectEqual(t, !is_darwin, m.ctrl)
+			expect(t, !m.shift, "!m.shift")
+			expect(t, !m.alt, "!m.alt")
+			expect(t, !m.caps_lock, "!m.caps_lock")
+			expect(t, !m.num_lock, "!m.num_lock")
 
-	// Other mods are preserved, including locks and sides.
-	m2 := InputKeyCtrlOrSuper(InputKeyMods{
-		shift:     true,
-		alt:       true,
-		caps_lock: true,
-		sides:     kmSides{alt: kmRight},
-	})
-	expect(t, m2.shift, "m2.shift")
-	expect(t, m2.alt, "m2.alt")
-	expect(t, m2.caps_lock, "m2.caps_lock")
-	expectEqual(t, kmSides{alt: kmRight}, m2.sides)
-	expectEqual(t, is_darwin, m2.super)
-	expectEqual(t, !is_darwin, m2.ctrl)
+			// Other mods are preserved, including locks and sides.
+			m2 := InputKeyCtrlOrSuper(InputKeyMods{
+				shift:     true,
+				alt:       true,
+				caps_lock: true,
+				sides:     kmSides{alt: kmRight},
+			})
+			expect(t, m2.shift, "m2.shift")
+			expect(t, m2.alt, "m2.alt")
+			expect(t, m2.caps_lock, "m2.caps_lock")
+			expectEqual(t, kmSides{alt: kmRight}, m2.sides)
+			expectEqual(t, is_darwin, m2.super)
+			expectEqual(t, !is_darwin, m2.ctrl)
 
-	// Idempotent, and the other one stays untouched when already set.
-	expectEqual(t, m, InputKeyCtrlOrSuper(m))
-	m3 := InputKeyCtrlOrSuper(InputKeyMods{ctrl: true, super: true})
-	expect(t, m3.ctrl && m3.super, "m3.ctrl and m3.super")
-	expect(t, InputKeyCtrlOrSuper(InputKeyMods{}).CtrlOrSuper(), "ctrlOrSuper(.{}).ctrlOrSuper()")
+			// Idempotent, and the other one stays untouched when already set.
+			expectEqual(t, m, InputKeyCtrlOrSuper(m))
+			m3 := InputKeyCtrlOrSuper(InputKeyMods{ctrl: true, super: true})
+			expect(t, m3.ctrl && m3.super, "m3.ctrl and m3.super")
+			expect(t, InputKeyCtrlOrSuper(InputKeyMods{}).CtrlOrSuper(), "ctrlOrSuper(.{}).ctrlOrSuper()")
+		})
+	}
 }

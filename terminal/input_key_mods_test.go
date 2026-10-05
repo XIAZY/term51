@@ -11,8 +11,9 @@
 //   - Allocator parameters are dropped. A `defer set.deinit(alloc)` inside a
 //     Zig loop body is run per iteration here by wrapping the body in a
 //     closure.
-//   - Platform branches follow the non-Darwin branch; the Darwin lines are
-//     kept as `// Zig-only (Darwin):` comments.
+//   - Platform branches (`builtin.target.os.tag.isDarwin()`) run once per
+//     platform mode: linux, darwin and ios (see kmPlatforms). Every check in
+//     this file is isDarwin(), so darwin and ios expect the same values.
 //   - `std.testing.expectError` is kmExpectError (errors.Is).
 
 package terminal
@@ -113,6 +114,16 @@ func (self *kmFailFormatter) formatEntry(value Optional[[]uint8]) error {
 	return kmErrBoom
 }
 
+// kmPlatforms are the three platform modes of the encoders: "linux" (both
+// upstream checks false), "darwin" (both true) and "ios" (isDarwin() true,
+// `.macos` false).
+var kmPlatforms = [...]string{"linux", "darwin", "ios"}
+
+// kmIsDarwin is `builtin.target.os.tag.isDarwin()` in the mode goos.
+func kmIsDarwin(goos string) bool {
+	return goos == "darwin" || goos == "ios"
+}
+
 // kmModName is `@tagName(mod)`.
 func kmModName(mod InputKeyModsMod) string {
 	return mod.String()
@@ -124,6 +135,58 @@ func TestKm_unnamed_key_mods_zig_160(t *testing.T) {
 	// For our own understanding
 	expectEqual(t, uint16(0b0), (kmMods{}).Int())
 	expectEqual(t, uint16(0b0000_0001), (kmMods{shift: true}).Int())
+}
+
+// Zig: test "translation macos-option-as-alt"
+// Zig skips it off Darwin (`if (comptime !builtin.target.os.tag.isDarwin())
+// return error.SkipZigTest;`), so it runs under darwin and ios.
+// Go-only: platform modes
+func TestKm_translation_macos_option_as_alt(t *testing.T) {
+	for _, goos := range [...]string{"darwin", "ios"} {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+
+			// Unset
+			{
+				mods := kmMods{}
+				result := mods.Translation(InputConfigOptionAsAltTrue)
+				expectEqual(t, result, mods)
+			}
+
+			// Set
+			{
+				mods := kmMods{alt: true}
+				result := mods.Translation(InputConfigOptionAsAltTrue)
+				expectEqual(t, kmMods{}, result)
+			}
+
+			// Set but disabled
+			{
+				mods := kmMods{alt: true}
+				result := mods.Translation(InputConfigOptionAsAltFalse)
+				expectEqual(t, result, mods)
+			}
+
+			// Set wrong side
+			{
+				mods := kmMods{alt: true, sides: kmSides{alt: kmRight}}
+				result := mods.Translation(InputConfigOptionAsAltLeft)
+				expectEqual(t, result, mods)
+			}
+			{
+				mods := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
+				result := mods.Translation(InputConfigOptionAsAltRight)
+				expectEqual(t, result, mods)
+			}
+
+			// Set with other mods
+			{
+				mods := kmMods{alt: true, shift: true}
+				result := mods.Translation(InputConfigOptionAsAltTrue)
+				expectEqual(t, kmMods{shift: true}, result)
+			}
+		})
+	}
 }
 
 // Zig: test "RemapSet: unsided remap creates both left and right mappings"
@@ -683,58 +746,85 @@ func TestKm_term51_Mods_withoutLocks_clears_only_caps_and_num_lock(t *testing.T)
 }
 
 // Zig: test "term51: Mods.translation: option as alt"
+// Go-only: platform modes (Zig runs it once per build; translation uses
+// isDarwin(), so darwin and ios expect the same values).
 func TestKm_term51_Mods_translation_option_as_alt(t *testing.T) {
-	testPlatform(t, "linux")
-	// Zig: const is_darwin = comptime builtin.target.os.tag.isDarwin();
-	// Go follows the non-Darwin branch.
-	options := [...]InputConfigOptionAsAlt{
-		InputConfigOptionAsAltFalse,
-		InputConfigOptionAsAltTrue,
-		InputConfigOptionAsAltLeft,
-		InputConfigOptionAsAltRight,
-	}
+	for _, goos := range kmPlatforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			is_darwin := kmIsDarwin(goos)
+			options := [...]InputConfigOptionAsAlt{
+				InputConfigOptionAsAltFalse,
+				InputConfigOptionAsAltTrue,
+				InputConfigOptionAsAltLeft,
+				InputConfigOptionAsAltRight,
+			}
 
-	inputs := [...]kmMods{
-		{},
-		{alt: true},
-		{alt: true, sides: kmSides{alt: kmRight}},
-		{alt: true, shift: true, caps_lock: true},
-		{shift: true, ctrl: true, super: true},
-		{sides: kmSides{alt: kmRight}},
-	}
-	for _, mods := range inputs {
-		for _, opt := range options {
-			expected := mods
-			// Zig-only (Darwin): if (is_darwin) { unset := switch (opt) { .false => false, .true => true, .left => mods.sides.alt != .right, .right => mods.sides.alt != .left }; if (unset) expected.alt = false; }
-			expectEqual(t, expected, mods.Translation(opt))
-		}
-	}
+			inputs := [...]kmMods{
+				{},
+				{alt: true},
+				{alt: true, sides: kmSides{alt: kmRight}},
+				{alt: true, shift: true, caps_lock: true},
+				{shift: true, ctrl: true, super: true},
+				{sides: kmSides{alt: kmRight}},
+			}
+			for _, mods := range inputs {
+				for _, opt := range options {
+					expected := mods
+					if is_darwin {
+						unset := false
+						switch opt {
+						case InputConfigOptionAsAltFalse:
+							unset = false
+						case InputConfigOptionAsAltTrue:
+							unset = true
+						case InputConfigOptionAsAltLeft:
+							unset = mods.sides.alt != kmRight
+						case InputConfigOptionAsAltRight:
+							unset = mods.sides.alt != kmLeft
+						}
+						if unset {
+							expected.alt = false
+						}
+					}
+					expectEqual(t, expected, mods.Translation(opt))
+				}
+			}
 
-	// Only the alt flag is cleared: the side bit is retained.
-	// Zig-only (Darwin): if (is_darwin) { r := (Mods{ .alt = true, .sides = .{ .alt = .right } }).translation(.right); expectEqual(Mods{ .sides = .{ .alt = .right } }, r) } else {
-	// Not macOS: translation never changes anything.
-	m := kmMods{alt: true}
-	expectEqual(t, m, m.Translation(InputConfigOptionAsAltTrue))
-	expectEqual(t, m, m.Translation(InputConfigOptionAsAltLeft))
-	expectEqual(t, m, m.Translation(InputConfigOptionAsAltRight))
-	expectEqual(t, m, m.Translation(InputConfigOptionAsAltFalse))
+			// Only the alt flag is cleared: the side bit is retained.
+			if is_darwin {
+				r := (kmMods{alt: true, sides: kmSides{alt: kmRight}}).Translation(InputConfigOptionAsAltRight)
+				expectEqual(t, kmMods{sides: kmSides{alt: kmRight}}, r)
+			} else {
+				// Not macOS: translation never changes anything.
+				m := kmMods{alt: true}
+				expectEqual(t, m, m.Translation(InputConfigOptionAsAltTrue))
+				expectEqual(t, m, m.Translation(InputConfigOptionAsAltLeft))
+				expectEqual(t, m, m.Translation(InputConfigOptionAsAltRight))
+				expectEqual(t, m, m.Translation(InputConfigOptionAsAltFalse))
+			}
+		})
+	}
 }
 
 // Zig: test "term51: Mods.ctrlOrSuper: checks ctrl or super per platform"
+// Go-only: platform modes (ctrlOrSuper uses isDarwin(): darwin and ios agree).
 func TestKm_term51_Mods_ctrlOrSuper_checks_ctrl_or_super_per_platform(t *testing.T) {
-	testPlatform(t, "linux")
-	// Zig: const is_darwin = comptime builtin.target.os.tag.isDarwin();
-	// Go follows the non-Darwin branch.
-	const is_darwin = false
-	expect(t, !(kmMods{}).CtrlOrSuper(), "!(Mods{}).ctrlOrSuper()")
-	expectEqual(t, !is_darwin, (kmMods{ctrl: true}).CtrlOrSuper())
-	expectEqual(t, is_darwin, (kmMods{super: true}).CtrlOrSuper())
-	expect(t, (kmMods{ctrl: true, super: true}).CtrlOrSuper(), "(Mods{ .ctrl = true, .super = true }).ctrlOrSuper()")
-	expect(t, !(kmMods{shift: true, alt: true, caps_lock: true, num_lock: true}).CtrlOrSuper(), "!(Mods{ .shift = true, .alt = true, .caps_lock = true, .num_lock = true }).ctrlOrSuper()")
-	expectEqual(t,
-		!is_darwin,
-		(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}).CtrlOrSuper(),
-	)
+	for _, goos := range kmPlatforms {
+		t.Run(goos, func(t *testing.T) {
+			testPlatform(t, goos)
+			is_darwin := kmIsDarwin(goos)
+			expect(t, !(kmMods{}).CtrlOrSuper(), "!(Mods{}).ctrlOrSuper()")
+			expectEqual(t, !is_darwin, (kmMods{ctrl: true}).CtrlOrSuper())
+			expectEqual(t, is_darwin, (kmMods{super: true}).CtrlOrSuper())
+			expect(t, (kmMods{ctrl: true, super: true}).CtrlOrSuper(), "(Mods{ .ctrl = true, .super = true }).ctrlOrSuper()")
+			expect(t, !(kmMods{shift: true, alt: true, caps_lock: true, num_lock: true}).CtrlOrSuper(), "!(Mods{ .shift = true, .alt = true, .caps_lock = true, .num_lock = true }).ctrlOrSuper()")
+			expectEqual(t,
+				!is_darwin,
+				(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}).CtrlOrSuper(),
+			)
+		})
+	}
 }
 
 // Zig: test "term51: RemapSet: empty value"

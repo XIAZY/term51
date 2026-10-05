@@ -190,22 +190,27 @@ bodies cannot compile; they have no behaviour). `Screen.clone` with the cursor
 outside the cloned region returns `ErrScreenCloneCursorOutside` instead of
 upstream's abort.
 
-## Platform branches (Darwin) in the input encoders
+## Platform branches in the input encoders (decision: platform-neutral, final)
 
-The target is BlackBerry 10 (QNX), so the port follows the non-Darwin branch of
-every compile-time platform check in `src/input/`: `macos_option_as_alt` is
-never read, alt always prevents associated text in the Kitty encoding, alt is
-kept in modifyOtherKeys state 2, super plus text encodes the text, and
-`ctrlOrSuper` is ctrl. The Zig tests that only run on macOS (they return
-`SkipZigTest` elsewhere) are on the not-translated list as "platform not
-targeted"; tests that mix both keep the non-Darwin assertions and mark the
-Darwin lines `// Zig-only (Darwin):`.
+The Go library is platform neutral (project owner, 2026-10-04): it follows
+upstream's compile-time platform checks at run time. Upstream has two checks in
+`src/input/` (`key_encode.zig`, `key_mods.zig`, `key.zig`): `builtin.os.tag ==
+.macos` and `builtin.target.os.tag.isDarwin()`. In Go they read `platformGOOS`
+(`terminal/platform.go`; the implementation sets it from `runtime.GOOS`):
+`platformIsMacos()` is GOOS "darwin"; `platformIsDarwin()` is "darwin" or "ios".
+There are three modes: linux (both false: everything that is not Apple), darwin
+(both true) and ios (Apple but not macOS: `isDarwin()` true, `.macos` false; the
+one case where the distinction changes output: modifyOtherKeys drops alt but
+the ESC prefix ignores `macos_option_as_alt`).
 
-How a future macOS build would select the behaviour: each file that has such a
-check has a stub standing for the comptime test (`inputKeyEncodeIsMacos()` for
-`builtin.os.tag == .macos`, `inputKeyEncodeIsDarwin()` for `isDarwin()`: macOS,
-iOS, tvOS, watchOS, visionOS; the same idea in `input_key_mods.go` and
-`input_key.go`). Making the stubs return true on `runtime.GOOS == "darwin"` (and
-"ios" for the second) selects the Darwin branches. The Darwin tests would then be
-translated as Go tests that call `t.Skip` when the matching stub returns false.
-Nothing here is done for the current target.
+Testing. Upstream cannot be run on a Mac here, so, like the other reference
+patches, `patches-macos/` and `patches-ios/` build upstream with the checks forced
+(`scripts/build-macos.sh`), the whole suite runs in each mode, and the keyboard
+corpus is recorded per mode (`golden/input`, `golden-macos/input`,
+`golden-ios/input`; `docs/macos.md` in the term51 repository). In Go every encoder
+test selects its platform with the shared helper `testPlatform` (sets and
+restores `platformGOOS`, no parallel tests): non-platform tests run as "linux";
+tests Zig gates on `isDarwin()` run under "darwin" and "ios", those gated on
+`.macos` under "darwin"; shared tests whose expected values depend on the platform
+loop over the three modes (`// Go-only: platform modes`). Tvos, watchos, visionos and
+DriverKit are not Go targets and are not modelled.

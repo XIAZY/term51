@@ -1,7 +1,4 @@
-// WIREFRAME for src/terminal/osc/parsers.zig (Ghostty v1.3.1). NOT YET
-// PORTED.
-//
-// Types and signatures only; see the header of color.go for the rules.
+// Ported from src/terminal/osc/parsers.zig (Ghostty v1.3.1).
 //
 // parsers.zig declares nothing of its own: it is a namespace file that
 // imports each file under osc/parsers/ under its name. Go has one package,

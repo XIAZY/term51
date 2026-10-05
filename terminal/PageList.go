@@ -5612,7 +5612,13 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self PageListDirection) String() string { panic(notImplemented) }
+func (self PageListDirection) String() string {
+	return pageListDirectionNames[self]
+}
+
+// pageListDirectionNames are the tag names of PageListDirection, indexed by
+// value (Zig's @tagName).
+var pageListDirectionNames = [...]string{"left_up", "right_down"}
 
 // PageListPromptIterator is PageList.PromptIterator.
 type PageListPromptIterator struct {
@@ -5643,20 +5649,186 @@ var PageListPromptIteratorEmpty = PageListPromptIterator{
 // From here, you can find the prompt input, command output, etc.
 //
 // Zig: returns ?Pin.
-func (self *PageListPromptIterator) Next() Optional[PageListPin] { panic(notImplemented) }
+func (self *PageListPromptIterator) Next() Optional[PageListPin] {
+	switch self.direction {
+	case PageListDirectionLeftUp:
+		return self.NextLeftUp()
+	case PageListDirectionRightDown:
+		return self.NextRightDown()
+	default:
+		panic("unreachable")
+	}
+}
 
 // NextRightDown is PageList.PromptIterator.nextRightDown.
 //
 // Zig: returns ?Pin.
 func (self *PageListPromptIterator) NextRightDown() Optional[PageListPin] {
-	panic(notImplemented)
+	// Start at our current pin. If we have no current it means
+	// we reached the end and we're done.
+	if !self.current.Valid {
+		return None[PageListPin]()
+	}
+	start := self.current.Value
+
+	// We need to traverse downwards and look for prompts.
+	current := Some(start)
+outer:
+	for current.Valid {
+		p := current.Value
+		// Check our limit.
+		at_limit := false
+		if self.limit.Valid {
+			at_limit = self.limit.Value.Eql(p)
+		}
+
+		rac := p.RowAndCell()
+		switch rac.row.semantic_prompt {
+		// This row isn't a prompt. Keep looking.
+		case PageRowSemanticPromptNone:
+			if at_limit {
+				break outer
+			}
+
+		// This is a prompt line or continuation line. In either
+		// case we consider the first line the prompt, and then
+		// skip over any remaining prompt lines. This handles the
+		// case where scrollback pruned the prompt.
+		case PageRowSemanticPromptPrompt, PageRowSemanticPromptPromptContinuation:
+			// If we're at our limit just return this prompt.
+			if at_limit {
+				self.current = None[PageListPin]()
+				return Some(p.Left(uint(p.x)))
+			}
+
+			// Skip over any continuation lines that follow this prompt,
+			// up to our limit.
+			end_pin := p
+		inner:
+			for next_pin_ := end_pin.Down(1); next_pin_.Valid; next_pin_ = end_pin.Down(1) {
+				next_pin := next_pin_.Value
+				switch next_pin.RowAndCell().row.semantic_prompt {
+				case PageRowSemanticPromptPromptContinuation:
+					if self.limit.Valid {
+						if self.limit.Value.Eql(next_pin) {
+							break inner
+						}
+					}
+
+				case PageRowSemanticPromptPrompt, PageRowSemanticPromptNone:
+					self.current = Some(next_pin)
+					return Some(p.Left(uint(p.x)))
+
+				default:
+					panic("unreachable")
+				}
+				end_pin = next_pin
+			}
+
+			self.current = None[PageListPin]()
+			return Some(p.Left(uint(p.x)))
+
+		default:
+			panic("unreachable")
+		}
+		current = p.Down(1)
+	}
+
+	self.current = None[PageListPin]()
+	return None[PageListPin]()
 }
 
 // NextLeftUp is PageList.PromptIterator.nextLeftUp.
 //
 // Zig: returns ?Pin.
 func (self *PageListPromptIterator) NextLeftUp() Optional[PageListPin] {
-	panic(notImplemented)
+	// Start at our current pin. If we have no current it means
+	// we reached the end and we're done.
+	if !self.current.Valid {
+		return None[PageListPin]()
+	}
+	start := self.current.Value
+
+	// We need to traverse upwards and look for prompts.
+	current := Some(start)
+outer:
+	for current.Valid {
+		p := current.Value
+		// Check our limit.
+		at_limit := false
+		if self.limit.Valid {
+			at_limit = self.limit.Value.Eql(p)
+		}
+
+		rac := p.RowAndCell()
+		switch rac.row.semantic_prompt {
+		// This row isn't a prompt. Keep looking.
+		case PageRowSemanticPromptNone:
+			if at_limit {
+				break outer
+			}
+
+		// This is a prompt line.
+		case PageRowSemanticPromptPrompt:
+			if at_limit {
+				self.current = None[PageListPin]()
+			} else {
+				self.current = p.Up(1)
+			}
+			return Some(p.Left(uint(p.x)))
+
+		// If this is a prompt continuation, then we continue
+		// looking for the start of the prompt OR a non-prompt
+		// line, whichever is first. The non-prompt line is to handle
+		// poorly behaved programs or scrollback that's been cut-off.
+		case PageRowSemanticPromptPromptContinuation:
+			// If we're at our limit just return this continuation as prompt.
+			if at_limit {
+				self.current = None[PageListPin]()
+				return Some(p.Left(uint(p.x)))
+			}
+
+			end_pin := p
+			for prior_ := end_pin.Up(1); prior_.Valid; prior_ = end_pin.Up(1) {
+				prior := prior_.Value
+				if self.limit.Valid {
+					if self.limit.Value.Eql(prior) {
+						break
+					}
+				}
+
+				switch prior.RowAndCell().row.semantic_prompt {
+				// No prompt. That means our last pin is good!
+				case PageRowSemanticPromptNone:
+					self.current = Some(prior)
+					return Some(end_pin.Left(uint(end_pin.x)))
+
+				// Prompt continuation, keep looking.
+				case PageRowSemanticPromptPromptContinuation:
+
+				// Prompt! Found it!
+				case PageRowSemanticPromptPrompt:
+					self.current = prior.Up(1)
+					return Some(prior.Left(uint(prior.x)))
+
+				default:
+					panic("unreachable")
+				}
+				end_pin = prior
+			}
+
+			// No prior rows, trimmed scrollback probably.
+			self.current = None[PageListPin]()
+			return Some(p.Left(uint(p.x)))
+
+		default:
+			panic("unreachable")
+		}
+		current = p.Up(1)
+	}
+
+	self.current = None[PageListPin]()
+	return None[PageListPin]()
 }
 
 // PromptIterator is PageList.promptIterator.
@@ -5668,7 +5840,30 @@ func (self *PageList) PromptIterator(
 	tl_pt Point,
 	bl_pt Optional[Point],
 ) PageListPromptIterator {
-	panic(notImplemented)
+	tl_pin_ := self.Pin(tl_pt)
+	assert(tl_pin_.Valid) // .?
+	tl_pin := tl_pin_.Value
+	var bl_pin PageListPin
+	if bl_pt.Valid {
+		bl_pin_ := self.Pin(bl_pt.Value)
+		assert(bl_pin_.Valid) // .?
+		bl_pin = bl_pin_.Value
+	} else {
+		bl_pin_ := self.GetBottomRight(tl_pt.Tag)
+		if !bl_pin_.Valid {
+			return PageListPromptIteratorEmpty
+		}
+		bl_pin = bl_pin_.Value
+	}
+
+	switch direction {
+	case PageListDirectionRightDown:
+		return tl_pin.PromptIterator(PageListDirectionRightDown, Some(bl_pin))
+	case PageListDirectionLeftUp:
+		return bl_pin.PromptIterator(PageListDirectionLeftUp, Some(tl_pin))
+	default:
+		panic("unreachable")
+	}
 }
 
 // PageListCellIterator is PageList.CellIterator.
@@ -5681,7 +5876,48 @@ type PageListCellIterator struct {
 // Next is PageList.CellIterator.next.
 //
 // Zig: returns ?Pin.
-func (self *PageListCellIterator) Next() Optional[PageListPin] { panic(notImplemented) }
+func (self *PageListCellIterator) Next() Optional[PageListPin] {
+	if !self.cell.Valid {
+		return None[PageListPin]()
+	}
+	cell := self.cell.Value
+
+	switch self.row_it.page_it.direction {
+	case PageListDirectionRightDown:
+		if uint(cell.x)+1 < uint(cell.node.data.size.cols) {
+			// We still have cells in this row, increase x.
+			copy_ := cell
+			copy_.x += 1
+			self.cell = Some(copy_)
+		} else {
+			// We need to move to the next row.
+			self.cell = self.row_it.Next()
+		}
+
+	case PageListDirectionLeftUp:
+		if cell.x > 0 {
+			// We still have cells in this row, decrease x.
+			copy_ := cell
+			copy_.x -= 1
+			self.cell = Some(copy_)
+		} else {
+			// We need to move to the previous row and last col
+			if next_cell := self.row_it.Next(); next_cell.Valid {
+				copy_ := next_cell.Value
+				assert(next_cell.Value.node.data.size.cols > 0) // Zig: u16 `- 1` traps
+				copy_.x = next_cell.Value.node.data.size.cols - 1
+				self.cell = Some(copy_)
+			} else {
+				self.cell = None[PageListPin]()
+			}
+		}
+
+	default:
+		panic("unreachable")
+	}
+
+	return Some(cell)
+}
 
 // CellIterator is PageList.cellIterator.
 //
@@ -5692,7 +5928,32 @@ func (self *PageList) CellIterator(
 	tl_pt Point,
 	bl_pt Optional[Point],
 ) PageListCellIterator {
-	panic(notImplemented)
+	tl_pin_ := self.Pin(tl_pt)
+	assert(tl_pin_.Valid) // .?
+	tl_pin := tl_pin_.Value
+	var bl_pin PageListPin
+	if bl_pt.Valid {
+		bl_pin_ := self.Pin(bl_pt.Value)
+		assert(bl_pin_.Valid) // .?
+		bl_pin = bl_pin_.Value
+	} else {
+		bl_pin_ := self.GetBottomRight(tl_pt.Tag)
+		if !bl_pin_.Valid {
+			// Zig: `.{ .row_it = undefined }`; the Go zero value (cell
+			// is null, so next returns null).
+			return PageListCellIterator{}
+		}
+		bl_pin = bl_pin_.Value
+	}
+
+	switch direction {
+	case PageListDirectionRightDown:
+		return tl_pin.CellIterator(PageListDirectionRightDown, Some(bl_pin))
+	case PageListDirectionLeftUp:
+		return bl_pin.CellIterator(PageListDirectionLeftUp, Some(tl_pin))
+	default:
+		panic("unreachable")
+	}
 }
 
 // PageListRowIterator is PageList.RowIterator.
@@ -5707,7 +5968,52 @@ type PageListRowIterator struct {
 // Next is PageList.RowIterator.next.
 //
 // Zig: returns ?Pin.
-func (self *PageListRowIterator) Next() Optional[PageListPin] { panic(notImplemented) }
+func (self *PageListRowIterator) Next() Optional[PageListPin] {
+	if !self.chunk.Valid {
+		return None[PageListPin]()
+	}
+	chunk := self.chunk.Value
+	row := PageListPin{node: chunk.node, y: self.offset}
+
+	switch self.page_it.direction {
+	case PageListDirectionRightDown:
+		// Increase our offset in the chunk
+		assert(self.offset < math.MaxUint16) // Zig: u16 `+=` traps
+		self.offset += 1
+
+		// If we are beyond the chunk end, we need to move to the next chunk.
+		if self.offset >= chunk.end {
+			self.chunk = self.page_it.Next()
+			if self.chunk.Valid {
+				self.offset = self.chunk.Value.start
+			}
+		}
+
+	case PageListDirectionLeftUp:
+		// If we are at the start of the chunk, we need to move to the
+		// previous chunk.
+		if self.offset == 0 {
+			self.chunk = self.page_it.Next()
+			if self.chunk.Valid {
+				assert(self.chunk.Value.end > 0) // Zig: u16 `- 1` traps
+				self.offset = self.chunk.Value.end - 1
+			}
+		} else {
+			// If we're at the start of the chunk and its a non-zero
+			// offset then we've reached a limit.
+			if self.offset == chunk.start {
+				self.chunk = None[PageListPageIteratorChunk]()
+			} else {
+				self.offset -= 1
+			}
+		}
+
+	default:
+		panic("unreachable")
+	}
+
+	return Some(row)
+}
 
 // RowIterator is PageList.rowIterator.
 //
@@ -5724,7 +6030,32 @@ func (self *PageList) RowIterator(
 	tl_pt Point,
 	bl_pt Optional[Point],
 ) PageListRowIterator {
-	panic(notImplemented)
+	tl_pin_ := self.Pin(tl_pt)
+	assert(tl_pin_.Valid) // .?
+	tl_pin := tl_pin_.Value
+	var bl_pin PageListPin
+	if bl_pt.Valid {
+		bl_pin_ := self.Pin(bl_pt.Value)
+		assert(bl_pin_.Valid) // .?
+		bl_pin = bl_pin_.Value
+	} else {
+		bl_pin_ := self.GetBottomRight(tl_pt.Tag)
+		if !bl_pin_.Valid {
+			// Zig: `.{ .page_it = undefined }`; the Go zero value (chunk
+			// is null, so next returns null).
+			return PageListRowIterator{}
+		}
+		bl_pin = bl_pin_.Value
+	}
+
+	switch direction {
+	case PageListDirectionRightDown:
+		return tl_pin.RowIterator(PageListDirectionRightDown, Some(bl_pin))
+	case PageListDirectionLeftUp:
+		return bl_pin.RowIterator(PageListDirectionLeftUp, Some(tl_pin))
+	default:
+		panic("unreachable")
+	}
 }
 
 // PageListPageIterator is PageList.PageIterator.
@@ -5761,27 +6092,199 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self pageListPageIteratorLimitTag) String() string { panic(notImplemented) }
+func (self pageListPageIteratorLimitTag) String() string {
+	return pageListPageIteratorLimitTagNames[self]
+}
+
+// pageListPageIteratorLimitTagNames are the tag names of
+// pageListPageIteratorLimitTag, indexed by value (Zig's @tagName).
+var pageListPageIteratorLimitTagNames = [...]string{"none", "count", "row"}
 
 // Next is PageList.PageIterator.next.
 //
 // Zig: returns ?Chunk.
 func (self *PageListPageIterator) Next() Optional[PageListPageIteratorChunk] {
-	panic(notImplemented)
+	switch self.direction {
+	case PageListDirectionLeftUp:
+		return self.nextUp()
+	case PageListDirectionRightDown:
+		return self.nextDown()
+	default:
+		panic("unreachable")
+	}
 }
 
 // nextDown is PageList.PageIterator.nextDown.
 //
 // Zig: returns ?Chunk.
 func (self *PageListPageIterator) nextDown() Optional[PageListPageIteratorChunk] {
-	panic(notImplemented)
+	// Get our current row location
+	if !self.row.Valid {
+		return None[PageListPageIteratorChunk]()
+	}
+	row := self.row.Value
+
+	switch self.limit.Tag {
+	case pageListPageIteratorLimitNone:
+		// If we have no limit, then we consume this entire page. Our
+		// next row is the next page.
+		if next_page := row.node.next; next_page == nil {
+			self.row = None[PageListPin]()
+		} else {
+			self.row = Some(PageListPin{node: next_page})
+		}
+
+		return Some(PageListPageIteratorChunk{
+			node:  row.node,
+			start: row.y,
+			end:   row.node.data.size.rows,
+		})
+
+	case pageListPageIteratorLimitCount:
+		limit := &self.limit.Count
+		assert(*limit > 0) // should be handled already
+		// Zig: @min of a u16 and a usize is a u16.
+		assert(row.node.data.size.rows >= row.y) // Zig: u16 `-` traps
+		length := SizeCellCountInt(min(uint(row.node.data.size.rows-row.y), *limit))
+		if uint(length) > *limit {
+			self.row = row.Down(uint(length))
+			*limit -= uint(length)
+		} else {
+			self.row = None[PageListPin]()
+		}
+
+		assert(uint(row.y)+uint(length) <= math.MaxUint16) // Zig: u16 `+` traps
+		return Some(PageListPageIteratorChunk{
+			node:  row.node,
+			start: row.y,
+			end:   row.y + length,
+		})
+
+	case pageListPageIteratorLimitRow:
+		limit_row := self.limit.Row
+		// If this is not the same page as our limit then we
+		// can consume the entire page.
+		if limit_row.node != row.node {
+			if next_page := row.node.next; next_page == nil {
+				self.row = None[PageListPin]()
+			} else {
+				self.row = Some(PageListPin{node: next_page})
+			}
+
+			return Some(PageListPageIteratorChunk{
+				node:  row.node,
+				start: row.y,
+				end:   row.node.data.size.rows,
+			})
+		}
+
+		// If this is the same page then we only consume up to
+		// the limit row.
+		self.row = None[PageListPin]()
+		if row.y > limit_row.y {
+			return None[PageListPageIteratorChunk]()
+		}
+		assert(limit_row.y < math.MaxUint16) // Zig: u16 `+` traps
+		return Some(PageListPageIteratorChunk{
+			node:  row.node,
+			start: row.y,
+			end:   limit_row.y + 1,
+		})
+
+	default:
+		panic("unreachable")
+	}
 }
 
 // nextUp is PageList.PageIterator.nextUp.
 //
 // Zig: returns ?Chunk.
 func (self *PageListPageIterator) nextUp() Optional[PageListPageIteratorChunk] {
-	panic(notImplemented)
+	// Get our current row location
+	if !self.row.Valid {
+		return None[PageListPageIteratorChunk]()
+	}
+	row := self.row.Value
+
+	switch self.limit.Tag {
+	case pageListPageIteratorLimitNone:
+		// If we have no limit, then we consume this entire page. Our
+		// next row is the next page.
+		if next_page := row.node.prev; next_page == nil {
+			self.row = None[PageListPin]()
+		} else {
+			assert(next_page.data.size.rows > 0) // Zig: u16 `- 1` traps
+			self.row = Some(PageListPin{
+				node: next_page,
+				y:    next_page.data.size.rows - 1,
+			})
+		}
+
+		assert(row.y < math.MaxUint16) // Zig: u16 `+` traps
+		return Some(PageListPageIteratorChunk{
+			node:  row.node,
+			start: 0,
+			end:   row.y + 1,
+		})
+
+	case pageListPageIteratorLimitCount:
+		limit := &self.limit.Count
+		assert(*limit > 0) // should be handled already
+		// Zig: @min of a u16 and a usize is a u16.
+		length := SizeCellCountInt(min(uint(row.y), *limit))
+		if uint(length) > *limit {
+			self.row = row.Up(uint(length))
+			*limit -= uint(length)
+		} else {
+			self.row = None[PageListPin]()
+		}
+
+		assert(row.y >= 1) // Zig: u16 `- 1` traps
+		return Some(PageListPageIteratorChunk{
+			node:  row.node,
+			start: row.y - length,
+			end:   row.y - 1,
+		})
+
+	case pageListPageIteratorLimitRow:
+		limit_row := self.limit.Row
+		// If this is not the same page as our limit then we
+		// can consume the entire page.
+		if limit_row.node != row.node {
+			if next_page := row.node.prev; next_page == nil {
+				self.row = None[PageListPin]()
+			} else {
+				assert(next_page.data.size.rows > 0) // Zig: u16 `- 1` traps
+				self.row = Some(PageListPin{
+					node: next_page,
+					y:    next_page.data.size.rows - 1,
+				})
+			}
+
+			assert(row.y < math.MaxUint16) // Zig: u16 `+` traps
+			return Some(PageListPageIteratorChunk{
+				node:  row.node,
+				start: 0,
+				end:   row.y + 1,
+			})
+		}
+
+		// If this is the same page then we only consume up to
+		// the limit row.
+		self.row = None[PageListPin]()
+		if row.y < limit_row.y {
+			return None[PageListPageIteratorChunk]()
+		}
+		assert(row.y < math.MaxUint16) // Zig: u16 `+` traps
+		return Some(PageListPageIteratorChunk{
+			node:  row.node,
+			start: limit_row.y,
+			end:   row.y + 1,
+		})
+
+	default:
+		panic("unreachable")
+	}
 }
 
 // PageListPageIteratorChunk is PageList.PageIterator.Chunk.
@@ -5799,16 +6302,30 @@ type PageListPageIteratorChunk struct {
 //
 // Zig: returns []Row, the page's rows `start` to `end`: a sub-slice of
 // `node.data.rows`.
-func (self PageListPageIteratorChunk) Rows() []PageRow { panic(notImplemented) }
+func (self PageListPageIteratorChunk) Rows() []PageRow {
+	rows_ptr := self.node.data.rows
+	return rows_ptr[self.start:self.end]
+}
 
 // FullPage is PageList.PageIterator.Chunk.fullPage: returns true if this
 // chunk represents every row in the page.
-func (self PageListPageIteratorChunk) FullPage() bool { panic(notImplemented) }
+func (self PageListPageIteratorChunk) FullPage() bool {
+	return self.start == 0 && self.end == self.node.data.size.rows
+}
 
 // Overlaps is PageList.PageIterator.Chunk.overlaps: returns true if this
 // chunk overlaps with the given other chunk in any way.
 func (self PageListPageIteratorChunk) Overlaps(other PageListPageIteratorChunk) bool {
-	panic(notImplemented)
+	if self.node != other.node {
+		return false
+	}
+	if self.end <= other.start {
+		return false
+	}
+	if self.start >= other.end {
+		return false
+	}
+	return true
 }
 
 // PageIterator is PageList.pageIterator.
@@ -5837,7 +6354,40 @@ func (self *PageList) PageIterator(
 	tl_pt Point,
 	bl_pt Optional[Point],
 ) PageListPageIterator {
-	panic(notImplemented)
+	tl_pin_ := self.Pin(tl_pt)
+	assert(tl_pin_.Valid) // .?
+	tl_pin := tl_pin_.Value
+	var bl_pin PageListPin
+	if bl_pt.Valid {
+		bl_pin_ := self.Pin(bl_pt.Value)
+		assert(bl_pin_.Valid) // .?
+		bl_pin = bl_pin_.Value
+	} else {
+		bl_pin_ := self.GetBottomRight(tl_pt.Tag)
+		if !bl_pin_.Valid {
+			// Zig: `.{ .row = null }`, the other fields at their defaults
+			// (limit .none, direction .right_down).
+			return PageListPageIterator{
+				row:       None[PageListPin](),
+				limit:     pageListPageIteratorLimit{Tag: pageListPageIteratorLimitNone},
+				direction: PageListDirectionRightDown,
+			}
+		}
+		bl_pin = bl_pin_.Value
+	}
+
+	if pageSlowRuntimeSafety {
+		assert(tl_pin.Eql(bl_pin) || tl_pin.Before(bl_pin))
+	}
+
+	switch direction {
+	case PageListDirectionRightDown:
+		return tl_pin.PageIterator(PageListDirectionRightDown, Some(bl_pin))
+	case PageListDirectionLeftUp:
+		return bl_pin.PageIterator(PageListDirectionLeftUp, Some(tl_pin))
+	default:
+		panic("unreachable")
+	}
 }
 
 // GetTopLeft is PageList.getTopLeft: get the top-left of the screen for
@@ -5845,7 +6395,48 @@ func (self *PageList) PageIterator(
 //
 // Zig: self is *const PageList. Upstream also calls it with a point.Point,
 // which Zig coerces to its tag; in Go pass `pt.Tag`.
-func (self *PageList) GetTopLeft(tag PointTag) PageListPin { panic(notImplemented) }
+func (self *PageList) GetTopLeft(tag PointTag) PageListPin {
+	switch tag {
+	// The full screen or history is always just the first page.
+	case PointTagScreen, PointTagHistory:
+		assert(self.pages.first != nil) // .?
+		return PageListPin{node: self.pages.first}
+
+	case PointTagViewport:
+		switch self.viewport.Tag {
+		case PageListViewportActive:
+			return self.GetTopLeft(PointTagActive)
+		case PageListViewportTop:
+			return self.GetTopLeft(PointTagScreen)
+		case PageListViewportPin:
+			return *self.viewport_pin
+		default:
+			panic("unreachable")
+		}
+
+	// The active area is calculated backwards from the last page.
+	// This makes getting the active top left slower but makes scrolling
+	// much faster because we don't need to update the top left. Under
+	// heavy load this makes a measurable difference.
+	case PointTagActive:
+		rem := self.rows
+		for node := self.pages.last; node != nil; node = node.prev {
+			if rem <= node.data.size.rows {
+				return PageListPin{
+					node: node,
+					y:    node.data.size.rows - rem,
+				}
+			}
+
+			rem -= node.data.size.rows
+		}
+
+		panic("unreachable") // assertion: we always have enough rows for active
+
+	default:
+		panic("unreachable")
+	}
+}
 
 // GetBottomRight is PageList.getBottomRight.
 //
@@ -5855,7 +6446,43 @@ func (self *PageList) GetTopLeft(tag PointTag) PageListPin { panic(notImplemente
 //
 // Zig: self is *const PageList; returns ?Pin.
 func (self *PageList) GetBottomRight(tag PointTag) Optional[PageListPin] {
-	panic(notImplemented)
+	switch tag {
+	case PointTagScreen, PointTagActive:
+		node := self.pages.last
+		assert(node != nil) // .?
+		// Zig: u16 `- 1` traps on an empty page.
+		assert(node.data.size.rows > 0)
+		assert(node.data.size.cols > 0)
+		return Some(PageListPin{
+			node: node,
+			y:    node.data.size.rows - 1,
+			x:    node.data.size.cols - 1,
+		})
+
+	case PointTagViewport:
+		br := self.GetTopLeft(PointTagViewport)
+		assert(self.rows > 0) // Zig: u16 `- 1` traps
+		br_ := br.Down(uint(self.rows - 1))
+		assert(br_.Valid) // .?
+		br = br_.Value
+		assert(br.node.data.size.cols > 0) // Zig: u16 `- 1` traps
+		br.x = br.node.data.size.cols - 1
+		return Some(br)
+
+	case PointTagHistory:
+		br := self.GetTopLeft(PointTagActive)
+		br_ := br.Up(1)
+		if !br_.Valid {
+			return None[PageListPin]()
+		}
+		br = br_.Value
+		assert(br.node.data.size.cols > 0) // Zig: u16 `- 1` traps
+		br.x = br.node.data.size.cols - 1
+		return Some(br)
+
+	default:
+		panic("unreachable")
+	}
 }
 
 // totalRows is PageList.totalRows.
@@ -5867,7 +6494,17 @@ func (self *PageList) GetBottomRight(tag PointTag) Optional[PageListPin] {
 // rows, so it is not pub. This is only used for testing/debugging.
 //
 // Zig: self is *const PageList; returns usize, a count.
-func (self *PageList) totalRows() uint { panic(notImplemented) }
+func (self *PageList) totalRows() uint {
+	var rows uint = 0
+	node_ := self.pages.first
+	for node_ != nil {
+		node := node_
+		rows += uint(node.data.size.rows)
+		node_ = node.next
+	}
+
+	return rows
+}
 
 // TotalPages is PageList.totalPages.
 //
@@ -5875,7 +6512,17 @@ func (self *PageList) totalRows() uint { panic(notImplemented) }
 // for tests since it is O(N) over the list of pages.
 //
 // Zig: self is *const PageList; returns usize, a count.
-func (self *PageList) TotalPages() uint { panic(notImplemented) }
+func (self *PageList) TotalPages() uint {
+	var pages uint = 0
+	node_ := self.pages.first
+	for node_ != nil {
+		node := node_
+		pages += 1
+		node_ = node.next
+	}
+
+	return pages
+}
 
 // growRows is PageList.growRows.
 //
@@ -5883,22 +6530,46 @@ func (self *PageList) TotalPages() uint { panic(notImplemented) }
 // This is only used for testing so it isn't optimized in any way.
 //
 // Zig: Allocator.Error!void; n is usize, a count of rows.
-func (self *PageList) growRows(n uint) error { panic(notImplemented) }
+func (self *PageList) growRows(n uint) error {
+	for range n {
+		if _, err := self.Grow(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ClearDirty is PageList.clearDirty.
 //
 // Clear all dirty bits on all pages. This is not efficient since it
 // traverses the entire list of pages. This is used for testing/debugging.
-func (self *PageList) ClearDirty() { panic(notImplemented) }
+func (self *PageList) ClearDirty() {
+	for p := self.pages.first; p != nil; p = p.next {
+		p.data.dirty = false
+		rows := p.data.rows[0:p.data.size.rows]
+		for i := range rows {
+			row := &rows[i]
+			row.dirty = false
+		}
+	}
+}
 
 // IsDirty is PageList.isDirty: returns true if the point is dirty, used
 // for testing.
 //
 // Zig: self is *const PageList.
-func (self *PageList) IsDirty(pt Point) bool { panic(notImplemented) }
+func (self *PageList) IsDirty(pt Point) bool {
+	cell := self.GetCell(pt)
+	assert(cell.Valid) // .?
+	return cell.Value.IsDirty()
+}
 
 // markDirty is PageList.markDirty: mark a point as dirty, used for testing.
-func (self *PageList) markDirty(pt Point) { panic(notImplemented) }
+func (self *PageList) markDirty(pt Point) {
+	p := self.Pin(pt)
+	assert(p.Valid) // .?
+	p.Value.MarkDirty()
+}
 
 // PageListPin is PageList.Pin.
 //
@@ -5941,7 +6612,11 @@ func (self PageListPin) RowAndCell() struct {
 	row  *PageRow
 	cell *PageCell
 } {
-	panic(notImplemented)
+	rac := self.node.data.GetRowAndCell(uint(self.x), uint(self.y))
+	return struct {
+		row  *PageRow
+		cell *PageCell
+	}{row: rac.row, cell: rac.cell}
 }
 
 // PageListPinCellSubset is PageList.Pin.CellSubset.
@@ -5957,14 +6632,33 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self PageListPinCellSubset) String() string { panic(notImplemented) }
+func (self PageListPinCellSubset) String() string {
+	return pageListPinCellSubsetNames[self]
+}
+
+// pageListPinCellSubsetNames are the tag names of PageListPinCellSubset,
+// indexed by value (Zig's @tagName).
+var pageListPinCellSubsetNames = [...]string{"all", "left", "right"}
 
 // Cells is PageList.Pin.cells.
 //
 // Returns the cells for the row that this pin is on. The subset determines
 // what subset of the cells are returned. The "left/right" subsets are
 // inclusive of the x coordinate of the pin.
-func (self PageListPin) Cells(subset PageListPinCellSubset) []PageCell { panic(notImplemented) }
+func (self PageListPin) Cells(subset PageListPinCellSubset) []PageCell {
+	rac := self.RowAndCell()
+	all := self.node.data.GetCells(rac.row)
+	switch subset {
+	case PageListPinCellSubsetAll:
+		return all
+	case PageListPinCellSubsetLeft:
+		return all[0 : uint(self.x)+1]
+	case PageListPinCellSubsetRight:
+		return all[self.x:]
+	default:
+		panic("unreachable")
+	}
+}
 
 // Grapheme is PageList.Pin.grapheme.
 //
@@ -5972,19 +6666,32 @@ func (self PageListPin) Cells(subset PageListPinCellSubset) []PageCell { panic(n
 // the EXTRA codepoints and not the first codepoint.
 //
 // Zig: cell is *const pagepkg.Cell; returns ?[]u21.
-func (self PageListPin) Grapheme(cell *PageCell) Optional[[]uint32] { panic(notImplemented) }
+func (self PageListPin) Grapheme(cell *PageCell) Optional[[]uint32] {
+	return self.node.data.LookupGrapheme(cell)
+}
 
 // Style is PageList.Pin.style: returns the style for the given cell in
 // this pin.
 //
 // Zig: cell is *const pagepkg.Cell.
-func (self PageListPin) Style(cell *PageCell) Style { panic(notImplemented) }
+func (self PageListPin) Style(cell *PageCell) Style {
+	if cell.style_id == StyleDefaultId {
+		return Style{}
+	}
+	return *self.node.data.styles.Get(
+		cell.style_id,
+	)
+}
 
 // IsDirty is PageList.Pin.isDirty: check if this pin is dirty.
-func (self PageListPin) IsDirty() bool { panic(notImplemented) }
+func (self PageListPin) IsDirty() bool {
+	return self.node.data.dirty || self.RowAndCell().row.dirty
+}
 
 // MarkDirty is PageList.Pin.markDirty: mark this pin location as dirty.
-func (self PageListPin) MarkDirty() { panic(notImplemented) }
+func (self PageListPin) MarkDirty() {
+	self.RowAndCell().row.dirty = true
+}
 
 // PageIterator is PageList.Pin.pageIterator.
 //
@@ -5999,7 +6706,28 @@ func (self PageListPin) PageIterator(
 	direction PageListDirection,
 	limit Optional[PageListPin],
 ) PageListPageIterator {
-	panic(notImplemented)
+	if pageSlowRuntimeSafety {
+		if limit.Valid {
+			l := limit.Value
+			// Check the order according to the iteration direction.
+			switch direction {
+			case PageListDirectionRightDown:
+				assert(self.Eql(l) || self.Before(l))
+			case PageListDirectionLeftUp:
+				assert(self.Eql(l) || l.Before(self))
+			}
+		}
+	}
+
+	lim := pageListPageIteratorLimit{Tag: pageListPageIteratorLimitNone}
+	if limit.Valid {
+		lim = pageListPageIteratorLimit{Tag: pageListPageIteratorLimitRow, Row: limit.Value}
+	}
+	return PageListPageIterator{
+		row:       Some(self),
+		limit:     lim,
+		direction: direction,
+	}
 }
 
 // RowIterator is PageList.Pin.rowIterator.
@@ -6009,7 +6737,27 @@ func (self PageListPin) RowIterator(
 	direction PageListDirection,
 	limit Optional[PageListPin],
 ) PageListRowIterator {
-	panic(notImplemented)
+	page_it := self.PageIterator(direction, limit)
+	chunk_ := page_it.Next()
+	if !chunk_.Valid {
+		return PageListRowIterator{page_it: page_it}
+	}
+	chunk := chunk_.Value
+	var offset SizeCellCountInt
+	switch direction {
+	case PageListDirectionRightDown:
+		offset = chunk.start
+	case PageListDirectionLeftUp:
+		assert(chunk.end > 0) // Zig: u16 `- 1` traps
+		offset = chunk.end - 1
+	default:
+		panic("unreachable")
+	}
+	return PageListRowIterator{
+		page_it: page_it,
+		chunk:   Some(chunk),
+		offset:  offset,
+	}
 }
 
 // CellIterator is PageList.Pin.cellIterator.
@@ -6019,7 +6767,14 @@ func (self PageListPin) CellIterator(
 	direction PageListDirection,
 	limit Optional[PageListPin],
 ) PageListCellIterator {
-	panic(notImplemented)
+	row_it := self.RowIterator(direction, limit)
+	cell_ := row_it.Next()
+	if !cell_.Valid {
+		return PageListCellIterator{row_it: row_it}
+	}
+	cell := cell_.Value
+	cell.x = self.x
+	return PageListCellIterator{row_it: row_it, cell: Some(cell)}
 }
 
 // PromptIterator is PageList.Pin.promptIterator.
@@ -6029,7 +6784,11 @@ func (self PageListPin) PromptIterator(
 	direction PageListDirection,
 	limit Optional[PageListPin],
 ) PageListPromptIterator {
-	panic(notImplemented)
+	return PageListPromptIterator{
+		current:   Some(self),
+		limit:     limit,
+		direction: direction,
+	}
 }
 
 // IsBetween is PageList.Pin.isBetween: returns true if this pin is between
@@ -6038,7 +6797,90 @@ func (self PageListPin) PromptIterator(
 // Note: this is primarily unit tested as part of the Kitty
 // graphics deletion code.
 func (self PageListPin) IsBetween(top PageListPin, bottom PageListPin) bool {
-	panic(notImplemented)
+	if pageSlowRuntimeSafety {
+		if top.node == bottom.node {
+			// If top is bottom, must be ordered.
+			assert(top.y <= bottom.y)
+			if top.y == bottom.y {
+				assert(top.x <= bottom.x)
+			}
+		} else {
+			// If top is not bottom, top must be before bottom.
+			found := false
+			for node := top.node.next; node != nil; node = node.next {
+				if node == bottom.node {
+					found = true
+					break
+				}
+			}
+			if !found {
+				assert(false)
+			}
+		}
+	}
+
+	if self.node == top.node {
+		// If our pin is the top page and our y is less than the top y
+		// then we can't possibly be between the top and bottom.
+		if self.y < top.y {
+			return false
+		}
+
+		// If our y is after the top y but we're on the same page
+		// then we're between the top and bottom if our y is less
+		// than or equal to the bottom y if its the same page. If the
+		// bottom is another page then it means that the range is
+		// at least the full top page and since we're the same page
+		// we're in the range.
+		if self.y > top.y {
+			if self.node == bottom.node {
+				return self.y <= bottom.y
+			}
+			return true
+		}
+
+		// Otherwise our y is the same as the top y, so we need to
+		// check the x coordinate.
+		assert(self.y == top.y)
+		if self.x < top.x {
+			return false
+		}
+	}
+	if self.node == bottom.node {
+		// Our page is the bottom page so we're between the top and
+		// bottom if our y is less than the bottom y.
+		if self.y > bottom.y {
+			return false
+		}
+		if self.y < bottom.y {
+			return true
+		}
+
+		// If our y is the same, then we're between if we're before
+		// or equal to the bottom x.
+		assert(self.y == bottom.y)
+		return self.x <= bottom.x
+	}
+
+	// Our page isn't the top or bottom so we need to check if
+	// our page is somewhere between the top and bottom.
+
+	// Since our loop starts at top.page.next we need to check that
+	// top != bottom because if they're the same then we can't possibly
+	// be between them.
+	if top.node == bottom.node {
+		return false
+	}
+	for node := top.node.next; node != nil; node = node.next {
+		if node == bottom.node {
+			break
+		}
+		if node == self.node {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Before is PageList.Pin.before.
@@ -6046,30 +6888,88 @@ func (self PageListPin) IsBetween(top PageListPin, bottom PageListPin) bool {
 // Returns true if self is before other. This is very expensive since
 // it requires traversing the linked list of pages. This should not
 // be called in performance critical paths.
-func (self PageListPin) Before(other PageListPin) bool { panic(notImplemented) }
+func (self PageListPin) Before(other PageListPin) bool {
+	if self.node == other.node {
+		if self.y < other.y {
+			return true
+		}
+		if self.y > other.y {
+			return false
+		}
+		return self.x < other.x
+	}
+
+	for node := self.node.next; node != nil; node = node.next {
+		if node == other.node {
+			return true
+		}
+	}
+
+	return false
+}
 
 // Eql is PageList.Pin.eql.
-func (self PageListPin) Eql(other PageListPin) bool { panic(notImplemented) }
+func (self PageListPin) Eql(other PageListPin) bool {
+	return self.node == other.node &&
+		self.y == other.y &&
+		self.x == other.x
+}
 
 // Left is PageList.Pin.left: move the pin left n columns. n must fit
 // within the size.
 //
 // Zig: n is usize, a count of columns.
-func (self PageListPin) Left(n uint) PageListPin { panic(notImplemented) }
+func (self PageListPin) Left(n uint) PageListPin {
+	assert(n <= uint(self.x))
+	result := self
+	// Zig: std.math.cast(size.CellCountInt, n) orelse result.x.
+	if n <= math.MaxUint16 {
+		result.x -= SizeCellCountInt(n)
+	} else {
+		result.x -= result.x
+	}
+	return result
+}
 
 // Right is PageList.Pin.right: move the pin right n columns. n must fit
 // within the size.
 //
 // Zig: n is usize, a count of columns.
-func (self PageListPin) Right(n uint) PageListPin { panic(notImplemented) }
+func (self PageListPin) Right(n uint) PageListPin {
+	assert(n <= math.MaxUint-uint(self.x)) // Zig: usize `+` traps
+	assert(uint(self.x)+n < uint(self.node.data.size.cols))
+	result := self
+	// Zig: `+|=` with std.math.cast(size.CellCountInt, n) orelse
+	// std.math.maxInt(size.CellCountInt).
+	d := SizeCellCountInt(math.MaxUint16)
+	if n <= math.MaxUint16 {
+		d = SizeCellCountInt(n)
+	}
+	result.x = saturatingAddU16(result.x, d)
+	return result
+}
 
 // LeftClamp is PageList.Pin.leftClamp: move the pin left n columns,
 // stopping at the start of the row.
-func (self PageListPin) LeftClamp(n SizeCellCountInt) PageListPin { panic(notImplemented) }
+func (self PageListPin) LeftClamp(n SizeCellCountInt) PageListPin {
+	result := self
+	// Zig: `-|=` (saturating).
+	if result.x > n {
+		result.x -= n
+	} else {
+		result.x = 0
+	}
+	return result
+}
 
 // RightClamp is PageList.Pin.rightClamp: move the pin right n columns,
 // stopping at the end of the row.
-func (self PageListPin) RightClamp(n SizeCellCountInt) PageListPin { panic(notImplemented) }
+func (self PageListPin) RightClamp(n SizeCellCountInt) PageListPin {
+	result := self
+	assert(self.node.data.size.cols > 0) // Zig: u16 `- 1` traps
+	result.x = min(saturatingAddU16(self.x, n), self.node.data.size.cols-1)
+	return result
+}
 
 // LeftWrap is PageList.Pin.leftWrap.
 //
@@ -6080,7 +6980,32 @@ func (self PageListPin) RightClamp(n SizeCellCountInt) PageListPin { panic(notIm
 // TODO: Unit tests.
 //
 // Zig: n is usize, a count of cells; returns ?Pin.
-func (self PageListPin) LeftWrap(n uint) Optional[PageListPin] { panic(notImplemented) }
+func (self PageListPin) LeftWrap(n uint) Optional[PageListPin] {
+	// NOTE: This assumes that all pages have the same width, which may
+	//       be violated under certain circumstances by incomplete reflow.
+	cols := self.node.data.size.cols
+	remaining_in_row := self.x
+
+	if n <= uint(remaining_in_row) {
+		return Some(self.Left(n))
+	}
+
+	extra_after_remaining := n - uint(remaining_in_row)
+
+	rows_off := 1 + extra_after_remaining/uint(cols)
+
+	switch v := self.UpOverflow(rows_off); v.Tag {
+	case PageListPinOverflowOffset:
+		result := v.Offset
+		// Zig: @intCast to u16 of a value at most cols.
+		result.x = SizeCellCountInt(uint(cols) - extra_after_remaining%uint(cols))
+		return Some(result)
+	case PageListPinOverflowOverflow:
+		return None[PageListPin]()
+	default:
+		panic("unreachable")
+	}
+}
 
 // RightWrap is PageList.Pin.rightWrap.
 //
@@ -6091,7 +7016,35 @@ func (self PageListPin) LeftWrap(n uint) Optional[PageListPin] { panic(notImplem
 // TODO: Unit tests.
 //
 // Zig: n is usize, a count of cells; returns ?Pin.
-func (self PageListPin) RightWrap(n uint) Optional[PageListPin] { panic(notImplemented) }
+func (self PageListPin) RightWrap(n uint) Optional[PageListPin] {
+	// NOTE: This assumes that all pages have the same width, which may
+	//       be violated under certain circumstances by incomplete reflow.
+	cols := self.node.data.size.cols
+	assert(self.x < cols) // Zig: u16 `-` traps
+	remaining_in_row := cols - self.x - 1
+
+	if n <= uint(remaining_in_row) {
+		return Some(self.Right(n))
+	}
+
+	extra_after_remaining := n - uint(remaining_in_row)
+
+	rows_off := 1 + extra_after_remaining/uint(cols)
+
+	switch v := self.DownOverflow(rows_off); v.Tag {
+	case PageListPinOverflowOffset:
+		result := v.Offset
+		rem := extra_after_remaining % uint(cols)
+		assert(rem >= 1) // Zig: usize `- 1` traps
+		// Zig: @intCast to u16 of a value below cols.
+		result.x = SizeCellCountInt(rem - 1)
+		return Some(result)
+	case PageListPinOverflowOverflow:
+		return None[PageListPin]()
+	default:
+		panic("unreachable")
+	}
+}
 
 // Down is PageList.Pin.down.
 //
@@ -6099,7 +7052,16 @@ func (self PageListPin) RightWrap(n uint) Optional[PageListPin] { panic(notImple
 // the pin goes beyond the end of the screen.
 //
 // Zig: n is usize, a count of rows; returns ?Pin.
-func (self PageListPin) Down(n uint) Optional[PageListPin] { panic(notImplemented) }
+func (self PageListPin) Down(n uint) Optional[PageListPin] {
+	switch v := self.DownOverflow(n); v.Tag {
+	case PageListPinOverflowOffset:
+		return Some(v.Offset)
+	case PageListPinOverflowOverflow:
+		return None[PageListPin]()
+	default:
+		panic("unreachable")
+	}
+}
 
 // Up is PageList.Pin.up.
 //
@@ -6107,7 +7069,16 @@ func (self PageListPin) Down(n uint) Optional[PageListPin] { panic(notImplemente
 // the pin goes beyond the start of the screen.
 //
 // Zig: n is usize, a count of rows; returns ?Pin.
-func (self PageListPin) Up(n uint) Optional[PageListPin] { panic(notImplemented) }
+func (self PageListPin) Up(n uint) Optional[PageListPin] {
+	switch v := self.UpOverflow(n); v.Tag {
+	case PageListPinOverflowOffset:
+		return Some(v.Offset)
+	case PageListPinOverflowOverflow:
+		return None[PageListPin]()
+	default:
+		panic("unreachable")
+	}
+}
 
 // PageListPinOverflow is the anonymous union(enum) that
 // PageList.Pin.downOverflow and PageList.Pin.upOverflow return:
@@ -6141,7 +7112,32 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self PageListPinOverflowTag) String() string { panic(notImplemented) }
+func (self PageListPinOverflowTag) String() string {
+	return pageListPinOverflowTagNames[self]
+}
+
+// pageListPinOverflowTagNames are the tag names of PageListPinOverflowTag,
+// indexed by value (Zig's @tagName).
+var pageListPinOverflowTagNames = [...]string{"offset", "overflow"}
+
+// pageListCastCellCount is NOT a Zig declaration: `std.math.cast(
+// size.CellCountInt, v) orelse std.math.maxInt(size.CellCountInt)` in
+// downOverflow and upOverflow.
+func pageListCastCellCount(v uint) SizeCellCountInt {
+	if v > math.MaxUint16 {
+		return math.MaxUint16
+	}
+	return SizeCellCountInt(v)
+}
+
+// pageListPinOverflowOverflow is NOT a Zig declaration: the `.overflow`
+// value of PageListPinOverflow.
+func pageListPinOverflowOverflow(end PageListPin, remaining uint) PageListPinOverflow {
+	result := PageListPinOverflow{Tag: PageListPinOverflowOverflow}
+	result.Overflow.end = end
+	result.Overflow.remaining = remaining
+	return result
+}
 
 // DownOverflow is PageList.Pin.downOverflow.
 //
@@ -6149,7 +7145,42 @@ func (self PageListPinOverflowTag) String() string { panic(notImplemented) }
 // end of the screen, return the overflow amount.
 //
 // Zig: n is usize, a count of rows.
-func (self PageListPin) DownOverflow(n uint) PageListPinOverflow { panic(notImplemented) }
+func (self PageListPin) DownOverflow(n uint) PageListPinOverflow {
+	// Index fits within this page
+	assert(self.y < math.MaxUint16)              // Zig: u16 `+` traps
+	assert(self.node.data.size.rows >= self.y+1) // Zig: u16 `-` traps
+	rows := uint(self.node.data.size.rows - (self.y + 1))
+	if n <= rows {
+		return PageListPinOverflow{Tag: PageListPinOverflowOffset, Offset: PageListPin{
+			node: self.node,
+			y:    pageListCastCellCount(uint(self.y) + n),
+			x:    self.x,
+		}}
+	}
+
+	// Need to traverse page links to find the page
+	node := self.node
+	n_left := n - rows
+	for {
+		if node.next == nil {
+			assert(node.data.size.rows > 0) // Zig: u16 `- 1` traps
+			return pageListPinOverflowOverflow(PageListPin{
+				node: node,
+				y:    node.data.size.rows - 1,
+				x:    self.x,
+			}, n_left)
+		}
+		node = node.next
+		if n_left <= uint(node.data.size.rows) {
+			return PageListPinOverflow{Tag: PageListPinOverflowOffset, Offset: PageListPin{
+				node: node,
+				y:    pageListCastCellCount(n_left - 1),
+				x:    self.x,
+			}}
+		}
+		n_left -= uint(node.data.size.rows)
+	}
+}
 
 // UpOverflow is PageList.Pin.upOverflow.
 //
@@ -6157,7 +7188,37 @@ func (self PageListPin) DownOverflow(n uint) PageListPinOverflow { panic(notImpl
 // start of the screen, return the overflow amount.
 //
 // Zig: n is usize, a count of rows.
-func (self PageListPin) UpOverflow(n uint) PageListPinOverflow { panic(notImplemented) }
+func (self PageListPin) UpOverflow(n uint) PageListPinOverflow {
+	// Index fits within this page
+	if n <= uint(self.y) {
+		return PageListPinOverflow{Tag: PageListPinOverflowOffset, Offset: PageListPin{
+			node: self.node,
+			y:    pageListCastCellCount(uint(self.y) - n),
+			x:    self.x,
+		}}
+	}
+
+	// Need to traverse page links to find the page
+	node := self.node
+	n_left := n - uint(self.y)
+	for {
+		if node.prev == nil {
+			return pageListPinOverflowOverflow(
+				PageListPin{node: node, y: 0, x: self.x},
+				n_left,
+			)
+		}
+		node = node.prev
+		if n_left <= uint(node.data.size.rows) {
+			return PageListPinOverflow{Tag: PageListPinOverflowOffset, Offset: PageListPin{
+				node: node,
+				y:    pageListCastCellCount(uint(node.data.size.rows) - n_left),
+				x:    self.x,
+			}}
+		}
+		n_left -= uint(node.data.size.rows)
+	}
+}
 
 // PageListCell is PageList.Cell.
 //
@@ -6176,14 +7237,23 @@ type PageListCell struct {
 //
 // This is not very performant this is primarily used for assertions
 // and testing.
-func (self PageListCell) IsDirty() bool { panic(notImplemented) }
+func (self PageListCell) IsDirty() bool {
+	return self.node.data.dirty || self.row.dirty
+}
 
 // Style is PageList.Cell.style.
 //
 // Get the cell style.
 //
 // Not meant for non-test usage since this is inefficient.
-func (self PageListCell) Style() Style { panic(notImplemented) }
+func (self PageListCell) Style() Style {
+	if self.cell.style_id == StyleDefaultId {
+		return Style{}
+	}
+	return *self.node.data.styles.Get(
+		self.cell.style_id,
+	)
+}
 
 // ScreenPoint is PageList.Cell.screenPoint.
 //
@@ -6193,4 +7263,19 @@ func (self PageListCell) Style() Style { panic(notImplemented) }
 // for debugging and tests. If you have a need for this outside of
 // this file then consider a different approach and ask yourself very
 // carefully if you really need this.
-func (self PageListCell) ScreenPoint() Point { panic(notImplemented) }
+func (self PageListCell) ScreenPoint() Point {
+	y := self.row_idx
+	node_ := self.node
+	for node_.prev != nil {
+		node := node_.prev
+		// Zig: u16 `+=` traps on overflow.
+		assert(uint(y)+uint(node.data.size.rows) <= math.MaxUint16)
+		y += node.data.size.rows
+		node_ = node
+	}
+
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{
+		x: self.col_idx,
+		y: uint32(y),
+	}}
+}

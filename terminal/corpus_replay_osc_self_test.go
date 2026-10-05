@@ -1124,17 +1124,35 @@ func TestCorpusReplaySelfOSCVariants(t *testing.T) {
 	}
 }
 
-// A wireframe type that cannot be mapped fails loudly, naming the type: the
-// tag types without String, and an enum type without String.
+// Types the self-test uses to check that a type which cannot be mapped fails
+// loudly. They stand in for wireframe types without String: the OSC types
+// that once lacked it now have it (dde4530), so they no longer exercise
+// this path.
+type (
+	oscSelfNoStringTag   uint8
+	oscSelfNoStringEnum  uint8
+	oscSelfNoStringUnion struct {
+		Tag     oscSelfNoStringTag
+		Palette uint8
+	}
+	oscSelfNoStringHolder struct {
+		action oscSelfNoStringEnum
+	}
+)
+
+const oscSelfNoStringTagPalette oscSelfNoStringTag = 1
+
+// A wireframe type that cannot be mapped fails loudly, naming the type: a tag
+// type without String, and an enum type without String.
 func TestCorpusReplaySelfOSCLoudFailures(t *testing.T) {
 	for _, c := range []struct {
 		name string
 		v    any
 		want string
 	}{
-		{"tag without String", OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette}, "OSCParsersColorTargetTag"},
-		{"enum without String", OSCParsersContextSignalCommand{}, "OSCParsersContextSignalCommandAction"},
-		{"enum slice without String", []OSCParsersContextSignalCommandAction{1}, "OSCParsersContextSignalCommandAction"},
+		{"tag without String", oscSelfNoStringUnion{Tag: oscSelfNoStringTagPalette}, "oscSelfNoStringTag"},
+		{"enum without String", oscSelfNoStringHolder{}, "oscSelfNoStringEnum"},
+		{"enum slice without String", []oscSelfNoStringEnum{1}, "oscSelfNoStringEnum"},
 	} {
 		func() {
 			defer func() {

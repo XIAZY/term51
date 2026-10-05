@@ -64,16 +64,13 @@ func corpusSelfBody(text string) string {
 // ---------------------------------------------------------------------------
 // The trace kinds.
 
-// The parser kind needs only the parser of the port (Parser.go): every trace
-// of every parser suite is replayed through corpusProduce (runTrace) and
-// compared with the recorded one, all cases, except the traces that contain an
-// `@osc_dispatch`: the parser of the port yields no OSC command until osc.go
-// is ported, so those traces cannot match yet. This is a limit of THIS
-// plumbing self-test only (it must pass today); TestCorpusReplayParser has no
-// exclusion and fails for them until osc.go is ported.
+// The parser kind needs only the parser of the port (Parser.go and osc.go
+// with the OSC sub-parsers): every trace of every parser suite is replayed
+// through corpusProduce (runTrace) and compared with the recorded one, all
+// 9,010 cases, including the 393 that contain an `@osc_dispatch`.
 func TestCorpusReplaySelfParserTrace(t *testing.T) {
 	area := corpusAreaByName(t, "parser")
-	compared, needOSC, bad := 0, 0, 0
+	compared, withOSC, bad := 0, 0, 0
 	suitesRead := 0
 	for _, suite := range corpusSuiteNames(t, area) {
 		parsed := corpusReadSuite(t, area, suite)
@@ -93,8 +90,7 @@ func TestCorpusReplaySelfParserTrace(t *testing.T) {
 				t.Fatalf("%s: section %d is %q, the case is %q", suite, i, names[i], c.name)
 			}
 			if strings.Contains(texts[i], "\n@osc_dispatch\n") {
-				needOSC++
-				continue
+				withOSC++
 			}
 			compared++
 			got := corpusProduce(c, replayKindParser)
@@ -106,10 +102,10 @@ func TestCorpusReplaySelfParserTrace(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("parser traces: %d compared, %d with an @osc_dispatch (need osc.go), %d differ", compared, needOSC, bad)
-	if !testing.Short() && (compared+needOSC != 9010 || needOSC != 393) {
+	t.Logf("parser traces: %d compared, %d with an @osc_dispatch, %d differ", compared, withOSC, bad)
+	if !testing.Short() && (compared != 9010 || withOSC != 393) {
 		// 25 of the 27 suites have the parser kind; 9,010 traces in all.
-		t.Errorf("%d compared and %d with an @osc_dispatch, want 9010 in all and 393 with one", compared, needOSC)
+		t.Errorf("%d compared, %d with an @osc_dispatch, want 9010 and 393", compared, withOSC)
 	}
 	if bad > 0 {
 		t.Errorf("%d traces differ", bad)

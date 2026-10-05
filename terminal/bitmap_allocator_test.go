@@ -55,6 +55,7 @@ import (
 	"errors"
 	"math"
 	"math/bits"
+	"reflect"
 	"testing"
 	"unsafe"
 )
@@ -2422,4 +2423,24 @@ func TestBitmapAllocator_panic_findFreeChunks_n_is_zero(t *testing.T) {
 // Go-only: panic test: BitmapAllocator: chunk size is not a power of two: comptime assert(std.math.isPowerOfTwo(chunk_size)), a compile error in Zig, a run-time assertion in BitmapAllocatorInit in Go
 func TestBitmapAllocator_panic_init_chunk_size_not_a_power_of_two(t *testing.T) {
 	bmExpectPanic(t, func() { _ = BitmapAllocatorInit[uint8](3, BitmapAllocatorLayoutOf(4, 64)) })
+}
+
+// Go-only: ruling (@alignOf is Zig's on every platform, not Go's runtime alignment; other element types panic)
+func TestBitmapAllocator_go_only_zig_alignment(t *testing.T) {
+	expectEqual(t, uint64(1), bitmapAllocatorZigAlignOf(reflect.TypeFor[uint8]()))
+	expectEqual(t, uint64(2), bitmapAllocatorZigAlignOf(reflect.TypeFor[uint16]()))
+	expectEqual(t, uint64(4), bitmapAllocatorZigAlignOf(reflect.TypeFor[uint32]()))
+	// 8 on 32-bit ARM too, where Go's own alignment of a uint64 is 4.
+	expectEqual(t, uint64(8), bitmapAllocatorZigAlignOf(reflect.TypeFor[uint64]()))
+	expectEqual(t, uint64(8), bitmapAllocatorZigAlignOf(reflect.TypeFor[uint]()))
+	expectEqual(t, uint64(1), bitmapAllocatorZigAlignOf(reflect.TypeFor[[3]uint8]()))
+	expectEqual(t, uint64(8), BitmapAllocatorInit[uint64](16, BitmapAllocatorLayoutOf(16, 64)).elem_align)
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Fatalf("expected a panic for a struct element type")
+			}
+		}()
+		bitmapAllocatorZigAlignOf(reflect.TypeFor[struct{ a uint8 }]())
+	}()
 }

@@ -78,6 +78,10 @@ func TestCorpusReplaySelfSplitConfig(t *testing.T) {
 	if cfg.allUpTo != 300 || cfg.head != 64 {
 		t.Errorf("SPLIT_MAX=300 in the default run: %+v", cfg)
 	}
+	cfg, err = splitConfigFrom(env("TERM51_SPLIT_LONG", "64,64,64"), true)
+	if err != nil || cfg != (splitConfig{allUpTo: 1000, head: 64, tail: 64, seeded: 64}) {
+		t.Errorf("SPLIT_LONG=64,64,64 in the full run: %+v %v", cfg, err)
+	}
 	cfg, err = splitConfigFrom(env("TERM51_SPLIT_AT", "op:2,at:17"), false)
 	if err != nil || cfg.at == nil || *cfg.at != (splitVariant{2, 17}) {
 		t.Errorf("SPLIT_AT: %+v %v", cfg, err)
@@ -87,7 +91,8 @@ func TestCorpusReplaySelfSplitConfig(t *testing.T) {
 		t.Errorf("SPLIT_AT=bytewise: %+v", cfg)
 	}
 	for _, bad := range [][]string{{"TERM51_SPLIT_MAX", "x"}, {"TERM51_SPLIT_MAX", "-1"}, {"TERM51_SPLIT_AT", "op:1"},
-		{"TERM51_SPLIT_AT", "op:1,at:0"}, {"TERM51_SPLIT_AT", "op:-1,at:3"}, {"TERM51_SPLIT_AT", "x"}} {
+		{"TERM51_SPLIT_AT", "op:1,at:0"}, {"TERM51_SPLIT_AT", "op:-1,at:3"}, {"TERM51_SPLIT_AT", "x"},
+		{"TERM51_SPLIT_LONG", "64,64"}, {"TERM51_SPLIT_LONG", "64,64,-1"}, {"TERM51_SPLIT_LONG", "64,64,64,1"}, {"TERM51_SPLIT_LONG", "a,b,c"}} {
 		if _, err := splitConfigFrom(env(bad...), false); err == nil {
 			t.Errorf("%v accepted", bad)
 		}

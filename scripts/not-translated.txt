@@ -218,3 +218,9 @@ terminal/search/sliding_window.zig | term51: SlidingWindow.init: out of memory u
 terminal/search/sliding_window.zig | term51: SlidingWindow.append: out of memory leaves the window empty (forward) | allocation-failure test (std.testing.FailingAllocator via term51AKAppendOom); no Go counterpart
 terminal/search/sliding_window.zig | term51: SlidingWindow.append: out of memory leaves the window empty (reverse) | allocation-failure test (std.testing.FailingAllocator via term51AKAppendOom); no Go counterpart
 terminal/osc/parsers/semantic_prompt.zig | (unnamed, semantic_prompt.zig:1271) | term51: `_ = string_encoding;` only makes the Zig compiler include the tests of os/string_encoding.zig; Go always compiles every file of the package
+std/fmt/parse_float.zig | #11169 | f128 only; only parseFloat(f64) is ported (RGB.fromIntensity)
+std/fmt/parse_float.zig | many_digits hex | f32 and f128 only; only parseFloat(f64) is ported
+std/fmt/parse_float.zig | hex.f16 | f16 only; only parseFloat(f64) is ported
+std/fmt/parse_float.zig | hex.f32 | f32 only; only parseFloat(f64) is ported
+std/fmt/parse_float.zig | hex.f80 | f80 only; only parseFloat(f64) is ported
+std/fmt/parse_float.zig | hex.f128 | f128 only; only parseFloat(f64) is ported

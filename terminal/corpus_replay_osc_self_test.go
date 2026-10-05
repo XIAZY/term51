@@ -722,7 +722,7 @@ var oscSelfActionTags = []string{
 func oscSelfFiles(t *testing.T) []string {
 	t.Helper()
 	files := []string{"esc/reset.actions.gz", "esc/save_restore.actions.gz", "csi/misc.actions.gz", "modes/alt_screen.actions.gz"}
-	for _, suite := range []string{"all", "color_state", "hyperlink_text", "lengths", "semantic_prompt_text", "unterminated"} {
+	for _, suite := range []string{"all", "color_state", "hyperlink_text", "lengths", "rgbi_float", "semantic_prompt_text", "unterminated"} {
 		files = append(files, "osc/"+suite+".actions.gz", "osc/"+suite+".actions_noalloc.gz")
 	}
 	for _, suite := range []string{"abort", "c0_embedded", "nextslicecapped_inputs", "state_osc_string", "state_then_final", "utf8"} {

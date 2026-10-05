@@ -37,6 +37,9 @@ package terminal
 //	                    in between
 //	TERM51_SPLIT_MAX=n  the length up to which every offset is cut, in the
 //	                    default run too; 0 means every offset of every feed
+//	TERM51_SPLIT_LONG=h,t,s  of a feed longer than the every-offset limit:
+//	                    offsets 1..h, the last t and s seeded ones in
+//	                    between (the reduced rule of docs/verification.md)
 //	TERM51_SPLIT_AT=v   only that variant, `bytewise` or `op:<i>,at:<n>` (a
 //	                    reproduction of a report)
 //
@@ -156,6 +159,13 @@ func splitConfigFrom(getenv func(string) string, exhaustive bool) (splitConfig, 
 		if n == 0 {
 			cfg.allUpTo = math.MaxInt
 		}
+	}
+	if s := getenv("TERM51_SPLIT_LONG"); s != "" {
+		var h, tl, sd int
+		if n, err := fmt.Sscanf(s, "%d,%d,%d", &h, &tl, &sd); err != nil || n != 3 || h < 0 || tl < 0 || sd < 0 || fmt.Sprintf("%d,%d,%d", h, tl, sd) != s {
+			return cfg, fmt.Errorf("TERM51_SPLIT_LONG=%q: want head,tail,seeded", s)
+		}
+		cfg.head, cfg.tail, cfg.seeded = h, tl, sd
 	}
 	if s := getenv("TERM51_SPLIT_AT"); s != "" {
 		v, err := parseSplitVariant(s)

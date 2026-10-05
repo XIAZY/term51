@@ -546,23 +546,19 @@ merge into `docs/mapping.md`.
   on 32-bit ARM.
 
 ##### `std.fmt.parseFloat(f64)` (used by `RGB.fromIntensity`)
-- strconv's grammar is not Zig's: Zig accepts `_` between digits (also in the
-  exponent) without a base prefix, a hex mantissa without `p` (`0x1`), and a
-  signed `nan`; strconv rejects those. `colorStdFmtParseFloatF64` ports
-  `parse_float.zig` + `parse.zig` (grammar, `Number`, `validUnderscores`,
-  `parseInfOrNan`) and `convert_hex.zig` (hex conversion, including Zig's
-  handling of more than 16 significant hex digits, which is not correctly
-  rounded: `0x1.000000000000000800000000001p-1` gives 0.5,
-  `0xFFFFFFFFFFFFFFFFFFFFp-80` gives 0x3FEFFFFFFFFFFFFE). Decimal values are
-  converted by `strconv.ParseFloat` of the same digits without underscores:
-  Zig's decimal path (fast path, Eisel-Lemire, slow path) is correctly rounded,
-  as is strconv; `ErrRange` is accepted (it carries Zig's +-inf).
-- The 8-digits-at-a-time fast path of `tryParseDigits` is not ported (same
-  result, wrapping arithmetic).
-- Checked once against Zig 0.15.2 on 60 edge inputs (signs, `.5`, `1.`,
-  underscores valid and invalid, hex with/without `p`, inf/nan spellings,
-  overflow/underflow, 20-50 digit decimals, >16-digit hex): identical bits
-  and identical accept/reject.
+- Ported in full from Zig 0.15.2 (`lib/std/fmt/parse_float.zig` and
+  `parse_float/*.zig`) as `terminal/std_fmt_parse_float.go`, entry point
+  `stdFmtParseFloatF64`; no `strconv`. strconv differs from Zig in grammar
+  (`_` separators, `0x1` without `p`, signed `nan`), in hex rounding (Zig is
+  not correctly rounded with more than 16 significant hex digits), in decimal
+  rounding (Zig's slow path, `Decimal.parse`, drops digits when the input
+  has `_` separators and returns a value one unit in the last place low:
+  `rgbi:0.0_66666666666666658802586908905141171999275684356689453125001/0/0`
+  gives red 16, strconv 17; term51 `docs/upstream-findings.md` section 21,
+  `docs/deliberate-fixes.md` entry 7), and in exponents (strconv caps them
+  at 10,000). The port reproduces all of it. Details, names and the
+  bit-for-bit comparison with Zig: "`std.fmt.parseFloat(f64)`:
+  `terminal/std_fmt_parse_float.go`" below.
 - The error (`error.InvalidCharacter`) is discarded by the only caller, so
   the Go function returns `(float64, bool)`; no new sentinel.
 
@@ -577,8 +573,9 @@ merge into `docs/mapping.md`.
   OSC port, which may declare them).
 - `std.mem.trim` and `std.mem.indexOfScalarPos` are `colorStdMemTrim` and
   `colorStdMemIndexOfScalarPos`.
-- All these stand-ins carry a `color` prefix and live at the end of
-  `color.go` to avoid name clashes with stand-ins the parallel OSC port may
+- All these stand-ins (except `std.fmt.parseFloat`, which is in
+  `std_fmt_parse_float.go` with the prefix `stdFmtParseFloat`) carry a
+  `color` prefix and live at the end of `color.go` to avoid name clashes with stand-ins the parallel OSC port may
   add; they belong in `zig.go` and should be unified with the OSC port's
   equivalents when merging.
 
@@ -605,6 +602,221 @@ merge into `docs/mapping.md`.
 - `MouseShape.String` and the other exhaustive enums' `String()` index a
   names array; an out-of-range value (impossible in Zig) panics.
 
+
+### `std.fmt.parseFloat(f64)`: `terminal/std_fmt_parse_float.go`
+
+Zig 0.15.2's `lib/std/fmt/parse_float.zig` and `lib/std/fmt/parse_float/*.zig`
+(the toolchain that built the recorded corpus) are ported in full. Nothing in
+the file is ported from a Ghostty source file. The only caller is
+`RGB.fromIntensity` (`colorRGBFromIntensity`, `color.go`), which parses an
+f64.
+
+#### Why a port and not strconv
+
+- Grammar: Zig accepts `_` between digits (also in the exponent) without a
+  base prefix, a hex mantissa without a `p` exponent (`0x1`) and a signed
+  `nan`; strconv rejects those.
+- Hex rounding: with more than 16 significant hex digits Zig is not correctly
+  rounded (`0x1.000000000000000800000000001p-1` gives 0.5,
+  `0xFFFFFFFFFFFFFFFFFFFFp-80` gives 0x3FEFFFFFFFFFFFFE).
+- Decimal rounding: Zig's decimal path is **not** always correctly rounded.
+  `Decimal.parse` (`decimal.zig` lines 273-294, used by `convertSlow`) trims
+  trailing zeros by scanning `s` backwards from `stream.offsetTrue() - 1`.
+  `offsetTrue()` does not count the `_` separators that `scanDigit` skipped,
+  so with separators the scan starts too far left. If it lands on a run of
+  `'0'` characters it counts them, and `num_digits -= n_trailing_zeros` then
+  drops that many digits from the end, real digits included. Near a
+  midpoint between two doubles this returns the lower one (one unit in the
+  last place low). Example: `0.0_66666666666666658802586908905141171999275684356689453125001`
+  gives 0x3FB1111111111110; the correctly rounded value (strconv, and Zig
+  without the `_`) is 0x3FB1111111111111. Through `rgbi:` that is red 16
+  instead of 17. Only inputs that reach the slow path are affected, which
+  means more than 19 significant digits near a midpoint, with Eisel-Lemire
+  unable to decide.
+- Exponents: `Decimal.parse` saturates its exponent at 0x10000 (65,536) and
+  `parseScientific` at 0x1000_0000. strconv caps the exponent at 10,000, so
+  long inputs with compensating exponents of 100,000 or more differ.
+
+The port copies all of these exactly (governing rule 7).
+
+#### Names
+
+- Every declaration has the prefix `stdFmtParseFloat` followed by its Zig
+  name in Go style: `parseFloat` -> `stdFmtParseFloatF64`,
+  `FloatStream` -> `stdFmtParseFloatFloatStream`, `isEightDigits` ->
+  `stdFmtParseFloatIsEightDigits`, file-level constants
+  (`max_shift`, `eisel_lemire_smallest_power_of_five`, ...) ->
+  `stdFmtParseFloatMaxShift`, `stdFmtParseFloatEiselLemireSmallestPowerOfFive`.
+  The prefix names the std file group; unlike the earlier stand-ins
+  (`colorStd...`), it carries no `color` prefix: the code is no longer in
+  `color.go`, and the name says what it ports, not who calls it.
+- Generic instantiations get a type suffix. Generic over the float type T
+  (always f64 here): `F64` (`stdFmtParseFloatConvertFastF64`,
+  `stdFmtParseFloatNumberF64`, `stdFmtParseFloatBiasedFpF64`,
+  `stdFmtParseFloatDecimalF64`, ...). Generic over the mantissa type
+  (`mantissaType(f64)` is u64): `U64` (`stdFmtParseFloatTryParseDigitsU64`,
+  `stdFmtParseFloatMinNDigitIntU64`, `stdFmtParseFloatFastIntPow10U64`).
+- Methods keep Zig's names in lower case (`offsetTrue`, `scanDigit`,
+  `leftShift`, `toFloat`, ...): the types are file-private. Functions without
+  `self` that return the type follow the `<Type>Init` rule:
+  `FloatStream.init` -> `stdFmtParseFloatFloatStreamInit`,
+  `BiasedFp.zero`/`zeroPow2`/`inf` -> `stdFmtParseFloatBiasedFpF64Zero` /
+  `...ZeroPow2` / `...Inf`, `Decimal.new`/`parse` ->
+  `stdFmtParseFloatDecimalF64New` / `...Parse`, `U128.new`/`mul` ->
+  `stdFmtParseFloatU128New` / `...Mul`.
+- `FloatStream.len` is the method `len` (legal in Go). The local `len` of
+  `parsePartialNumberBase` is `len_`.
+- std helpers used by the package: `std.ascii.toLower` ->
+  `stdFmtParseFloatAsciiToLower`, `std.ascii.startsWithIgnoreCase` ->
+  `stdFmtParseFloatAsciiStartsWithIgnoreCase`, `std.math.shl(u64, ...)` /
+  `std.math.shr(u64, ...)` -> `stdFmtParseFloatMathShlU64` /
+  `stdFmtParseFloatMathShrU64` (signed shift amount: negative reverses the
+  direction, 64 or more gives 0, as Zig's), `std.math.nan(f64)` ->
+  the existing `colorStdMathNanF64` (`color.go`), `std.math.inf` ->
+  `math.Inf`, `std.math.mul(u64)` -> `bits.Mul64` with a non-zero high word
+  as the overflow, `@clz` -> `bits.LeadingZeros64`, `std.mem.readInt` /
+  `writeInt` (u64, little) -> `encoding/binary.LittleEndian`. All could move
+  to `zig.go` later.
+
+#### Layout
+
+One Go file for the ten Zig files (the task asked for one file). Each Zig
+file is a section headed by its path, functions in the Zig order: 
+`parse_float.zig`, `parse.zig`, `FloatStream.zig`, `common.zig`,
+`FloatInfo.zig`, `convert_hex.zig`, `convert_fast.zig`,
+`convert_eisel_lemire.zig`, `convert_slow.zig`, `decimal.zig`. Upstream's
+comments are carried over.
+
+#### Comptime
+
+- Only the f64 instantiation exists. The f16, f32, f80 and f128 arms of
+  every type switch (`FloatInfo.from`, `fastPow10`, `floatFromUnsigned`,
+  `BiasedFp.inf`) and the u128 arm of `fastIntPow10` are not ported;
+  `if (MantissaT == u64) a else b` is written as `a` (max_mantissa_digits 19
+  and 16, Decimal constants 768/19/2047/-324/310/18). `mantissaType(T)` is
+  `uint64` wherever it is used.
+- `FloatInfo.from(f64)` (comptime_int fields) is a block of untyped Go
+  constants `stdFmtParseFloatFloatInfoF64<Field>`.
+- Comptime value parameters become ordinary parameters: `base`, the
+  `ParseInfo` struct (`stdFmtParseFloatParseInfo`), `precision` of
+  `computeProductApprox`, `n` of `tryParseNDigits`. `comptime assert`s on
+  them are run-time `assert`s.
+- `math.floatExponentBits(f64)` etc. are literal constants (11, 52, 1023,
+  -1022) with the Zig expression in a comment.
+- Tables: `eisel_lemire_table_powers_of_five_128` (651 entries) and
+  `pow2_to_pow5_table` (128 entries, local to `numberOfDigitsLeftShift` in
+  Zig, package-level in Go: `stdFmtParseFloatDecimalPow2ToPow5Table`) were
+  copied from the Zig source by a script and compared entry by entry with
+  it (identical; every cutoff is also checked to equal 5^i). Note that the
+  Eisel-Lemire table passes the high word of each power as `U128.lo` and the
+  low word as `.hi`; `computeProductApprox` uses them that way round, and so
+  does the port. `fastPow10` and `fastIntPow10` tables are package-level
+  arrays (`...Table`) indexed by the function as in Zig (`i & 31`).
+
+#### Optionals and errors
+
+- `?T` results are `(T, bool)` (as the previous stand-ins did):
+  `FloatStream.first`, `readU64`, `scanDigit`, `parseScientific`,
+  `parsePartialNumberBase`, `parsePartialNumber`, `parseNumber`,
+  `parsePartialInfOrNan`, `parseInfOrNan`, `convertFast`,
+  `convertEiselLemire`.
+- `parseFloat`'s only error, `error.InvalidCharacter`, is discarded by the
+  only caller, so `stdFmtParseFloatF64` returns `(float64, bool)`; no new
+  sentinel.
+
+#### Control flow
+
+- `scanDigit`'s `retry: while (true)` with `continue :retry` is a Go `for`
+  with `continue`.
+- `convertSlow`: the `blk:` block whose `5...9` prong does an unlabelled
+  `break` (which leaves the enclosing `while`) is a labelled Go loop
+  `shiftLeft:` with `break shiftLeft`.
+- `numberOfDigitsLeftShift`: the `return x.delta;` after the if/else chain
+  inside the `for` is unreachable in Zig and is omitted (`go vet` rejects
+  unreachable code); a comment marks the place.
+- `@branchHint(.cold)` has no Go counterpart (comment kept).
+
+#### Safety checks (ReleaseSafe recorder)
+
+Where Zig would trap and Go would wrap silently, the port asserts:
+`n.mantissa + 1` in `parseFloat`, `n *= 10` in `min_n_digit_int`,
+`first.hi += 1` in `computeProductApprox`, `@intCast(self.e)` to u64 in
+`BiasedFp.toFloat` (e >= 0), the `@intCast` usize -> i32 conversions and the
+`i -= 1` and `d.num_digits -= n_trailing_zeros` subtractions in
+`Decimal.parse`. None of them can fail for any input (reasoning in the
+comments; the 11.6 million compared inputs never trip them, natively or on 32-bit ARM). Other checked
+operations are proven not to overflow by upstream's own comments
+(`parse8Digits`) or by bounds (shift amounts, `Decimal` digit arithmetic in
+u64 with shifts of at most 60); Go's index checks cover the array accesses.
+
+#### Integer widths
+
+`usize` is `uint`, `isize` is `int64` (the recorder is 64-bit; the values are
+bounded by the input length), `i64`/`i32`/`u64`/`u8` are the same-width Go
+types. `U128.mul` is `bits.Mul64`. Nothing uses Go `int` where the width
+matters, so 32-bit ARM computes the same values (checked, below).
+
+#### Floating point
+
+The only float arithmetic is in `convertFast`: `float64(mantissa)` (exact,
+mantissa <= 2^53), one multiplication or division by a power of ten, and a
+negation. There is no addition, so Go cannot fuse anything; `go build
+-gcflags=...=-S` of the package shows no FMADD/FMSUB/FNMADD/FNMSUB.
+Eisel-Lemire and the slow path are integer-only.
+
+#### Not ported as an optimisation
+
+Nothing is left out: the 8-digits-at-a-time path of `tryParseDigits`
+(`parse8Digits`, `isEightDigits`, `readU64Unchecked`) and the 8-digit copy
+in `Decimal.parse` are ported (the previous stand-in skipped the first one).
+Unused declarations (`FloatStream.len`, `isEmpty`, `readU64`, `atUnchecked`,
+`BiasedFp.zeroPow2`) are ported too.
+
+#### Verification
+
+Compared bit for bit (f64 bits, or ERR) with Zig 0.15.2 `std.fmt.parseFloat(f64)`
+using the project lead's harness (copy in `/home/xia/wt/pf-scratch/pfdiff-pf`,
+streamed, nothing stored):
+
+| Family | What | Inputs | Zig ERR | Diffs native (arm64) | Diffs 32-bit ARM (qemu) |
+|---|---|---:|---:|---:|---:|
+| targeted | hand-written edge cases (signs, `inf`/`nan` spellings, hex with/without `p`, underscores valid/invalid, under/overflow) | 123 | 61 | 0 | 0 |
+| rgb | the 255 channel boundaries with and without `_`, `rgbi:` domain | 510 | 0 | 0 | 0 |
+| bytes | every byte value inserted/substituted at every position of 8 templates | 14,336 | 13,833 | 0 | 0 |
+| long | very long inputs (up to 200,000 digits, with and without `_`, decimal and hex) with compensating exponents | 297 | 0 | 0 | 0 |
+| intensity | random values in [0, 1] with long digit strings | 200,000 | 63,949 | 0 | 0 |
+| random | random decimal and hex strings, random `_` | 300,000 | 24,124 | 0 | 0 |
+| halfway | exact midpoints between adjacent doubles, perturbed and truncated, with and without `_` | 1,394,822 | 412,252 | 0 | 0 |
+| extra | midpoints with `_` (>19 digits) at the intensity boundaries, huge exponents, hex, inf/nan, malformed | 1,639,789 | 209,253 | 0 | 0 |
+| exh6 | every 6-character string over three 11/8-letter alphabets | 3,805,266 | 3,795,432 | 0 | 0 |
+| exh5 | every string of up to 5 characters over a 21-letter alphabet | 4,288,305 | 4,275,771 | 0 | 0 |
+| **total** | | **11,643,449** | | **0** | **0** |
+
+The Go side is the current `std_fmt_parse_float.go` (package line changed
+to `main`), built natively and with `GOARCH=arm GOARM=7`, run under
+`qemu-arm-static`; the whole set ran on both. Defect-focused check
+(`/home/xia/wt/pf-scratch/defect`): `RGB.parse` built from upstream
+`color.zig` with Zig 0.15.2 against `terminal.ColorRGBParse`, natively and
+on 32-bit ARM: identical on the 10 `rgbi:` strings of `list.txt` and on all
+1,020 generated candidates (`cands.txt`: for each channel boundary k, the
+midpoint + `001` with `_` after `0.0`, after `0.0` and two digits later,
+near the end, and without `_`); 360 of the 765 underscored candidates give
+a channel one lower than the correctly rounded value, none of the 255
+without `_`.
+
+Tests: `terminal/std_fmt_parse_float_test.go` translates the six tests of
+`parse_float.zig` that have an f64 part (`parseFloat`, `nan and inf`,
+`largest normals` (f64 line), `hex.special` and `hex.zero` (written for f32
+in Zig, width-independent, run on f64), `hex.f64`); not translated:
+`#11169` (f128), `many_digits hex` (f32 vs f128), `hex.f16`, `hex.f32`,
+`hex.f80`, `hex.f128`. `parse_float/*.zig` have no tests.
+`scripts/check-test-mapping.py` does not check std files (as for
+`std_hash_*_test.go`). Two Go-only tests pin the defect bits and the large
+exponents. The defect is also pinned through `rgbi:` by the term51 test
+`term51: RGB.fromIntensity: underscores can lower a channel by one (zig std
+defect)` (term51 patch 0022, translated in `color_test.go`) and by the
+recorded suite `osc/rgbi_float` (57 cases: OSC 11, OSC 4 and OSC 21 with
+each string, with and without `_`).
 
 ## Stream module: implementation notes
 
@@ -1069,6 +1281,224 @@ Tag `String()` methods use names arrays (`hyperlinkHyperlinkIdTagNames`,
   3,000 entries directly (the Go entry holds its slices, no page needed); the
   Zig dump test that produced the file is not translated.
 
+## Page layer: implementation notes
+
+Recorded by the implementers of each file and folded in here (2026-10-05).
+
+### `bitmap_allocator.zig`
+
+File: `terminal/bitmap_allocator.go`.
+
+| Zig | Go | Notes |
+|---|---|---|
+| `comptime assert(std.math.isPowerOfTwo(chunk_size))` | `assert(chunk_size != 0 && chunk_size&(chunk_size-1) == 0)` in `BitmapAllocatorInit` | run time in Go (Go-only panic test) |
+| `@sizeOf(T)`, `@alignOf(T)` (comptime) | `reflect.TypeFor[T]().Size()` / `.Align()`, read ONCE in `BitmapAllocatorInit` into the **added fields** `elem_size`, `elem_align` (the `has_deleted` precedent) | `BitmapAllocatorBytesRequired` has no receiver and reads `@sizeOf(T)` per call (`bitmapAllocatorSizeOf`). Go sizes equal Zig's for every element type used (u8, u16, u21 = uint32, u64, [3]u8). Go's alignment differs only for 8-byte scalars on 32-bit ARM (Go 4, Zig 8), read only by alloc's `chunk_size % @alignOf(T)` assertion with a chunk size below 8; the page uses 16 and 32 |
+| `@intFromPtr(slice.ptr) - @intFromPtr(chunks)` (free, isAllocated) | `reflect.ValueOf(slice).Pointer()` minus the same for `chunks` (`bitmapAllocatorAddr`), in the helper `chunkIndexOf` (not a Zig declaration; the shared expression of free and isAllocated) | addresses are only subtracted, never turned back into pointers; no package `unsafe`. Zig's traps kept: `-` underflow (slice before `chunks`, or a nil slice) and `@divExact` (not on a chunk boundary). Go-only guard: a start past the end of `chunks` panics (Zig would write bitmap words through the unchecked `[*]u64`) |
+| `bitmaps[i] \|= ~@as(u64, 0) >> @intCast(64 - bits) << @intCast(bit)` with `bits == 0` (empty slice) | `assert(bits > 0)` before the shift | Zig's `@intCast(64)` to u6 traps; Go would shift by 64 and continue (Go-only panic test) |
+| `for (1..n)` in findFreeChunks with `n == 0` | `assert(n >= 1)` inside the per-bitmap loop, where Zig's `for` is | so an empty bitmap list still returns null for n = 0, as in Zig |
+| findFreeChunks, large path: the read of `bitmaps[i]` after the middle loop | `if i >= len(bitmaps) { return None }` | the term51 reference fix (`patches-reference/0001`); the pinned upstream aborts (out-of-bounds read at bitmap_allocator.zig:281). Tests `TestBitmapAllocator_findFreeChunks_large_request_past_last_bitmap` and `..._random_bitmaps_skipped_inputs_no_space` |
+| `continue :search` from the inner `while (rem > 64) : (i += 1)` | labeled `continue search` | Go's labeled continue skips the inner post statement, as Zig's does |
+| `std.math.mul(usize, @sizeOf(T), n) catch return error.OutOfMemory` | `bits.Mul64`, high word non-zero is `ErrOutOfMemory` | 64-bit as the reference |
+| `std.math.divCeil(usize, byte_count, chunk_size)` | `(byte_count-1)/chunk_size + 1` for a positive numerator, else `byte_count/chunk_size` | std's unsigned branch; its error (zero denominator) cannot happen |
+| `findFreeChunks(..., chunk_count)` with `chunk_count` a 64-bit usize | Go-only: a count above `math.MaxUint` returns `ErrOutOfMemory` before the call | only on a 32-bit target; such a count exceeds every chunk the bitmaps hold, so findFreeChunks would return null |
+| `ptr[0..n]` at `&chunks[idx * chunk_size]` | `chunks[start : start+n : end]`, `start`/`end` the byte offsets of the first chunk and of the end of the last chunk divided by `@sizeOf(T)` | capacity reaches the end of the last chunk (wireframe REQUIREMENT). Go-only assert: the chunk starts on a whole element (an element size that does not divide the chunk size cannot be a Go `[]T`; never with the page's types) |
+| `std.mem.alignForward(usize, x, a)` | `bitmapAllocatorAlignForward` (not a Zig declaration) | asserts `a` is a power of two (std) and that `x + (a - 1)` does not overflow (Zig's `+` traps) |
+| `a * b` on usize in layout/bytesRequired | `bitmapAllocatorMul` (not a Zig declaration) | asserts no overflow (Zig's `*` traps) |
+| `@divExact` whose exactness follows from an alignForward just before | plain `/`, comment `// @divExact: exact by construction` | |
+| `@popCount`, `@clz`, `@ctz` | `bits.OnesCount64`, `bits.LeadingZeros64`, `bits.TrailingZeros64` | |
+| `std.log.warn("bm={b} idx={}", ...)` (dumpBitmaps) | `warn("default", "bm=%b idx=%d", ...)` | unscoped std.log is the `default` scope |
+| `comptime assert(@import("builtin").is_test)` (isAllocated) | not checked | the function is unexported and only tests call it |
+| `init`: `.chunks = buf.member(u8, l.chunks_start)` | `chunks = make([]T, bitmap_count * 64 * chunk_size / @sizeOf(T))` | what the bitmaps can hand out (file header) |
+
+Tests: bitmap_allocator_test.go 74 + corpus_bitmap_test.go 3, all pass
+natively and on 32-bit ARM (qemu).
+
+### `hash_map.zig`
+
+File: `terminal/hash_map.go`. The wireframe's structure (metadata slice +
+shared `hdr` pointer, value receivers, `hashMapEntrySizes`, `keyIndex`) is
+kept unchanged; no signature changed.
+
+| Zig | Go | Notes |
+|---|---|---|
+| `AutoContext.hash` = `getAutoHashFn(K)`: `Wyhash.hash(0, std.mem.asBytes(&key))` (every key type used has a unique representation) | type switch on `any(key)` writing the key little-endian at its Zig width into an 8-byte stack buffer, then `stdHashWyhashHash(0, buf[:n])` | u8/i8 1, u16/i16 2, u32/i32 4, u64/i64 8 bytes; Go `uint`/`int` (usize/isize) always 8 (int sign-extended). Any other key type panics `not ported`. The switch is a per-call run-time step standing for Zig's comptime width: Go cannot specialise a method of the empty generic struct `hashMapAutoContext[K]` per type argument, and the struct has no field to hold a choice made once. A defined type (e.g. `type X uint32`) would hit the default; the library's keys are `SizeOffsetInt` (alias of uint32) |
+| `AutoContext.eql` = `std.meta.eql(a, b)` | `a == b` | integers |
+| `Metadata` packed struct, `@as(u8, @bitCast(self))` in isFree / isTombstone | method `bitCast()` (not a Zig declaration): `fingerprint&0x7f \| (used&1)<<7` | the masks drop what a u7 / u1 cannot hold |
+| `takeFingerprint`: `@truncate(hash >> (64 - 7))` | `uint8(hash >> 57)` | |
+| `self.metadata.?` (null unwrap, a safety panic) | `assert(self.metadata != nil)` in `header()` and `initMetadatas()`; `removeByIndex` and the probe loops index the slice (a nil slice panics on the index) | Go-only panic tests `TestHashMap_panic_*_null_metadata` |
+| `self.metadata.? + idx` then `metadata[0]` (unchecked many-pointer) | `self.metadata[idx]` | idx is masked below capacity = len(metadata) |
+| `const mask = self.capacity() - 1` (u32) | `assert(capacity >= 1)` before the subtraction | in putAssumeCapacityNoClobberContext, getIndex, getOrPutAssumeCapacityAdapted (capacity-0 panic tests) |
+| `self.capacity() - self.header().size` in growIfNeeded | `assert(capacity >= size)` | Go-only test: a full map overfilled by an assume-capacity put |
+| `self.count() + additional_size` in ensureUnusedCapacity | `assert(additional_size <= MaxUint32 - count)` | |
+| `header().size += 1` / `-= 1` (u32) | assert before (`< MaxUint32` / `> 0`) | removeByIndex panic test |
+| `x.* = undefined` (fetchRemoveAdapted, removeByIndex, getOrPutAssumeCapacityAdapted) | Go zero value of K / V | mapping table: `undefined` is the zero value |
+| `@memset(metadata[0 .. capacity], 0)` (initMetadatas) | `clear(self.metadata[0:self.Capacity()])` | |
+| Iterator `while (metadata != end) : ({ metadata += 1; it.index += 1; })` | `for ; len(metadata) != 0; metadata, it.index = metadata[1:], it.index+1` over `metadata[it.index:cap]` | the return inside the body skips the post statement as in Zig |
+| FieldIterator `metadata += 1; items += 1` | reslice `[1:]` of both | |
+| keyIterator / valueIterator with null metadata: `metadata` and `items` `undefined` | nil slices, `len: 0` | |
+| `init`: metadata at `buf + @sizeOf(Header)`, keys/values at `layout.keys_start` / `vals_start` | `make` of each, `layout.capacity` long; header allocated and pointed at by `hdr` | capacity 0 gives a non-nil empty metadata slice (wireframe REQUIREMENT) |
+| `OffsetHashMap.init`: `getOffset(..., m.metadata.?)`; `map(base)`: `self.metadata.ptr(base)` | copy `metadata` and `hdr` from / to the unmanaged map | |
+| `removeByPtr`: `if (@sizeOf(K) > 0) (@intFromPtr(key_ptr) - @intFromPtr(self.keys())) / @sizeOf(K) else 0` | `keyIndex` holds the whole expression, with package `unsafe` as the wireframe allows (`unsafe.Sizeof(*key_ptr)`, `unsafe.Pointer`, `unsafe.SliceData`) | panics when the pointer is before `keys` (Zig's `-` trap) or the element at the computed index is not `key_ptr` (wireframe REQUIREMENT; Go-only foreign-pointer test) |
+| comptime `key_align` / `val_align` (`1` for a zero-sized type), `header_align` (4), `base_align` (max) | computed at the top of `hashMapLayoutForCapacity` from `hashMapEntrySizes` | the function is the only user; a page computes it once per layout |
+| `std.mem.alignForward(usize, x, a)` in layoutForCapacity | local closure `alignForward`, asserting a power-of-two alignment (std) | no overflow possible: cap <= 2^31 |
+| `assert(new_capacity == 0 or std.math.isPowerOfTwo(new_capacity))` | `assert(new_capacity == 0 \|\| new_capacity&(new_capacity-1) == 0)` | Go-only panic tests (layoutForCapacity, OffsetHashMap.layout) |
+| The Context-less wrappers (`put`, `get`, ... : compile error unless `@sizeOf(Context) == 0`, then `undefined` context) | `var ctx C` (zero value) | |
+| `getOrPutAdapted`'s compile-time check | comment only | |
+
+Tests: hash_map_test.go 101 + hash_map_2_test.go 51 +
+corpus_hashmap_test.go 1 (data/hashmap/hashmap_data.txt), all pass natively
+and on 32-bit ARM (qemu).
+
+### `page.zig`
+
+File: `terminal/page.go`.
+
+#### Memory
+
+| Zig | Go | Notes |
+|---|---|---|
+| `Page.memory`, `Offset(Row)`, `Offset(Cell)` | `rows []PageRow`, `cells []PageCell` (one slice, `capacity.rows * capacity.cols`) | wireframe decision; `Row.cells` keeps the byte offset `cells_start + index*8` |
+| `row.cells.ptr(self.memory)` (many-item pointer to the row's first cell) | `self.rowCells(row)`: `self.cells[(row.cells - cells_start)/8:]`, sliced by the caller as Zig slices the pointer | private helper, not a Zig declaration. A row of another page whose offset is out of range panics when sliced |
+| `cells_start` outside `layout` | `pageCellsStart(cap)`: `alignForward(cap.rows * @sizeOf(Row), @alignOf(Cell))`, the first lines of `layout` | computing the whole layout per call would be slow (it runs the set layouts' float formulas) |
+| `getOffset(Cell, self.memory, cell)` | `self.cellOffset(cell)` = `pageCellsStart + cellIndex(cell)*8`; asserts the result fits u32 (`@intCast` to OffsetInt) | |
+| pointer subtraction (`cellIndex`, `rowIndex`) | `unsafe` pointer arithmetic, the one sanctioned use (wireframe): panics if the pointer is not an element of the page's slice (also for an empty slice) | Go-only panic tests `GetCells` of another page's row rely on it |
+| `initBuf(buf, l)` | private `pageInitBuf(rows, cells, l)`: the buffer is the rows and cells slices; the sub-structures make their own memory | the wireframe omitted initBuf; it is reinstated (private) because `init` and `reinit` both call it and `reinit` must reuse the page's own rows and cells: Zig zeroes the same memory, so a `*Row`/`*Cell` held elsewhere (for example Screen's cursor during `PageList.eraseRows`' reinit of the last page) still points into the page. A fresh allocation would leave such pointers on a detached copy. `PageList`'s prune path (`first.data = .initBuf(.init(buf), layout)`) can use it the same way |
+| `init`: `posix.mmap` + `errdefer munmap` | `make` of rows and cells; the error result is always nil | `assert(l.total_size % page_size_min == 0)` kept |
+| `deinit`: `munmap`, `self.* = undefined` | `*self = Page{}` | as `Tabstops.deinit` |
+| `reinit`: `@memset` of the memory as u64, then `initBuf` | `clear(rows)`, `clear(cells)`, `pageInitBuf(self.rows, self.cells, layout(capacity))` | |
+| `clone` / `cloneBuf` (mmap + memcpy of the whole page) | `Clone`: copy of the struct, then of every slice the page owns: rows, cells, both allocators (bitmaps and chunks), both hash maps (metadata, a new header, keys, values) and both sets (table, items). Private helpers `pageCloneBitmapAllocator`, `pageCloneHashMap`, `pageCloneRefCountedSet` | the copies reach into the private fields of bitmap_allocator.go, hash_map.go and ref_counted_set.go (same package) |
+| an `Offset(T).Slice` copied with the memory (grapheme map values, hyperlink entries' uri and explicit id) | `pageRebase(s, from, to, chunk_len)`: finds `&from[i] == &s[0]` among the chunk starts of the old allocator and returns `to[i : i+len(s) : i+cap(s)]` | no `unsafe` (not sanctioned here), so a linear scan of chunk starts per slice (graphemes: up to 512 starts for 8192 bytes). Capacity kept (appendGrapheme grows into it). An empty slice, or one not inside the allocator (not page memory), is returned unchanged |
+| `fastmem.copy(Cell, dst, src)` | `copy(dst, src)` | Go's copy is a memmove; upstream's memcpy with overlapping ranges is undefined (it is never reached with overlap in the library's own calls as far as checked) |
+| `@memset(@as([]u64, @ptrCast(cells)), 0)` | `clear(cells)` | the zero PageCell is the all-zero cell |
+
+#### Byte arithmetic (`layout`, `Capacity`)
+
+- All byte sizes and offsets are `uint64` (wireframe). The sizes and base
+  alignments Zig reads from types are untyped constants next to the
+  wireframe's `...Sizes` values: `pageSizeOfRow`/`pageSizeOfCell`/
+  `pageAlignOfCell` 8, `pageBitSizeOfRow`/`pageBitSizeOfCell` 64,
+  `pagePageSizeMin` 4096, and the base alignments:
+  StyleSet 8 (RefCountedSet's `@max` includes `@alignOf(Layout)`, which has
+  usize fields), GraphemeAlloc and StringAlloc 8 (`@alignOf(u64)`),
+  GraphemeMap 8 (`@max(Header 4, key 4, value 8)`), hyperlink.Set 8,
+  hyperlink.Map 4 (`@max(4, 4, 2)`). The wireframes of the three
+  sub-structure files omit `base_align`; page.go needs the numbers for the
+  `alignForward`/`alignBackward` calls.
+- `std.mem.alignForward/alignBackward(usize, ...)` are `pageAlignForward` /
+  `pageAlignBackward` (Zig 0.15.2: assert the alignment is a power of two;
+  alignForward's `addr + (alignment - 1)` asserted not to overflow).
+  `std.math.divCeil(usize, ...)` is `pageStdMathDivCeil` (unsigned branch;
+  every caller's `catch` is for a zero divisor, which never happens).
+  `std.math.ceilPowerOfTwo(T, v) catch unreachable` and
+  `ceilPowerOfTwoAssert(u32, v)` are `pageStdMathCeilPowerOfTwo(v, bits)`
+  (asserts `v != 0` and that the result fits T). They could move to zig.go
+  and be shared with ref_counted_set.go's inline versions.
+- `layout`: `hyperlink_count` is a u16 (`@divFloor` of the u16 field);
+  `hyperlink_count * hyperlink_cell_multiplier` is a u16 product of at most
+  1365 * 16, so it cannot trap and `std.math.cast(u32, ...) orelse
+  maxInt(u32)` never takes its `orelse` (comment in place).
+  `@intCast(grapheme_count)` to the map's u32 Size is asserted.
+- `availableBitsForGrid`: the usize subtractions cannot underflow (each
+  backward start is at or after the forward start of the same member); no
+  assert added, comment in place.
+- `adjust`: `@intCast(new_rows)` to u16 is asserted
+  (`TestPg1_panic_Capacity_adjust_new_row_count_overflows_u16`).
+- `exactRowCapacity`: the four `@intCast`s of the result are asserted
+  (`..._styles_capacity_overflows_u16`). `std.StaticBitSet(65536)` is the
+  private `pageCellCountSet` (1024 u64 masks, `set`, `isSet`, `count`; a
+  u16 index is always in range).
+
+#### Packed structs `Row` and `Cell`
+
+- `PageRow.bitCast` / `pageRowFromBits` and `PageCell.bitCast` /
+  `pageCellFromBits` place every field at its Zig bit offset; a field wider
+  in Go than in Zig is masked to the Zig width (u2 enums, the u21
+  codepoint, the u23 `_padding`), as in style.go.
+- `Cell.content` is an untagged packed union of three views of 24 bits; Go
+  has one field per view. `pageCellFromBits` fills all three from the same
+  bits. `bitCast` takes the view `content_tag` selects for its own bits
+  (codepoint 0..20, palette 0..7, rgb 0..23) and the bits above that view
+  from `color_rgb`, the one view covering all 24. This reproduces Zig for
+  every cell built by a whole literal (other views zero) or read from raw
+  bits, including the leftover bits 21..23 under a codepoint tag
+  (`term51: Cell.isZero: leftover bits are not ignored`), and for a Go
+  write of `content.codepoint` alone (Zig's field write keeps bits 21..23).
+  It differs from Zig only for a Go value whose views were set
+  inconsistently by hand (no library code does that).
+- `Cell.init`: `@bitCast(@as(u64, 0))` is the Go zero value; the u21
+  parameter is asserted `<= 0x1FFFFF`.
+- Enum `String()`s read names arrays (`pageRowSemanticPromptNames`,
+  `pageCellContentTagNames`, `pageCellWideNames`,
+  `pageCellSemanticContentNames`); exhaustive switches on these enums
+  (`hasText`, `codepoint`, `gridWidth`, `isEmpty`, the `wide` switch of
+  `verifyIntegrity`) end in `panic("unreachable")`.
+
+#### Control flow
+
+- `clonePartialRowFrom`: the labeled blocks `hyperlink:` and `dst_id:` are
+  left from inside nested blocks, so they are `goto hyperlink` / `goto
+  dst_id` with the label after the block (mapping's goto rule); `style:` is
+  the last statement of the loop body, so `break :style` is `continue`.
+  `copy:` is a plain block assigning `*dst_row`. The deferred
+  `pauseIntegrityChecks(false); assertIntegrity()` is a deferred closure;
+  Go also runs it while a panic unwinds (Zig aborts first), which only
+  matters to the panic tests and does not change that they panic.
+- `addWithId... catch |e| switch (e) { ... } orelse id`: an error switch
+  over `ErrOutOfMemory` / `ErrNeedsRehash` with `default:
+  panic("unreachable")`, then `Valid ? Value : id`. The same shape for
+  `string_alloc.alloc ... catch |err| switch (err)` in insertHyperlink.
+  Where Zig only asserts the error set at compile time (`comptime
+  assert(@TypeOf(e) == error{OutOfMemory})`), any error maps to the page
+  error.
+- `errdefer` (insertHyperlink, setGraphemes, appendGrapheme): written out
+  before the later error returns, in Zig's unwinding order (the explicit
+  id, then the uri); errdefers with nothing failing after them are
+  comments. As upstream, a failed `addWithIdContext` in
+  clonePartialRowFrom leaks the duplicated strings in the page's string
+  allocator (no errdefer upstream).
+- `moveCells`' parameter `len` hides Go's builtin inside the function;
+  `src_cells.len` is written as `len` (the slice was cut to that length).
+- `pauseIntegrityChecks`: `+= 1` / `-= 1` on the usize counter are guarded
+  by asserts (Zig traps on overflow/underflow;
+  `TestPg1_panic_Page_pauseIntegrityChecks_unpause_below_zero`).
+- `assertIntegrity`: `log.err` goes through `warn("page", ...)` marked `//
+  Zig: log.err` (the stream.go precedent), then `panic("page integrity
+  violation")`. The DebugAllocator is dropped.
+- `verifyIntegrity`: the Valgrind early return is dropped (comment). The
+  arena and the two `std.AutoHashMap`s are Go maps; `getOrPut` + `+= 1` is
+  `m[k] += 1`. Go's map order is not Zig's, so when several styles (or
+  hyperlinks) have a short ref count, a different one may be logged first;
+  the returned error is the same. The zombie-style block is kept with its
+  unused counter (`_ = zombies`).
+- `self.page.?`-style unwraps (`lookupGrapheme(...).?`, `getEntry(...).?`,
+  `getPtr(...).?`) are `assert(x.Valid)` / `assert(p != nil)`.
+- `build_options.kitty_graphics` blocks: not ported (wireframe), a comment
+  marks each place.
+
+#### Integrity checks are always on
+
+`pageSlowRuntimeSafety` is the constant `true` (wireframe), so every
+`assertIntegrity` (clearCells, clearGrapheme, clearHyperlink, setGraphemes,
+appendGrapheme, setHyperlink, moveCells, swapCells, cloneFrom,
+clonePartialRowFrom) runs a full `verifyIntegrity`, which hashes every cell
+of the page into the hyperlink map. The recorded corpus comes from a build
+where this is off. See the optimisation list.
+
+#### Tests
+
+- page_1/2/3_test.go: 405 Go tests (140 + 135 + 130): the 320 translated
+  Zig tests (all 331 Zig tests are mapped; 11 listed in
+  not-translated.txt) and the Go-only panic tests. hyperlink_test.go: 42
+  tests (the 32 that needed PageInit included). All 447 pass, each run on
+  its own, natively (arm64) and under 32-bit ARM qemu (main at 869098c
+  merged). No translated test turned out to be layout-only beyond the 11
+  already listed.
+- `data/layout/page_layout.txt` (27,060 lines: 505 capacities with every
+  Layout field and maxCols, and 3,325 `Capacity.adjust` results) matched
+  line for line natively and on 32-bit ARM, checked with a throw-away test
+  (not committed). Suggest a Go-only corpus test like
+  TestStyle_corpus_hash; nothing reads the file today.
+
 ## Tests
 
 - One Go test per Zig test, in the same order, with the exact Zig title in a
@@ -1177,6 +1607,16 @@ on `Point` (286) or `Optional[Point]` (8) were switched to the two helpers.
 (`styleFlags.bits`), and `Style.Format` prints those bits, so a Go value with bits above `underline`'s u3 or
 `_padding`'s u5 compares, hashes and prints as its Zig bits
 (`TestStyle_go_only_flags_out_of_range_bits_are_masked`).
+
+## The one per-call exception to the compile-time rule (project lead, 2026-10-05)
+
+`hashMapAutoContext.Hash` picks the key's Zig width with a type switch on
+every call. Zig resolves `getAutoHashFn(K)` at compile time, but Go cannot
+resolve it once for an empty generic context struct (no field to hold the
+choice, no specialisation by type parameter). It is a type switch, not
+string work. A defined key type (for example `type X uint32`) panics "not
+ported"; the library's keys are aliases and are fine. Every other piece of
+Zig compile-time work is done once in Go.
 
 ## Page-layer bookkeeping (decision: option A, final)
 

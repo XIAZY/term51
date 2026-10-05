@@ -19,7 +19,7 @@ build.
 | `terminal/osc/parsers/*.zig` (15 files) | `terminal/osc_parsers_*.go` | done | 448 of 457 (9 not translated), all pass except 1 that skips as upstream does (iterm2) | - | pass |
 | `os/string_encoding.zig` | `terminal/os_string_encoding.go` | done | 50 of 50 (18 upstream, 32 term51), all pass | - | pass |
 | `terminal/sgr.zig` | `terminal/sgr.go` | done | 60 of 64 (4 not translated), all pass | - | pass |
-| `terminal/color.zig` | `terminal/color.go` | done | 67 of 70 (3 not translated), all pass | `data/colors` (lab grid, lerp, 256-colour generation) bit for bit; default palette table | pass |
+| `terminal/color.zig` | `terminal/color.go` | done | 68 of 71 (3 not translated), all pass | `data/colors` (lab grid, lerp, 256-colour generation) bit for bit; default palette table | pass |
 | `terminal/x11_color.zig` | `terminal/x11_color.go` | done | 8 of 8, all pass | `rgb.txt` byte for byte | pass |
 | `terminal/kitty/color.zig` | `terminal/kitty_color.go` | done | 9 of 10 (1 not translated), all pass | - | pass |
 | `terminal/mouse_shape.zig` | `terminal/mouse_shape.go` | done | 7 of 7; 6 pass, 1 skips as upstream does (library build) | - | pass |
@@ -34,8 +34,12 @@ build.
 | `terminal/Tabstops.zig` | `terminal/Tabstops.go` | done | 35 of 39 (4 allocation-failure tests not translated), all pass; 1 Go-only panic test | - | pass |
 | `terminal/ref_counted_set.zig` | `terminal/ref_counted_set.go` | done | 79 of 80 (1 not translated), all pass | capacities.txt: all 65,537 capacities match | pass |
 | `terminal/style.zig` | `terminal/style.go` | done | 106 of 108 (2 not translated), all pass | style_hash.txt: 4,096 of 4,096 | pass |
-| `terminal/hyperlink.zig` | `terminal/hyperlink.go` | done | 35 of 37 (2 not translated); 10 pass, the rest wait for page.go and bitmap_allocator.go | hyperlink_hash.txt: 3,000 of 3,000 | pass (same 10) |
+| `terminal/hyperlink.zig` | `terminal/hyperlink.go` | done | 35 of 37 (2 not translated), all pass (42 tests with the Go-only ones) | hyperlink_hash.txt: 3,000 of 3,000 | pass |
+| `terminal/bitmap_allocator.zig` | `terminal/bitmap_allocator.go` | done | 74 translated and Go-only, all pass | corpus_bitmap_test.go: 3 pass | pass |
+| `terminal/hash_map.zig` | `terminal/hash_map.go` | done | 152 translated and Go-only, all pass | corpus_hashmap_test.go passes | pass |
+| `terminal/page.zig` | `terminal/page.go` | done | 320 of 331 (11 not translated), all pass, plus Go-only panic tests (405 page tests in all) | page_layout.txt: 27,060 of 27,060 lines (corpus test pending) | pass |
 | std `hash/wyhash.zig`, `hash.zig` (`int`), `hash/auto_hash.zig` | `terminal/std_hash_wyhash.go`, `std_hash.go`, `std_hash_auto_hash.go` | done (int: u64; autoHash: the cases PageEntry.hash reaches) | wyhash 5 of 5, int 1 (u64 lines), auto_hash 0 of 12 (key types not ported); 9 Go-only tests pinning Zig output | - | pass |
+| std `fmt/parse_float.zig` + `parse_float/*.zig` (f64) | `terminal/std_fmt_parse_float.go` | done | 6 of 12 std tests (6 f16/f32/f80/f128-only not translated); 2 Go-only; bit for bit with Zig on 11,643,449 inputs | osc/rgbi_float: 57 cases match (actions kinds) | pass |
 
 `scripts/check-test-mapping.py` verifies that every Zig test has exactly one
 Go test, in the same order, by the `// Zig: test "<title>"` comment above each

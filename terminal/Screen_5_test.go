@@ -36,7 +36,7 @@
 //     page.memory, id)` is page.styles.Get(id), `refCount(page.memory, id)`
 //     is RefCount(id), and `entry.uri.slice(page.memory)` is entry.uri.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-sca.txt. The asserts of the functions under
+//     scripts/not-translated.txt. The asserts of the functions under
 //     test (cursorUp, cursorLeft, cursorCellRight, cursorCellLeft,
 //     cursorHorizontalAbsolute) already have panic tests in Screen_2_test.go
 //     (TestSc2_panic_...); they are not repeated here.

@@ -29,7 +29,7 @@
 //     direction (Zig default right_down) and every Resize literal says
 //     `reflow: true`.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-pl6.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

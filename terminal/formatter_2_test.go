@@ -30,7 +30,7 @@
 //     (`defer x.deinit(alloc)` of lists and maps) are dropped with
 //     `// Zig-only:` comments.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-fm2.txt (none in this range).
+//     scripts/not-translated.txt (none in this range).
 
 package terminal
 

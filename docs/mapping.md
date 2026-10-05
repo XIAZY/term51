@@ -32,6 +32,17 @@ Set by the project lead; they take precedence over anything below.
    included. Deliberate fixes come after everything passes
    (`term51/docs/deliberate-fixes.md`).
 8. SIMD fast paths are not ported; the scalar path is the reference.
+   Ruling (project lead, 2026-10-05): `Stream.nextSliceCapped` calls
+   `simd.vt.utf8DecodeUntilControlSeq`, whose scalar fallback
+   (`utf8DecodeUntilControlSeqScalar`) lives in the SIMD module and is only
+   reached from the SIMD branch of `nextSlice`, so it is not ported. Its
+   defined result is what per-byte `next` gives (upstream's fallback aborts
+   on `FF ESC [ 1 A` and disagrees with `next` on `E2 82 (`, findings
+   section 12). `stream.go` uses the stand-in `streamUtf8DecodeUntilControlSeq`
+   (see "`stream.zig`" below), and
+   `TestStream_go_only_nextSliceCapped_equals_per_byte_next` enforces the
+   equivalence on 30,000 seeded random inputs fed in random chunks (printed
+   codepoints, action log, parser and UTF-8 decoder state).
 9. The port never wraps errors (no `fmt.Errorf` with `%w`, no `errors.Join`):
    it returns the bare sentinel, so `err.Error()` is Zig's `@errorName`. Every
    sentinel is `var Err<ZigName> = errors.New("<ZigName>")`; the corpus
@@ -370,15 +381,15 @@ Files: `osc_parsers_osc9.go`, `osc_parsers_semantic_prompt.go`, and the new
   with three `writeAll` calls. Only with a fixed writer that runs out of
   room could the split of a partial write differ from std's formatter (not
   reachable in the library: urlPercentEncode has no caller in it).
-- Tests: all 18 Zig tests (`printf_q 1`..`10`, `singles percent`,
-  `percent 1`..`7`) are translated one for one in
-  `terminal/os_string_encoding_test.go`.
-- `scripts/check-test-mapping.py` needs a rule for `os/` (like the
-  `datastruct/` one): `os/string_encoding.zig` currently resolves to
-  `os/string_encoding_test.go` and reports all 18 tests missing. With
-  `parts[0] in ("datastruct", "os")` and `base = parts[0] + "_" + ...` it
-  reports `zig=18 go=18 ok` (checked on a temporary copy; the script is not
-  edited).
+- Tests: all 18 upstream tests (`printf_q 1`..`10`, `singles percent`,
+  `percent 1`..`7`) and the 32 term51 tests (patch 0020, one or more for
+  every function, added at the lead's request) are translated one for one
+  in `terminal/os_string_encoding_test.go`. The library's Zig test root
+  never reached this file, so upstream's 18 had never run in our Zig build;
+  patch 0020 adds `test { _ = string_encoding; }` to `semantic_prompt.zig`
+  (listed in `scripts/not-translated.txt`).
+- `scripts/check-test-mapping.py` maps `os/` like `datastruct/`
+  (`os/string_encoding.zig` -> `os_string_encoding_test.go`).
 
 ### OSC sub-parsers: context_signal, kitty_clipboard_protocol, kitty_text_sizing, iterm2
 
@@ -502,7 +513,16 @@ merge into `docs/mapping.md`.
   does not. Every product that is an operand of `+` or `-` is wrapped in an
   explicit `float32(...)`/`float64(...)` conversion (Go spec: an explicit
   conversion rounds and prevents fusion). Applied in `LAB.*`, `luminance`,
-  `perceivedLuminance` and in every stand-in below.
+  `perceivedLuminance` and in every stand-in below. Go also fuses across
+  statements, so a product stored in a variable that later feeds `+` or `-`
+  is wrapped as well (`lo = float32(fk * ln2lo)`, `t1`, `t2`, `hfsq`, `z`,
+  `w`, `x1 = float32(x1 * x1)`): to be safe every stored product in these
+  functions is wrapped. Found by review after the parser module merged:
+  the unwrapped stored products compiled to FMADD/FMSUB on arm64 and made
+  `pow(x, 2.4)` 1 ULP off for some channels (e.g. 180); 32-bit ARM never
+  fuses. `scripts/check-no-fma.sh` (run first by `scripts/test.sh`)
+  disassembles the package for arm64 and amd64 v3 and fails on any fused
+  instruction, since instruction selection can change with a Go upgrade.
 - `std.math.pow(f32)`, `std.math.pow(f64)`, `std.math.cbrt(f32)`,
   `std.math.scalbn`/`ldexp` (f32, f64) are ported (`colorStdMathPowF32`,
   `colorStdMathPowF64`, `colorStdMathCbrtF32`, `colorStdMathLdexpF32/F64`).
@@ -583,6 +603,178 @@ merge into `docs/mapping.md`.
   names array; an out-of-range value (impossible in Zig) panics.
 
 
+## Stream module: implementation notes
+
+Recorded by the implementers of each file and folded in here. Governing
+rules are above; these sections only add what the implementation decided.
+
+### Small terminal files: `ansi.zig`, `charsets.zig`, `modes.zig`, `device_status.zig`, `kitty/key.zig`
+
+Files: `ansi.go`, `charsets.go`, `modes.go`, `device_status.go`,
+`kitty_key.go`. Recorded while porting them (2026-10-05).
+
+#### Language features (additions to the table)
+
+| Zig | Go | Notes |
+|---|---|---|
+| `packed struct(uN)` whose bit layout is observable (`ModeTag`, `device_status.Tag`, `kitty.key.Flags`) | ordinary Go struct plus the wireframe's conversion pair (`Int()` = `@bitCast` to the backing integer, `...FromInt` = `@bitCast` back) | the conversions place each field at Zig's bit offset (first field = bit 0). A field narrower than its Go type (`u15` value) and a `u5` argument are asserted to fit (`assert(value <= 0x7FFF)`, `assert(v <= 0x1F)`): such values cannot exist in Zig, so the port stops instead of dropping bits. The reverse cast from the full backing integer (`ModesModeTagFromInt`) needs no check: every u16 is a valid ModeTag. |
+| `packed struct` used only as a set of bools (`ModePacked`) | ordinary Go struct of bools, fields in Zig's order | no Go code depends on the bit layout; the tests check the field order with reflect (the counterpart of `@bitOffsetOf`) |
+| Type generated at compile time from a table (`Mode`, `ModePacked`, `device_status.Request`, via `@Type`) | the declarations written out (wireframe), plus the part of the generation that is data computed from the table at start-up | `Mode`/`Request`: the enum field list (name, value = the Tag bit-cast) is built by `modesModeInit` / `deviceStatusRequestInit` from `entries` into `modesModeFields` / `deviceStatusRequestFields`; `String()` and `ModesModeValues()` read it. The written-out constants equal what it computes (the tests check all of them). `ModePacked`'s field defaults (`.default_value_ptr = &entry.default`) are set by `ModesModePackedInit` in a loop over `entries`. |
+| `@field(s, name)` with a comptime field name (`modes.zig`) | `modesModePackedField(p, name) *bool`, a `switch` on the name returning a pointer to that field | an unknown name is a compile error in Zig; it panics in Go (cannot happen: every entry has a field). `132_column` maps to the Go field `x132_column`. |
+| `switch (mode) { inline else => \|m\| { const entry = comptime entryForMode(m); ... @field(..., entry.name) } }` | tables built once at start-up: `modesModeIndex` (Mode -> entry index, a [1<<16]uint8) and `modesModePackedFields` (per entry, the field accessor `@field` resolves to, checked against `modesModePackedField` at start-up); set/get/save/restore are one index load plus one field access | rule (lead, 2026-10-05): compile-time work is computed once at start-up, never per call. The first implementation did the lookup per call (`String()`, a scan of `entries`, a string switch; ~420 ns per `get`); now ~9 ns. `modesEntryForMode` and `modesModePackedField` keep their Zig meaning but are off the per-call path. A value that is not a Mode panics (`modesModeEntryIndex`; Zig: switch on a corrupt enum value traps). |
+| `inline for (entries)` with `comptime` conditions (`modeFromInt`, `reqFromInt`) | `modeFromInt`: lookup of the tag `(v, ansi)` in `modesModeIndex`, then the `disabled` check; `reqFromInt`: ordinary `for` loop and `if` | Zig unrolls the loop into one integer comparison per entry. `reqFromInt` (3 entries) keeps the loop; `modeFromInt` uses the start-up index at the lead's request. |
+| `@splat(.disabled)` (FlagStack) | loop assigning `KittyKeyFlagsDisabled` to every element | |
+| `u3` counter with `+%=` / `-%=` (`FlagStack.idx`) | uint8, `(idx + 1) & 7` / `(idx - 1) & 7` | wraps exactly as the u3 |
+| `~` on a `u5` (`FlagStack.set`, `.not`) | `^` on the uint8 | sets bits 5..7 too, but the `&` with the current flags (at most 31) clears them, so the result is the u5 result |
+| `pub inline fn` (`charsets.table`) | ordinary function | inlining left to the Go compiler |
+
+#### Enum `String()` methods
+
+- Exhaustive enums (all `lib.Enum`s, `ProtectedMode`, `Slots`, `ActiveSlot`,
+  `Charset`, `SetMode`) read a file-private names array (`ansiCursorStyleNames`,
+  `charsetsSlotsNames`, `kittyKeySetModeNames`, ...); an out-of-range value
+  panics, as in `mouse_shape.go` / `Parser.go`.
+- Non-exhaustive enums (`ANSIC0`, `ANSIRenditionAspect`, `ANSIStatusLineType`)
+  use a `switch` and return `""` for an unnamed value (dumps print `#N`), per
+  "Enums that are not exhaustive print `#N`".
+- Generated enums (`ModesMode`, `DeviceStatusRequest`) search the generated
+  field list and panic("unreachable") for a value outside the enum.
+
+#### Per-file notes
+
+##### `ansi.zig`
+- No functions; only the String() methods. Upstream's inline comments (the
+  `// Blank`, `// >`, `// =` of DeviceAttributeReq, the "Non-exhaustive so
+  that ..." comments) are carried over.
+
+##### `charsets.zig`
+- `ascii`, `british`, `dec_special` are package variables initialised at
+  start-up; the `british:` and `tech:` blocks are function literals called
+  in the initialiser.
+- `table`: `.utf8 => unreachable` is `panic("unreachable")`, and a value
+  outside the enum also panics (exhaustive switch). The returned slice
+  aliases the package array, as Zig's points at the comptime constant (the
+  storage-identity test depends on that); callers must not write through it.
+- Upstream's doc comment of `table` says the slice has 255 chars; it has
+  `table_len` = 256. The comment is carried over with a note.
+- `initTable` keeps the `while` loop and `assert(i == table_len)`.
+
+##### `modes.zig`
+- `ModeState{}` / `ModePacked{}` are `ModesModeStateInit()` /
+  `ModesModePackedInit()` (wireframe). A zero `ModesModeState` is NOT Zig's
+  default state (six modes default to true).
+- `reset`: `self.saved = .{}` is `ModesModePackedInit()` (the type's defaults,
+  not `self.default`), as upstream.
+- `get` takes `*const ModeState` in Zig; Go uses the pointer receiver.
+- `entryForMode`: `std.mem.eql(u8, entry.name, @tagName(mode))` is
+  `string(entry.name) == mode.String()`; `@setEvalBranchQuota` has no
+  counterpart; the final `unreachable` is `panic("unreachable")`.
+- `ModesModeValues` (std.enums.values) returns a new slice per call.
+- `golden/tables/modes.txt` (TestCorpusReplayTables/modes) passes.
+
+##### `device_status.zig`
+- Same scheme as modes.zig for the generated `Request` enum and `Tag`.
+- The wireframe has no reverse `@bitCast` for `Tag` (modes has
+  `ModesModeTagFromInt`), so three lines of
+  `term51: Tag: layout of the value and question bit` stay untranslated
+  (marked MISSING-IN-WIREFRAME in the test). A `DeviceStatusTagFromInt`
+  identical in shape to `ModesModeTagFromInt` would make them translatable;
+  not added here (signatures are the lead's).
+
+##### `kitty/key.zig`
+- `Flags.int` builds the u5 from the five bools (bit 0 = disambiguate ...
+  bit 4 = report_associated); `KittyKeyFlagsFromInt` is the reverse and
+  asserts `v <= 31`. stream.zig only casts values already checked with
+  `std.math.cast(u5, ...)`, so the assertion never fires from the stream.
+- `FlagStack.set`: the exhaustive switch gets `default: panic("unreachable")`.
+- `FlagStack.pop(n)`: `n` is `uint` (usize); `n >= self.flags.len` resets the
+  stack exactly as upstream (idx = 0, every slot disabled).
+
+### `stream.zig`
+
+File: `terminal/stream.go`. Recorded while porting it (2026-10-05). The design of the generic, the handler interface
+and `Action` is the wireframe's (header of `stream.go`); unchanged.
+
+#### Language features (additions)
+
+| Zig | Go | Notes |
+|---|---|---|
+| `try self.handler.vt(.key, payload)` | `if err := self.handler.Vt(StreamActionKeyKey, StreamAction{Tag: StreamActionKeyKey, Key: payload}); err != nil { return err }` | the union is built in place at every call; no helper. A void payload is `StreamAction{Tag: ...}` |
+| `@hasDecl(T, "vtRaw")` (comptime) | `any(h).(StreamHandlerVtRaw)` once in `StreamInit`, kept in the added field `vt_raw` (nil: no vtRaw); `nextNonUtf8` tests `self.vt_raw != nil` (project lead: compile-time work happens once in Go, however cheap per call) | `vtRaw(...) catch \|err\| err: { log.warn; break :err true }` is: on a non-nil error, warn and `skip = true` |
+| Labeled block that is a whole prong of the outer `switch (input.final)` / `switch (action.final)` and is left from inside a nested switch (`mode:`, `decrqm:`, `capture:`, `push:`, `set:`, `decsasd:`, `blk:`) | the outer Go switch carries the label `prong:` and `break :x` is `break prong` | equivalent because nothing follows the outer switch in csiDispatch/escDispatch. Each site has a `// break :x` comment |
+| Value-producing inner block (`ansi:`, `question:` in `h`, `l`, `n`) | if / else if / else assigning the value; the failing branch does what Zig's does (`break prong` or `return nil`) | |
+| `ansi:` of DECRQM (`p`), left from inside a nested switch | `goto ansi`, label after the block | the mapping's existing goto rule |
+| `csi_param:` labeled `if` in nextNonUtf8, left with `break :csi_param` from the `else` of a switch | `goto csi_param` to a label after the `if` | same rule |
+| `std.meta.intToEnum(csi.EraseDisplay, p) catch null` (exhaustive enum) | switch on the u16 value over the five enum values | the check is on the u16, before any conversion, so a value above 255 cannot be truncated into a valid one |
+| `std.meta.intToEnum(csi.TabClear, p) catch` (non-exhaustive `enum(u8)`) | `if p > 0xFF { error branch }` | `std.enums.fromInt` of a non-exhaustive enum only checks that the value fits the tag type |
+| `std.math.cast(u5, p) orelse` | `if p > 0x1F` | |
+| `inline 22, 23 => \|number\|` | `case 22, 23:` with `number := input.Params[0]`; the `else => @compileError` arm is `panic("unreachable")` | |
+| `@max(1, p)` | Go builtin `max(1, p)` on uint16 | |
+| `std.unicode.utf8ValidateSlice` | `utf8.Valid` | same equivalence as `isSafeUtf8` (osc/encoding.zig section): both reject overlongs, surrogates and values above U+10FFFF |
+| Exhaustive `switch` over an enum / union (`Parser.Action`, `osc.Command`, `csi.EraseDisplay`, `ansi.ProtectedMode`, `ansi.ModifyKeyFormat`, the action tag of `CSI = u`) | `default: panic("unreachable")` | as in osc.go |
+| Non-exhaustive `switch` with `_ =>` (`csi.EraseLine`, `csi.TabClear`) | `default:` | |
+| `{}` of a value of a non-exhaustive enum in a log line | `@enumFromInt(%d)` | Zig 0.15.2 `printEnumNonexhaustive` prints `.name` for a named value and `@enumFromInt(N)` otherwise; both `_` prongs are only reached by unnamed values |
+
+#### Logging
+
+- `log.warn` is `warn("stream", ...)`. `log.err` (the one in `CSI t` with no
+  parameters) also goes through `warn("stream", ...)`, marked `// Zig: log.err`:
+  the package has one hook, and an error-level message is printed whenever a
+  warning is. The lead may prefer a separate hook.
+- `log.info` (C1 execute, change icon, the `debug`-only lines) and
+  `log.debug` (unimplemented OSC callbacks) are not printed; the calls are
+  kept as comments, as in `search_screen.go` and `osc_parsers_iterm2.go`.
+- Formats: `{f}` is `Format()` with `%s` (`ParserActionCSI`, `ParserActionESC`,
+  `ParserAction`); `{s}` of the intermediates is `%s` of the `[]uint8`; `{}`
+  of an integer is `%d`; `{any}` of the intermediates (configureCharset) is
+  `zigFmtAnySlice`; `{}` of an error is `error.%v`; `0x{x}` is `0x%x`.
+
+#### `nextSlice`, `nextSliceCapped` and the decode stand-in
+
+- `nextSlice` is the scalar loop only: `comptime debug or !build_options.simd`
+  is true for the reference build. `streamDebug` (Zig `debug`) is declared but
+  only referred to in comments (its two uses are `log.info`).
+- `nextSliceCapped` is ported line for line (the tests call it directly). Its
+  call `simd.vt.utf8DecodeUntilControlSeq` is the file-private stand-in
+  `streamUtf8DecodeUntilControlSeq` (result `streamDecodeResult{consumed,
+  decoded}`, simd/vt.zig's `DecodeResult`). Upstream's scalar fallback
+  `utf8DecodeUntilControlSeqScalar` is NOT ported, because it is the cause of
+  the abort on `FF ESC [ 1 A` (stream.zig:593, upstream-findings section 12)
+  and of the `E2 82 (` disagreement with the per-byte path; docs/mapping.md
+  requires nextSliceCapped to return what nextSlice returns.
+- The stand-in decodes the bytes before the first ESC with a fresh
+  `UTF8Decoder`, feeding a byte again when the decoder does not consume it
+  (as nextUtf8 does). `consumed` ends after the last complete or rejected
+  sequence; a sequence still open at the end of the input is left for
+  nextSliceCapped's `nextUtf8` loop (it stays pending in the stream's
+  decoder); a sequence still open when the ESC is reached gets the U+FFFD the
+  decoder emits on rejecting the ESC, and the bytes up to the ESC are
+  consumed, so the ESC is handled by `consumeAllEscapes` as `handleCodepoint`
+  would. This keeps nextSliceCapped's control flow and makes it identical to
+  the per-byte path. `TestStream_go_only_nextSliceCapped_equals_per_byte_next`
+  (`stream_capped_equiv_test.go`) checks it on 30,000 seeded inputs of
+  0-23 bytes over an alphabet of ESC, CSI/OSC/DCS bytes, C0, invalid and
+  truncated UTF-8 leads, continuation bytes, surrogate, overlong and
+  above-U+10FFFF starts, each fed in random chunks (cp buffer of 4096 or
+  exactly the chunk length): same codepoints, actions, parser state and
+  decoder state as byte-by-byte `next`. A failure prints its seed;
+  `TERM51_CAPPED_SEED=<n>` replays it. Dropping the U+FFFD for a sequence
+  broken by ESC makes it fail at seed 37.
+
+#### Other per-function notes
+
+- `Execute`: `ansi.C0` is `enum(u7)` non-exhaustive; `ANSIC0(c)` after the
+  `c > 0x7F` check. The C1 path builds `ParserActionESC{Intermediates:
+  []uint8{}, ...}` (Zig `&.{}`).
+- nextNonUtf8's CSI-param fast path: `*|=` / `+|=` are `saturatingMulU16` /
+  `saturatingAddU16`; `params_sep.set(int(params_idx))`.
+- `Print` takes `uint32` (u21); `handleCodepoint`'s `@intCast(c)` to u8 for
+  `execute` is a plain conversion after `c <= 0xF`.
+- Payload widths: the usize payloads (`print_repeat`, `delete_chars`, ...)
+  are `uint(input.Params[0])`.
+- `Stream.init` copies Zig's whole doc comment (the OSC 52 example and the
+  size-limit sentence were missing from the wireframe).
+
 ## Tests
 
 - One Go test per Zig test, in the same order, with the exact Zig title in a
@@ -646,6 +838,12 @@ merge into `docs/mapping.md`.
   Zig therefore cannot be told apart from one passed by pointer in Go; two
   tests that check this are translated with a pointer handler and lose that
   distinction (a Go limitation, accepted).
+  The same limitation applies to `vtRaw` (project lead review, 2026-10-05):
+  `vt_raw` is detected on the handler value given to `StreamInit`. For a
+  value-type handler Go would call `VtRaw` on that copy, and a pointer-receiver
+  `VtRaw` on a value handler is not detected at all, where Zig's
+  `@hasDecl` would see it. Every handler in the package is a pointer, so
+  nothing differs today.
 - The reference-counted set is generic over all four of Zig's parameters, has
   no memory base, keeps `cap`, `table_cap` and `table_mask` as counts (the
   byte offsets are dropped), treats a zero-capacity set as empty (lookups find

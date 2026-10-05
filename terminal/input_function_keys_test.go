@@ -20,7 +20,7 @@
 //     counterpart: the helper functions return a fresh slice on each call.
 //   - `std.fmt.allocPrint(alloc, "...{d}...", .{n})` is fmt.Sprintf.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-kp.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

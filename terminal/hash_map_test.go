@@ -2930,7 +2930,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAssumeCapacityAdapted_randomize
 
 // Zig: the term51XDump* helpers and the test "term51: OffsetHashMap: dump
 // exact data when TERM51_HASHMAP_DUMP_DIR is set" are not translated (see
-// scripts/not-translated-hm.txt); corpus_hashmap_test.go replays the data
+// scripts/not-translated.txt); corpus_hashmap_test.go replays the data
 // file it writes.
 
 // ---------------------------------------------------------------------------

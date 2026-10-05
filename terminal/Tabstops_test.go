@@ -109,7 +109,7 @@ func TestTabstops_Tabstops_count_on_80(t *testing.T) {
 	expectEqual(t, uint(9), count)
 }
 
-// Not translated, Zig test "Tabstops: resize alloc failure preserves state": see scripts/not-translated-sm1.txt (tripwire fault
+// Not translated, Zig test "Tabstops: resize alloc failure preserves state": see scripts/not-translated.txt (tripwire fault
 // injection; no Go counterpart).
 
 // Zig: test "term51: prealloc_columns: constants"
@@ -353,7 +353,7 @@ func TestTabstops_term51_Tabstops_init_interval_one_never_at_column_zero_or_the_
 	expect(t, !ts.Get(4), "!t.get(4)")
 }
 
-// Not translated, Zig test "term51: Tabstops.init: out of memory when dynamic storage is needed": see scripts/not-translated-sm1.txt (FailingAllocator).
+// Not translated, Zig test "term51: Tabstops.init: out of memory when dynamic storage is needed": see scripts/not-translated.txt (FailingAllocator).
 
 // Zig: test "term51: Tabstops.deinit: frees dynamic storage only when present"
 func TestTabstops_term51_Tabstops_deinit_frees_dynamic_storage_only_when_present(t *testing.T) {
@@ -504,9 +504,9 @@ func TestTabstops_term51_Tabstops_resize_smaller_than_the_dynamic_length_keeps_t
 	expect(t, ts.Get(590), "t.get(590)")
 }
 
-// Not translated, Zig test "term51: Tabstops.resize: allocation failure on growth preserves state and data": see scripts/not-translated-sm1.txt (FailingAllocator).
+// Not translated, Zig test "term51: Tabstops.resize: allocation failure on growth preserves state and data": see scripts/not-translated.txt (FailingAllocator).
 
-// Not translated, Zig test "term51: Tabstops.resize: failure when growing from the preallocated range": see scripts/not-translated-sm1.txt (FailingAllocator).
+// Not translated, Zig test "term51: Tabstops.resize: failure when growing from the preallocated range": see scripts/not-translated.txt (FailingAllocator).
 
 // Zig: test "term51: Tabstops.capacity: depends on the dynamic storage only"
 func TestTabstops_term51_Tabstops_capacity_depends_on_the_dynamic_storage_only(t *testing.T) {

@@ -28,7 +28,7 @@
 //   - Every test calls testStdCapacity first (Zig's unit tests run with
 //     grapheme_bytes 512).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-rn.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

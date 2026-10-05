@@ -32,7 +32,7 @@
 //   - Zig's `testing.allocator` / `alloc` arguments of verifyIntegrity are
 //     dropped: VerifyIntegrity takes none.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-pg1.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 
@@ -1919,7 +1919,7 @@ func TestPg1_term51_Page_init_independent_pages_do_not_share_memory(t *testing.T
 
 // ---- Page.initBuf ---------------------------------------------------------
 // The four Page.initBuf tests are not translated (no memory base in Go); see
-// scripts/not-translated-pg1.txt.
+// scripts/not-translated.txt.
 
 // ---- Page.deinit ----------------------------------------------------------
 
@@ -2481,10 +2481,10 @@ func TestPg1_term51_Page_verifyIntegrity_style_ref_check_precedes_hyperlink_ref_
 }
 
 // Not translated, Zig test "term51: Page.verifyIntegrity: temporary allocations come from the given allocator": std.testing.FailingAllocator has no Go counterpart; see
-// scripts/not-translated-pg1.txt.
+// scripts/not-translated.txt.
 
 // Not translated, Zig test "term51: Page.verifyIntegrity: valid pages do not modify the page": memory-snapshot test (compares page.memory byte for byte);
-// see scripts/not-translated-pg1.txt.
+// see scripts/not-translated.txt.
 
 // ---- Page.clone / Page.cloneBuf -------------------------------------------
 
@@ -2578,7 +2578,7 @@ func TestPg1_term51_Page_clone_keeps_a_reduced_logical_size_and_dirty_flags(t *t
 }
 
 // Not translated, Zig test "term51: Page.clone: an empty page clones to an empty page": memory-snapshot test (compares page.memory byte for byte);
-// see scripts/not-translated-pg1.txt.
+// see scripts/not-translated.txt.
 
 // Zig: test "term51: Page.clone: copies the integrity pause counter"
 func TestPg1_term51_Page_clone_copies_the_integrity_pause_counter(t *testing.T) {
@@ -2595,7 +2595,7 @@ func TestPg1_term51_Page_clone_copies_the_integrity_pause_counter(t *testing.T) 
 }
 
 // The two Page.cloneBuf tests are not translated (no memory base in Go); see
-// scripts/not-translated-pg1.txt.
+// scripts/not-translated.txt.
 
 // ---- Page.exactRowCapacity ------------------------------------------------
 

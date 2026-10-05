@@ -35,7 +35,7 @@
 //   - Every test calls testStdCapacity first (Zig's unit tests run with
 //     grapheme_bytes 512).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-fm3.txt. The Go-only panic tests are at the end.
+//     scripts/not-translated.txt. The Go-only panic tests are at the end.
 
 package terminal
 
@@ -3043,7 +3043,7 @@ func TestFm3_term51_TerminalFormatter_format_allocation_failure_of_the_pin_map_a
 
 	// Zig-only: the fail_index loop with std.testing.FailingAllocator (an
 	// allocation failure of the pin map; not translatable, see
-	// scripts/not-translated-fm3.txt). The remaining half is translated.
+	// scripts/not-translated.txt). The remaining half is translated.
 
 	// A writer that is too small fails at the palette, at the content and at
 	// the trailing extras: every smaller capacity fails, the exact one works.

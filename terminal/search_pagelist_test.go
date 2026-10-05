@@ -12,7 +12,7 @@
 //   - `.{ .sel = .init(a, b, false) }` for selectionString is
 //     screenSelectionStringDefault(SelectionInit(a, b, false)) (trim = true).
 //
-// Not translated (scripts/not-translated-sa.txt): the allocation failure
+// Not translated (scripts/not-translated.txt): the allocation failure
 // test (FailingAllocator).
 //
 // Go-only panic tests: PageListSearch.init on a start page with zero rows or

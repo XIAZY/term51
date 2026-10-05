@@ -24,7 +24,7 @@
 //   - The Zig test helpers term51U* (defined earlier in the Zig file) that
 //     these tests use are translated as tm9* helpers.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tm9.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 
@@ -867,7 +867,7 @@ func TestTm9_deleteChars_cursor_on_a_spacer_tail_at_the_left_margin_clears_the_w
 }
 
 // The test "term51: kittyGraphics: compiled out in the library build" is not
-// translated; see scripts/not-translated-tm9.txt.
+// translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: setAttribute: every setting attribute from the default style"
 func TestTm9_setAttribute_every_setting_attribute_from_the_default_style(t *testing.T) {
@@ -1489,7 +1489,7 @@ func TestTm9_setPwd_layout_clearing_retains_capacity(t *testing.T) {
 }
 
 // The test "term51: setPwd: allocation failure keeps the pwd empty" is not
-// translated; see scripts/not-translated-tm9.txt.
+// translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: getPwd: pointer aliases the terminal's storage"
 func TestTm9_getPwd_pointer_aliases_the_terminal_s_storage(t *testing.T) {
@@ -1731,7 +1731,7 @@ func TestTm9_plainString_wrapped_rows_are_separated_wide_chars_and_graphemes(t *
 }
 
 // The test "term51: plainString: allocation failure is reported" is not
-// translated; see scripts/not-translated-tm9.txt.
+// translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: plainStringUnwrapped: joins soft-wrapped rows"
 func TestTm9_plainStringUnwrapped_joins_soft_wrapped_rows(t *testing.T) {
@@ -1767,7 +1767,7 @@ func TestTm9_plainStringUnwrapped_viewport_and_screen_selection(t *testing.T) {
 }
 
 // The test "term51: plainStringUnwrapped: allocation failure is reported" is
-// not translated; see scripts/not-translated-tm9.txt.
+// not translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: deccolm: modes enum values"
 func TestTm9_deccolm_modes_enum_values(t *testing.T) {
@@ -2255,7 +2255,7 @@ func TestTm9_resize_wide_terminal_uses_dynamic_tabstop_storage(t *testing.T) {
 }
 
 // The test "term51: resize: tabstop allocation failure is reported before
-// any state changes" is not translated; see scripts/not-translated-tm9.txt.
+// any state changes" is not translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: switchScreen: already on the requested screen does nothing"
 func TestTm9_switchScreen_already_on_the_requested_screen_does_nothing(t *testing.T) {
@@ -2563,7 +2563,7 @@ func TestTm9_switchScreen_marks_the_terminal_dirty_only_when_switching(t *testin
 }
 
 // The test "term51: switchScreen: allocation failure leaves the primary
-// screen active" is not translated; see scripts/not-translated-tm9.txt.
+// screen active" is not translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: switchScreenMode: 47 enable copies the cursor without saving or erasing"
 func TestTm9_switchScreenMode_47_enable_copies_the_cursor_without_saving_or_erasing(t *testing.T) {
@@ -3100,7 +3100,7 @@ func TestTm9_switchScreenMode_charset_is_carried_by_every_mode(t *testing.T) {
 }
 
 // The test "term51: switchScreenMode: allocation failure when creating the
-// alternate screen" is not translated; see scripts/not-translated-tm9.txt.
+// alternate screen" is not translated; see scripts/not-translated.txt.
 
 // Zig: test "term51: switchScreenMode: the three modes"
 func TestTm9_switchScreenMode_the_three_modes(t *testing.T) {

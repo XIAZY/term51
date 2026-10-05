@@ -499,7 +499,7 @@ func TestCb2_term51_CircBuf_resize_shrink_an_empty_buffer_to_zero(t *testing.T) 
 
 // "term51: CircBuf.resize: allocation failure leaves capacity and data but
 // rotates" is not translated: it uses std.testing.FailingAllocator (see
-// scripts/not-translated-cb.txt).
+// scripts/not-translated.txt).
 
 // Zig: test "term51: CircBuf.rotateToZero: tail already zero changes nothing"
 func TestCb2_term51_CircBuf_rotateToZero_tail_already_zero_changes_nothing(t *testing.T) {

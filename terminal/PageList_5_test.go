@@ -33,7 +33,7 @@
 //     GetCells(&page.rows[y])[x].
 //   - Tests that were not translated (FailingAllocator, memory-pool reuse,
 //     the diagram signature test) are listed in
-//     scripts/not-translated-pl5.txt. Panic tests (Go-only) follow the
+//     scripts/not-translated.txt. Panic tests (Go-only) follow the
 //     translated ones at the end of the file.
 
 package terminal

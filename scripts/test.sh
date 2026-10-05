@@ -4,6 +4,8 @@
 set -eu
 cd "$(dirname "$0")/.."
 GO=${GO:-/usr/local/go/bin/go}
+echo "== no fused multiply-add (arm64, amd64 v3)"
+GO="$GO" sh scripts/check-no-fma.sh
 echo "== native"
 "$GO" vet ./...
 "$GO" test ./... -count=1 "$@"

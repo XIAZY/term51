@@ -34,7 +34,7 @@
 //     is `oscWriter{buffer: buf[:]}` and `w.buffered()` is
 //     `w.buffer[:w.end]` (osc.go).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-sc4.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 
@@ -350,7 +350,7 @@ func TestSc4_select_replacing_a_selection_untracks_the_previous_one(t *testing.T
 }
 
 // term51: select: allocation failure leaves prior selection untouched: not
-// translated (FailingAllocator), see scripts/not-translated-sc4.txt.
+// translated (FailingAllocator), see scripts/not-translated.txt.
 
 // Zig: test "term51: clearSelection: untracks pins and sets dirty"
 func TestSc4_clearSelection_untracks_pins_and_sets_dirty(t *testing.T) {
@@ -655,10 +655,10 @@ func TestSc4_selectionString_map_is_untouched_when_not_requested_and_empty_selec
 }
 
 // term51: selectionString: allocation failure while copying the map: not
-// translated (tripwire fault injection), see scripts/not-translated-sc4.txt.
+// translated (tripwire fault injection), see scripts/not-translated.txt.
 
 // term51: selectionString: allocation failures free everything: not
-// translated (FailingAllocator), see scripts/not-translated-sc4.txt.
+// translated (FailingAllocator), see scripts/not-translated.txt.
 
 // Zig: test "term51: selectionString: selection across pages"
 func TestSc4_selectionString_selection_across_pages(t *testing.T) {
@@ -2406,7 +2406,7 @@ func TestSc4_dumpStringAlloc_empty_screen(t *testing.T) {
 }
 
 // term51: dumpStringAlloc: allocation failures surface as errors: not
-// translated (FailingAllocator), see scripts/not-translated-sc4.txt.
+// translated (FailingAllocator), see scripts/not-translated.txt.
 
 // Zig: test "term51: dumpStringAllocUnwrapped: soft wrapped rows are joined"
 func TestSc4_dumpStringAllocUnwrapped_soft_wrapped_rows_are_joined(t *testing.T) {

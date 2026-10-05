@@ -48,9 +48,9 @@ func osc0_writer(t *testing.T, p *OSCParser) *oscWriter {
 	return p.writer
 }
 
-// Not translated (Zig: test "ghostty.h Command.ProgressReport.State"): see scripts/not-translated-osc0.txt.
+// Not translated (Zig: test "ghostty.h Command.ProgressReport.State"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test (unnamed, osc.zig:773)): see scripts/not-translated-osc0.txt.
+// Not translated (Zig: test (unnamed, osc.zig:773)): see scripts/not-translated.txt.
 
 // ---------------------------------------------------------------------------
 // term51: additional tests. Not part of upstream Ghostty.
@@ -75,7 +75,7 @@ func TestOSC_term51_Terminator_string_the_bytes_to_end_a_reply_with(t *testing.T
 	expectEqualStrings(t, "\x07", string(OSCTerminatorBel.String()))
 }
 
-// Not translated (Zig: test "term51: Terminator.cval: st is 0 and bel is 1"): see scripts/not-translated-osc0.txt.
+// Not translated (Zig: test "term51: Terminator.cval: st is 0 and bel is 1"): see scripts/not-translated.txt.
 
 // Zig: test "term51: Terminator.format: writes the terminator bytes"
 func TestOSC_term51_Terminator_format_writes_the_terminator_bytes(t *testing.T) {
@@ -92,7 +92,7 @@ func TestOSC_term51_Terminator_format_writes_the_terminator_bytes(t *testing.T) 
 	}
 }
 
-// Not translated (Zig: test "term51: Command.ProgressReport.cval: state number and clamped progress"): see scripts/not-translated-osc0.txt.
+// Not translated (Zig: test "term51: Command.ProgressReport.cval: state number and clamped progress"): see scripts/not-translated.txt.
 
 // Zig: test "term51: Parser.init: starts empty, with or without an allocator"
 func TestOSC_term51_Parser_init_starts_empty_with_or_without_an_allocator(t *testing.T) {

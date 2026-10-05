@@ -5,7 +5,7 @@
 // oscA_ptrAt, oscA_terms and oscA_testingAllocator are in
 // osc_parsers_change_window_icon_test.go, where the translation notes are.
 //
-// Not translated (compile-time types, see scripts/not-translated-oscA.txt):
+// Not translated (compile-time types, see scripts/not-translated.txt):
 //   - test "term51: Field.Type: result type of every field"
 //
 // Translation notes:

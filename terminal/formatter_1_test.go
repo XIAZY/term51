@@ -35,7 +35,7 @@
 //   - Every test calls testStdCapacity first (Zig's unit tests run with
 //     grapheme_bytes 512, which decides how many rows a page holds).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-fm1.txt (none in this part).
+//     scripts/not-translated.txt (none in this part).
 
 package terminal
 

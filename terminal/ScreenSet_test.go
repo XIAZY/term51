@@ -14,7 +14,7 @@
 //   - A pointer comparison of screens is a Go pointer comparison.
 //   - `.{ .screen = .{} }` is Point{Tag: PointTagScreen}.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-ss.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

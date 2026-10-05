@@ -1,7 +1,7 @@
 // Tests of input_key.go, translated from src/input/key.zig.
 //
 // Translation notes (project lead's decisions, see
-// scripts/not-translated-km.txt):
+// scripts/not-translated.txt):
 //
 //   - Every KeyEvent literal says `action: InputKeyActionPress` (Zig's
 //     default, not the Go zero value): kmKeyEventDefault is `KeyEvent{}`.
@@ -899,7 +899,7 @@ func TestKmKey_term51_Key_keypad_every_key(t *testing.T) {
 }
 
 // "term51: Key.imguiKey: not testable in the library build" is not
-// translated (Key.imguiKey is not ported). See scripts/not-translated-km.txt.
+// translated (Key.imguiKey is not ported). See scripts/not-translated.txt.
 
 // Zig: test "term51: Key.ctrlOrSuper: every key"
 // Go-only: platform modes (Key.ctrlOrSuper uses isDarwin(): darwin and ios agree).

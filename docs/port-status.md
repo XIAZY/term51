@@ -29,6 +29,10 @@ build.
 | `terminal/device_status.zig` | `terminal/device_status.go` | done | 7 of 7, all pass | - | pass |
 | `terminal/kitty/key.zig` | `terminal/kitty_key.go` | done | 25 of 25, all pass | - | pass |
 | `terminal/stream.zig` | `terminal/stream.go` | done | 253 of 264 (11 not translated: the C-binding `cval` tests and `test Action`), all pass | needs Terminal (replay areas) | pass |
+| `terminal/size.zig` | `terminal/size.go` | done | 2 of 24 (22 not translated, listed), all pass | - | pass |
+| `terminal/point.zig` | `terminal/point.go` | done | 6 of 6, all pass | - | pass |
+| `terminal/Tabstops.zig` | `terminal/Tabstops.go` | done | 35 of 39 (4 allocation-failure tests not translated), all pass; 1 Go-only panic test | - | pass |
+| std `hash/wyhash.zig`, `hash.zig` (`int`), `hash/auto_hash.zig` | `terminal/std_hash_wyhash.go`, `std_hash.go`, `std_hash_auto_hash.go` | done (int: u64; autoHash: the cases PageEntry.hash reaches) | wyhash 5 of 5, int 1 (u64 lines), auto_hash 0 of 12 (key types not ported); 9 Go-only tests pinning Zig output | - | pass |
 
 `scripts/check-test-mapping.py` verifies that every Zig test has exactly one
 Go test, in the same order, by the `// Zig: test "<title>"` comment above each

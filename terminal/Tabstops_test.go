@@ -722,3 +722,20 @@ func TestTabstops_term51_Tabstops_boundary_widths_511_512_513_and_514(t *testing
 	defer ts506.Deinit()
 	expect(t, ts506.Get(504), "t506.get(504)")
 }
+
+// tsExpectPanic fails the test unless f panics.
+func tsExpectPanic(t *testing.T, f func()) {
+	t.Helper()
+	defer func() {
+		t.Helper()
+		if recover() == nil {
+			t.Fatalf("expected a panic, got none")
+		}
+	}()
+	f()
+}
+
+// Go-only: panic test: Tabstops.reset: cols is 0 and interval above 0 (Zig: `self.cols - 1` underflows usize and traps)
+func TestTabstops_panic_reset_cols_zero(t *testing.T) {
+	tsExpectPanic(t, func() { _, _ = TabstopsInit(0, 8) })
+}

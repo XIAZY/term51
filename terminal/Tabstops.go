@@ -200,17 +200,17 @@ func (self *Tabstops) Resize(cols uint) error {
 	}
 
 	// Zig: try tw.check(.dynamic_alloc); omitted (see the file header).
-	new := make([]tabstopsUnit, size) // Zig: try alloc.alloc(Unit, size)
+	new_ := make([]tabstopsUnit, size) // Zig: const new = try alloc.alloc(Unit, size) (new_: Go builtin name)
 	// Zig: errdefer comptime unreachable; nothing below can fail.
 	// Zig: @memset(new, 0); make returns zeroed memory.
 	if len(self.dynamic_stops) > 0 {
 		// Zig: fastmem.copy(Unit, new, self.dynamic_stops), which copies
 		// into new[0..dynamic_stops.len]; alloc.free(self.dynamic_stops) is
 		// left to the garbage collector.
-		copy(new[0:len(self.dynamic_stops)], self.dynamic_stops)
+		copy(new_[0:len(self.dynamic_stops)], self.dynamic_stops)
 	}
 
-	self.dynamic_stops = new
+	self.dynamic_stops = new_
 	self.cols = cols
 	return nil
 }

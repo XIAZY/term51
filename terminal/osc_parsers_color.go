@@ -217,6 +217,9 @@ const (
 	OSCParsersColorRequestResetSpecial
 )
 
+// String returns the Zig tag name (@tagName).
+func (self OSCParsersColorRequestTag) String() string { panic(notImplemented) }
+
 // OSCParsersColorRequest is osc.parsers.color.Request: a single operation
 // related to the terminal color palette.
 //
@@ -238,6 +241,9 @@ const (
 	OSCParsersColorTargetSpecial
 	OSCParsersColorTargetDynamic
 )
+
+// String returns the Zig tag name (@tagName).
+func (self OSCParsersColorTargetTag) String() string { panic(notImplemented) }
 
 // OSCParsersColorTarget is osc.parsers.color.Target.
 //

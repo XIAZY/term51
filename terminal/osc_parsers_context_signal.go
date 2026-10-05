@@ -53,6 +53,9 @@ const (
 	OSCParsersContextSignalCommandActionEnd
 )
 
+// String returns the Zig tag name (@tagName).
+func (self OSCParsersContextSignalCommandAction) String() string { panic(notImplemented) }
+
 // ReadOption is osc.parsers.context_signal.Command.readOption: read a
 // metadata field value from the raw fields string. Returns null if the field
 // is not present or malformed.

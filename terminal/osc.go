@@ -263,6 +263,9 @@ const (
 	OSCCommandConemuChangeTabTitlePayloadValue
 )
 
+// String returns the Zig tag name (@tagName).
+func (self OSCCommandConemuChangeTabTitlePayloadTag) String() string { panic(notImplemented) }
+
 // OSCCommandConemuChangeTabTitlePayload is the payload of
 // Command.conemu_change_tab_title:
 // union(enum) { reset, value: [:0]const u8 }.

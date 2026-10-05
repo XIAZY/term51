@@ -32,6 +32,9 @@ const (
 	KittyColorOSCRequestReset
 )
 
+// String returns the Zig tag name (@tagName).
+func (self KittyColorOSCRequestTag) String() string { panic(notImplemented) }
+
 // KittyColorOSCRequest is kitty.color.OSC.Request.
 //
 // Zig: a tagged union. Only the field named by Tag is meaningful.
@@ -80,6 +83,9 @@ const (
 	KittyColorKindPalette KittyColorKindTag = iota
 	KittyColorKindSpecial
 )
+
+// String returns the Zig tag name (@tagName).
+func (self KittyColorKindTag) String() string { panic(notImplemented) }
 
 // KittyColorKind is kitty.color.Kind.
 //

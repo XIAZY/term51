@@ -192,6 +192,11 @@ const (
 	// Remainders are valid unnamed values in the 256 color palette.
 )
 
+// String returns the Zig tag name (@tagName).
+//
+// Unnamed values (16 to 255) return ""; dumps print them as #N.
+func (self ColorName) String() string { panic(notImplemented) }
+
 // Default is color.Name.default: default colors for tagged values. Returns
 // ErrNoDefaultValue for unnamed values.
 func (self ColorName) Default() (ColorRGB, error) { panic(notImplemented) }

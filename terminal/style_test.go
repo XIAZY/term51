@@ -1870,3 +1870,32 @@ func TestStyle_term51_Style_fg_rgb_color(t *testing.T) {
 // Not translated (the unnamed test at style.zig:2739, `_ = term51FFgTests;`): see scripts/not-translated.txt.
 
 // Not translated (Zig: test "term51: Style.hash: dump exact data when TERM51_SET_DUMP_DIR is set"): see scripts/not-translated.txt. corpus_style_test.go compares data/sets/style_hash.txt instead.
+
+// Go-only: ruling (Style flags hold bits Zig cannot: equality and hashing use the same masked u16)
+func TestStyle_go_only_flags_out_of_range_bits_are_masked(t *testing.T) {
+	// _padding is a u5 and underline a u3 in Zig, whole bytes in Go. A Go
+	// value with bits above those widths is the Zig value of its low bits
+	// for Eql, Default and Hash alike.
+	var dflt Style
+	pad := Style{flags: styleFlags{_padding: 32}}
+	expect(t, pad.Default(), "pad.Default()")
+	expect(t, pad.Eql(dflt), "pad.Eql(default)")
+	expectEqual(t, pad.Hash(), dflt.Hash())
+
+	ul := Style{flags: styleFlags{underline: SGRAttributeUnderline(8 | 1)}}
+	ul1 := Style{flags: styleFlags{underline: SGRAttributeUnderline(1)}}
+	expect(t, ul.Eql(ul1), "ul.Eql(ul1)")
+	expect(t, !ul.Default(), "!ul.Default()")
+	expectEqual(t, ul.Hash(), ul1.Hash())
+
+	pad33 := Style{flags: styleFlags{_padding: 33}}
+	pad1 := Style{flags: styleFlags{_padding: 1}}
+	expect(t, pad33.Eql(pad1), "pad33.Eql(pad1)")
+	expect(t, !pad33.Default(), "!pad33.Default()")
+	expectEqual(t, pad33.Hash(), pad1.Hash())
+
+	// Format prints the same Zig bits.
+	expectEqualStrings(t, dflt.Format(), pad.Format())
+	expectEqualStrings(t, ul1.Format(), ul.Format())
+	expectEqualStrings(t, pad1.Format(), pad33.Format())
+}

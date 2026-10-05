@@ -1277,8 +1277,8 @@ func TestSc1_Screen_scrolling_moves_selection(t *testing.T) {
 	// Our selection should've moved up
 	{
 		sel := zigUnwrap(t, s.selection)
-		expectEqual(t, sc1Active(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s.pages.cols-1, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s.pages.cols-1, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 
 	{
@@ -1293,8 +1293,8 @@ func TestSc1_Screen_scrolling_moves_selection(t *testing.T) {
 	// Our selection should've stayed the same
 	{
 		sel := zigUnwrap(t, s.selection)
-		expectEqual(t, sc1Active(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s.pages.cols-1, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s.pages.cols-1, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 
 	{
@@ -1337,7 +1337,7 @@ func TestSc1_Screen_scrolling_moves_viewport(t *testing.T) {
 	}
 
 	{
-		expectEqual(t, sc1Screen(0, 1), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagViewport))))
+		expectEqualPoint(t, sc1Screen(0, 1), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagViewport))))
 	}
 }
 
@@ -1362,7 +1362,7 @@ func TestSc1_Screen_scrolling_when_viewport_is_pruned(t *testing.T) {
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL")
 
 	{
-		expectEqual(t, sc1Screen(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagViewport))))
+		expectEqualPoint(t, sc1Screen(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagViewport))))
 	}
 }
 
@@ -2008,8 +2008,8 @@ func TestSc1_Screen_clone_contains_full_selection(t *testing.T) {
 	// Our selection should remain valid
 	{
 		sel := zigUnwrap(t, s2.selection)
-		expectEqual(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s2.pages.cols-1, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2058,8 +2058,8 @@ func TestSc1_Screen_clone_contains_selection_start_cutoff(t *testing.T) {
 	// Our selection should remain valid
 	{
 		sel := zigUnwrap(t, s2.selection)
-		expectEqual(t, sc1Active(0, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s2.pages.cols-1, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2085,8 +2085,8 @@ func TestSc1_Screen_clone_contains_selection_end_cutoff(t *testing.T) {
 	// Our selection should remain valid
 	{
 		sel := zigUnwrap(t, s2.selection)
-		expectEqual(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s2.pages.cols-1, 2), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 2), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2112,8 +2112,8 @@ func TestSc1_Screen_clone_contains_selection_end_cutoff_reversed(t *testing.T) {
 	// Our selection should remain valid
 	{
 		sel := zigUnwrap(t, s2.selection)
-		expectEqual(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s2.pages.cols-1, 2), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 2), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2139,8 +2139,8 @@ func TestSc1_Screen_clone_contains_subset_of_selection(t *testing.T) {
 	// Our selection should remain valid
 	{
 		sel := zigUnwrap(t, s2.selection)
-		expectEqual(t, sc1Active(0, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(s2.pages.cols-1, 3), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 3), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2168,8 +2168,8 @@ func TestSc1_Screen_clone_contains_subset_of_rectangle_selection(t *testing.T) {
 	// selection.
 	{
 		sel := zigUnwrap(t, s2.selection)
-		expectEqual(t, sc1Active(1, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqual(t, sc1Active(3, 3), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		expectEqualPoint(t, sc1Active(1, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(3, 3), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -3999,16 +3999,16 @@ func TestSc1_Screen_selectAll(t *testing.T) {
 		sc1Write(t, s, "ABC  DEF\n 123\n456")
 		sel := zigUnwrap(t, s.SelectAll())
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(2, 2), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(2, 2), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	{
 		sc1Write(t, s, "\nFOO\n BAR\n BAZ\n QWERTY\n 12345678")
 		sel := zigUnwrap(t, s.SelectAll())
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(8, 7), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(8, 7), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 }
 
@@ -4028,32 +4028,32 @@ func TestSc1_Screen_selectLine(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(0, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	// Going backward
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(7, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	// Going forward and backward
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(3, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	// Outside active area
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(9, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(7, 0), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 }
 
@@ -4069,8 +4069,8 @@ func TestSc1_Screen_selectLine_across_soft_wrap(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 }
 
@@ -4085,8 +4085,8 @@ func TestSc1_Screen_selectLine_across_full_soft_wrap(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(2, 1)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(4, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(4, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 }
 
@@ -4102,24 +4102,24 @@ func TestSc1_Screen_selectLine_across_soft_wrap_ignores_blank_lines(t *testing.T
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	// Going backward
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 1)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	// Going forward and backward
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(3, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(1, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(3, 1), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 }
 
@@ -4137,8 +4137,8 @@ func TestSc1_Screen_selectLine_disabled_whitespace_trimming(t *testing.T) {
 		opts.whitespace = None[[]uint32]()
 		sel := zigUnwrap(t, s.SelectLine(opts))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(4, 2), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(4, 2), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 
 	// Non-wrapped
@@ -4147,8 +4147,8 @@ func TestSc1_Screen_selectLine_disabled_whitespace_trimming(t *testing.T) {
 		opts.whitespace = None[[]uint32]()
 		sel := zigUnwrap(t, s.SelectLine(opts))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Screen(0, 3), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
-		expectEqual(t, sc1Screen(4, 3), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
+		expectEqualPoint(t, sc1Screen(0, 3), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
+		expectEqualPoint(t, sc1Screen(4, 3), sc1PointFromPin(t, s, PointTagScreen, sel.End()))
 	}
 }
 
@@ -4164,16 +4164,16 @@ func TestSc1_Screen_selectLine_with_scrollback(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(0, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(1, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(1, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 
 	// Selecting last line
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(0, 2)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 2), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(1, 2), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 2), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(1, 2), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 }
 
@@ -4207,8 +4207,8 @@ func TestSc1_Screen_selectLine_semantic_prompt_boundary(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 2)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 2), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(0, 2), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 2), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(0, 2), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 }
 
@@ -4230,16 +4230,16 @@ func TestSc1_Screen_selectLine_semantic_prompt_to_input_boundary(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(0, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(1, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(1, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 
 	// Selecting from input should only select input
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(5, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(2, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(8, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(2, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(8, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 }
 
@@ -4294,24 +4294,24 @@ func TestSc1_Screen_selectLine_semantic_mid_row_boundary(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(2, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(2, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 
 	// Selecting from prompt should only select prompt
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(3, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(3, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(4, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(3, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(4, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 
 	// Selecting from input should only select input
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(6, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(5, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(7, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(5, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(7, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 }
 
@@ -4411,16 +4411,16 @@ func TestSc1_Screen_selectLine_semantic_boundary_first_cell_of_row(t *testing.T)
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(2, 0)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(4, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 0), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(4, 0), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 
 	// Selecting from output should only get output
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(2, 1)))))
 		defer sel.Deinit(s)
-		expectEqual(t, sc1Active(0, 1), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
-		expectEqual(t, sc1Active(4, 1), sc1PointFromPin(t, s, PointTagActive, sel.End()))
+		expectEqualPoint(t, sc1Active(0, 1), sc1PointFromPin(t, s, PointTagActive, sel.Start()))
+		expectEqualPoint(t, sc1Active(4, 1), sc1PointFromPin(t, s, PointTagActive, sel.End()))
 	}
 }
 

@@ -159,8 +159,13 @@ func (self Style) Default() bool {
 }
 
 // Eql is style.Style.eql: true if the style is equal to another style.
+//
+// Zig: `self.flags == other.flags` compares the packed u16. Go's struct ==
+// would also compare the bits above each field's Zig width (underline is a
+// u3 and _padding a u5 in Zig, whole bytes in Go), so the flags are compared
+// as the same masked u16 that Style.hash uses (styleFlags.bits).
 func (self Style) Eql(other Style) bool {
-	return self.flags == other.flags &&
+	return self.flags.bits() == other.flags.bits() &&
 		self.fg_color.Eql(other.fg_color) &&
 		self.bg_color.Eql(other.bg_color) &&
 		self.underline_color.Eql(other.underline_color)
@@ -326,6 +331,11 @@ func (self Style) Format() string {
 	var writer []uint8
 
 	dflt := Style{}
+
+	// Go-only: print the flags as their Zig bits (styleFlags.bits), so a Go
+	// value with bits above underline's u3 or _padding's u5 prints as it
+	// compares and hashes. self is a copy.
+	self.flags.underline, self.flags._padding = SGRAttributeUnderline(self.flags.bits()>>8&0x7), uint8(self.flags.bits()>>11)
 
 	writer = append(writer, "Style{ "...)
 
@@ -845,24 +855,30 @@ func stylePackedStyleFromStyle(style Style) stylePackedStyle {
 	return self
 }
 
-// bitCast is not a Zig declaration. It stands for
-// `const wide: [2]u64 = @bitCast(packed_style);` in Style.hash (style.zig
-// line 530): the 128 bits of the packed struct, element 0 holding bits
-// 0..63 and element 1 holding bits 64..127.
-func (self stylePackedStyle) bitCast() [2]uint64 {
-	// Style.Flags as its u16: bold bit 0 .. overline bit 7, underline bits
-	// 8..10 (u3), _padding bits 11..15 (u5). The masks keep each field to
-	// its Zig width.
-	b := func(v bool) uint64 {
+// bits is not a Zig declaration. It is `@as(u16, @bitCast(flags))`:
+// Style.Flags as its u16, bold bit 0 .. overline bit 7, underline bits 8..10
+// (u3), _padding bits 11..15 (u5). The masks keep each field to its Zig
+// width, so a Go value with bits above a field's width (which Zig cannot
+// hold) compares and hashes as the Zig value of those bits.
+func (f styleFlags) bits() uint16 {
+	b := func(v bool) uint16 {
 		if v {
 			return 1
 		}
 		return 0
 	}
-	f := self.flags
-	flags := b(f.bold)<<0 | b(f.italic)<<1 | b(f.faint)<<2 | b(f.blink)<<3 |
+	return b(f.bold)<<0 | b(f.italic)<<1 | b(f.faint)<<2 | b(f.blink)<<3 |
 		b(f.inverse)<<4 | b(f.invisible)<<5 | b(f.strikethrough)<<6 | b(f.overline)<<7 |
-		(uint64(f.underline)&0x7)<<8 | (uint64(f._padding)&0x1f)<<11
+		(uint16(f.underline)&0x7)<<8 | (uint16(f._padding)&0x1f)<<11
+}
+
+// bitCast is not a Zig declaration. It stands for
+// `const wide: [2]u64 = @bitCast(packed_style);` in Style.hash (style.zig
+// line 530): the 128 bits of the packed struct, element 0 holding bits
+// 0..63 and element 1 holding bits 64..127.
+func (self stylePackedStyle) bitCast() [2]uint64 {
+	// Style.Flags as its u16, each field masked to its Zig width.
+	flags := uint64(self.flags.bits())
 
 	// The 128 bits: tags at 0, 8, 16; data (u24 each, masked) at 24, 48,
 	// 72; flags at 96; _padding at 112.

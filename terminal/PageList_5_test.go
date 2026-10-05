@@ -3900,12 +3900,12 @@ func TestPl5_term51_pointFromPin_every_tag_over_every_row_of_a_multi_page_list(t
 		page, y := pl5MlocOf(sizes, g)
 		p := PageListPin{node: pl5MnodeAt(s, page), y: SizeCellCountInt(y), x: 2}
 
-		expectEqual(t, pl5Screen(2, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl5Screen(2, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 		// history counts from the first row and has no upper bound
-		expectEqual(t, pl5History(2, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagHistory, p)))
+		expectEqualPoint(t, pl5History(2, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagHistory, p)))
 		if g >= 7 {
-			expectEqual(t, pl5Active(2, uint32(g-7)), zigUnwrap(t, s.PointFromPin(PointTagActive, p)))
-			expectEqual(t, pl5Viewport(2, uint32(g-7)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
+			expectEqualPoint(t, pl5Active(2, uint32(g-7)), zigUnwrap(t, s.PointFromPin(PointTagActive, p)))
+			expectEqualPoint(t, pl5Viewport(2, uint32(g-7)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
 		} else {
 			expect(t, !s.PointFromPin(PointTagActive, p).Valid, "s.pointFromPin(.active, p) == null")
 			expect(t, !s.PointFromPin(PointTagViewport, p).Valid, "s.pointFromPin(.viewport, p) == null")
@@ -3917,7 +3917,7 @@ func TestPl5_term51_pointFromPin_every_tag_over_every_row_of_a_multi_page_list(t
 	for g := uint(0); g < 12; g++ {
 		page, y := pl5MlocOf(sizes, g)
 		p := PageListPin{node: pl5MnodeAt(s, page), y: SizeCellCountInt(y), x: 0}
-		expectEqual(t, pl5Viewport(0, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
+		expectEqualPoint(t, pl5Viewport(0, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
 	}
 
 	// pinned viewport at global row 5 (page 1, row 1)
@@ -3927,7 +3927,7 @@ func TestPl5_term51_pointFromPin_every_tag_over_every_row_of_a_multi_page_list(t
 		page, y := pl5MlocOf(sizes, g)
 		p := PageListPin{node: pl5MnodeAt(s, page), y: SizeCellCountInt(y), x: 1}
 		if g >= 5 {
-			expectEqual(t, pl5Viewport(1, uint32(g-5)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
+			expectEqualPoint(t, pl5Viewport(1, uint32(g-5)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
 		} else {
 			expect(t, !s.PointFromPin(PointTagViewport, p).Valid, "s.pointFromPin(.viewport, p) == null")
 		}
@@ -3950,10 +3950,10 @@ func TestPl5_term51_pointFromPin_active_area_straddling_two_pages(t *testing.T) 
 	expect(t, !s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 0}).Valid, "s.pointFromPin(.active, .{ .node = n1, .y = 0 }) == null")
 	// tl.y > p.y is outside; tl.y == p.y is the first row
 	expect(t, !s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 1}).Valid, "s.pointFromPin(.active, .{ .node = n1, .y = 1 }) == null")
-	expectEqual(t, pl5Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 2, x: 3})))
+	expectEqualPoint(t, pl5Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 2, x: 3})))
 	// Later pages add the rows remaining in the first page of the area (1).
-	expectEqual(t, pl5Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n2, y: 0})))
-	expectEqual(t, pl5Active(5, 5), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n2, y: 4, x: 5})))
+	expectEqualPoint(t, pl5Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n2, y: 0})))
+	expectEqualPoint(t, pl5Active(5, 5), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n2, y: 4, x: 5})))
 }
 
 // Zig: test "term51: pointFromPin: pins are not bounds checked and foreign nodes are rejected"
@@ -3966,10 +3966,10 @@ func TestPl5_term51_pointFromPin_pins_are_not_bounds_checked_and_foreign_nodes_a
 	n1 := pl5MnodeAt(s, 1)
 
 	// y and x beyond the page are passed through (screen: page 1 starts at 4)
-	expectEqual(t, pl5Screen(100, 13), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n1, y: 9, x: 100})))
-	expectEqual(t, pl5Screen(0, 9), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n0, y: 9})))
+	expectEqualPoint(t, pl5Screen(100, 13), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n1, y: 9, x: 100})))
+	expectEqualPoint(t, pl5Screen(0, 9), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n0, y: 9})))
 	// garbage is ignored
-	expectEqual(t, pl5Screen(0, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n1, garbage: true})))
+	expectEqualPoint(t, pl5Screen(0, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n1, garbage: true})))
 
 	// A node of another list is never found.
 	other := pl5Init(t, 6, 5, None[uint64]())
@@ -3990,10 +3990,10 @@ func TestPl5_term51_pointFromPin_single_page_lists_and_history_without_scrollbac
 	n := s.pages.first
 	for y := uint(0); y < 5; y++ {
 		p := PageListPin{node: n, y: SizeCellCountInt(y), x: 5}
-		expectEqual(t, pl5Active(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagActive, p)))
-		expectEqual(t, pl5Screen(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
-		expectEqual(t, pl5Viewport(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
-		expectEqual(t, pl5History(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagHistory, p)))
+		expectEqualPoint(t, pl5Active(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagActive, p)))
+		expectEqualPoint(t, pl5Screen(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl5Viewport(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
+		expectEqualPoint(t, pl5History(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagHistory, p)))
 	}
 
 	// History inside one page above the active area: rows 0..3 of 9.
@@ -4001,7 +4001,7 @@ func TestPl5_term51_pointFromPin_single_page_lists_and_history_without_scrollbac
 	defer s2.Deinit()
 	n2 := s2.pages.first
 	expect(t, !s2.PointFromPin(PointTagActive, PageListPin{node: n2, y: 3}).Valid, "s2.pointFromPin(.active, .{ .node = n2, .y = 3 }) == null")
-	expectEqual(t, pl5Active(0, 0), zigUnwrap(t, s2.PointFromPin(PointTagActive, PageListPin{node: n2, y: 4})))
+	expectEqualPoint(t, pl5Active(0, 0), zigUnwrap(t, s2.PointFromPin(PointTagActive, PageListPin{node: n2, y: 4})))
 }
 
 // Zig: test "term51: getCell: every row and column in every tag"

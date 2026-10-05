@@ -243,14 +243,14 @@ func TestPl1_PageList_pointFromPin_active_no_history(t *testing.T) {
 	defer s.Deinit()
 
 	{
-		expectEqual(t, pl1Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
+		expectEqualPoint(t, pl1Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
 			node: s.pages.first,
 			y:    0,
 			x:    0,
 		})))
 	}
 	{
-		expectEqual(t, pl1Active(4, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
+		expectEqualPoint(t, pl1Active(4, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
 			node: s.pages.first,
 			y:    2,
 			x:    4,
@@ -267,7 +267,7 @@ func TestPl1_PageList_pointFromPin_active_with_history(t *testing.T) {
 	pl1GrowRows(t, &s, 30)
 
 	{
-		expectEqual(t, pl1Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
+		expectEqualPoint(t, pl1Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
 			node: s.pages.first,
 			y:    30,
 			x:    2,
@@ -304,7 +304,7 @@ func TestPl1_PageList_pointFromPin_active_from_prior_page(t *testing.T) {
 	cur_page.data.PauseIntegrityChecks(false)
 
 	{
-		expectEqual(t, pl1Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
+		expectEqualPoint(t, pl1Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
 			node: s.pages.last,
 			y:    0,
 			x:    2,
@@ -346,7 +346,7 @@ func TestPl1_PageList_pointFromPin_traverse_pages(t *testing.T) {
 		page_cap := uint(page.capacity.rows)
 		expected_y := page_cap*(pages-2) + 5
 
-		expectEqual(t, pl1Screen(2, uint32(expected_y)), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{
+		expectEqualPoint(t, pl1Screen(2, uint32(expected_y)), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{
 			node: s.pages.last.prev,
 			y:    5,
 			x:    2,
@@ -377,15 +377,15 @@ func TestPl1_PageList_active_after_grow(t *testing.T) {
 	// Make sure all points make sense
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	// Scrollbar should be in the active area
@@ -522,7 +522,7 @@ func TestPl1_PageList_scroll_with_max_size_0_no_history(t *testing.T) {
 	// Scroll to top - should also be no-op with no scrollback
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 	pt_after := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-	expectEqual(t, pt_before, pt_after)
+	expectEqualPoint(t, pt_before, pt_after)
 }
 
 // Zig: test "PageList scroll top"
@@ -535,14 +535,14 @@ func TestPl1_PageList_scroll_top(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -554,7 +554,7 @@ func TestPl1_PageList_scroll_top(t *testing.T) {
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -566,7 +566,7 @@ func TestPl1_PageList_scroll_top(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 20), pt)
+		expectEqualPoint(t, pl1Screen(0, 20), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -586,7 +586,7 @@ func TestPl1_PageList_scroll_delta_row_back(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -1})
@@ -599,13 +599,13 @@ func TestPl1_PageList_scroll_delta_row_back(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 9), pt)
+		expectEqualPoint(t, pl1Screen(0, 9), pt)
 	}
 
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 9), pt)
+		expectEqualPoint(t, pl1Screen(0, 9), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -633,14 +633,14 @@ func TestPl1_PageList_scroll_delta_row_back_overflow(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -100})
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -652,7 +652,7 @@ func TestPl1_PageList_scroll_delta_row_back_overflow(t *testing.T) {
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -672,7 +672,7 @@ func TestPl1_PageList_scroll_delta_row_forward(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
@@ -686,13 +686,13 @@ func TestPl1_PageList_scroll_delta_row_forward(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 2), pt)
+		expectEqualPoint(t, pl1Screen(0, 2), pt)
 	}
 
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 2), pt)
+		expectEqualPoint(t, pl1Screen(0, 2), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -713,7 +713,7 @@ func TestPl1_PageList_scroll_delta_row_forward_into_active(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -733,7 +733,7 @@ func TestPl1_PageList_scroll_delta_row_back_without_space_preserves_active(t *te
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
@@ -763,7 +763,7 @@ func TestPl1_PageList_scroll_to_pin(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 4), pt)
+		expectEqualPoint(t, pl1Screen(0, 4), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(2, 5)))})
@@ -776,7 +776,7 @@ func TestPl1_PageList_scroll_to_pin(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 5), pt)
+		expectEqualPoint(t, pl1Screen(0, 5), pt)
 	}
 }
 
@@ -798,7 +798,7 @@ func TestPl1_PageList_scroll_to_pin_in_active(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 }
 
@@ -822,7 +822,7 @@ func TestPl1_PageList_scroll_to_pin_at_top(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 }
 
@@ -836,7 +836,7 @@ func TestPl1_PageList_scroll_to_row_0(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollRow, Row: 0})
@@ -844,7 +844,7 @@ func TestPl1_PageList_scroll_to_row_0(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -856,7 +856,7 @@ func TestPl1_PageList_scroll_to_row_0(t *testing.T) {
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -876,7 +876,7 @@ func TestPl1_PageList_scroll_to_row_in_scrollback(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 20), pt)
+		expectEqualPoint(t, pl1Screen(0, 20), pt)
 	}
 
 	s.Scroll(PageListScroll{Tag: PageListScrollRow, Row: 5})
@@ -889,13 +889,13 @@ func TestPl1_PageList_scroll_to_row_in_scrollback(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 5), pt)
+		expectEqualPoint(t, pl1Screen(0, 5), pt)
 	}
 
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 5), pt)
+		expectEqualPoint(t, pl1Screen(0, 5), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -926,13 +926,13 @@ func TestPl1_PageList_scroll_to_row_in_middle(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, uint32(SizeCellCountInt(midpoint))), pt)
+		expectEqualPoint(t, pl1Screen(0, uint32(SizeCellCountInt(midpoint))), pt)
 	}
 
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, uint32(SizeCellCountInt(midpoint))), pt)
+		expectEqualPoint(t, pl1Screen(0, uint32(SizeCellCountInt(midpoint))), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -958,7 +958,7 @@ func TestPl1_PageList_scroll_to_row_at_active_boundary(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, uint32(SizeCellCountInt(active_start))), pt)
+		expectEqualPoint(t, pl1Screen(0, uint32(SizeCellCountInt(active_start))), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -992,7 +992,7 @@ func TestPl1_PageList_scroll_to_row_beyond_active(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1015,7 +1015,7 @@ func TestPl1_PageList_scroll_to_row_without_scrollback(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1039,7 +1039,7 @@ func TestPl1_PageList_scroll_to_row_then_delta(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1054,7 +1054,7 @@ func TestPl1_PageList_scroll_to_row_then_delta(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 15), pt)
+		expectEqualPoint(t, pl1Screen(0, 15), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1069,7 +1069,7 @@ func TestPl1_PageList_scroll_to_row_then_delta(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 12), pt)
+		expectEqualPoint(t, pl1Screen(0, 12), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1098,7 +1098,7 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_down(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 10), pt)
+		expectEqualPoint(t, pl1Screen(0, 10), pt)
 	}
 
 	// Verify cache is populated
@@ -1117,13 +1117,13 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_down(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 20), pt)
+		expectEqualPoint(t, pl1Screen(0, 20), pt)
 	}
 
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 20), pt)
+		expectEqualPoint(t, pl1Screen(0, 20), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1152,7 +1152,7 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_up(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 30), pt)
+		expectEqualPoint(t, pl1Screen(0, 30), pt)
 	}
 
 	// Verify cache is populated
@@ -1171,13 +1171,13 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_up(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 15), pt)
+		expectEqualPoint(t, pl1Screen(0, 15), pt)
 	}
 
 	pl1GrowRows(t, &s, 10)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 15), pt)
+		expectEqualPoint(t, pl1Screen(0, 15), pt)
 	}
 
 	expectEqual(t, PageListScrollbar{
@@ -1207,7 +1207,7 @@ func TestPl1_PageList_scroll_clear(t *testing.T) {
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 2), pt)
+		expectEqualPoint(t, pl1Screen(0, 2), pt)
 	}
 }
 
@@ -1261,7 +1261,7 @@ func TestPl1_Screen_jump_back_one_prompt(t *testing.T) {
 	{
 		s.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: -1})
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-		expectEqual(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
+		expectEqualPoint(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
 
 		expectEqual(t, PageListScrollbar{
 			total:  s.total_rows,
@@ -1272,7 +1272,7 @@ func TestPl1_Screen_jump_back_one_prompt(t *testing.T) {
 	{
 		s.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: -1})
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-		expectEqual(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
+		expectEqualPoint(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
 
 		expectEqual(t, PageListScrollbar{
 			total:  s.total_rows,
@@ -1335,14 +1335,14 @@ func TestPl1_Screen_jump_forward_prompt_skips_multiline_continuation(t *testing.
 	s.Scroll(PageListScroll{Tag: PageListScrollRow, Row: 1})
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: 1})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
+	expectEqualPoint(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
 
 	// Starting in the middle of continuation lines should also jump to
 	// the next prompt.
 	s.Scroll(PageListScroll{Tag: PageListScrollRow, Row: 2})
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: 1})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
+	expectEqualPoint(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
 }
 
 // Zig: test "PageList grow fit in capacity"
@@ -1360,7 +1360,7 @@ func TestPl1_PageList_grow_fit_in_capacity(t *testing.T) {
 	expect(t, pl1Grow(t, &s) == nil, "try s.grow() == null")
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 1), pt)
+		expectEqualPoint(t, pl1Screen(0, 1), pt)
 	}
 }
 
@@ -1386,7 +1386,7 @@ func TestPl1_PageList_grow_allocate(t *testing.T) {
 	{
 		cell := zigUnwrap(t, s.GetCell(pl1Active(0, uint32(s.rows-1))))
 		expect(t, cell.node == new, "cell.node == new")
-		expectEqual(t, pl1Screen(0, uint32(last.capacity.rows)), cell.ScreenPoint())
+		expectEqualPoint(t, pl1Screen(0, uint32(last.capacity.rows)), cell.ScreenPoint())
 	}
 }
 
@@ -2319,19 +2319,19 @@ func TestPl1_PageList_cellIterator(t *testing.T) {
 	it := s.CellIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen}, None[Point]())
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(1, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(1, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(1, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(1, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2354,19 +2354,19 @@ func TestPl1_PageList_cellIterator_reverse(t *testing.T) {
 	it := s.CellIterator(PageListDirectionLeftUp, Point{Tag: PointTagScreen}, None[Point]())
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(1, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(1, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(1, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(1, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2406,15 +2406,15 @@ func TestPl1_PageList_promptIterator_left_up(t *testing.T) {
 	it := s.PromptIterator(PageListDirectionLeftUp, Point{Tag: PointTagScreen}, None[Point]())
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 12), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 12), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2454,15 +2454,15 @@ func TestPl1_PageList_promptIterator_right_down(t *testing.T) {
 	it := s.PromptIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen}, None[Point]())
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 12), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 12), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2495,11 +2495,11 @@ func TestPl1_PageList_promptIterator_right_down_continuation_at_start(t *testing
 	{
 		// Should return the first continuation line since there's no prior prompt
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2535,7 +2535,7 @@ func TestPl1_PageList_promptIterator_right_down_with_prompt_before_continuation(
 	{
 		p := zigUnwrap(t, it.Next())
 		// Returns row 3 since that's the first prompt-related line we encounter
-		expectEqual(t, pl1Screen(0, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2564,7 +2564,7 @@ func TestPl1_PageList_promptIterator_right_down_limit_inclusive(t *testing.T) {
 	it := s.PromptIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen}, Some(pl1Screen(0, 5)))
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2594,7 +2594,7 @@ func TestPl1_PageList_promptIterator_left_up_limit_inclusive(t *testing.T) {
 	it := s.PromptIterator(PageListDirectionLeftUp, pl1Screen(0, 10), Some(pl1Screen(0, 15)))
 	{
 		p := zigUnwrap(t, it.Next())
-		expectEqual(t, pl1Screen(0, 10), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
+		expectEqualPoint(t, pl1Screen(0, 10), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2635,8 +2635,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(2, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqual(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt with output"
@@ -2682,8 +2682,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_with_output(t *testing.T) 
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqual(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(6, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(6, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt multiline"
@@ -2724,8 +2724,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_multiline(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(2, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqual(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(4, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(4, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt only"
@@ -2758,8 +2758,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_only(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqual(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt to end of screen"
@@ -2792,8 +2792,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_to_end_of_screen(t *testin
 		zigUnwrap(t, s.Pin(pl1Screen(0, 15))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqual(t, pl1Screen(0, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(7, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(7, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent input basic"
@@ -2833,8 +2833,8 @@ func TestPl1_PageList_highlightSemanticContent_input_basic(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentInput,
 	))
-	expectEqual(t, pl1Screen(3, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(3, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent input with output"
@@ -2880,8 +2880,8 @@ func TestPl1_PageList_highlightSemanticContent_input_with_output(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentInput,
 	))
-	expectEqual(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent input multiline with continuation"
@@ -2935,8 +2935,8 @@ func TestPl1_PageList_highlightSemanticContent_input_multiline_with_continuation
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentInput,
 	))
-	expectEqual(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(5, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(5, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent input no input returns null"
@@ -3009,8 +3009,8 @@ func TestPl1_PageList_highlightSemanticContent_input_to_end_of_screen(t *testing
 		zigUnwrap(t, s.Pin(pl1Screen(0, 15))),
 		PageCellSemanticContentInput,
 	))
-	expectEqual(t, pl1Screen(2, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(6, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(2, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(6, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent input prompt only returns null"
@@ -3105,8 +3105,8 @@ func TestPl1_PageList_highlightSemanticContent_output_basic(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqual(t, pl1Screen(5, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(5, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent output multiline"
@@ -3170,8 +3170,8 @@ func TestPl1_PageList_highlightSemanticContent_output_multiline(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqual(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(4, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(4, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent output stops at next prompt"
@@ -3229,8 +3229,8 @@ func TestPl1_PageList_highlightSemanticContent_output_stops_at_next_prompt(t *te
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqual(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(2, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(2, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent output to end of screen"
@@ -3279,8 +3279,8 @@ func TestPl1_PageList_highlightSemanticContent_output_to_end_of_screen(t *testin
 		zigUnwrap(t, s.Pin(pl1Screen(0, 15))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqual(t, pl1Screen(4, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(7, 16), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(4, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(7, 16), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList highlightSemanticContent output no output returns null"
@@ -3390,8 +3390,8 @@ func TestPl1_PageList_highlightSemanticContent_output_skips_empty_cells(t *testi
 		PageCellSemanticContentOutput,
 	))
 	// Output should start at row 7, not row 5 (where empty cells have default .output)
-	expectEqual(t, pl1Screen(0, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqual(t, pl1Screen(4, 8), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
+	expectEqualPoint(t, pl1Screen(4, 8), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
 }
 
 // Zig: test "PageList erase"
@@ -3998,7 +3998,7 @@ func TestPl1_PageList_clone_remap_tracked_pin(t *testing.T) {
 	// We should be able to find our tracked pin
 	p2, ok := pin_remap[p]
 	expect(t, ok, "pin_remap.get(p) != null")
-	expectEqual(t,
+	expectEqualPoint(t,
 		pl1Active(0, 1),
 		zigUnwrap(t, s2.PointFromPin(PointTagActive, *p2)),
 	)
@@ -4076,11 +4076,11 @@ func TestPl1_PageList_resize_no_reflow_more_rows(t *testing.T) {
 
 	// Our cursor should not move because we have no scrollback so
 	// we just grew.
-	expectEqual(t, pl1Active(0, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl1Active(0, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 }
 
@@ -4093,7 +4093,7 @@ func TestPl1_PageList_resize_no_reflow_more_rows_with_history(t *testing.T) {
 	pl1GrowRows(t, &s, 50)
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 50), pt)
+		expectEqualPoint(t, pl1Screen(0, 50), pt)
 	}
 
 	// Put a tracked pin in the history
@@ -4107,11 +4107,11 @@ func TestPl1_PageList_resize_no_reflow_more_rows_with_history(t *testing.T) {
 	expectEqual(t, uint(53), s.totalRows())
 
 	// Our cursor should move since it's in the scrollback
-	expectEqual(t, pl1Active(0, 4), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl1Active(0, 4), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 48), pt)
+		expectEqualPoint(t, pl1Screen(0, 48), pt)
 	}
 }
 
@@ -4139,7 +4139,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows(t *testing.T) {
 	expectEqual(t, uint(10), s.totalRows())
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 5), pt)
+		expectEqualPoint(t, pl1Screen(0, 5), pt)
 	}
 }
 
@@ -4167,7 +4167,7 @@ func TestPl1_PageList_resize_no_reflow_one_rows(t *testing.T) {
 	expectEqual(t, uint(10), s.totalRows())
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 9), pt)
+		expectEqualPoint(t, pl1Screen(0, 9), pt)
 	}
 }
 
@@ -4205,11 +4205,11 @@ func TestPl1_PageList_resize_no_reflow_less_rows_cursor_on_bottom(t *testing.T) 
 	expectEqual(t, uint(10), s.totalRows())
 
 	// Our cursor should move since it's in the scrollback
-	expectEqual(t, pl1Active(0, 4), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl1Active(0, 4), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 5), pt)
+		expectEqualPoint(t, pl1Screen(0, 5), pt)
 	}
 }
 
@@ -4248,11 +4248,11 @@ func TestPl1_PageList_resize_no_reflow_less_rows_cursor_in_scrollback(t *testing
 
 	// Our cursor should move since it's in the scrollback
 	expect(t, !s.PointFromPin(PointTagActive, *p).Valid, "s.pointFromPin(.active, p.*) == null")
-	expectEqual(t, pl1Screen(0, 2), zigUnwrap(t, s.PointFromPin(PointTagScreen, *p)))
+	expectEqualPoint(t, pl1Screen(0, 2), zigUnwrap(t, s.PointFromPin(PointTagScreen, *p)))
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 5), pt)
+		expectEqualPoint(t, pl1Screen(0, 5), pt)
 	}
 }
 
@@ -4296,11 +4296,11 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines(t *testing.T)
 	expectEqual(t, uint(2), s.totalRows())
 
 	// Our cursor should not move since we trimmed
-	expectEqual(t, pl1Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl1Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 }
 
@@ -4339,7 +4339,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines_cursor_in_bla
 	expectEqual(t, uint(4), s.totalRows())
 
 	// Our cursor should not move since we trimmed
-	expectEqual(t, pl1Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl1Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize (no reflow) less rows trims blank lines erases pages"
@@ -4402,7 +4402,7 @@ func TestPl1_PageList_resize_no_reflow_more_rows_extends_blank_lines(t *testing.
 	expectEqual(t, uint(7), s.totalRows())
 	{
 		pt := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive})).ScreenPoint()
-		expectEqual(t, pl1Screen(0, 0), pt)
+		expectEqualPoint(t, pl1Screen(0, 0), pt)
 	}
 }
 
@@ -4492,7 +4492,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols_pin_in_trimmed_cols(t *testing.
 		expectEqual(t, uint(5), uint(len(cells)))
 	}
 
-	expectEqual(t, pl1Active(4, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
+	expectEqualPoint(t, pl1Active(4, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, *p)))
 }
 
 // Zig: test "PageList resize (no reflow) less cols clears graphemes"

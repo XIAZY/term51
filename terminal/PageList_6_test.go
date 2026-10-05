@@ -300,11 +300,11 @@ func TestPl6_Cell_screenPoint_row_and_column_on_a_single_page(t *testing.T) {
 	defer s.Deinit()
 
 	c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 3, y: 2}}))
-	expectEqual(t, pl6Pt(3, 2), c.ScreenPoint())
+	expectEqualPoint(t, pl6Pt(3, 2), c.ScreenPoint())
 	tl := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen}))
-	expectEqual(t, pl6Pt(0, 0), tl.ScreenPoint())
+	expectEqualPoint(t, pl6Pt(0, 0), tl.ScreenPoint())
 	br := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 4, y: 3}}))
-	expectEqual(t, pl6Pt(4, 3), br.ScreenPoint())
+	expectEqualPoint(t, pl6Pt(4, 3), br.ScreenPoint())
 	// The result tag is always screen, whatever tag was used to get the cell.
 	v := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: 1, y: 1}}))
 	expect(t, v.ScreenPoint().Tag == PointTagScreen, "v.screenPoint() == .screen")
@@ -324,16 +324,16 @@ func TestPl6_Cell_screenPoint_adds_the_rows_of_all_previous_pages(t *testing.T) 
 		expect(t, c.node == s.pages.first.next, "c.node == s.pages.first.?.next.?")
 		expectEqual(t, uint(7), uint(c.row_idx))
 		expectEqual(t, uint(4), uint(c.col_idx))
-		expectEqual(t, pl6Pt(4, n1+7), c.ScreenPoint())
+		expectEqualPoint(t, pl6Pt(4, n1+7), c.ScreenPoint())
 	}
 	// First row of page 3 and last row of page 2
 	{
 		c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 0, y: n1 + n2}}))
 		expect(t, c.node == s.pages.last, "c.node == s.pages.last.?")
-		expectEqual(t, pl6Pt(0, n1+n2), c.ScreenPoint())
+		expectEqualPoint(t, pl6Pt(0, n1+n2), c.ScreenPoint())
 		d := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 9, y: n1 + n2 - 1}}))
 		expect(t, d.node == s.pages.first.next, "d.node == s.pages.first.?.next.?")
-		expectEqual(t, pl6Pt(9, n1+n2-1), d.ScreenPoint())
+		expectEqualPoint(t, pl6Pt(9, n1+n2-1), d.ScreenPoint())
 	}
 }
 
@@ -3064,14 +3064,14 @@ func TestPl6_CellIterator_next_whole_screen_in_both_directions(t *testing.T) {
 	down := s.CellIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen}, None[Point]())
 	dd := pl6DrainCells(t, &s, &down, PageListDirectionRightDown)
 	expectEqual(t, uint(20), dd.count)
-	expectEqual(t, pl6Pt(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.first))))
-	expectEqual(t, pl6Pt(3, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.last))))
+	expectEqualPoint(t, pl6Pt(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.first))))
+	expectEqualPoint(t, pl6Pt(3, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.last))))
 
 	up := s.CellIterator(PageListDirectionLeftUp, Point{Tag: PointTagScreen}, None[Point]())
 	du := pl6DrainCells(t, &s, &up, PageListDirectionLeftUp)
 	expectEqual(t, uint(20), du.count)
-	expectEqual(t, pl6Pt(3, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.first))))
-	expectEqual(t, pl6Pt(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.last))))
+	expectEqualPoint(t, pl6Pt(3, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.first))))
+	expectEqualPoint(t, pl6Pt(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.last))))
 }
 
 // Zig: test "term51: CellIterator.next: one column pages move to the next row on every call"
@@ -3162,11 +3162,11 @@ func TestPl6_cellIterator_no_bottom_bound_iterates_to_the_end_of_the_tag_area(t 
 		screen := s.CellIterator(dir, Point{Tag: PointTagScreen}, None[Point]())
 		ds := pl6DrainCells(t, &s, &screen, dir)
 		expectEqual(t, uint(20), ds.count)
-		expectEqual(t,
+		expectEqualPoint(t,
 			pl6If(fwd, pl6Pt(0, 0), pl6Pt(3, 4)),
 			zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, ds.first))),
 		)
-		expectEqual(t,
+		expectEqualPoint(t,
 			pl6If(fwd, pl6Pt(3, 4), pl6Pt(0, 0)),
 			zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, ds.last))),
 		)
@@ -3174,11 +3174,11 @@ func TestPl6_cellIterator_no_bottom_bound_iterates_to_the_end_of_the_tag_area(t 
 		active := s.CellIterator(dir, Point{Tag: PointTagActive}, None[Point]())
 		da := pl6DrainCells(t, &s, &active, dir)
 		expectEqual(t, uint(12), da.count)
-		expectEqual(t,
+		expectEqualPoint(t,
 			pl6If(fwd, pl6Pt(0, 2), pl6Pt(3, 4)),
 			zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, da.first))),
 		)
-		expectEqual(t,
+		expectEqualPoint(t,
 			pl6If(fwd, pl6Pt(3, 4), pl6Pt(0, 2)),
 			zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, da.last))),
 		)
@@ -3186,11 +3186,11 @@ func TestPl6_cellIterator_no_bottom_bound_iterates_to_the_end_of_the_tag_area(t 
 		history := s.CellIterator(dir, Point{Tag: PointTagHistory}, None[Point]())
 		dh := pl6DrainCells(t, &s, &history, dir)
 		expectEqual(t, uint(8), dh.count)
-		expectEqual(t,
+		expectEqualPoint(t,
 			pl6If(fwd, pl6Pt(0, 0), pl6Pt(3, 1)),
 			zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dh.first))),
 		)
-		expectEqual(t,
+		expectEqualPoint(t,
 			pl6If(fwd, pl6Pt(3, 1), pl6Pt(0, 0)),
 			zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dh.last))),
 		)
@@ -3205,8 +3205,8 @@ func TestPl6_cellIterator_no_bottom_bound_iterates_to_the_end_of_the_tag_area(t 
 	top := s.CellIterator(PageListDirectionRightDown, Point{Tag: PointTagViewport}, None[Point]())
 	dt := pl6DrainCells(t, &s, &top, PageListDirectionRightDown)
 	expectEqual(t, uint(12), dt.count)
-	expectEqual(t, pl6Pt(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dt.first))))
-	expectEqual(t, pl6Pt(3, 2), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dt.last))))
+	expectEqualPoint(t, pl6Pt(0, 0), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dt.first))))
+	expectEqualPoint(t, pl6Pt(3, 2), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dt.last))))
 }
 
 // Zig: test "term51: cellIterator: explicit bounds in both directions"
@@ -3219,15 +3219,15 @@ func TestPl6_cellIterator_explicit_bounds_in_both_directions(t *testing.T) {
 	dd := pl6DrainCells(t, &s, &down, PageListDirectionRightDown)
 	// (2,1) to the end of row 1: 2, rows 2: 4, row 3: 4
 	expectEqual(t, uint(10), dd.count)
-	expectEqual(t, pl6Pt(2, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.first))))
-	expectEqual(t, pl6Pt(3, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.last))))
+	expectEqualPoint(t, pl6Pt(2, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.first))))
+	expectEqualPoint(t, pl6Pt(3, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, dd.last))))
 
 	up := s.CellIterator(PageListDirectionLeftUp, pl6Pt(2, 1), Some(pl6Pt(1, 3)))
 	du := pl6DrainCells(t, &s, &up, PageListDirectionLeftUp)
 	// (1,3) to the start of row 3: 2, row 2: 4, row 1: 4
 	expectEqual(t, uint(10), du.count)
-	expectEqual(t, pl6Pt(1, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.first))))
-	expectEqual(t, pl6Pt(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.last))))
+	expectEqualPoint(t, pl6Pt(1, 3), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.first))))
+	expectEqualPoint(t, pl6Pt(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, du.last))))
 
 	// Bounds in the active tag.
 	act := s.CellIterator(PageListDirectionRightDown,
@@ -4247,8 +4247,8 @@ func pl6ExpectHl(
 ) {
 	t.Helper()
 	expect(t, hl.Valid, "hl != null")
-	expectEqual(t, pl6Pt(sx, sy), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.start)))
-	expectEqual(t, pl6Pt(ex, ey), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.end)))
+	expectEqualPoint(t, pl6Pt(sx, sy), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.start)))
+	expectEqualPoint(t, pl6Pt(ex, ey), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.end)))
 }
 
 // pl6At is `s.pin(term51NPt(x, y)).?`.

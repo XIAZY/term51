@@ -1236,7 +1236,7 @@ func TestPl3_term51_clone_remaps_tracked_pins_into_the_cloned_area(t *testing.T)
 	expectEqual(t, SizeCellCountInt(2), ng.y)
 	expect(t, !na.garbage, "!na.garbage")
 	expect(t, ng.garbage, "ng.garbage")
-	expectEqual(t, pl3Screen(79, 10), zigUnwrap(t, c.PointFromPin(PointTagScreen, *nb)))
+	expectEqualPoint(t, pl3Screen(79, 10), zigUnwrap(t, c.PointFromPin(PointTagScreen, *nb)))
 
 	// The clone's own viewport pin stays at the top-left.
 	expect(t, c.viewport_pin.node == c.pages.first, "c.viewport_pin.node == c.pages.first.?")

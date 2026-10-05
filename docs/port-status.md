@@ -28,6 +28,7 @@ build.
 | `terminal/modes.zig` | `terminal/modes.go` | done | 23 of 25 (2 not translated: a layout test and an analysis-only unnamed test), all pass | modes table equals upstream's | pass |
 | `terminal/device_status.zig` | `terminal/device_status.go` | done | 7 of 7, all pass | - | pass |
 | `terminal/kitty/key.zig` | `terminal/kitty_key.go` | done | 25 of 25, all pass | - | pass |
+| `terminal/stream.zig` | `terminal/stream.go` | done | 253 of 264 (11 not translated: the C-binding `cval` tests and `test Action`), all pass | needs Terminal (replay areas) | pass |
 
 `scripts/check-test-mapping.py` verifies that every Zig test has exactly one
 Go test, in the same order, by the `// Zig: test "<title>"` comment above each

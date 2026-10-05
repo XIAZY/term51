@@ -24,7 +24,7 @@
 //   - Zig's "terminal returned by value" helpers (term51UEightAt,
 //     term51UCrossTerm) return *Terminal.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tm7.txt (none).
+//     scripts/not-translated.txt (none).
 
 package terminal
 

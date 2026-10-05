@@ -27,7 +27,7 @@
 //   - Zig's default option values are written out in every literal
 //     (Resize.reflow = true, the page iterator direction, ...).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-pl3.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 
@@ -1410,7 +1410,7 @@ func TestPl3_term51_clone_clone_of_a_clone(t *testing.T) {
 }
 
 // The Zig test "term51: clone: allocator failure sweeps" is not translated
-// (FailingAllocator fault injection); see scripts/not-translated-pl3.txt.
+// (FailingAllocator fault injection); see scripts/not-translated.txt.
 
 // ---------------------------------------------------------------------------
 // term51: additional tests (K): helpers.
@@ -3538,7 +3538,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_reuse_their_id_when_its_slot_i
 // The Zig test "term51: ReflowCursor.writeCell: kitty placeholders mark the
 // destination row" is not translated (Kitty graphics is compiled out of the
 // library build, the test is skipped upstream); see
-// scripts/not-translated-pl3.txt.
+// scripts/not-translated.txt.
 
 // Zig: test "term51: ReflowCursor.writeCell: a full style set increases the style capacity"
 func TestPl3_term51_ReflowCursor_writeCell_a_full_style_set_increases_the_style_capacity(t *testing.T) {

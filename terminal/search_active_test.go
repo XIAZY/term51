@@ -5,7 +5,7 @@
 // saExpectHighlight, ...) are shared with the other search tests and are in
 // search_test.go; see the translation notes there.
 //
-// Not translated (scripts/not-translated-sa.txt): the two out-of-memory
+// Not translated (scripts/not-translated.txt): the two out-of-memory
 // tests (FailingAllocator).
 //
 // Go-only panic tests: ActiveSearch.update on a previous page with zero rows

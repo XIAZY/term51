@@ -1,7 +1,7 @@
 // Tests of input_key_mods.go, translated from src/input/key_mods.zig.
 //
 // Translation notes (project lead's decisions, see
-// scripts/not-translated-km.txt):
+// scripts/not-translated.txt):
 //
 //   - Packed-integer conversions (`@bitCast`, `.int()`) use the wireframe's
 //     `Int` and `...FromInt` stubs. Zig's u12 (RemapSet.Mask) and u4 values
@@ -470,7 +470,7 @@ func TestKm_RemapSet_parse_aliased_modifiers_on_target_side(t *testing.T) {
 // The four upstream "RemapSet: formatEntry ..." tests (empty, single sided,
 // unsided creates two entries, right sided) are not translated: they need
 // config/formatter.zig (app code) and are skipped in the library build. See
-// scripts/not-translated-km.txt.
+// scripts/not-translated.txt.
 
 // Zig: test "term51: Mod: values and Side"
 func TestKm_term51_Mod_values_and_Side(t *testing.T) {
@@ -509,7 +509,7 @@ func TestKm_term51_alias_table_contents(t *testing.T) {
 }
 
 // "term51: Mods: layout and backing types" is not translated (@bitSizeOf and
-// Backing type identity checks). See scripts/not-translated-km.txt.
+// Backing type identity checks). See scripts/not-translated.txt.
 
 // Zig: test "term51: Mods.int: bit position of every field"
 func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
@@ -1150,7 +1150,7 @@ func TestKm_term51_RemapSet_parse_failed_parse_keeps_previous_entries(t *testing
 }
 
 // "term51: RemapSet.parse: out of memory leaves the set untouched" is not
-// translated (FailingAllocator). See scripts/not-translated-km.txt.
+// translated (FailingAllocator). See scripts/not-translated.txt.
 
 // Zig: test "term51: RemapSet.parseCLI: null and empty reset the set"
 func TestKm_term51_RemapSet_parseCLI_null_and_empty_reset_the_set(t *testing.T) {
@@ -1198,7 +1198,7 @@ func TestKm_term51_RemapSet_parseCLI_accumulates_and_maps_errors_to_InvalidValue
 }
 
 // "term51: RemapSet.parseCLI: out of memory is passed through" is not
-// translated (FailingAllocator). See scripts/not-translated-km.txt.
+// translated (FailingAllocator). See scripts/not-translated.txt.
 
 // Zig: test "term51: RemapSet.finalize: right sided entries come first"
 func TestKm_term51_RemapSet_finalize_right_sided_entries_come_first(t *testing.T) {
@@ -1306,7 +1306,7 @@ func TestKm_term51_RemapSet_clone_empty_set(t *testing.T) {
 }
 
 // "term51: RemapSet.clone: out of memory" is not translated
-// (FailingAllocator). See scripts/not-translated-km.txt.
+// (FailingAllocator). See scripts/not-translated.txt.
 
 // Zig: test "term51: RemapSet.equal: counts keys and values"
 func TestKm_term51_RemapSet_equal_counts_keys_and_values(t *testing.T) {

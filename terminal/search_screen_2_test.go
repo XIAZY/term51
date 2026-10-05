@@ -25,7 +25,7 @@
 //     arguments are dropped. The allocation failure tests (FailingAllocator,
 //     the reloadActive tripwire, the tracked pin set filling that needs a
 //     failing pool allocator) are not translated: see
-//     scripts/not-translated-ss2.txt.
+//     scripts/not-translated.txt.
 //   - Go-only panic tests are at the end of the file.
 
 package terminal

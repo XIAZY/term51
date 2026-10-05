@@ -5,7 +5,7 @@
 // Only the tests of the integer types and of max_page_size are translated.
 // Every test of Offset, OffsetBuf, getOffset and intFromBase is not
 // translated (the Go wireframe has none of them; see
-// scripts/not-translated-sm1.txt).
+// scripts/not-translated.txt).
 //
 // Translation notes:
 //   - `try testing.expect(A == u32)` on a type alias is a reflect.Type

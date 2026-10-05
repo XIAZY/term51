@@ -260,7 +260,7 @@ func TestHyperlink_term51_Hyperlink_dupe_very_long_uri_and_id(t *testing.T) {
 	expectEqualSlices(t, id, cp.id.Explicit)
 }
 
-// Not translated (std.testing.FailingAllocator has no Go counterpart): see scripts/not-translated-hl.txt.
+// Not translated (std.testing.FailingAllocator has no Go counterpart): see scripts/not-translated.txt.
 //   Zig: test "term51: Hyperlink.dupe: allocation failures leak nothing"
 
 // Zig: test "term51: PageEntry.dupe: same page is a shallow copy"
@@ -967,7 +967,7 @@ func TestHyperlink_term51_deleted_lookup_finds_a_link_stored_in_another_page_via
 	)
 }
 
-// Not translated (only produces data/sets/hyperlink_hash.txt, gated by TERM51_SET_DUMP_DIR): see scripts/not-translated-hl.txt.
+// Not translated (only produces data/sets/hyperlink_hash.txt, gated by TERM51_SET_DUMP_DIR): see scripts/not-translated.txt.
 //   Zig: test "term51: PageEntry.hash: dump exact data when TERM51_SET_DUMP_DIR is set"
 
 // Go-only: panic test: PageEntry.dupe: empty uri to another page: string_alloc.alloc asserts n > 0

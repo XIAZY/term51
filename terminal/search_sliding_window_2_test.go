@@ -29,7 +29,7 @@
 //     comparison of the address of the first element of the two slices.
 //   - The two "out of memory leaves the window empty" tests are not
 //     translated (std.testing.FailingAllocator): see
-//     scripts/not-translated-sw2.txt.
+//     scripts/not-translated.txt.
 //   - The Go-only tests at the end cover the intentional difference in the
 //     underflow `data.len() - needle.len + 1` of `next` (the Go port
 //     computes `len + 1 - needle.len`) and the assert / unreachable paths

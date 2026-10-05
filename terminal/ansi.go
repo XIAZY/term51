@@ -1,10 +1,4 @@
-// WIREFRAME for src/terminal/ansi.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/terminal/ansi.zig (Ghostty v1.3.1).
 //
 // File naming: ansi.zig is a namespace file, so its declarations take the
 // prefix `ANSI`.
@@ -13,6 +7,11 @@
 // (`lib_target`, and the C variant of every `lib.Enum`) is not ported; see
 // docs/mapping.md. A `lib.Enum` with the Zig target is an ordinary enum
 // whose values are numbered from zero in the order listed.
+//
+// The file has no functions. Each enum has a String() method (@tagName):
+// the enums Zig declares non-exhaustive (`_`) return "" for a value without
+// a name (dumps print it as #N); the exhaustive ones read a names array, so
+// a value outside the enum panics as @tagName on an invalid value does.
 
 package terminal
 
@@ -52,10 +51,43 @@ const (
 	ANSIC0SO ANSIC0 = 0x0E
 	// Shift in
 	ANSIC0SI ANSIC0 = 0x0F
+
+	// Non-exhaustive so that @intToEnum never fails since the inputs are
+	// user-generated.
 )
 
-// String returns the Zig tag name (@tagName).
-func (self ANSIC0) String() string { panic(notImplemented) }
+// String returns the Zig tag name (@tagName), or "" for an unnamed value.
+func (self ANSIC0) String() string {
+	switch self {
+	case ANSIC0NUL:
+		return "NUL"
+	case ANSIC0SOH:
+		return "SOH"
+	case ANSIC0STX:
+		return "STX"
+	case ANSIC0ENQ:
+		return "ENQ"
+	case ANSIC0BEL:
+		return "BEL"
+	case ANSIC0BS:
+		return "BS"
+	case ANSIC0HT:
+		return "HT"
+	case ANSIC0LF:
+		return "LF"
+	case ANSIC0VT:
+		return "VT"
+	case ANSIC0FF:
+		return "FF"
+	case ANSIC0CR:
+		return "CR"
+	case ANSIC0SO:
+		return "SO"
+	case ANSIC0SI:
+		return "SI"
+	}
+	return ""
+}
 
 // ANSIRenditionAspect is ansi.RenditionAspect: the SGR rendition aspects
 // that can be set, sometimes known as attributes. The value corresponds to
@@ -69,10 +101,25 @@ const (
 	ANSIRenditionAspectBold      ANSIRenditionAspect = 1
 	ANSIRenditionAspectDefaultFg ANSIRenditionAspect = 39
 	ANSIRenditionAspectDefaultBg ANSIRenditionAspect = 49
+
+	// Non-exhaustive so that @intToEnum never fails since the inputs are
+	// user-generated.
 )
 
-// String returns the Zig tag name (@tagName).
-func (self ANSIRenditionAspect) String() string { panic(notImplemented) }
+// String returns the Zig tag name (@tagName), or "" for an unnamed value.
+func (self ANSIRenditionAspect) String() string {
+	switch self {
+	case ANSIRenditionAspectDefault:
+		return "default"
+	case ANSIRenditionAspectBold:
+		return "bold"
+	case ANSIRenditionAspectDefaultFg:
+		return "default_fg"
+	case ANSIRenditionAspectDefaultBg:
+		return "default_bg"
+	}
+	return ""
+}
 
 // ANSIDeviceAttributeReq is ansi.DeviceAttributeReq: the device attribute
 // request type (ESC [ c).
@@ -86,8 +133,18 @@ const (
 	ANSIDeviceAttributeReqTertiary                                // =
 )
 
+// ansiDeviceAttributeReqNames are the tag names of ANSIDeviceAttributeReq,
+// in order.
+var ansiDeviceAttributeReqNames = [...]string{
+	"primary",   // Blank
+	"secondary", // >
+	"tertiary",  // =
+}
+
 // String returns the Zig tag name (@tagName).
-func (self ANSIDeviceAttributeReq) String() string { panic(notImplemented) }
+func (self ANSIDeviceAttributeReq) String() string {
+	return ansiDeviceAttributeReqNames[self]
+}
 
 // ANSICursorStyle is ansi.CursorStyle: possible cursor styles (ESC [ q).
 //
@@ -104,8 +161,19 @@ const (
 	ANSICursorStyleSteadyBar
 )
 
+// ansiCursorStyleNames are the tag names of ANSICursorStyle, in order.
+var ansiCursorStyleNames = [...]string{
+	"default",
+	"blinking_block",
+	"steady_block",
+	"blinking_underline",
+	"steady_underline",
+	"blinking_bar",
+	"steady_bar",
+}
+
 // String returns the Zig tag name (@tagName).
-func (self ANSICursorStyle) String() string { panic(notImplemented) }
+func (self ANSICursorStyle) String() string { return ansiCursorStyleNames[self] }
 
 // ANSIStatusLineType is ansi.StatusLineType: the status line type for
 // DECSSDT.
@@ -118,10 +186,22 @@ const (
 	ANSIStatusLineTypeNone         ANSIStatusLineType = 0
 	ANSIStatusLineTypeIndicator    ANSIStatusLineType = 1
 	ANSIStatusLineTypeHostWritable ANSIStatusLineType = 2
+
+	// Non-exhaustive so that @intToEnum never fails for unsupported values.
 )
 
-// String returns the Zig tag name (@tagName).
-func (self ANSIStatusLineType) String() string { panic(notImplemented) }
+// String returns the Zig tag name (@tagName), or "" for an unnamed value.
+func (self ANSIStatusLineType) String() string {
+	switch self {
+	case ANSIStatusLineTypeNone:
+		return "none"
+	case ANSIStatusLineTypeIndicator:
+		return "indicator"
+	case ANSIStatusLineTypeHostWritable:
+		return "host_writable"
+	}
+	return ""
+}
 
 // ANSIStatusDisplay is ansi.StatusDisplay: the display to target for status
 // updates (DECSASD).
@@ -134,8 +214,14 @@ const (
 	ANSIStatusDisplayStatusLine
 )
 
+// ansiStatusDisplayNames are the tag names of ANSIStatusDisplay, in order.
+var ansiStatusDisplayNames = [...]string{
+	"main",
+	"status_line",
+}
+
 // String returns the Zig tag name (@tagName).
-func (self ANSIStatusDisplay) String() string { panic(notImplemented) }
+func (self ANSIStatusDisplay) String() string { return ansiStatusDisplayNames[self] }
 
 // ANSIModifyKeyFormat is ansi.ModifyKeyFormat: the possible modify key
 // formats to ESC[>{a};{b}m.
@@ -153,8 +239,19 @@ const (
 	ANSIModifyKeyFormatOtherKeysNumeric
 )
 
+// ansiModifyKeyFormatNames are the tag names of ANSIModifyKeyFormat, in
+// order.
+var ansiModifyKeyFormatNames = [...]string{
+	"legacy",
+	"cursor_keys",
+	"function_keys",
+	"other_keys_none",
+	"other_keys_numeric_except",
+	"other_keys_numeric",
+}
+
 // String returns the Zig tag name (@tagName).
-func (self ANSIModifyKeyFormat) String() string { panic(notImplemented) }
+func (self ANSIModifyKeyFormat) String() string { return ansiModifyKeyFormatNames[self] }
 
 // ANSIProtectedMode is ansi.ProtectedMode: the protection modes that can be
 // set for the terminal. See DECSCA and ESC V, W.
@@ -166,5 +263,12 @@ const (
 	ANSIProtectedModeDec                   // CSI Ps " q
 )
 
+// ansiProtectedModeNames are the tag names of ANSIProtectedMode, in order.
+var ansiProtectedModeNames = [...]string{
+	"off",
+	"iso", // ESC V, W
+	"dec", // CSI Ps " q
+}
+
 // String returns the Zig tag name (@tagName).
-func (self ANSIProtectedMode) String() string { panic(notImplemented) }
+func (self ANSIProtectedMode) String() string { return ansiProtectedModeNames[self] }

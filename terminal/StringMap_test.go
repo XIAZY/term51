@@ -6,7 +6,7 @@
 // Translation notes:
 //   - The three upstream tests and five term51 tests that concern the
 //     oniguruma search iterator are not translated (the library build has
-//     oniguruma off and Go has no binding): scripts/not-translated-ss.txt.
+//     oniguruma off and Go has no binding): scripts/not-translated.txt.
 //   - `[:0]const u8` strings: a Go slice whose backing array has the
 //     terminating zero after len (ssDupeZ), so that `string[len]` is
 //     `string[:len+1][len]`.

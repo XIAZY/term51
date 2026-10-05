@@ -18,7 +18,7 @@
 //     which returns the two 64-bit halves (low half first); the expected
 //     128-bit values are built with sm3_u128.
 //   - Style.bg and Style.bgCell wait for the page wireframe (Cell type): see
-//     scripts/not-translated-sm3.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 
@@ -1867,6 +1867,6 @@ func TestStyle_term51_Style_fg_rgb_color(t *testing.T) {
 	}
 }
 
-// Not translated (the unnamed test at style.zig:2739, `_ = term51FFgTests;`): see scripts/not-translated-sm3.txt.
+// Not translated (the unnamed test at style.zig:2739, `_ = term51FFgTests;`): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Style.hash: dump exact data when TERM51_SET_DUMP_DIR is set"): see scripts/not-translated-sm3.txt. corpus_style_test.go compares data/sets/style_hash.txt instead.
+// Not translated (Zig: test "term51: Style.hash: dump exact data when TERM51_SET_DUMP_DIR is set"): see scripts/not-translated.txt. corpus_style_test.go compares data/sets/style_hash.txt instead.

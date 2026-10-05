@@ -44,7 +44,7 @@
 //     and ColorDynamic and OSCTerminator.String is Zig's `string` (the
 //     terminator bytes), so strA_specialName, strA_dynamicName and
 //     strA_terminatorName stand in for them (see the report).
-//   - Not translated, see scripts/not-translated-strA.txt: `test Action` and
+//   - Not translated, see scripts/not-translated.txt: `test Action` and
 //     the ten `cval` tests (C bindings).
 
 package terminal
@@ -1655,27 +1655,27 @@ func strA_allEscapes[H StreamHandler](t *testing.T, s *Stream[H], input string) 
 // Action payload C helpers
 // ---------------------------------------------------------------------------
 
-// Not translated (Zig: test Action): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test Action): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.Print.cval: widens the codepoint to u32"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.Print.cval: widens the codepoint to u32"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.DeviceStatus.cval: is the packed request tag"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.DeviceStatus.cval: is the packed request tag"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.Mode.cval: is the packed mode tag"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.Mode.cval: is the packed mode tag"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.KittyKeyboardFlags.cval: is the flag bit set"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.KittyKeyboardFlags.cval: is the flag bit set"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.WindowTitle.cval: borrows the title"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.WindowTitle.cval: borrows the title"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.ReportPwd.cval: borrows the url"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.ReportPwd.cval: borrows the url"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.ShowDesktopNotification.cval: borrows title and body"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.ShowDesktopNotification.cval: borrows title and body"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.StartHyperlink.cval: a missing id becomes an empty string"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.StartHyperlink.cval: a missing id becomes an empty string"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.ClipboardContents.cval: kind and borrowed data"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.ClipboardContents.cval: kind and borrowed data"): see scripts/not-translated.txt.
 
-// Not translated (Zig: test "term51: Action.ColorOperation.cval: is void"): see scripts/not-translated-strA.txt.
+// Not translated (Zig: test "term51: Action.ColorOperation.cval: is void"): see scripts/not-translated.txt.
 
 // ---------------------------------------------------------------------------
 // Stream.init / initAlloc / deinit

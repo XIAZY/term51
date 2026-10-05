@@ -27,7 +27,7 @@
 //   - `@embedFile("res/glitch.txt")` is the constant tm1GlitchText, the bytes
 //     of that file.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tm1.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

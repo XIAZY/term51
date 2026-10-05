@@ -370,15 +370,15 @@ Files: `osc_parsers_osc9.go`, `osc_parsers_semantic_prompt.go`, and the new
   with three `writeAll` calls. Only with a fixed writer that runs out of
   room could the split of a partial write differ from std's formatter (not
   reachable in the library: urlPercentEncode has no caller in it).
-- Tests: all 18 Zig tests (`printf_q 1`..`10`, `singles percent`,
-  `percent 1`..`7`) are translated one for one in
-  `terminal/os_string_encoding_test.go`.
-- `scripts/check-test-mapping.py` needs a rule for `os/` (like the
-  `datastruct/` one): `os/string_encoding.zig` currently resolves to
-  `os/string_encoding_test.go` and reports all 18 tests missing. With
-  `parts[0] in ("datastruct", "os")` and `base = parts[0] + "_" + ...` it
-  reports `zig=18 go=18 ok` (checked on a temporary copy; the script is not
-  edited).
+- Tests: all 18 upstream tests (`printf_q 1`..`10`, `singles percent`,
+  `percent 1`..`7`) and the 32 term51 tests (patch 0020, one or more for
+  every function, added at the lead's request) are translated one for one
+  in `terminal/os_string_encoding_test.go`. The library's Zig test root
+  never reached this file, so upstream's 18 had never run in our Zig build;
+  patch 0020 adds `test { _ = string_encoding; }` to `semantic_prompt.zig`
+  (listed in `scripts/not-translated.txt`).
+- `scripts/check-test-mapping.py` maps `os/` like `datastruct/`
+  (`os/string_encoding.zig` -> `os_string_encoding_test.go`).
 
 ### OSC sub-parsers: context_signal, kitty_clipboard_protocol, kitty_text_sizing, iterm2
 
@@ -502,7 +502,16 @@ merge into `docs/mapping.md`.
   does not. Every product that is an operand of `+` or `-` is wrapped in an
   explicit `float32(...)`/`float64(...)` conversion (Go spec: an explicit
   conversion rounds and prevents fusion). Applied in `LAB.*`, `luminance`,
-  `perceivedLuminance` and in every stand-in below.
+  `perceivedLuminance` and in every stand-in below. Go also fuses across
+  statements, so a product stored in a variable that later feeds `+` or `-`
+  is wrapped as well (`lo = float32(fk * ln2lo)`, `t1`, `t2`, `hfsq`, `z`,
+  `w`, `x1 = float32(x1 * x1)`): to be safe every stored product in these
+  functions is wrapped. Found by review after the parser module merged:
+  the unwrapped stored products compiled to FMADD/FMSUB on arm64 and made
+  `pow(x, 2.4)` 1 ULP off for some channels (e.g. 180); 32-bit ARM never
+  fuses. `scripts/check-no-fma.sh` (run first by `scripts/test.sh`)
+  disassembles the package for arm64 and amd64 v3 and fails on any fused
+  instruction, since instruction selection can change with a Go upgrade.
 - `std.math.pow(f32)`, `std.math.pow(f64)`, `std.math.cbrt(f32)`,
   `std.math.scalbn`/`ldexp` (f32, f64) are ported (`colorStdMathPowF32`,
   `colorStdMathPowF64`, `colorStdMathCbrtF32`, `colorStdMathLdexpF32/F64`).

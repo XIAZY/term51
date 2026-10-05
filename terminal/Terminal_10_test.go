@@ -19,7 +19,7 @@
 //     `alloc` field of a Screen) are dropped with `// Zig-only:` comments;
 //     Go has no allocator (see the header of Terminal.go).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tma.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

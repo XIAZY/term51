@@ -29,7 +29,7 @@
 //     comparison of the addresses of their first elements, `&a[0] != &b[0]`.
 //   - Zig's `alloc` arguments are dropped; the FailingAllocator tests and the
 //     allocator-leak checks are not translated (listed in
-//     scripts/not-translated-sa.txt, or `// Zig-only:` lines).
+//     scripts/not-translated.txt, or `// Zig-only:` lines).
 //   - Every test calls testStdCapacity first (Zig's unit tests run with
 //     grapheme_bytes 512); the page capacity decides rows per page.
 //   - Go-only panic tests use saExpectPanic.

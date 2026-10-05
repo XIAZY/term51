@@ -17,7 +17,7 @@
 //   - Pin accessors that Zig reads as `s.pages.pages.first.?` are the Go
 //     pointer `s.pages.pages.first`, checked for nil first.
 //   - The three FailingAllocator tests are not translated; they are listed
-//     in scripts/not-translated-ss.txt.
+//     in scripts/not-translated.txt.
 //   - Go-only panic tests: Flattened.startPin, endPin and untracked on a
 //     highlight without chunks (index 0 out of bounds in Zig).
 

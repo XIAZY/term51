@@ -26,7 +26,7 @@
 //     helper term51QClearKittyDirty does nothing and term51QKittyDirty
 //     returns true, exactly as in Zig.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-sc3.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

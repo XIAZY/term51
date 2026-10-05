@@ -1273,7 +1273,165 @@ type PageListCloneTrackedPinsRemap map[*PageListPin]*PageListPin
 // Zig: pub fn clone(self: *const PageList, alloc: Allocator, opts: Clone)
 // !PageList. The allocator parameter is dropped. The inferred error set is
 // ErrOutOfMemory (dcs.go) and Page.CloneFromError (page.go).
-func (self *PageList) Clone(opts PageListClone) (PageList, error) { panic(notImplemented) }
+func (self *PageList) Clone(opts PageListClone) (PageList, error) {
+	it := self.PageIterator(
+		PageListDirectionRightDown,
+		opts.top,
+		opts.bot,
+	)
+
+	// First, count our pages so our preheat is exactly what we need.
+	it_copy := it
+	var page_count uint
+	{
+		var count uint = 0
+		for it_copy.Next().Valid {
+			count += 1
+		}
+		page_count = count
+	}
+
+	// Setup our pool
+	pool, err := PageListMemoryPoolInit(page_count)
+	if err != nil {
+		return PageList{}, err
+	}
+	// errdefer pool.deinit(): the pool holds no memory in Go.
+
+	// Create our viewport. In a clone, the viewport always goes
+	// to the top.
+	viewport_pin := new(PageListPin) // pool.pins.create()
+	var tracked_pins pageListPinSet
+	// errdefer tracked_pins.deinit(pool.alloc): Go memory.
+	if err := tracked_pins.PutNoClobber(viewport_pin); err != nil {
+		return PageList{}, err
+	}
+
+	// Our list of pages
+	var page_list PageListList
+	// Zig: an errdefer that frees the buffers of non-standard pages in
+	// page_list; Go memory.
+
+	// Copy our pages
+	var page_serial uint64 = 0
+	var total_rows uint = 0
+	var page_size uint64 = 0
+	for chunk_ := it.Next(); chunk_.Valid; chunk_ = it.Next() {
+		chunk := chunk_.Value
+
+		// Clone the page. We have to use createPageExt here because
+		// we don't know if the source page has a standard size.
+		node, err := pageListCreatePageExt(
+			&pool,
+			chunk.node.data.capacity,
+			&page_serial,
+			&page_size,
+		)
+		if err != nil {
+			return PageList{}, err
+		}
+		assert(chunk.end >= chunk.start) // Zig: u16 `-` traps
+		assert(node.data.capacity.rows >= chunk.end-chunk.start)
+
+		// Zig: `defer node.data.assertIntegrity()` at the end of each
+		// iteration, also when an error leaves it: the rest of the body is
+		// a closure.
+		err = func() error {
+			defer node.data.AssertIntegrity()
+			node.data.size.rows = chunk.end - chunk.start
+			node.data.size.cols = chunk.node.data.size.cols
+			if err := node.data.CloneFrom(
+				&chunk.node.data,
+				uint(chunk.start),
+				uint(chunk.end),
+			); err != nil {
+				return err
+			}
+
+			node.data.dirty = chunk.node.data.dirty
+
+			page_list.Append(node)
+
+			total_rows += uint(node.data.size.rows)
+
+			// Remap our tracked pins by changing the page and
+			// offsetting the Y position based on the chunk start.
+			if remap := opts.tracked_pins; remap != nil {
+				pin_keys := self.tracked_pins.Keys()
+				for _, p := range pin_keys {
+					// We're only interested in pins that were within the chunk.
+					if p.node != chunk.node ||
+						p.y < chunk.start ||
+						p.y >= chunk.end {
+						continue
+					}
+					new_p := new(PageListPin) // pool.pins.create()
+					*new_p = *p
+					new_p.node = node
+					new_p.y -= chunk.start
+					// Zig: remap.putNoClobber asserts that the key is new.
+					_, found := (*remap)[p]
+					assert(!found)
+					(*remap)[p] = new_p
+					if err := tracked_pins.PutNoClobber(new_p); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			return PageList{}, err
+		}
+	}
+
+	// Initialize our viewport pin to point to the first cloned page
+	// so it points to valid memory.
+	assert(page_list.first != nil) // page_list.first.?
+	*viewport_pin = PageListPin{node: page_list.first}
+
+	result := PageList{
+		pool:                    pool,
+		pages:                   page_list,
+		page_serial:             page_serial,
+		page_serial_min:         0,
+		page_size:               page_size,
+		explicit_max_size:       self.explicit_max_size,
+		min_max_size:            self.min_max_size,
+		cols:                    self.cols,
+		rows:                    self.rows,
+		total_rows:              total_rows,
+		tracked_pins:            tracked_pins,
+		viewport:                PageListViewport{Tag: PageListViewportActive},
+		viewport_pin:            viewport_pin,
+		viewport_pin_row_offset: None[uint](),
+	}
+
+	// We always need to have enough rows for our viewport because this is
+	// a pagelist invariant that other code relies on.
+	if total_rows < uint(self.rows) {
+		length := uint(self.rows) - total_rows
+		for range length {
+			if _, err := result.Grow(); err != nil {
+				return PageList{}, err
+			}
+
+			// Clear the row. This is not very fast but in reality right
+			// now we rarely clone less than the active area and if we do
+			// the area is by definition very small.
+			last := result.pages.last
+			assert(last.data.size.rows > 0) // Zig: u16 `- 1` traps
+			row := &last.data.rows[last.data.size.rows-1]
+			last.data.ClearCells(row, 0, uint(result.cols))
+		}
+
+		// Update our total rows to be our row size.
+		result.total_rows = uint(result.rows)
+	}
+
+	result.AssertIntegrity()
+	return result, nil
+}
 
 // PageListResize is PageList.Resize: resize options.
 type PageListResize struct {
@@ -1314,7 +1472,107 @@ type PageListResizeCursor struct {
 // docs/mapping.md ("Requirements the wireframe tests impose on the
 // implementation") places one deferral of the integrity check inside this
 // function.
-func (self *PageList) Resize(opts PageListResize) error { panic(notImplemented) }
+func (self *PageList) Resize(opts PageListResize) (err error) {
+	defer self.AssertIntegrity()
+	// term51 candidate B (docs/mapping.md): runs before the
+	// AssertIntegrity defer above.
+	self.term51_resizing = true
+	defer func() { self.term51_resizing = false }()
+
+	// Zig: `if (comptime std.debug.runtime_safety)`; the reference is a
+	// safe build.
+	{
+		// Resize does not work with 0 values, this should be protected
+		// upstream
+		if opts.cols.Valid {
+			assert(opts.cols.Value > 0)
+		}
+		if opts.rows.Valid {
+			assert(opts.rows.Value > 0)
+		}
+	}
+
+	// Resizing (especially with reflow) can cause our row offset to
+	// become invalid. Rather than do something fancy like we do other
+	// places and try to update it in place, we just invalidate it because
+	// its too easy to get the logic wrong in here.
+	self.viewport_pin_row_offset = None[uint]()
+
+	if !opts.reflow {
+		return self.resizeWithoutReflow(opts)
+	}
+
+	// Recalculate our minimum max size. This allows grow to work properly
+	// when increasing beyond our initial minimum max size or explicit max
+	// size to fit the active area.
+	old_min_max_size := self.min_max_size
+	{
+		cols := self.cols
+		if opts.cols.Valid {
+			cols = opts.cols.Value
+		}
+		rows := self.rows
+		if opts.rows.Valid {
+			rows = opts.rows.Value
+		}
+		self.min_max_size = pageListMinMaxSize(cols, rows)
+	}
+	defer func() {
+		// errdefer
+		if err != nil {
+			self.min_max_size = old_min_max_size
+		}
+	}()
+
+	// On reflow, the main thing that causes reflow is column changes. If
+	// only rows change, reflow is impossible. So we change our behavior based
+	// on the change of columns.
+	cols := self.cols
+	if opts.cols.Valid {
+		cols = opts.cols.Value
+	}
+	switch {
+	case cols == self.cols:
+		if err := self.resizeWithoutReflow(opts); err != nil {
+			return err
+		}
+
+	case cols > self.cols:
+		// We grow rows after cols so that we can do our unwrapping/reflow
+		// before we do a no-reflow grow.
+		if err := self.resizeCols(cols, opts.cursor); err != nil {
+			return err
+		}
+		if err := self.resizeWithoutReflow(opts); err != nil {
+			return err
+		}
+
+	default: // .lt
+		// We first change our row count so that we have the proper amount
+		// we can use when shrinking our cols.
+		copy_ := opts
+		copy_.cols = Some(self.cols)
+		if err := self.resizeWithoutReflow(copy_); err != nil {
+			return err
+		}
+		if err := self.resizeCols(cols, opts.cursor); err != nil {
+			return err
+		}
+	}
+
+	// Various resize operations can change our total row count such
+	// that our viewport pin is now in the active area and has insufficient
+	// space. We need to check for this case and fix it up.
+	switch self.viewport.Tag {
+	case PageListViewportPin:
+		if self.pinIsActive(*self.viewport_pin) {
+			self.viewport = PageListViewport{Tag: PageListViewportActive}
+		}
+	case PageListViewportActive, PageListViewportTop:
+	}
+
+	return nil
+}
 
 // resizeCols is PageList.resizeCols: resize the pagelist with reflow by
 // adding or removing columns.
@@ -1324,8 +1582,234 @@ func (self *PageList) Resize(opts PageListResize) error { panic(notImplemented) 
 func (self *PageList) resizeCols(
 	cols SizeCellCountInt,
 	cursor Optional[PageListResizeCursor],
-) error {
-	panic(notImplemented)
+) (err error) {
+	assert(cols != self.cols)
+
+	// Update our cols. We have to do this early because grow() that we
+	// may call below relies on this to calculate the proper page size.
+	self.cols = cols
+
+	// If we have a cursor position (x,y), then we try under any col resizing
+	// to keep the same number remaining active rows beneath it. This is a
+	// very special case if you can imagine clearing the screen (i.e.
+	// scrollClear), having an empty active area, and then resizing to less
+	// cols then we don't want the active area to "jump" to the bottom and
+	// pull down scrollback.
+	//
+	// Zig: an optional anonymous struct.
+	type preservedCursor struct {
+		tracked_pin    *PageListPin
+		remaining_rows uint
+		wrapped_rows   uint
+	}
+	var preserved_cursor Optional[preservedCursor]
+	if cursor.Valid {
+		c := cursor.Value
+		// Zig: `orelse break :cursor null`.
+		if p := self.Pin(Point{Tag: PointTagActive, Active: PointCoordinate{
+			x: c.x,
+			y: uint32(c.y),
+		}}); p.Valid {
+			active_pin := self.Pin(Point{Tag: PointTagActive})
+
+			// We count how many wraps the cursor had before it to begin with
+			// so that we can offset any additional wraps to avoid pushing the
+			// original row contents in to the scrollback.
+			var wrapped uint
+			{
+				var wrapped_ uint = 0
+
+				row_it := p.Value.RowIterator(PageListDirectionLeftUp, active_pin)
+				for next := row_it.Next(); next.Valid; next = row_it.Next() {
+					row := next.Value.RowAndCell().row
+					if row.wrap_continuation {
+						wrapped_ += 1
+					}
+				}
+
+				wrapped = wrapped_
+			}
+
+			tracked_pin, err := self.TrackPin(p.Value)
+			if err != nil {
+				return err
+			}
+			// Zig: `self.rows - c.y - 1` on u16 traps on underflow.
+			assert(c.y < self.rows)
+			preserved_cursor = Some(preservedCursor{
+				tracked_pin:    tracked_pin,
+				remaining_rows: uint(self.rows - c.y - 1),
+				wrapped_rows:   wrapped,
+			})
+		}
+	}
+	defer func() {
+		if preserved_cursor.Valid {
+			self.UntrackPin(preserved_cursor.Value.tracked_pin)
+		}
+	}()
+
+	// Create the first node that contains our reflow.
+	var first_rewritten_node *PageListNode
+	{
+		page := &self.pages.first.data
+		cap, aerr := page.capacity.Adjust(
+			PageCapacityAdjustment{cols: Some(cols)},
+		)
+		if aerr != nil {
+			// Zig: comptime assert(@TypeOf(err) == error{OutOfMemory}).
+
+			// We verify all maxed out page layouts work.
+			cap = page.capacity
+			cap.cols = cols
+
+			// We're growing columns so we can only get less rows so use
+			// the lesser of our capacity and size so we minimize wasted
+			// rows.
+			cap.rows = min(page.size.rows, cap.rows)
+		}
+
+		node, err := self.createPage(cap)
+		if err != nil {
+			return err
+		}
+		node.data.size.rows = 1
+		first_rewritten_node = node
+	}
+
+	// We need to grab our rowIterator now before we rewrite our
+	// linked list below.
+	it := self.RowIterator(
+		PageListDirectionRightDown,
+		Point{Tag: PointTagScreen},
+		None[Point](),
+	)
+	defer func() {
+		// errdefer
+		if err == nil {
+			return
+		}
+		// If an error occurs, we're in a pretty disastrous broken state,
+		// but we should still try to clean up our leaked memory. Free
+		// any of the remaining orphaned pages from before. If we reflowed
+		// successfully this will be null.
+		var node_ *PageListNode
+		if it.chunk.Valid {
+			node_ = it.chunk.Value.node
+		}
+		for node_ != nil {
+			node := node_
+			node_ = node.next
+			self.destroyNode(node)
+		}
+	}()
+
+	// Set our new page as the only page. This orphans the existing pages
+	// in the list, but that's fine since we're gonna delete them anyway.
+	self.pages.first = first_rewritten_node
+	self.pages.last = first_rewritten_node
+
+	// Reflow all our rows.
+	{
+		reflow_cursor := pageListReflowCursorInit(first_rewritten_node)
+		for row_ := it.Next(); row_.Valid; row_ = it.Next() {
+			row := row_.Value
+			if err := reflow_cursor.reflowRow(self, row); err != nil {
+				return err
+			}
+
+			// Once we're done reflowing a page, destroy it immediately.
+			// This frees memory and makes it more likely in memory
+			// constrained environments that the next reflow will work.
+			if uint(row.y) == uint(row.node.data.size.rows)-1 {
+				self.destroyNode(row.node)
+			}
+		}
+
+		// At the end of the reflow, setup our total row cache
+		// log.warn("total old={} new={}", .{ self.total_rows, reflow_cursor.total_rows });
+		self.total_rows = reflow_cursor.total_rows
+	}
+
+	// If our total rows is less than our active rows, we need to grow.
+	// This can happen if you're growing columns such that enough active
+	// rows unwrap that we no longer have enough.
+	node_it := self.pages.first
+	var total uint = 0
+	for ; node_it != nil; node_it = node_it.next {
+		node := node_it
+		total += uint(node.data.size.rows)
+		if total >= uint(self.rows) {
+			break
+		}
+	}
+	if node_it == nil {
+		// Zig: the `else` of the while, reached without a break.
+		for range uint(self.rows) - total {
+			if _, err := self.Grow(); err != nil {
+				return err
+			}
+		}
+	}
+
+	// See preserved_cursor setup for why.
+	if preserved_cursor.Valid {
+		c := preserved_cursor.Value
+		// Zig: `orelse break :cursor`.
+		if active_pt := self.PointFromPin(
+			PointTagActive,
+			*c.tracked_pin,
+		); active_pt.Valid {
+			active_pin := self.Pin(Point{Tag: PointTagActive})
+
+			// We need to determine how many rows we wrapped from the original
+			// and subtract that from the remaining rows we expect because if
+			// we wrap down we don't want to push our original row contents into
+			// the scrollback.
+			var wrapped uint
+			{
+				var wrapped_ uint = 0
+
+				row_it := c.tracked_pin.RowIterator(PageListDirectionLeftUp, active_pin)
+				for next := row_it.Next(); next.Valid; next = row_it.Next() {
+					row := next.Value.RowAndCell().row
+					if row.wrap_continuation {
+						wrapped_ += 1
+					}
+				}
+
+				wrapped = wrapped_
+			}
+
+			// Zig: `self.rows - active_pt.active.y - 1` in u32 traps on
+			// underflow.
+			assert(active_pt.Value.Active.y < uint32(self.rows))
+			current := uint(uint32(self.rows) - active_pt.Value.Active.y - 1)
+
+			// Zig: `-|=` (saturating).
+			req_rows := c.remaining_rows
+			req_rows = pageListSatSub(req_rows, pageListSatSub(wrapped, c.wrapped_rows))
+			req_rows = pageListSatSub(req_rows, current)
+
+			for req_rows > 0 {
+				if _, err := self.Grow(); err != nil {
+					return err
+				}
+				req_rows -= 1
+			}
+		}
+	}
+
+	return nil
+}
+
+// pageListSatSub is NOT a Zig declaration: Zig's saturating `a -| b` on
+// usize.
+func pageListSatSub(a uint, b uint) uint {
+	if a > b {
+		return a - b
+	}
+	return 0
 }
 
 // pageListReflowCursor is PageList.ReflowCursor.
@@ -1355,14 +1839,218 @@ type pageListReflowCursor struct {
 }
 
 // pageListReflowCursorInit is PageList.ReflowCursor.init.
-func pageListReflowCursorInit(node *PageListNode) pageListReflowCursor { panic(notImplemented) }
+func pageListReflowCursorInit(node *PageListNode) pageListReflowCursor {
+	page := &node.data
+	rows := page.rows
+	return pageListReflowCursor{
+		x:            0,
+		y:            0,
+		pending_wrap: false,
+		node:         node,
+		page:         page,
+		page_row:     &rows[0],
+		page_cell:    &page.rowCells(&rows[0])[0],
+		new_rows:     0,
+
+		// Initially whatever size our input node is.
+		total_rows: uint(node.data.size.rows),
+	}
+}
 
 // reflowRow is PageList.ReflowCursor.reflowRow: reflow the provided row in
 // to this cursor.
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
 func (self *pageListReflowCursor) reflowRow(list *PageList, row PageListPin) error {
-	panic(notImplemented)
+	src_page := &row.node.data
+	src_row := row.RowAndCell().row
+	src_y := row.y
+	cells := src_page.rowCells(src_row)[0:src_page.size.cols]
+
+	// Calculate the columns in this row. First up we trim non-semantic
+	// rightmost blanks.
+	cols_len := src_page.size.cols
+	if !src_row.wrap {
+		for cols_len > 0 {
+			if !cells[cols_len-1].IsEmpty() {
+				break
+			}
+			cols_len -= 1
+		}
+
+		// If the row has a semantic prompt then the blank row is meaningful
+		// so we just consider pretend the first cell of the row isn't empty.
+		if cols_len == 0 && src_row.semantic_prompt != PageRowSemanticPromptNone {
+			cols_len = 1
+		}
+	}
+
+	// Handle tracked pin adjustments.
+	{
+		pin_keys := list.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if &p.node.data != src_page ||
+				p.y != src_y {
+				continue
+			}
+
+			// If this pin is in the blanks on the right and past the end
+			// of the dst col width then we move it to the end of the dst
+			// col width instead.
+			if p.x >= cols_len {
+				// Zig: u16 `-` traps on underflow.
+				assert(self.x < self.page.size.cols)
+				p.x = min(
+					p.x,
+					self.page.size.cols-1-self.x,
+				)
+			}
+
+			// We increase our col len to at least include this pin.
+			// This ensures that blank rows with pins are processed,
+			// so that the pins can be properly remapped.
+			assert(p.x < math.MaxUint16) // Zig: u16 `+` traps on overflow.
+			cols_len = max(cols_len, p.x+1)
+		}
+	}
+
+	// Defer processing of blank rows so that blank rows
+	// at the end of the page list are never written.
+	if cols_len == 0 {
+		// If this blank row was a wrap continuation somehow
+		// then we won't need to write it since it should be
+		// a part of the previously written row.
+		if !src_row.wrap_continuation {
+			self.new_rows += 1
+		}
+		return nil
+	}
+
+	// Inherit increased styles or grapheme bytes from the src page
+	// we're reflowing from for new pages.
+	cap, aerr := src_page.capacity.Adjust(
+		PageCapacityAdjustment{cols: Some(self.page.size.cols)},
+	)
+	if aerr != nil {
+		// Zig: comptime assert(@TypeOf(err) == error{OutOfMemory}).
+
+		cap = src_page.capacity
+		cap.cols = self.page.size.cols
+		// We're already a non-standard page. We don't want to
+		// inherit a massive set of rows, so cap it at our std size.
+		cap.rows = min(src_page.size.rows, PageStdCapacity.rows)
+	}
+
+	// Our row isn't blank, write any new rows we deferred.
+	for self.new_rows > 0 {
+		if err := self.cursorScrollOrNewPage(list, cap); err != nil {
+			return err
+		}
+		self.new_rows -= 1
+	}
+
+	self.copyRowMetadata(src_row)
+
+	var x uint = 0
+	for x < uint(cols_len) {
+		if self.pending_wrap {
+			self.page_row.wrap = true
+			if err := self.cursorScrollOrNewPage(list, cap); err != nil {
+				return err
+			}
+			self.copyRowMetadata(src_row)
+			self.page_row.wrap_continuation = true
+		}
+
+		// Move any tracked pins from the source.
+		{
+			pin_keys := list.tracked_pins.Keys()
+			for _, p := range pin_keys {
+				if &p.node.data != src_page ||
+					p.y != src_y ||
+					uint(p.x) != x {
+					continue
+				}
+
+				p.node = self.node
+				p.x = self.x
+				p.y = self.y
+			}
+		}
+
+		if result, err := self.writeCell(
+			list,
+			&cells[x],
+			src_page,
+		); err == nil {
+			switch result {
+			// Wrote the cell, move to the next.
+			case pageListReflowCursorWriteCellResultSuccess:
+				x += 1
+
+			// Wrote the cell but request to skip the next so skip it.
+			// This is used for things like spacers.
+			case pageListReflowCursorWriteCellResultSkipNext:
+				// Remap any tracked pins at the skipped position (x+1)
+				// since we won't process that cell in the loop.
+				pin_keys := list.tracked_pins.Keys()
+				for _, p := range pin_keys {
+					if &p.node.data != src_page ||
+						p.y != src_y ||
+						uint(p.x) != x+1 {
+						continue
+					}
+
+					p.node = self.node
+					p.x = self.x
+					p.y = self.y
+				}
+
+				x += 2
+
+			// Didn't write the cell, repeat writing this same cell.
+			case pageListReflowCursorWriteCellResultRepeat:
+			}
+		} else {
+			switch err {
+			// System out of memory, we can't fix this.
+			case ErrOutOfMemory:
+				return ErrOutOfMemory
+
+			// We reached the capacity of a single page and can't
+			// add any more of some type of managed memory. When this
+			// happens we split out the current row we're working on
+			// into a new page and continue from there.
+			case ErrOutOfSpace:
+				if self.y == 0 {
+					// If we're already on the first-row, we can't split
+					// any further, so we just ignore bad cells and take
+					// corrupted (but valid) cell contents.
+					warn("page_list", "reflowRow OutOfSpace on first row, discarding cell managed memory")
+					x += 1
+					self.cursorForward()
+				} else {
+					// Move our last row to a new page.
+					if err := self.moveLastRowToNewPage(list, cap); err != nil {
+						return err
+					}
+
+					// Do NOT increment x so that we retry writing
+					// the same existing cell.
+				}
+
+			default:
+				panic("unreachable")
+			}
+		}
+	}
+
+	// If the source row isn't wrapped then we should scroll afterwards.
+	if !src_row.wrap {
+		self.new_rows += 1
+	}
+
+	return nil
 }
 
 // pageListReflowCursorWriteCellResult is the anonymous enum
@@ -1381,7 +2069,13 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self pageListReflowCursorWriteCellResult) String() string { panic(notImplemented) }
+func (self pageListReflowCursorWriteCellResult) String() string {
+	return pageListReflowCursorWriteCellResultNames[self]
+}
+
+// pageListReflowCursorWriteCellResultNames are the tag names of
+// pageListReflowCursorWriteCellResult, indexed by value (Zig's @tagName).
+var pageListReflowCursorWriteCellResultNames = [...]string{"success", "repeat", "skip_next"}
 
 // writeCell is PageList.ReflowCursor.writeCell.
 //
@@ -1410,7 +2104,401 @@ func (self *pageListReflowCursor) writeCell(
 	cell *PageCell,
 	src_page *Page,
 ) (pageListReflowCursorWriteCellResult, error) {
-	panic(notImplemented)
+	// Initialize self.page_cell with basic, unmanaged memory contents.
+	{
+		// This must not fail because we want to make sure we atomically
+		// setup our page cell to be valid.
+		//
+		// errdefer comptime unreachable;
+
+		// Copy cell contents.
+		switch cell.content_tag {
+		case PageCellContentTagCodepoint,
+			PageCellContentTagCodepointGrapheme:
+			switch cell.wide {
+			case PageCellWideNarrow:
+				*self.page_cell = *cell
+
+			case PageCellWideWide:
+				if self.page.size.cols > 1 {
+					if self.x == self.page.size.cols-1 {
+						// If there's a wide character in the last column of
+						// the reflowed page then we need to insert a spacer
+						// head and wrap before handling it.
+						*self.page_cell = PageCell{
+							content_tag: PageCellContentTagCodepoint,
+							content:     PageCellContent{codepoint: 0},
+							wide:        PageCellWideSpacerHead,
+						}
+
+						// Move to the next row (this sets pending wrap
+						// which will cause us to wrap on the next
+						// iteration).
+						self.cursorForward()
+
+						// Decrement the source position so that when we
+						// loop we'll process this source cell again,
+						// since we can't copy it into a spacer head.
+						return pageListReflowCursorWriteCellResultRepeat, nil
+					} else {
+						*self.page_cell = *cell
+					}
+				} else {
+					// Edge case, when resizing to 1 column, wide
+					// characters are just destroyed and replaced
+					// with empty narrow cells.
+					self.page_cell.content.codepoint = 0
+					self.page_cell.wide = PageCellWideNarrow
+					self.cursorForward()
+
+					// Skip spacer tail so it doesn't cause a wrap.
+					return pageListReflowCursorWriteCellResultSkipNext, nil
+				}
+
+			case PageCellWideSpacerTail:
+				if self.page.size.cols > 1 {
+					*self.page_cell = *cell
+				} else {
+					// Edge case, when resizing to 1 column, wide
+					// characters are just destroyed and replaced
+					// with empty narrow cells, so we should just
+					// discard any spacer tails.
+					return pageListReflowCursorWriteCellResultSuccess, nil
+				}
+
+			case PageCellWideSpacerHead:
+				// Spacer heads should be ignored. If we need a
+				// spacer head in our reflowed page, it is added
+				// when processing the wide cell it belongs to.
+				return pageListReflowCursorWriteCellResultSuccess, nil
+
+			default:
+				panic("unreachable")
+			}
+
+		case PageCellContentTagBgColorPalette,
+			PageCellContentTagBgColorRgb:
+			// These are guaranteed to have no style or grapheme
+			// data associated with them so we can fast path them.
+			*self.page_cell = *cell
+			self.cursorForward()
+			return pageListReflowCursorWriteCellResultSuccess, nil
+
+		default:
+			panic("unreachable")
+		}
+
+		// These will create issues by trying to clone managed memory that
+		// isn't set if the current dst row needs to be moved to a new page.
+		// They'll be fixed once we do properly copy the relevant memory.
+		self.page_cell.content_tag = PageCellContentTagCodepoint
+		self.page_cell.hyperlink = false
+		self.page_cell.style_id = StyleDefaultId
+
+		// Zig: the `if (comptime build_options.kitty_graphics)` block that
+		// copies the Kitty virtual placeholder status is compiled out (see
+		// the file header).
+	}
+
+	// std.log.warn("\nsrc_y={} src_x={} dst_y={} dst_x={} dst_cols={} cp={X} wide={} page_cell_wide={}", .{
+	//     src_y,
+	//     x,
+	//     self.y,
+	//     self.x,
+	//     self.page.size.cols,
+	//     cell.content.codepoint,
+	//     cell.wide,
+	//     self.page_cell.wide,
+	// });
+
+	// From this point on we're moving on to failable, managed memory.
+	// If we reach an error, we do the minimal cleanup necessary to
+	// not leave dangling memory but otherwise we gracefully degrade
+	// into some functional but not strictly correct cell.
+
+	// Copy grapheme data.
+	if cell.content_tag == PageCellContentTagCodepointGrapheme {
+		// Copy the graphemes
+		cps_ := src_page.LookupGrapheme(cell)
+		assert(cps_.Valid) // .?
+		cps := cps_.Value
+
+		// If our page can't support an additional cell
+		// with graphemes then we increase capacity.
+		if self.page.GraphemeCount() >= self.page.GraphemeCapacity() {
+			if err := self.increaseCapacity(
+				list,
+				Some(PageListIncreaseCapacityGraphemeBytes),
+			); err != nil {
+				return 0, err
+			}
+		}
+
+		// Attempt to allocate the space that would be required
+		// for these graphemes, and if it's not available, then
+		// increase capacity. Keep trying until we succeed.
+		for {
+			if slice, err := self.page.grapheme_alloc.Alloc(
+				uint(len(cps)),
+			); err == nil {
+				self.page.grapheme_alloc.Free(
+					slice,
+				)
+				break
+			} else {
+				// Grow our capacity until we can fit the extra bytes.
+				if err := self.increaseCapacity(list, Some(PageListIncreaseCapacityGraphemeBytes)); err != nil {
+					return 0, err
+				}
+			}
+		}
+
+		if err := self.page.SetGraphemes(
+			self.page_row,
+			self.page_cell,
+			cps,
+		); err != nil {
+			// This shouldn't fail since we made sure we have space
+			// above. There is no reasonable behavior we can take here
+			// so we have a warn level log. This is ALMOST non-recoverable,
+			// though we choose to recover by corrupting the cell
+			// to a non-grapheme codepoint.
+			//
+			// Zig: log.err
+			warn("page_list", "setGraphemes failed after capacity increase err=error.%v", err)
+			// Zig: `if (comptime std.debug.runtime_safety)`; the
+			// reference is a safe build. Force a crash with safe builds.
+			// (The unsafe-build fallback, which throws away the grapheme
+			// data, is not reached.)
+			panic("unreachable")
+		}
+	}
+
+	// Copy hyperlink data.
+	//
+	// Zig: the block is labeled `hyperlink:`; every `break :hyperlink`
+	// follows a safe-build `unreachable`, so none is reached.
+	if cell.hyperlink {
+		src_id_ := src_page.LookupHyperlink(cell)
+		assert(src_id_.Valid) // .?
+		src_id := src_id_.Value
+		src_link := src_page.hyperlink_set.Get(src_id)
+
+		// If our page can't support an additional cell
+		// with a hyperlink then we increase capacity.
+		if self.page.HyperlinkCount() >= self.page.HyperlinkCapacity() {
+			if err := self.increaseCapacity(list, Some(PageListIncreaseCapacityHyperlinkBytes)); err != nil {
+				return 0, err
+			}
+		}
+
+		// Ensure that the string alloc has sufficient capacity
+		// to dupe the link (and the ID if it's not implicit).
+		additional_required_string_capacity := uint(len(src_link.uri))
+		switch src_link.id.Tag {
+		case HyperlinkPageEntryIdExplicit:
+			additional_required_string_capacity += uint(len(src_link.id.Explicit))
+		case HyperlinkPageEntryIdImplicit:
+			additional_required_string_capacity += 0
+		}
+		// Keep trying until we have enough capacity.
+		for {
+			if slice, err := self.page.string_alloc.Alloc(
+				additional_required_string_capacity,
+			); err == nil {
+				// We have enough capacity, free the test alloc.
+				self.page.string_alloc.Free(
+					slice,
+				)
+				break
+			} else {
+				// Grow our capacity until we can fit the extra bytes.
+				if err := self.increaseCapacity(
+					list,
+					Some(PageListIncreaseCapacityStringBytes),
+				); err != nil {
+					return 0, err
+				}
+			}
+		}
+
+		dst_link, err := src_link.Dupe(
+			src_page,
+			self.page,
+		)
+		if err != nil {
+			// This shouldn't fail since we did a capacity
+			// check above.
+			//
+			// Zig: log.err
+			warn("page_list", "link dupe failed with capacity check err=error.%v", err)
+			// Zig: `if (comptime std.debug.runtime_safety)`; force a crash
+			// with safe builds (the `break :hyperlink` is not reached).
+			panic("unreachable")
+		}
+
+		dst_id_, err := self.page.hyperlink_set.AddWithIdContext(
+			dst_link,
+			src_id,
+			HyperlinkSetContext{page: self.page},
+		)
+		if err != nil {
+			// Zig: `catch |err| id: { ... }`.
+
+			// Always free our original link in case the increaseCap
+			// call fails so we aren't leaking memory.
+			dst_link.Free(self.page)
+
+			// If the add failed then either the set needs to grow
+			// or it needs to be rehashed. Either one of those can
+			// be accomplished by increasing capacity, either with
+			// no actual change or with an increased hyperlink cap.
+			var adjustment Optional[PageListIncreaseCapacity]
+			switch err {
+			case ErrOutOfMemory:
+				adjustment = Some(PageListIncreaseCapacityHyperlinkBytes)
+			case ErrNeedsRehash:
+				adjustment = None[PageListIncreaseCapacity]()
+			default:
+				panic("unreachable")
+			}
+			if err := self.increaseCapacity(list, adjustment); err != nil {
+				return 0, err
+			}
+
+			// We need to recreate the link into the new page.
+			dst_link2, err2 := src_link.Dupe(
+				src_page,
+				self.page,
+			)
+			if err2 != nil {
+				// This shouldn't fail since we did a capacity
+				// check above.
+				//
+				// Zig: log.err
+				warn("page_list", "link dupe failed with capacity check err=error.%v", err2)
+				// Force a crash with safe builds.
+				panic("unreachable")
+			}
+
+			// We assume this one will succeed. We dupe the link
+			// again, and don't have to worry about the other one
+			// because increasing the capacity naturally clears up
+			// any managed memory not associated with a cell yet.
+			id2, err2 := self.page.hyperlink_set.AddWithIdContext(
+				dst_link2,
+				src_id,
+				HyperlinkSetContext{page: self.page},
+			)
+			if err2 != nil {
+				// This shouldn't happen since we increased capacity
+				// above so we handle it like the other similar
+				// cases and log it, crash in safe builds, and
+				// remove the hyperlink in unsafe builds.
+				//
+				// Zig: log.err
+				warn(
+					"page_list",
+					"addWithIdContext failed after capacity increase err=error.%v",
+					err2,
+				)
+				// Force a crash with safe builds.
+				panic("unreachable")
+			}
+			dst_id_ = id2
+		}
+		// Zig: `orelse src_id`.
+		dst_id := src_id
+		if dst_id_.Valid {
+			dst_id = dst_id_.Value
+		}
+
+		// We expect this to succeed due to the hyperlinkCapacity
+		// check we did before. If it doesn't succeed let's
+		// log it, crash (in safe builds), and clear our state.
+		if err := self.page.SetHyperlink(
+			self.page_row,
+			self.page_cell,
+			dst_id,
+		); err != nil {
+			// Zig: log.err
+			warn(
+				"page_list",
+				"setHyperlink failed after capacity increase err=error.%v",
+				err,
+			)
+			// Force a crash with safe builds. (The unsafe-build fallback,
+			// which throws away the hyperlink data, is not reached.)
+			panic("unreachable")
+		}
+	}
+
+	// Copy style data.
+	//
+	// Zig: the block is labeled `style:`; its `break :style` follows a
+	// safe-build `unreachable` and is not reached.
+	if cell.HasStyling() {
+		style := *src_page.styles.Get(
+			cell.style_id,
+		)
+
+		id_, err := self.page.styles.AddWithId(
+			style,
+			cell.style_id,
+		)
+		if err != nil {
+			// Zig: `catch |err| id: { ... }`.
+
+			// If the add failed then either the set needs to grow
+			// or it needs to be rehashed. Either one of those can
+			// be accomplished by increasing capacity, either with
+			// no actual change or with an increased style cap.
+			var adjustment Optional[PageListIncreaseCapacity]
+			switch err {
+			case ErrOutOfMemory:
+				adjustment = Some(PageListIncreaseCapacityStyles)
+			case ErrNeedsRehash:
+				adjustment = None[PageListIncreaseCapacity]()
+			default:
+				panic("unreachable")
+			}
+			if err := self.increaseCapacity(list, adjustment); err != nil {
+				return 0, err
+			}
+
+			// We assume this one will succeed.
+			id2, err2 := self.page.styles.AddWithId(
+				style,
+				cell.style_id,
+			)
+			if err2 != nil {
+				// Should not fail since we just modified capacity
+				// above. Log it, crash in safe builds, clear style
+				// in unsafe builds.
+				//
+				// Zig: log.err
+				warn(
+					"page_list",
+					"addWithId failed after capacity increase err=error.%v",
+					err2,
+				)
+				// Force a crash with safe builds.
+				panic("unreachable")
+			}
+			id_ = id2
+		}
+		// Zig: `orelse cell.style_id`.
+		id := cell.style_id
+		if id_.Valid {
+			id = id_.Value
+		}
+
+		self.page_row.styled = true
+		self.page_cell.style_id = id
+	}
+
+	self.cursorForward()
+	return pageListReflowCursorWriteCellResultSuccess, nil
 }
 
 // moveLastRowToNewPage is PageList.ReflowCursor.moveLastRowToNewPage.
@@ -1430,7 +2518,76 @@ func (self *pageListReflowCursor) writeCell(
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
 func (self *pageListReflowCursor) moveLastRowToNewPage(list *PageList, cap PageCapacity) error {
-	panic(notImplemented)
+	assert(self.page.size.rows > 0) // Zig: u16 `- 1` traps
+	assert(self.y == self.page.size.rows-1)
+	assert(!self.pending_wrap)
+
+	old_node := self.node
+	old_page := self.page
+	old_row := self.page_row
+	old_x := self.x
+
+	// Our total row count never changes, because we're removing one
+	// row from the last page and moving it into a new page.
+	old_total_rows := self.total_rows
+	defer func() { self.total_rows = old_total_rows }()
+
+	if err := self.cursorNewPage(list, cap); err != nil {
+		return err
+	}
+	assert(self.node != old_node)
+	assert(self.y == 0)
+
+	// We have no cleanup for our old state from here on out. No failures!
+	//
+	// errdefer comptime unreachable;
+
+	// Restore the x position of the cursor.
+	self.cursorAbsolute(old_x, 0)
+
+	// Copy our old data. This should NOT fail because we have the
+	// capacity of the old page which already fits the data we requested.
+	if err := self.page.CloneRowFrom(
+		old_page,
+		self.page_row,
+		old_row,
+	); err != nil {
+		// Zig: log.err
+		warn(
+			"page_list",
+			"error cloning single row for moveLastRowToNewPage err=error.%v",
+			err,
+		)
+		panic("unexpected copy row failure")
+	}
+
+	// Move any tracked pins from that last row into this new node.
+	{
+		pin_keys := list.tracked_pins.Keys()
+		for _, p := range pin_keys {
+			if &p.node.data != old_page ||
+				p.y != old_page.size.rows-1 {
+				continue
+			}
+
+			p.node = self.node
+			p.y = self.y
+			// p.x remains the same since we're copying the row as-is
+		}
+	}
+
+	// Clear the row from the old page and truncate it.
+	old_page.ClearCells(old_row, 0, uint(old_page.size.cols))
+	old_page.size.rows -= 1
+
+	// If that was the last row in that page
+	// then we should remove it from the list.
+	if old_page.size.rows == 0 {
+		list.pages.Remove(old_node)
+		list.destroyNode(old_node)
+	}
+
+	return nil
 }
 
 // increaseCapacity is PageList.ReflowCursor.increaseCapacity: increase the
@@ -1443,7 +2600,32 @@ func (self *pageListReflowCursor) increaseCapacity(
 	list *PageList,
 	adjustment Optional[PageListIncreaseCapacity],
 ) error {
-	panic(notImplemented)
+	old_x := self.x
+	old_y := self.y
+	old_total_rows := self.total_rows
+
+	node, err := func() (*PageListNode, error) {
+		// Pause integrity checks because the total row count won't
+		// be correct during a reflow.
+		list.PauseIntegrityChecks(true)
+		defer list.PauseIntegrityChecks(false)
+		return list.IncreaseCapacity(
+			self.node,
+			adjustment,
+		)
+	}()
+	if err != nil {
+		return err
+	}
+	// We must not fail after this, we've modified our self.node
+	// and we need to fix it up.
+	//
+	// errdefer comptime unreachable;
+
+	*self = pageListReflowCursorInit(node)
+	self.cursorAbsolute(old_x, old_y)
+	self.total_rows = old_total_rows
+	return nil
 }
 
 // bottom is PageList.ReflowCursor.bottom.
@@ -1452,10 +2634,23 @@ func (self *pageListReflowCursor) increaseCapacity(
 // i.e. we can't scroll anymore.
 //
 // Zig: self is *const ReflowCursor.
-func (self *pageListReflowCursor) bottom() bool { panic(notImplemented) }
+func (self *pageListReflowCursor) bottom() bool {
+	assert(self.page.capacity.rows > 0) // Zig: u16 `- 1` traps
+	return self.y == self.page.capacity.rows-1
+}
 
 // cursorForward is PageList.ReflowCursor.cursorForward.
-func (self *pageListReflowCursor) cursorForward() { panic(notImplemented) }
+func (self *pageListReflowCursor) cursorForward() {
+	assert(self.page.size.cols > 0) // Zig: u16 `- 1` traps
+	if self.x == self.page.size.cols-1 {
+		self.pending_wrap = true
+	} else {
+		// Zig: `cell + 1` on a many-item pointer.
+		cell := self.page.cellIndex(self.page_cell)
+		self.page_cell = &self.page.cells[cell+1]
+		self.x += 1
+	}
+}
 
 // cursorScroll is PageList.ReflowCursor.cursorScroll.
 //
@@ -1463,7 +2658,28 @@ func (self *pageListReflowCursor) cursorForward() { panic(notImplemented) }
 //
 // Asserts that the cursor is on the bottom row of the
 // page and that there is capacity to add a new one.
-func (self *pageListReflowCursor) cursorScroll() { panic(notImplemented) }
+func (self *pageListReflowCursor) cursorScroll() {
+	// Scrolling requires that we're on the bottom of our page.
+	// We also assert that we have capacity because reflow always
+	// works within the capacity of the page.
+	assert(self.page.size.rows > 0) // Zig: u16 `- 1` traps
+	assert(self.y == self.page.size.rows-1)
+	assert(self.page.size.rows < self.page.capacity.rows)
+
+	// Increase our page size
+	self.page.size.rows += 1
+
+	// With the increased page size, safely move down a row.
+	//
+	// Zig: `rows + 1` on a many-item pointer.
+	rows := self.page.rowIndex(self.page_row)
+	row := &self.page.rows[rows+1]
+	self.page_row = row
+	self.page_cell = &self.page.rowCells(row)[0]
+	self.pending_wrap = false
+	self.x = 0
+	self.y += 1
+}
 
 // cursorNewPage is PageList.ReflowCursor.cursorNewPage.
 //
@@ -1472,7 +2688,21 @@ func (self *pageListReflowCursor) cursorScroll() { panic(notImplemented) }
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
 func (self *pageListReflowCursor) cursorNewPage(list *PageList, cap PageCapacity) error {
-	panic(notImplemented)
+	// Remember our new row count so we can restore it
+	// after reinitializing our cursor on the new page.
+	new_rows := self.new_rows
+
+	node, err := list.createPage(cap)
+	if err != nil {
+		return err
+	}
+	// errdefer comptime unreachable;
+	node.data.size.rows = 1
+	list.pages.InsertAfter(self.node, node)
+
+	*self = pageListReflowCursorInit(node)
+	self.new_rows = new_rows
+	return nil
 }
 
 // cursorScrollOrNewPage is PageList.ReflowCursor.cursorScrollOrNewPage.
@@ -1482,23 +2712,80 @@ func (self *pageListReflowCursor) cursorNewPage(list *PageList, cap PageCapacity
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
 func (self *pageListReflowCursor) cursorScrollOrNewPage(list *PageList, cap PageCapacity) error {
-	panic(notImplemented)
+	// The functions below may overwrite self so we need to cache
+	// our total rows. We add one because no matter what when this
+	// returns we'll have one more row added.
+	new_total_rows := self.total_rows + 1
+	defer func() { self.total_rows = new_total_rows }()
+
+	if self.bottom() {
+		if err := self.cursorNewPage(list, cap); err != nil {
+			return err
+		}
+	} else {
+		self.cursorScroll()
+	}
+	return nil
 }
 
 // cursorAbsolute is PageList.ReflowCursor.cursorAbsolute.
 func (self *pageListReflowCursor) cursorAbsolute(x SizeCellCountInt, y SizeCellCountInt) {
-	panic(notImplemented)
+	assert(x < self.page.size.cols)
+	assert(y < self.page.size.rows)
+
+	// Zig: `rows - n` / `rows + n` on a many-item pointer.
+	var row *PageRow
+	switch {
+	case y == self.y:
+		row = self.page_row
+	case y < self.y:
+		row = &self.page.rows[self.page.rowIndex(self.page_row)-uint(self.y-y)]
+	default:
+		row = &self.page.rows[self.page.rowIndex(self.page_row)+uint(y-self.y)]
+	}
+	self.page_row = row
+	self.page_cell = &self.page.rowCells(row)[x]
+	self.pending_wrap = false
+	self.x = x
+	self.y = y
 }
 
 // countTrailingEmptyCells is PageList.ReflowCursor.countTrailingEmptyCells.
 //
 // Zig: self is *const ReflowCursor; returns usize, a count of cells.
-func (self *pageListReflowCursor) countTrailingEmptyCells() uint { panic(notImplemented) }
+func (self *pageListReflowCursor) countTrailingEmptyCells() uint {
+	// If the row is wrapped, all empty cells are meaningful.
+	if self.page_row.wrap {
+		return 0
+	}
+
+	// Zig: `cells` is the many-item pointer at page_cell.
+	cells := self.page.cells[self.page.cellIndex(self.page_cell):]
+	assert(self.x <= self.page.size.cols) // Zig: u16 `-` traps
+	length := uint(self.page.size.cols - self.x)
+	for i := range length {
+		rev_i := length - i - 1
+		if !cells[rev_i].IsEmpty() {
+			return i
+		}
+	}
+
+	// If the row has a semantic prompt then the blank row is meaningful
+	// so we always return all but one so that the row is drawn.
+	if self.page_row.semantic_prompt != PageRowSemanticPromptNone {
+		assert(length > 0) // Zig: usize `- 1` traps
+		return length - 1
+	}
+
+	return length
+}
 
 // copyRowMetadata is PageList.ReflowCursor.copyRowMetadata.
 //
 // Zig: other is *const Row.
-func (self *pageListReflowCursor) copyRowMetadata(other *PageRow) { panic(notImplemented) }
+func (self *pageListReflowCursor) copyRowMetadata(other *PageRow) {
+	self.page_row.semantic_prompt = other.semantic_prompt
+}
 
 // resizeWithoutReflow is PageList.resizeWithoutReflow.
 //

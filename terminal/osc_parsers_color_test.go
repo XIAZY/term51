@@ -7,7 +7,7 @@
 // the translation notes are.
 //
 // Not translated (std.testing.FailingAllocator has no Go counterpart, see
-// scripts/not-translated-oscA.txt):
+// scripts/not-translated.txt):
 //   - test "term51: parse: allocation failure yields an empty request list"
 //   - test "term51: parseGetSetAnsiColor: allocation failure frees the partial list"
 //   - test "term51: parseResetAnsiColor: allocation failure frees the partial list"

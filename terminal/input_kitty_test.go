@@ -10,7 +10,7 @@
 //     InputKeyKeyValues().
 //   - `u21` is uint32.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-kp.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

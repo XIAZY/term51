@@ -26,7 +26,7 @@
 //   - `defer s.deinit()` is `defer s.Deinit()`; `testing.allocator` and the
 //     `alloc` arguments are dropped.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-sc1.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

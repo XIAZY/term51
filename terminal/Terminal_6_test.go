@@ -24,7 +24,7 @@
 //   - `build_options.kitty_graphics` is false in the library build: Screen
 //     has no kitty_images, so term51UKittyDirty is always false.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tm6.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

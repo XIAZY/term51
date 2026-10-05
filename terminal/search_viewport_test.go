@@ -15,7 +15,7 @@
 //   - A block with a `defer` inside (Fingerprint tests) is a closure called
 //     in place, so the defer runs at the end of the block.
 //
-// Not translated (scripts/not-translated-sa.txt): the allocation failure
+// Not translated (scripts/not-translated.txt): the allocation failure
 // tests (FailingAllocator).
 //
 // Go-only panic tests: ViewportSearch.needle on a reverse window (assert),

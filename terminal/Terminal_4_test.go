@@ -21,7 +21,7 @@
 //   - `page.styles.get(page.memory, id)`, `.refCount(page.memory, id)` and
 //     `hyperlink_set.get(memory, id)` lose the memory argument.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tm4.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

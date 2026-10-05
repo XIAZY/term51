@@ -22,7 +22,7 @@
 //     is ModesModePackedInit() with bracketed_paste set (the other modes keep
 //     their Zig defaults).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-kp.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

@@ -32,7 +32,7 @@
 //   - `s.pages.first.?` is `s.pages.first` (a *PageListNode; the tests would
 //     dereference a nil pointer where Zig's `.?` would trap).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-pl1.txt. The Go-only panic tests at the end
+//     scripts/not-translated.txt. The Go-only panic tests at the end
 //     (`TestPl1_panic_...`) cover assert / unreachable / null-unwrap paths
 //     that Zig's tests cannot reach.
 

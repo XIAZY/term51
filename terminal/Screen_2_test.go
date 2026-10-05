@@ -23,7 +23,7 @@
 //   - Zig's default option values are written out in every literal
 //     (Resize.reflow = true, prompt_redraw = .false, trim = true, ...).
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-sc2.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 
@@ -1404,7 +1404,7 @@ func TestSc2_Screen_setAttribute_splits_page_on_OutOfSpace_at_max_styles(t *test
 
 // Not translated: Zig test "selectionString map allocation failure cleanup"
 // (selectionString_tw tripwire fault injection); see
-// scripts/not-translated-sc2.txt.
+// scripts/not-translated.txt.
 
 // Zig: test "Screen: promptClickMove line right basic"
 func TestSc2_Screen_promptClickMove_line_right_basic(t *testing.T) {
@@ -2311,7 +2311,7 @@ func TestSc2_term51_init_dimensions_from_one_cell_to_the_maximum(t *testing.T) {
 }
 
 // Not translated: Zig test "term51: init: out of memory at every allocation unwinds without leaking"
-// (std.testing.FailingAllocator); see scripts/not-translated-sc2.txt.
+// (std.testing.FailingAllocator); see scripts/not-translated.txt.
 
 // Zig: test "term51: deinit: releases hyperlink, selection, styles and every page"
 func TestSc2_term51_deinit_releases_hyperlink_selection_styles_and_every_page(t *testing.T) {
@@ -3179,7 +3179,7 @@ func TestSc2_term51_clone_selection_end_of_a_padded_clone_moves_to_the_padded_la
 }
 
 // Not translated: Zig test "term51: clone: out of memory at every allocation unwinds without leaking"
-// (std.testing.FailingAllocator); see scripts/not-translated-sc2.txt.
+// (std.testing.FailingAllocator); see scripts/not-translated.txt.
 
 // sc2PageHasRow reports whether row is an element of page.rows. It stands for
 // Zig's address-range check against the page's memory (`addr >=
@@ -3512,7 +3512,7 @@ func TestSc2_term51_increaseCapacity_out_of_space_leaves_the_cursor_state_intact
 
 // Not translated: Zig test "term51: increaseCapacity: failing to re-add the hyperlink drops it, the cursor keeps working"
 // (std.testing.FailingAllocator installed as Screen.alloc); see
-// scripts/not-translated-sc2.txt.
+// scripts/not-translated.txt.
 
 // Zig: test "term51: cursorCellRight: returns the cell n columns right without moving"
 func TestSc2_term51_cursorCellRight_returns_the_cell_n_columns_right_without_moving(t *testing.T) {

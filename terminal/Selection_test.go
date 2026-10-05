@@ -23,7 +23,7 @@
 //   - Zig `Selection.init(...)` on a `const sel` that is later adjusted is
 //     `var sel`; Go's pointer-receiver methods work on the variable.
 //   - The allocation-failure tests (FailingAllocator) are not translated:
-//     scripts/not-translated-ss.txt.
+//     scripts/not-translated.txt.
 //   - `@typeInfo` checks of unions/enums use package reflect and the Go
 //     constants.
 

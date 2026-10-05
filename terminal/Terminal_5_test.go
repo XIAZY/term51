@@ -23,7 +23,7 @@
 //     build_options.kitty_graphics)`) are compiled out of the library build
 //     and carry `// Zig-only:` comments.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-tm5.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

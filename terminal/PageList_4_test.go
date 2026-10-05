@@ -35,7 +35,7 @@
 //   - Helpers of the Zig file used by these tests (term51K*, term51L*) are
 //     translated here with the prefix pl4K and pl4L.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-pl4.txt. Go-only panic tests follow the
+//     scripts/not-translated.txt. Go-only panic tests follow the
 //     translated tests.
 
 package terminal

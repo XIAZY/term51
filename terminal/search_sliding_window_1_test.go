@@ -27,7 +27,7 @@
 //   - Zig's `std.MultiArrayList` chunk_buf is a Go slice: `.len` is len(),
 //     `.capacity` is cap().
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-sw1.txt.
+//     scripts/not-translated.txt.
 //   - Go-only tests at the end of the file (title `// Go-only:`) test the
 //     assert / panic paths of the functions under test that Zig's tests
 //     cannot reach, and the release-build behaviour of `next` when pruning
@@ -1230,7 +1230,7 @@ func TestSw1_term51_SlidingWindow_init_empty_needle_is_accepted(t *testing.T) {
 
 // Zig-only: the test "term51: SlidingWindow.init: out of memory unwinds every
 // allocation" (FailingAllocator fault injection) is not translated; see
-// scripts/not-translated-sw1.txt.
+// scripts/not-translated.txt.
 
 // Zig: test "term51: SlidingWindow.deinit: frees metas and buffers after pruning and wrapping"
 func TestSw1_term51_SlidingWindow_deinit_frees_metas_and_buffers_after_pruning_and_wrapping(t *testing.T) {

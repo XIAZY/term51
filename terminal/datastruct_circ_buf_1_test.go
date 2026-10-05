@@ -731,7 +731,7 @@ func TestCb1_term51_CircBuf_init_zero_capacity_is_full_but_has_no_elements(t *te
 }
 
 // "term51: CircBuf.init: allocation failure" is not translated: it uses
-// std.testing.FailingAllocator (see scripts/not-translated-cb.txt).
+// std.testing.FailingAllocator (see scripts/not-translated.txt).
 
 // Zig: test "term51: CircBuf.init: large capacity"
 func TestCb1_term51_CircBuf_init_large_capacity(t *testing.T) {

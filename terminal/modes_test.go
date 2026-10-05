@@ -173,7 +173,7 @@ func sm1_modesReference(v uint16, ansi bool) Optional[ModesMode] {
 	return None[ModesMode]()
 }
 
-// Not translated, Zig test (unnamed, modes.zig:79): see scripts/not-translated-sm1.txt (size of ModePacked).
+// Not translated, Zig test (unnamed, modes.zig:79): see scripts/not-translated.txt (size of ModePacked).
 
 // Zig: test "order"
 func TestModes_order(t *testing.T) {
@@ -182,7 +182,7 @@ func TestModes_order(t *testing.T) {
 	expectEqual(t, ModesModeTagBacking(1), int_)
 }
 
-// Not translated, Zig test (unnamed, modes.zig:235): see scripts/not-translated-sm1.txt (only forces analysis of Mode and ModePacked).
+// Not translated, Zig test (unnamed, modes.zig:235): see scripts/not-translated.txt (only forces analysis of Mode and ModePacked).
 
 // Zig: test modeFromInt
 func TestModes_modeFromInt(t *testing.T) {

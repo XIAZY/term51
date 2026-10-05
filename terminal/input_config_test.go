@@ -12,7 +12,7 @@
 //   - `std.meta.stringToEnum` is kpConfigStringToEnum, which matches the
 //     String method of every value.
 //   - Tests that were not translated are listed in
-//     scripts/not-translated-kp.txt.
+//     scripts/not-translated.txt.
 
 package terminal
 

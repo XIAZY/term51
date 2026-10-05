@@ -370,15 +370,15 @@ Files: `osc_parsers_osc9.go`, `osc_parsers_semantic_prompt.go`, and the new
   with three `writeAll` calls. Only with a fixed writer that runs out of
   room could the split of a partial write differ from std's formatter (not
   reachable in the library: urlPercentEncode has no caller in it).
-- Tests: all 18 Zig tests (`printf_q 1`..`10`, `singles percent`,
-  `percent 1`..`7`) are translated one for one in
-  `terminal/os_string_encoding_test.go`.
-- `scripts/check-test-mapping.py` needs a rule for `os/` (like the
-  `datastruct/` one): `os/string_encoding.zig` currently resolves to
-  `os/string_encoding_test.go` and reports all 18 tests missing. With
-  `parts[0] in ("datastruct", "os")` and `base = parts[0] + "_" + ...` it
-  reports `zig=18 go=18 ok` (checked on a temporary copy; the script is not
-  edited).
+- Tests: all 18 upstream tests (`printf_q 1`..`10`, `singles percent`,
+  `percent 1`..`7`) and the 32 term51 tests (patch 0020, one or more for
+  every function, added at the lead's request) are translated one for one
+  in `terminal/os_string_encoding_test.go`. The library's Zig test root
+  never reached this file, so upstream's 18 had never run in our Zig build;
+  patch 0020 adds `test { _ = string_encoding; }` to `semantic_prompt.zig`
+  (listed in `scripts/not-translated.txt`).
+- `scripts/check-test-mapping.py` maps `os/` like `datastruct/`
+  (`os/string_encoding.zig` -> `os_string_encoding_test.go`).
 
 ### OSC sub-parsers: context_signal, kitty_clipboard_protocol, kitty_text_sizing, iterm2
 

@@ -51,9 +51,12 @@
 //   - `Page.initBuf(buf: OffsetBuf, l: Layout) Page`;
 //   - `Page.cloneBuf(self: *const Page, buf: []align(page_size_min) u8) Page`.
 //
-// `Page.init`, `Page.reinit` and `Page.clone` call them in Zig; the Go
-// implementations do that work themselves. `Page.deinit` only unmaps the
-// memory; it is kept as a stub because every test calls it.
+// `Page.init`, `Page.reinit` and `Page.clone` call them in Zig. Clone does
+// cloneBuf's work itself. initBuf's work is the private pageInitBuf, whose
+// "buffer" is the rows and cells slices, so that reinit, as in Zig, reuses
+// the page's own rows and cells (pointers into them stay valid).
+// `Page.deinit` only unmaps the memory; it is kept as a stub because every
+// test calls it.
 //
 // # Pointer to index
 //
@@ -92,6 +95,16 @@
 //   - `Page.cellIndex`, `Page.rowIndex`, `Page.cellOffset`: pointer
 //     subtraction;
 //   - `PageCell.bitCast`: `@bitCast` of a cell.
+//
+// Added by the implementation (not Zig declarations, each says what it
+// stands for): `pageSizeOfRow` and the other sizes and base alignments
+// layout reads from types; `pageInitBuf` (initBuf, see above);
+// `pageCloneBitmapAllocator`, `pageCloneHashMap`, `pageCloneRefCountedSet`
+// and `pageRebase` (cloneBuf's memcpy); `pageCellCountSet`
+// (exactRowCapacity's local `CellCountSet`); `pageCellsStart` and
+// `Page.rowCells` (`row.cells.ptr(self.memory)`); the names arrays of the
+// enums; `pageBoolBit`; and std stand-ins `pageAlignForward`,
+// `pageAlignBackward`, `pageStdMathDivCeil`, `pageStdMathCeilPowerOfTwo`.
 //
 // Build options:
 //   - `build_options.kitty_graphics` is false in the library build. The
@@ -411,27 +424,49 @@ func PageInit(cap PageCapacity) (Page, error) {
 	// anonymous mmap is guaranteed on Linux and macOS to be zeroed,
 	// which is a critical property for us.
 	assert(l.total_size%pagePageSizeMin == 0)
-	// Zig: posix.mmap(...) and `errdefer posix.munmap(backing)`, then
-	// `return initBuf(buf, l)`. Go memory is zeroed and its allocation
-	// cannot fail here; initBuf's work follows (see the file header).
+	// Zig: posix.mmap(...) and `errdefer posix.munmap(backing)`: Go
+	// memory, zeroed, whose allocation cannot fail here. The buffer is
+	// the page's rows and cells (see pageInitBuf).
+	rows := make([]PageRow, l.capacity.rows)
+	cells := make([]PageCell, uint(l.capacity.cols)*uint(l.capacity.rows))
 
-	// Zig: initBuf.
-	cap = l.capacity
+	return pageInitBuf(rows, cells, l), nil
+}
+
+// pageInitBuf is page.Page.initBuf for Go memory: initialize a new page
+// using the given backing memory. Zig's `buf: OffsetBuf` is the page's rows
+// and cells, `rows` (`l.capacity.rows` long) and `cells`
+// (`l.capacity.rows * l.capacity.cols` long), zeroed; the sub-structures
+// make their own memory. It is NOT among the wireframe's declarations (the
+// wireframe omits initBuf, see the file header): it is kept, private,
+// because init and reinit both call it in Zig, and reinit reuses the
+// page's own rows and cells, so that pointers into them stay valid as they
+// do in Zig.
+//
+// Zig: pub inline fn initBuf(buf: OffsetBuf, l: Layout) Page. Upstream's
+// doc comment: "Initialize a new page using the given backing memory. It is
+// up to the caller to not call deinit on these pages."
+func pageInitBuf(rows []PageRow, cells []PageCell, l PageLayout) Page {
+	cap := l.capacity
+	// Zig: buf.member(Row, l.rows_start) and buf.member(Cell,
+	// l.cells_start).
+	assert(len(rows) == int(cap.rows))
 
 	// We need to go through and initialize all the rows so that
 	// they point to a valid offset into the cells, since the rows
 	// zero-initialized aren't valid.
 	cells_len := uint(cap.cols) * uint(cap.rows)
 	self := Page{
-		rows:     make([]PageRow, cap.rows),
-		cells:    make([]PageCell, cells_len),
+		rows:     rows,
+		cells:    cells,
 		capacity: cap,
 	}
-	cells_ptr := self.cells[0:cells_len]
-	for y := range self.rows {
-		row := &self.rows[y]
+	cells_ptr := cells[0:cells_len]
+	for y := range rows[0:cap.rows] {
+		row := &rows[y]
 		start := uint(y) * uint(cap.cols)
 		*row = PageRow{
+			// getOffset(Cell, buf, &cells_ptr[start])
 			cells: self.cellOffset(&cells_ptr[start]),
 		}
 	}
@@ -460,10 +495,8 @@ func PageInit(cap PageCapacity) (Page, error) {
 	)
 	self.size = PageSize{cols: cap.cols, rows: cap.rows}
 	self.dirty = false
-	return self, nil
+	return self
 }
-
-// page.Page.initBuf (page.zig line 191) is omitted; see the file header.
 
 // Deinit is page.Page.deinit.
 //
@@ -480,14 +513,11 @@ func (self *Page) Reinit() {
 	// We zero the page memory as u64 instead of u8 because
 	// we can and it's empirically quite a bit faster.
 	//
-	// Zig: @memset of self.memory to 0, then
-	// `self.* = initBuf(.init(self.memory), layout(self.capacity))`. Go:
-	// PageInit does the same work on fresh, zeroed memory and cannot fail.
-	page, err := PageInit(self.capacity)
-	if err != nil {
-		panic("unreachable")
-	}
-	*self = page
+	// Zig: @memset over self.memory. Go: the rows and cells, which
+	// pageInitBuf reuses; the sub-structures get new memory there.
+	clear(self.rows)
+	clear(self.cells)
+	*self = pageInitBuf(self.rows, self.cells, PageLayoutOf(self.capacity))
 }
 
 // Page.IntegrityError. An error set is not a type in Go; its members are

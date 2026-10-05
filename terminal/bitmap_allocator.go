@@ -71,15 +71,21 @@
 //     `has_deleted` precedent in ref_counted_set.go).
 //     BitmapAllocatorBytesRequired has no receiver and reads @sizeOf(T) per
 //     call through bitmapAllocatorSizeOf. Go's sizes equal Zig's for every
-//     element type used (u8, u16, u21 = uint32, u64, [3]u8); Go's alignment
-//     equals Zig's except for 8-byte scalars on 32-bit ARM (Go 4, Zig 8),
-//     which only the `chunk_size % @alignOf(T)` assertion of `alloc` reads,
-//     and only with a chunk size below 8 (the page uses 16 and 32).
+//     element type used (u8, u16, u21 = uint32, u64, [3]u8). The alignment
+//     is NOT Go's (project lead ruling): Go gives 4 for 8-byte scalars on
+//     32-bit ARM where Zig, and the 64-bit reference, give 8, so
+//     bitmapAllocatorZigAlignOf applies Zig's rule for the supported
+//     element types (an integer of up to 8 bytes is aligned to its size, an
+//     array to its element) and panics on any other type. The
+//     `chunk_size % @alignOf(T)` assertion of `alloc` therefore behaves the
+//     same on every platform.
 //   - Zig's `@intFromPtr(slice.ptr) - @intFromPtr(chunks)` (free,
 //     isAllocated) is the difference of the two slices' first-element
 //     addresses as given by reflect.Value.Pointer (bitmapAllocatorAddr).
-//     The addresses are only subtracted, never turned back into pointers;
-//     no package unsafe is used.
+//     This is the pointer-to-position conversion the project lead
+//     sanctioned (2026-10-05), done without package unsafe: the addresses
+//     are only subtracted, never turned back into pointers, and a Go-only
+//     check asserts that the slice starts inside `chunks`.
 //   - Zig traps on integer overflow (`+`, `*`) in a safe build; the byte
 //     arithmetic of `layout` and `bytesRequired` asserts where it could
 //     overflow a u64 (bitmapAllocatorAlignForward, bitmapAllocatorMul).
@@ -150,6 +156,24 @@ type BitmapAllocator[T any] struct {
 	elem_align uint64
 }
 
+// bitmapAllocatorZigAlignOf is not a Zig declaration. It is Zig's @alignOf
+// for the element types the allocator is used with (see the file header):
+// an integer of 1, 2, 4 or 8 bytes is aligned to its size (u21 is a 4-byte
+// uint32), an array to its element. Any other type panics.
+func bitmapAllocatorZigAlignOf(t reflect.Type) uint64 {
+	switch t.Kind() {
+	case reflect.Uint8, reflect.Int8, reflect.Uint16, reflect.Int16,
+		reflect.Uint32, reflect.Int32, reflect.Uint64, reflect.Int64:
+		return uint64(t.Size())
+	case reflect.Uint, reflect.Int:
+		// Zig usize/isize on the 64-bit reference.
+		return 8
+	case reflect.Array:
+		return bitmapAllocatorZigAlignOf(t.Elem())
+	}
+	panic("bitmap_allocator: @alignOf not ported for element type " + t.String())
+}
+
 // BitmapAllocatorInit is BitmapAllocator.init: initialize the allocator map
 // with a given buf and memory layout.
 //
@@ -189,7 +213,7 @@ func BitmapAllocatorInit[T any](chunk_size uint64, l BitmapAllocatorLayout) Bitm
 		bitmap_count: l.bitmap_count,
 		chunks:       make([]T, chunks_len),
 		elem_size:    elem_size,
-		elem_align:   uint64(t.Align()),
+		elem_align:   bitmapAllocatorZigAlignOf(t),
 	}
 }
 

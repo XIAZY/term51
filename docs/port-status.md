@@ -35,6 +35,8 @@ build.
 | `terminal/ref_counted_set.zig` | `terminal/ref_counted_set.go` | done | 79 of 80 (1 not translated), all pass | capacities.txt: all 65,537 capacities match | pass |
 | `terminal/style.zig` | `terminal/style.go` | done | 106 of 108 (2 not translated), all pass | style_hash.txt: 4,096 of 4,096 | pass |
 | `terminal/hyperlink.zig` | `terminal/hyperlink.go` | done | 35 of 37 (2 not translated); 10 pass, the rest wait for page.go and bitmap_allocator.go | hyperlink_hash.txt: 3,000 of 3,000 | pass (same 10) |
+| `terminal/bitmap_allocator.zig` | `terminal/bitmap_allocator.go` | done | 74 translated and Go-only, all pass | corpus_bitmap_test.go: 3 pass | pass |
+| `terminal/hash_map.zig` | `terminal/hash_map.go` | done | 152 translated and Go-only, all pass | corpus_hashmap_test.go passes | pass |
 | std `hash/wyhash.zig`, `hash.zig` (`int`), `hash/auto_hash.zig` | `terminal/std_hash_wyhash.go`, `std_hash.go`, `std_hash_auto_hash.go` | done (int: u64; autoHash: the cases PageEntry.hash reaches) | wyhash 5 of 5, int 1 (u64 lines), auto_hash 0 of 12 (key types not ported); 9 Go-only tests pinning Zig output | - | pass |
 
 `scripts/check-test-mapping.py` verifies that every Zig test has exactly one

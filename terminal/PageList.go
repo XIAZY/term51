@@ -186,7 +186,10 @@
 
 package terminal
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 // pageListPagePreheat is PageList.page_preheat.
 //
@@ -216,29 +219,91 @@ type PageListList struct {
 // InsertAfter is DoublyLinkedList.insertAfter: insert a new node after an
 // existing one.
 func (list *PageListList) InsertAfter(node *PageListNode, new_node *PageListNode) {
-	panic(notImplemented)
+	new_node.prev = node
+	if next_node := node.next; next_node != nil {
+		// Intermediate node.
+		new_node.next = next_node
+		next_node.prev = new_node
+	} else {
+		// Last element of the list.
+		new_node.next = nil
+		list.last = new_node
+	}
+	node.next = new_node
 }
 
 // InsertBefore is DoublyLinkedList.insertBefore: insert a new node before
 // an existing one.
 func (list *PageListList) InsertBefore(node *PageListNode, new_node *PageListNode) {
-	panic(notImplemented)
+	new_node.next = node
+	if prev_node := node.prev; prev_node != nil {
+		// Intermediate node.
+		new_node.prev = prev_node
+		prev_node.next = new_node
+	} else {
+		// First element of the list.
+		new_node.prev = nil
+		list.first = new_node
+	}
+	node.prev = new_node
 }
 
 // Append is DoublyLinkedList.append: insert a new node at the end of the
 // list.
-func (list *PageListList) Append(new_node *PageListNode) { panic(notImplemented) }
+func (list *PageListList) Append(new_node *PageListNode) {
+	if last := list.last; last != nil {
+		// Insert after last.
+		list.InsertAfter(last, new_node)
+	} else {
+		// Empty list.
+		list.Prepend(new_node)
+	}
+}
 
 // Prepend is DoublyLinkedList.prepend: insert a new node at the beginning
 // of the list.
-func (list *PageListList) Prepend(new_node *PageListNode) { panic(notImplemented) }
+func (list *PageListList) Prepend(new_node *PageListNode) {
+	if first := list.first; first != nil {
+		// Insert before first.
+		list.InsertBefore(first, new_node)
+	} else {
+		// Empty list.
+		list.first = new_node
+		list.last = new_node
+		new_node.prev = nil
+		new_node.next = nil
+	}
+}
 
 // Remove is DoublyLinkedList.remove: remove a node from the list.
-func (list *PageListList) Remove(node *PageListNode) { panic(notImplemented) }
+func (list *PageListList) Remove(node *PageListNode) {
+	if prev_node := node.prev; prev_node != nil {
+		// Intermediate node.
+		prev_node.next = node.next
+	} else {
+		// First element of the list.
+		list.first = node.next
+	}
+
+	if next_node := node.next; next_node != nil {
+		// Intermediate node.
+		next_node.prev = node.prev
+	} else {
+		// Last element of the list.
+		list.last = node.prev
+	}
+}
 
 // PopFirst is DoublyLinkedList.popFirst: remove and return the first node
 // in the list, or nil if the list is empty.
-func (list *PageListList) PopFirst() *PageListNode { panic(notImplemented) }
+func (list *PageListList) PopFirst() *PageListNode {
+	first := list.first
+	if first == nil {
+		return nil
+	}
+	list.Remove(first)
+	return first
+}
 
 // PageListNode is PageList.Node: a single node within the PageList linked
 // list.
@@ -282,7 +347,9 @@ type pageListNodePool struct{}
 // time, so a test that sets PageStdCapacity (Zig's unit tests run with a
 // smaller standard capacity than the recorded corpus) sees a consistent
 // value without any start-up ordering.
-func pageListStdSize() uint64 { panic(notImplemented) }
+func pageListStdSize() uint64 {
+	return PageLayoutOf(PageStdCapacity).total_size
+}
 
 // pageListPagePool is PageList.PagePool.
 //
@@ -304,7 +371,12 @@ type pageListPagePool struct{}
 // in the wireframe; the implementation sets it with pageListStdSize.
 //
 // A function for the same reason as pageListStdSize.
-func pageListPagePoolItemSize() uint64 { panic(notImplemented) }
+func pageListPagePoolItemSize() uint64 {
+	// Zig (std.heap.MemoryPoolAligned): item_size = @max(@sizeOf(Node),
+	// @sizeOf(Item)), Item = [std_size]u8; the free-list node is one
+	// pointer, smaller than std_size.
+	return pageListStdSize()
+}
 
 // pageListPinSet is PageList.PinSet.
 //
@@ -325,18 +397,37 @@ type pageListPinSet struct {
 // already present.
 //
 // Zig: Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
-func (self *pageListPinSet) PutNoClobber(key *PageListPin) error { panic(notImplemented) }
+func (self *pageListPinSet) PutNoClobber(key *PageListPin) error {
+	// Zig: `assert(!result.found_existing)`.
+	for _, k := range self.keys {
+		assert(k != key)
+	}
+	self.keys = append(self.keys, key)
+	return nil
+}
 
 // SwapRemove is std's swapRemove: if key is present, remove it by moving
 // the last key into its place and return true; otherwise return false.
-func (self *pageListPinSet) SwapRemove(key *PageListPin) bool { panic(notImplemented) }
+func (self *pageListPinSet) SwapRemove(key *PageListPin) bool {
+	for i, k := range self.keys {
+		if k != key {
+			continue
+		}
+		last := len(self.keys) - 1
+		self.keys[i] = self.keys[last]
+		self.keys[last] = nil
+		self.keys = self.keys[:last]
+		return true
+	}
+	return false
+}
 
 // Keys is std's keys: the keys in order. The slice is the set's own and is
 // only valid until the set is modified.
-func (self *pageListPinSet) Keys() []*PageListPin { panic(notImplemented) }
+func (self *pageListPinSet) Keys() []*PageListPin { return self.keys }
 
 // Count is std's count: the number of keys.
-func (self *pageListPinSet) Count() uint { panic(notImplemented) }
+func (self *pageListPinSet) Count() uint { return uint(len(self.keys)) }
 
 // pageListPinPool is PageList.PinPool.
 //
@@ -386,7 +477,13 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self PageListMemoryPoolResetModeTag) String() string { panic(notImplemented) }
+func (self PageListMemoryPoolResetModeTag) String() string {
+	return pageListMemoryPoolResetModeTagNames[self]
+}
+
+// pageListMemoryPoolResetModeTagNames are the tag names of
+// PageListMemoryPoolResetModeTag, indexed by value (Zig's @tagName).
+var pageListMemoryPoolResetModeTagNames = [...]string{"free_all", "retain_capacity", "retain_with_limit"}
 
 // PageListMemoryPoolInit is PageList.MemoryPool.init.
 //
@@ -394,13 +491,31 @@ func (self PageListMemoryPoolResetModeTag) String() string { panic(notImplemente
 // preheat: usize) Allocator.Error!MemoryPool. Both allocator parameters are
 // dropped. `preheat` is a number of nodes and pages (the pin pool is always
 // preheated with 8). The error is ErrOutOfMemory (dcs.go).
-func PageListMemoryPoolInit(preheat uint) (PageListMemoryPool, error) { panic(notImplemented) }
+func PageListMemoryPoolInit(preheat uint) (PageListMemoryPool, error) {
+	// Zig: NodePool.initPreheated(gen_alloc, preheat),
+	// PagePool.initPreheated(page_alloc, preheat) and
+	// PinPool.initPreheated(gen_alloc, 8), each with an errdefer deinit.
+	// The pools hold no memory in Go (see the file header).
+	_ = preheat
+	return PageListMemoryPool{
+		nodes: pageListNodePool{},
+		pages: pageListPagePool{},
+		pins:  pageListPinPool{},
+	}, nil
+}
 
 // Deinit is PageList.MemoryPool.deinit.
-func (self *PageListMemoryPool) Deinit() { panic(notImplemented) }
+func (self *PageListMemoryPool) Deinit() {
+	// Zig: self.pages.deinit(); self.nodes.deinit(); self.pins.deinit().
+	// The pools hold no memory in Go (see the file header).
+}
 
 // Reset is PageList.MemoryPool.reset.
-func (self *PageListMemoryPool) Reset(mode PageListMemoryPoolResetMode) { panic(notImplemented) }
+func (self *PageListMemoryPool) Reset(mode PageListMemoryPoolResetMode) {
+	// Zig: `_ = self.pages.reset(mode)`, and the same for nodes and pins.
+	// The pools hold no memory in Go (see the file header).
+	_ = mode
+}
 
 // PageList is the file-level struct of PageList.zig.
 //
@@ -510,6 +625,18 @@ type PageList struct {
 	// Zig: usize (default 0) when build_options.slow_runtime_safety, void
 	// otherwise. See the file header.
 	pause_integrity_checks uint
+
+	// NOT a field of upstream's PageList: the term51 "candidate B"
+	// verification patch (term51 patches-candidates/
+	// B-0001-tolerate-transient-pin-check-in-resize.patch), which
+	// docs/mapping.md ("Requirements the wireframe tests impose on the
+	// implementation") requires. True while Resize runs, so that the
+	// transient "viewport pin has too few rows" state inside the padding
+	// grow()s is tolerated exactly as release builds (which compile the
+	// check out) tolerate it. The check is enforced again when Resize
+	// returns. See docs/upstream-findings.md and docs/deliberate-fixes.md
+	// entry 3 in the term51 repository.
+	term51_resizing bool
 }
 
 // PageListViewport is PageList.Viewport: the viewport location.
@@ -541,7 +668,13 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self PageListViewportTag) String() string { panic(notImplemented) }
+func (self PageListViewportTag) String() string {
+	return pageListViewportTagNames[self]
+}
+
+// pageListViewportTagNames are the tag names of PageListViewportTag,
+// indexed by value (Zig's @tagName).
+var pageListViewportTagNames = [...]string{"active", "top", "pin"}
 
 // pageListMinMaxSize is PageList.minMaxSize.
 //
@@ -558,7 +691,45 @@ func (self PageListViewportTag) String() string { panic(notImplemented) }
 //
 // Zig: returns usize, `PagePool.item_size * pages`: bytes, uint64.
 func pageListMinMaxSize(cols SizeCellCountInt, rows SizeCellCountInt) uint64 {
-	panic(notImplemented)
+	// Invariant required to ensure our divCeil below cannot overflow.
+	//
+	// Zig: a comptime block, `divCeil(usize, maxInt(CellCountInt), 1)
+	// catch unreachable`; a compile-time check with nothing to do at run
+	// time.
+
+	// Get our capacity to fit our rows. If the cols are too big, it may
+	// force less rows than we want meaning we need more than one page to
+	// represent a viewport.
+	cap := pageListInitialCapacity(cols)
+
+	// Calculate the number of standard sized pages we need to represent
+	// an active area.
+	var pages_exact uint64
+	if cap.rows >= rows {
+		pages_exact = 1
+	} else {
+		// Not possible to fail (Zig: `catch unreachable`):
+		// - initialCapacity guarantees at least 1 row
+		// - numerator/denominator can't overflow because of comptime check above
+		pages_exact = pageStdMathDivCeil(uint64(rows), uint64(cap.rows))
+	}
+
+	// We always need at least one page extra so that we
+	// can fit partial pages to spread our active area across two pages.
+	// Even for caps that can't fit all rows in a single page, we add one
+	// because the most extra space we need at any given time is only
+	// the partial amount of one page.
+	pages := pages_exact + 1
+	assert(pages >= 2)
+
+	// log.debug("minMaxSize cols={} rows={} cap={} pages={}", .{
+	//     cols,
+	//     rows,
+	//     cap,
+	//     pages,
+	// });
+
+	return pageListPagePoolItemSize() * pages
 }
 
 // pageListInitialCapacity is PageList.initialCapacity.
@@ -571,7 +742,38 @@ func pageListMinMaxSize(cols SizeCellCountInt, rows SizeCellCountInt) uint64 {
 // The returned capacity is always guaranteed to layout properly (not
 // overflow). We are able to support capacities up to the maximum int
 // value of cols, so this will never overflow.
-func pageListInitialCapacity(cols SizeCellCountInt) PageCapacity { panic(notImplemented) }
+func pageListInitialCapacity(cols SizeCellCountInt) PageCapacity {
+	// This is an important invariant that ensures that this function
+	// can never return an error. We verify here that our standard capacity
+	// when increased to maximum possible columns can always support at
+	// least one row in memory.
+	//
+	// IF THIS EVER FAILS: We probably need to modify our logic below
+	// to reduce other elements of the capacity (styles, graphemes, etc.).
+	// But, instead, I recommend taking a step back and re-evaluating
+	// life choices.
+	//
+	// Zig: a comptime block asserting `Page.layout(cap).total_size <=
+	// size.max_page_size` for std_capacity with cols = maxInt; a
+	// compile-time check with nothing to do at run time.
+
+	if cap, err := PageStdCapacity.Adjust(
+		PageCapacityAdjustment{cols: Some(cols)},
+	); err == nil {
+		// If we can adjust our standard capacity, we fit within the
+		// standard size and we're good!
+		return cap
+	}
+	// Ensure our error set doesn't change.
+	// Zig: comptime assert(@TypeOf(err) == error{OutOfMemory}).
+
+	// This code path means that our standard capacity can't even
+	// accommodate our column count! The only solution is to increase
+	// our capacity and go non-standard.
+	cap := PageStdCapacity
+	cap.cols = cols
+	return cap
+}
 
 // PageList.pageAllocator (line 322) is omitted; see the file header.
 
@@ -605,7 +807,66 @@ func PageListInit(
 	rows SizeCellCountInt,
 	max_size Optional[uint64],
 ) (PageList, error) {
-	panic(notImplemented)
+	// Zig: const tw = init_tw; the tw.check calls are omitted (see the
+	// file header).
+
+	// The screen starts with a single page that is the entire viewport,
+	// and we'll split it thereafter if it gets too large and add more as
+	// necessary.
+	pool, err := PageListMemoryPoolInit(pageListPagePreheat)
+	if err != nil {
+		return PageList{}, err
+	}
+	// errdefer pool.deinit(): the pool holds no memory in Go.
+
+	var page_serial uint64 = 0
+	page_list, page_size, err := pageListInitPages(
+		&pool,
+		&page_serial,
+		cols,
+		rows,
+	)
+	if err != nil {
+		return PageList{}, err
+	}
+
+	// Get our minimum max size, see doc comments for more details.
+	min_max_size := pageListMinMaxSize(cols, rows)
+
+	// We always track our viewport pin to ensure this is never an allocation
+	viewport_pin := new(PageListPin) // pool.pins.create()
+	assert(page_list.first != nil)   // page_list.first.?
+	*viewport_pin = PageListPin{node: page_list.first}
+	var tracked_pins pageListPinSet
+	// errdefer tracked_pins.deinit(pool.alloc): Go memory.
+
+	if err := tracked_pins.PutNoClobber(viewport_pin); err != nil {
+		return PageList{}, err
+	}
+
+	// errdefer comptime unreachable;
+	explicit_max_size := uint64(math.MaxUint64) // std.math.maxInt(usize)
+	if max_size.Valid {
+		explicit_max_size = max_size.Value
+	}
+	result := PageList{
+		cols:                    cols,
+		rows:                    rows,
+		pool:                    pool,
+		pages:                   page_list,
+		page_serial:             page_serial,
+		page_serial_min:         0,
+		page_size:               page_size,
+		explicit_max_size:       explicit_max_size,
+		min_max_size:            min_max_size,
+		total_rows:              uint(rows),
+		tracked_pins:            tracked_pins,
+		viewport:                PageListViewport{Tag: PageListViewportActive},
+		viewport_pin:            viewport_pin,
+		viewport_pin_row_offset: None[uint](),
+	}
+	result.AssertIntegrity()
+	return result, nil
 }
 
 // PageList.initPages_tw (line 420) is omitted; see the file header.
@@ -623,7 +884,76 @@ func pageListInitPages(
 	cols SizeCellCountInt,
 	rows SizeCellCountInt,
 ) (PageListList, uint64, error) {
-	panic(notImplemented)
+	// Zig: const tw = initPages_tw; the tw.check calls are omitted (see
+	// the file header).
+	_ = pool
+
+	var page_list PageListList
+	var page_size uint64 = 0
+
+	// Add pages as needed to create our initial viewport.
+	cap := pageListInitialCapacity(cols)
+	layout := PageLayoutOf(cap)
+	std_size := pageListStdSize()
+	pooled := layout.total_size <= std_size
+	// Zig: const page_alloc = pool.pages.arena.child_allocator; Go memory.
+
+	// Guaranteed by comptime checks in initialCapacity but
+	// redundant here for safety.
+	assert(layout.total_size <= SizeMaxPageSize)
+
+	// If we have an error, we need to clean up our non-standard pages
+	// since they're not in the pool.
+	//
+	// Zig: an errdefer that frees the buffers of non-standard pages; the
+	// garbage collector frees in Go.
+
+	rem := rows
+	for rem > 0 {
+		node := new(PageListNode) // pool.nodes.create()
+		// errdefer pool.nodes.destroy(node): Go memory.
+
+		// Zig: the buffer is a pool item of std_size bytes when pooled,
+		// otherwise an allocation of layout.total_size bytes. Its length
+		// is what page_size counts. In Go the buffer is the page's rows
+		// and cells.
+		var page_buf_len uint64
+		if pooled {
+			page_buf_len = std_size
+		} else {
+			page_buf_len = layout.total_size
+		}
+		page_rows := make([]PageRow, layout.capacity.rows)
+		page_cells := make([]PageCell, uint(layout.capacity.cols)*uint(layout.capacity.rows))
+		// errdefer destroy/free of page_buf: Go memory.
+
+		// In runtime safety modes we have to memset because the Zig allocator
+		// interface will always memset to 0xAA for undefined. In non-safe modes
+		// we use a page allocator and the OS guarantees zeroed memory.
+		//
+		// Zig: @memset(page_buf, 0). Go memory is zeroed.
+
+		// Initialize the first set of pages to contain our viewport so that
+		// the top of the first page is always the active area.
+		*node = PageListNode{
+			data:   pageInitBuf(page_rows, page_cells, layout),
+			serial: *serial,
+		}
+		node.data.size.rows = min(rem, node.data.capacity.rows)
+		rem -= node.data.size.rows
+
+		// Add the page to the list
+		page_list.Append(node)
+		page_size += page_buf_len
+		// errdefer comptime unreachable;
+
+		// Increment our serial
+		*serial += 1
+	}
+
+	assert(page_list.first != nil)
+
+	return page_list, page_size, nil
 }
 
 // AssertIntegrity is PageList.assertIntegrity.
@@ -632,14 +962,37 @@ func pageListInitPages(
 // release builds.
 //
 // Zig: self is *const PageList.
-func (self *PageList) AssertIntegrity() { panic(notImplemented) }
+func (self *PageList) AssertIntegrity() {
+	if !pageSlowRuntimeSafety {
+		return
+	}
+
+	if err := self.verifyIntegrity(); err != nil {
+		// Zig: log.err
+		warn("page_list", "PageList integrity check failed: error.%v", err)
+		panic("PageList integrity check failed")
+	}
+}
 
 // PauseIntegrityChecks is PageList.pauseIntegrityChecks.
 //
 // Pause or resume integrity checks. This is useful when you're doing
 // a multi-step operation that temporarily leaves the PageList in an
 // inconsistent state.
-func (self *PageList) PauseIntegrityChecks(pause bool) { panic(notImplemented) }
+func (self *PageList) PauseIntegrityChecks(pause bool) {
+	if !pageSlowRuntimeSafety {
+		return
+	}
+	if pause {
+		// Zig: += traps on overflow.
+		assert(self.pause_integrity_checks < ^uint(0))
+		self.pause_integrity_checks += 1
+	} else {
+		// Zig: -= traps on underflow.
+		assert(self.pause_integrity_checks > 0)
+		self.pause_integrity_checks -= 1
+	}
+}
 
 // PageList.IntegrityError. An error set is not a type in Go; its members
 // are the sentinels below.
@@ -658,7 +1011,115 @@ var (
 //
 // Zig: fn verifyIntegrity(self: *const PageList) IntegrityError!void. The
 // error is one of the PageList.IntegrityError sentinels.
-func (self *PageList) verifyIntegrity() error { panic(notImplemented) }
+func (self *PageList) verifyIntegrity() error {
+	if !pageSlowRuntimeSafety {
+		return nil
+	}
+	if self.pause_integrity_checks > 0 {
+		return nil
+	}
+
+	// Our viewport pin should never be garbage
+	assert(!self.viewport_pin.garbage)
+
+	// Grab our total rows
+	var actual_total uint = 0
+	{
+		node_ := self.pages.first
+		for node_ != nil {
+			node := node_
+			actual_total += uint(node.data.size.rows)
+			node_ = node.next
+
+			// While doing this traversal, verify no node has a serial
+			// number lower than our min.
+			if node.serial < self.page_serial_min {
+				warn(
+					"page_list",
+					"PageList integrity violation: page serial too low serial=%d min=%d",
+					node.serial, self.page_serial_min,
+				)
+				return ErrPageSerialInvalid
+			}
+		}
+	}
+
+	// Verify that our cached total_rows matches the actual row count
+	if actual_total != self.total_rows {
+		warn(
+			"page_list",
+			"PageList integrity violation: total_rows mismatch cached=%d actual=%d",
+			self.total_rows, actual_total,
+		)
+		return ErrTotalRowsMismatch
+	}
+
+	// Verify that all our tracked pins point to valid pages.
+	for _, p := range self.tracked_pins.Keys() {
+		if !self.PinIsValid(*p) {
+			return ErrTrackedPinInvalid
+		}
+	}
+
+	if self.viewport.Tag == PageListViewportPin {
+		// Verify that our viewport pin row offset is correct.
+		//
+		// Zig: a labeled block `offset:` whose fall-through returns the
+		// error.
+		var actual_offset uint
+		found := false
+		{
+			var offset uint = 0
+			for n := self.pages.last; n != nil; n = n.prev {
+				offset += uint(n.data.size.rows)
+				if n == self.viewport_pin.node {
+					// Zig: usize `-=` and `-` trap on underflow.
+					assert(offset >= uint(self.viewport_pin.y))
+					offset -= uint(self.viewport_pin.y)
+					assert(self.total_rows >= offset)
+					actual_offset = self.total_rows - offset
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			warn(
+				"page_list",
+				"PageList integrity violation: viewport pin not in list",
+			)
+			return ErrViewportPinOffsetMismatch
+		}
+
+		if cached := self.viewport_pin_row_offset; cached.Valid {
+			cached_offset := cached.Value
+			if cached_offset != actual_offset {
+				warn(
+					"page_list",
+					"PageList integrity violation: viewport pin offset mismatch cached=%d actual=%d",
+					cached_offset, actual_offset,
+				)
+				return ErrViewportPinOffsetMismatch
+			}
+		}
+
+		// Ensure our viewport has enough rows.
+		//
+		// term51 candidate B (docs/mapping.md): not reported while Resize
+		// runs; Resize asserts integrity again when it returns.
+		rows := self.total_rows - actual_offset
+		if rows < uint(self.rows) && !self.term51_resizing {
+			warn(
+				"page_list",
+				"PageList integrity violation: viewport pin rows too small rows=%d needed=%d",
+				rows, self.rows,
+			)
+			return ErrViewportPinInsufficientRows
+		}
+	}
+
+	return nil
+}
 
 // Deinit is PageList.deinit.
 //
@@ -667,7 +1128,24 @@ func (self *PageList) verifyIntegrity() error { panic(notImplemented) }
 //
 // Kept although it mostly frees: it asserts integrity first, and every
 // test calls it.
-func (self *PageList) Deinit() { panic(notImplemented) }
+func (self *PageList) Deinit() {
+	// Verify integrity before cleanup
+	self.AssertIntegrity()
+
+	// Always deallocate our hashmap.
+	//
+	// Zig: self.tracked_pins.deinit(self.pool.alloc); Go memory.
+
+	// Go through our linked list and deallocate all pages that are
+	// not standard size.
+	//
+	// Zig: frees `node.data.memory` of every page whose
+	// `memory.len > std_size`; Go memory.
+
+	// Deallocate all the pages. We don't need to deallocate the list or
+	// nodes because they all reside in the pool.
+	self.pool.Deinit()
+}
 
 // Reset is PageList.reset.
 //
@@ -678,7 +1156,82 @@ func (self *PageList) Deinit() { panic(notImplemented) }
 //
 // This can't fail because we always retain at least enough allocated
 // memory to fit the active area.
-func (self *PageList) Reset() { panic(notImplemented) }
+func (self *PageList) Reset() {
+	defer self.AssertIntegrity()
+
+	// We need enough pages/nodes to keep our active area. This should
+	// never fail since we by definition have allocated a page already
+	// that fits our size but I'm not confident to make that assertion.
+	cap := pageListInitialCapacity(self.cols)
+	assert(cap.rows > 0)
+
+	// The number of pages we need is the number of rows in the active
+	// area divided by the row capacity of a page.
+	page_count := pageStdMathDivCeil(
+		uint64(self.rows),
+		uint64(cap.rows),
+	) // catch unreachable
+
+	// Before resetting our pools we need to free any pages that
+	// are non-standard size since those were allocated outside
+	// the pool.
+	//
+	// Zig: frees `node.data.memory` of every page whose
+	// `memory.len > std_size`; Go memory.
+
+	// Reset our pools to free as much memory as possible while retaining
+	// the capacity for at least the minimum number of pages we need.
+	// The return value is whether memory was reclaimed or not, but in
+	// either case the pool is left in a valid state.
+	//
+	// Zig: `_ = self.pool.pages.reset(.{ .retain_with_limit = page_count *
+	// PagePool.item_size })` and the same for `self.pool.nodes` with
+	// `NodePool.item_size`: std methods on pools that hold no memory in Go
+	// (see the file header).
+	_ = page_count
+
+	// Our page pool relies on mmap to zero our page memory. Since we're
+	// retaining a certain amount of memory, it won't use mmap and won't
+	// be zeroed. This block zeroes out all the memory in the pool arena.
+	//
+	// Zig: a walk over the page arena's buffers with @memset; initPages
+	// below gives every page fresh, zeroed Go memory.
+
+	// Initialize our pages. This should not be able to fail since
+	// we retained the capacity for the minimum number of pages we need.
+	pages, page_size, err := pageListInitPages(
+		&self.pool,
+		&self.page_serial,
+		self.cols,
+		self.rows,
+	)
+	if err != nil {
+		panic("initPages failed")
+	}
+	self.pages, self.page_size = pages, page_size
+
+	// Our total rows always goes back to the default
+	self.total_rows = uint(self.rows)
+
+	// Update all our tracked pins to point to our first page top-left
+	// and mark them as garbage, because it got mangled in a way where
+	// semantically it really doesn't make sense.
+	{
+		for _, p := range self.tracked_pins.Keys() {
+			assert(self.pages.first != nil) // self.pages.first.?
+			p.node = self.pages.first
+			p.x = 0
+			p.y = 0
+			p.garbage = true
+		}
+
+		// Our viewport pin is never garbage
+		self.viewport_pin.garbage = false
+	}
+
+	// Move our viewport back to the active area since everything is gone.
+	self.viewport = PageListViewport{Tag: PageListViewportActive}
+}
 
 // PageListClone is PageList.Clone: the options of clone.
 type PageListClone struct {

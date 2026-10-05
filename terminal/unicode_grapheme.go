@@ -98,7 +98,9 @@ func unicodeGraphemePrecomputeValueFromInt(v uint8) unicodeGraphemePrecomputeVal
 //go:embed res/grapheme_precompute.bin
 var unicodeGraphemePrecomputeBin []byte
 
-// unicodeGraphemePrecomputeData is Precompute.data.
+// unicodeGraphemePrecomputeData is Precompute.data. Entries whose index is
+// not built from valid enum values are `undefined` upstream; they hold the
+// zero bytes of the dump and are never read (see the file header).
 var unicodeGraphemePrecomputeData = unicodeGraphemePrecomputeInit(unicodeGraphemePrecomputeBin)
 
 // unicodeGraphemePrecomputeInit decodes res/grapheme_precompute.bin into

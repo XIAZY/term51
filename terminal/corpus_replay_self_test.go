@@ -1,0 +1,1008 @@
+package terminal
+
+// Tests of the corpus replayer's own plumbing (corpus_replay*_test.go). None
+// of them needs the port: they run today. `go test ./terminal -run
+// CorpusReplaySelf`.
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+// The corpus as counted by docs/replayer-design.md section 2: suites and
+// cases per area.
+var corpusSelfCounts = map[string][2]int{
+	"csi":    {45, 52898},
+	"dcs":    {1, 648},
+	"esc":    {4, 2032},
+	"fuzz":   {9, 30900},
+	"modes":  {8, 4773},
+	"osc":    {6, 4135},
+	"parser": {27, 78397},
+	"resize": {8, 4116},
+	"scroll": {6, 5345},
+	"text":   {13, 6803},
+}
+
+// Every case file of every area parses; its cases equal the cases= of every
+// output file (golden, actions, actions_noalloc, parser) in golden/MANIFEST;
+// the totals are the corpus's; the markers are the three kinds present.
+func TestCorpusReplaySelfParseAllAreas(t *testing.T) {
+	manifest := corpusManifest(t)
+	if len(corpusAreas) != len(corpusSelfCounts) {
+		t.Fatalf("%d areas, want %d", len(corpusAreas), len(corpusSelfCounts))
+	}
+	totalSuites, totalCases := 0, 0
+	markers := map[replayOpTag]int{}
+	kindFiles := [replayKindCount]int{}
+	for _, area := range corpusAreas {
+		suites, cases := 0, 0
+		for _, suite := range corpusSuiteNames(t, area) {
+			parsed := corpusReadSuite(t, area, suite)
+			corpusCheckManifest(t, manifest, area, suite, parsed)
+			suites++
+			cases += len(parsed.cases)
+			for _, k := range parsed.kinds.kinds() {
+				kindFiles[k]++
+			}
+			for _, c := range parsed.cases {
+				for _, op := range c.ops {
+					switch op.Tag {
+					case replayOpExpectCrash, replayOpUpstreamInvalid, replayOpTransientInvariant:
+						markers[op.Tag]++
+					}
+				}
+			}
+		}
+		want := corpusSelfCounts[area.name]
+		if suites != want[0] || cases != want[1] {
+			t.Errorf("%s: %d suites %d cases, want %d suites %d cases", area.name, suites, cases, want[0], want[1])
+		}
+		totalSuites += suites
+		totalCases += cases
+	}
+	if totalSuites != 127 || totalCases != 190047 {
+		t.Errorf("%d suites %d cases, want 127 and 190047", totalSuites, totalCases)
+	}
+	if markers[replayOpExpectCrash] != 114 || markers[replayOpTransientInvariant] != 951 || markers[replayOpUpstreamInvalid] != 0 {
+		t.Errorf("markers expect_crash=%d transient_invariant=%d upstream_invalid=%d, want 114 951 0",
+			markers[replayOpExpectCrash], markers[replayOpTransientInvariant], markers[replayOpUpstreamInvalid])
+	}
+	t.Logf("%d suites, %d cases; output files per kind %v", totalSuites, totalCases, kindFiles)
+	// MANIFEST has no file that is not a suite output, but the files of the
+	// other recorders.
+	for path := range manifest {
+		area, file, _ := strings.Cut(path, "/")
+		if area == "input" || area == "tables" || area == "search" {
+			// Not terminal areas: the key and paste encoders, the static
+			// tables, and the search recorder (harness/src/search.zig).
+			continue
+		}
+		known := false
+		for _, a := range corpusAreas {
+			known = known || a.name == area
+		}
+		if !known || !strings.HasSuffix(file, ".gz") {
+			t.Errorf("MANIFEST entry %q is not in an area", path)
+		}
+	}
+}
+
+func TestCorpusReplaySelfParseSuite(t *testing.T) {
+	text := "# comment\r\n" +
+		"kinds golden actions parser\n" +
+		"  init 10 5 10000  \n" +
+		"feed 4142\n" +
+		"\n" +
+		"case a\n" +
+		"transient_invariant\n" +
+		"init 80 24 0\n" +
+		"feed\n" +
+		"feed 1b5B\n" +
+		"resize 3 4\n" +
+		"scroll top\n" +
+		"scroll active\n" +
+		"scroll delta -3\n" +
+		"dump mid\n" +
+		"dump\n" +
+		"case b\n" +
+		"expect_crash\n" +
+		"upstream_invalid\n" +
+		"case empty\n"
+	got, err := parseSuite(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantKinds := replayKindSetOf(replayKindGolden, replayKindActions, replayKindParser)
+	if got.kinds != wantKinds {
+		t.Errorf("kinds %v, want %v", got.kinds.kinds(), wantKinds.kinds())
+	}
+	want := []replayNamed{
+		{"default", []replayOp{
+			{Tag: replayOpInit, Init: replayOpInitArgs{10, 5, 10000}},
+			{Tag: replayOpFeed, Feed: []uint8("AB")},
+		}},
+		{"a", []replayOp{
+			{Tag: replayOpTransientInvariant},
+			{Tag: replayOpInit, Init: replayOpInitArgs{80, 24, 0}},
+			{Tag: replayOpFeed, Feed: []uint8{}},
+			{Tag: replayOpFeed, Feed: []uint8{0x1b, 0x5b}},
+			{Tag: replayOpResize, Resize: replayOpResizeArgs{3, 4}},
+			{Tag: replayOpScrollTop},
+			{Tag: replayOpScrollActive},
+			{Tag: replayOpScrollDelta, ScrollDelta: -3},
+			{Tag: replayOpDump, Dump: "mid"},
+			{Tag: replayOpDump, Dump: "end"},
+		}},
+		{"b", []replayOp{{Tag: replayOpExpectCrash}, {Tag: replayOpUpstreamInvalid}}},
+		{"empty", nil},
+	}
+	if !reflect.DeepEqual(got.cases, want) {
+		t.Errorf("cases\n got  %+v\n want %+v", got.cases, want)
+	}
+
+	// No cases at all: one empty "default" case, like the Zig. The default
+	// kinds are golden and actions.
+	got, err = parseSuite("# nothing\n")
+	if err != nil || len(got.cases) != 1 || got.cases[0].name != "default" || len(got.cases[0].ops) != 0 {
+		t.Errorf("empty suite: %+v, %v", got, err)
+	}
+	if got.kinds != replayKindSetOf(replayKindGolden, replayKindActions) {
+		t.Errorf("default kinds %v", got.kinds.kinds())
+	}
+
+	for _, bad := range []string{
+		"feed 123\n", "feed zz\n", "scroll sideways\n", "scroll\n", "scroll delta\n", "frob\n",
+		"init 1 2\n", "init 70000 1 1\n", "init 1 1 -1\n", "resize 1\n", "case\n", "kinds nope\n",
+	} {
+		if _, err := parseSuite(bad); err == nil {
+			t.Errorf("parseSuite(%q) succeeded", bad)
+		}
+	}
+	if _, err := parseSuite("frob\n"); !errors.Is(err, errReplayBadCase) {
+		t.Errorf("unknown op: %v, want BadCase", err)
+	}
+}
+
+func TestCorpusReplaySelfSelect(t *testing.T) {
+	// i*(total-1)/(n-1): the first and the last case are always in.
+	want := []int{0, 69, 139, 209, 279, 348, 418, 488, 558, 628, 697, 767, 837, 907, 977, 1046, 1116, 1186, 1256, 1326}
+	if got := corpusSelect(1327, 20, nil); !reflect.DeepEqual(got, want) {
+		t.Errorf("corpusSelect(1327, 20) = %v, want %v", got, want)
+	}
+	if got := corpusSelect(1327, 3, nil); !reflect.DeepEqual(got, []int{0, 663, 1326}) {
+		t.Errorf("corpusSelect(1327, 3) = %v", got)
+	}
+	// Deterministic, sorted, without duplicates, markers added.
+	for _, c := range []struct{ total, n int }{{1, 20}, {2, 20}, {20, 20}, {21, 20}, {52898, 20}, {100, 1}, {100, 2}, {100, 0}} {
+		a := corpusSelect(c.total, c.n, []int{5, 5, 99})
+		b := corpusSelect(c.total, c.n, []int{99, 5, 5})
+		if !reflect.DeepEqual(a, b) {
+			t.Errorf("%v: not deterministic: %v %v", c, a, b)
+		}
+		for i := 1; i < len(a); i++ {
+			if a[i] <= a[i-1] {
+				t.Errorf("%v: not increasing: %v", c, a)
+			}
+		}
+		for _, v := range a {
+			if v < 0 || v >= c.total {
+				t.Errorf("%v: index %d out of range", c, v)
+			}
+		}
+		if c.total > 5 && c.n >= 1 && c.n < c.total {
+			found := false
+			for _, v := range a {
+				found = found || v == 5
+			}
+			if !found {
+				t.Errorf("%v: marked case 5 missing from %v", c, a)
+			}
+		}
+		if c.n >= 1 && c.total >= 1 && a[0] != 0 {
+			t.Errorf("%v: first case missing from %v", c, a)
+		}
+	}
+	if got := corpusSelect(5, 20, nil); !reflect.DeepEqual(got, []int{0, 1, 2, 3, 4}) {
+		t.Errorf("n > total: %v", got)
+	}
+	if got := corpusSelect(5, 0, nil); len(got) != 5 {
+		t.Errorf("n = 0 is all: %v", got)
+	}
+	if got := corpusSelect(0, 20, nil); got != nil {
+		t.Errorf("empty suite: %v", got)
+	}
+	if got := corpusSelect(100, 1, []int{7, 200}); !reflect.DeepEqual(got, []int{0, 7}) {
+		t.Errorf("one case and a marker: %v", got)
+	}
+
+	// The first case of each marker kind of a suite.
+	cases := []replayNamed{
+		{"c0", nil},
+		{"c1", []replayOp{{Tag: replayOpTransientInvariant}}},
+		{"c2", []replayOp{{Tag: replayOpExpectCrash}}},
+		{"c3", []replayOp{{Tag: replayOpTransientInvariant}}},
+		{"c4", []replayOp{{Tag: replayOpExpectCrash}}},
+	}
+	if got := corpusFirstMarked(cases); !reflect.DeepEqual(got, []int{1, 2}) {
+		t.Errorf("corpusFirstMarked = %v", got)
+	}
+
+	// On a real suite: the marked case of fuzz/resize_scrolled is selected.
+	area := corpusAreaByName(t, "fuzz")
+	parsed := corpusReadSuite(t, area, "resize_scrolled")
+	marked := corpusFirstMarked(parsed.cases)
+	if len(marked) != 1 {
+		t.Fatalf("resize_scrolled marked cases %v", marked)
+	}
+	sel := corpusSelect(len(parsed.cases), 3, marked)
+	found := false
+	for _, v := range sel {
+		found = found || v == marked[0]
+	}
+	if !found || len(sel) < 3 {
+		t.Errorf("selection %v lacks the marked case %v", sel, marked)
+	}
+}
+
+func TestCorpusReplaySelfConfig(t *testing.T) {
+	env := func(kv ...string) func(string) string {
+		m := map[string]string{}
+		for i := 0; i < len(kv); i += 2 {
+			m[kv[i]] = kv[i+1]
+		}
+		return func(k string) string { return m[k] }
+	}
+	cfg, err := corpusConfigFrom(env(), false)
+	if err != nil || cfg.sample != 20 || cfg.full || cfg.short || cfg.exhaustive() || cfg.suiteMax() != 10 || cfg.testMax() != 50 {
+		t.Errorf("defaults: %+v %v", cfg, err)
+	}
+	if !reflect.DeepEqual(cfg.skip(), []string{"layout."}) {
+		t.Errorf("default skip list %v", cfg.skip())
+	}
+	cfg, _ = corpusConfigFrom(env(), true)
+	if cfg.sample != 3 {
+		t.Errorf("-short sample %d", cfg.sample)
+	}
+	cfg, _ = corpusConfigFrom(env("TERM51_SAMPLE", "7"), true)
+	if cfg.sample != 7 {
+		t.Errorf("TERM51_SAMPLE with -short: %d", cfg.sample)
+	}
+	cfg, _ = corpusConfigFrom(env("TERM51_FULL", "1", "TERM51_STRICT", "1", "TERM51_REPORT_MAX", "4",
+		"TERM51_FAIL_LIST", "f", "TERM51_DIFF_DIR", "d"), true)
+	if !cfg.full || !cfg.exhaustive() || cfg.skip() != nil || cfg.suiteMax() != 4 || cfg.testMax() != 20 ||
+		cfg.failList != "f" || cfg.diffDir != "d" {
+		t.Errorf("full: %+v", cfg)
+	}
+	cfg, err = corpusConfigFrom(env("TERM51_ONLY", "^csi/cup/filled_.*_c1$"), false)
+	if err != nil || !cfg.exhaustive() || !cfg.wants("csi", "cup", "filled_H_c1") || cfg.wants("csi", "cup", "filled_H_c10") ||
+		cfg.wants("csi", "cub", "filled_H_c1") {
+		t.Errorf("only regexp: %+v %v", cfg, err)
+	}
+	list := filepath.Join(t.TempDir(), "fails")
+	if err := os.WriteFile(list, []byte("csi/cup:filled_H_c1:golden\ncsi/cup:a:b:actions\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = corpusConfigFrom(env("TERM51_ONLY", "@"+list), false)
+	if err != nil || !cfg.exhaustive() || !cfg.wants("csi", "cup", "filled_H_c1") || !cfg.wants("csi", "cup", "a:b") ||
+		cfg.wants("csi", "cup", "a") {
+		t.Errorf("only list: %+v %v", cfg, err)
+	}
+	for _, bad := range [][]string{{"TERM51_SAMPLE", "x"}, {"TERM51_REPORT_MAX", "-1"}, {"TERM51_ONLY", "("}, {"TERM51_ONLY", "@/nonexistent/x"}} {
+		if _, err := corpusConfigFrom(env(bad...), false); err == nil {
+			t.Errorf("%v accepted", bad)
+		}
+	}
+}
+
+func TestCorpusReplaySelfCompare(t *testing.T) {
+	want := "## case x\n== dump end\nreplies=\nterm.cols=10\n[screen primary]\nscreen.cursor.x=1\npages.cols=10\nlayout.pages.nodes=10x5/10x4246\nrow 0: dirty\n t 0: \"ABC\"\nrow 1:\n"
+	skip := []string{"layout."}
+
+	if d, ok := corpusCompare([]byte(want), []byte(want), skip); !ok {
+		t.Errorf("equal texts differ: %+v", d)
+	}
+
+	// A difference in a skipped line only.
+	layout := strings.Replace(want, "10x4246", "10x4000", 1)
+	if d, ok := corpusCompare([]byte(layout), []byte(want), skip); !ok {
+		t.Errorf("layout line not skipped: %+v", d)
+	}
+	if d, ok := corpusCompare([]byte(layout), []byte(want), nil); ok || d.line != 8 {
+		t.Errorf("strict: %+v %v", d, ok)
+	}
+	if n := corpusSkippedDiffs([]byte(layout), []byte(want), skip); n != 1 {
+		t.Errorf("skipped diffs %d, want 1", n)
+	}
+	if n := corpusSkippedDiffs([]byte(want), []byte(want), skip); n != 0 {
+		t.Errorf("skipped diffs of equal texts %d", n)
+	}
+	if n := corpusSkippedDiffs([]byte("a\n"), []byte("layout.x\nlayout.y\n"), skip); n != 2 {
+		t.Errorf("a missing skipped line counts: %d", n)
+	}
+
+	// A skipped line present on one side only.
+	if d, ok := corpusCompare([]byte(strings.Replace(want, "layout.pages.nodes=10x5/10x4246\n", "", 1)), []byte(want), skip); !ok {
+		t.Errorf("a missing layout line is not skipped: %+v", d)
+	}
+
+	// A real difference: line number counts the section lines, label and
+	// nearest header come from want.
+	got := strings.Replace(want, " t 0: \"ABC\"", " t 0: \"ABD\"", 1)
+	d, ok := corpusCompare([]byte(got), []byte(want), skip)
+	wantDiff := corpusDiff{line: 10, got: ` t 0: "ABD"`, want: ` t 0: "ABC"`, label: "end", near: "row 0: dirty"}
+	if ok || d != wantDiff {
+		t.Errorf("diff %+v, want %+v", d, wantDiff)
+	}
+	d, _ = corpusCompare([]byte(strings.Replace(want, "screen.cursor.x=1", "screen.cursor.x=2", 1)), []byte(want), skip)
+	if d.line != 6 || d.near != "[screen primary]" || d.label != "end" {
+		t.Errorf("diff in the screen header block: %+v", d)
+	}
+	d, _ = corpusCompare([]byte("## case y\n"), []byte(want), skip)
+	if d.line != 1 || d.label != "-" || d.near != "" || d.got != "## case y" {
+		t.Errorf("diff in the case line: %+v", d)
+	}
+
+	// A text that ends early or late.
+	d, ok = corpusCompare([]byte(want[:len(want)-len("\nrow 1:\n")]), []byte(want), skip)
+	if ok || d.line != 11 || d.got != "<end of text>" || d.want != "row 1:" {
+		t.Errorf("short got: %+v", d)
+	}
+	d, ok = corpusCompare([]byte(want+"extra\n"), []byte(want), skip)
+	if ok || d.line != 12 || d.got != "extra" || d.want != "" {
+		t.Errorf("long got: %+v", d)
+	}
+	d, ok = corpusCompare([]byte(strings.TrimSuffix(want, "\n")), []byte(want), skip)
+	if ok || d.got != "<end of text>" {
+		t.Errorf("missing final newline: %+v %v", d, ok)
+	}
+
+	// Long lines are cut.
+	long := strings.Repeat("x", 500)
+	d, _ = corpusCompare([]byte("a\n"+long+"\n"), []byte("a\ny\n"), skip)
+	if d.got != strings.Repeat("x", 300)+"..." || d.want != "y" {
+		t.Errorf("cut line: %q", d.got)
+	}
+}
+
+type corpusSelfReporter struct{ errors, fails int }
+
+func (r *corpusSelfReporter) Helper()      {}
+func (r *corpusSelfReporter) Error(...any) { r.errors++ }
+func (r *corpusSelfReporter) Fail()        { r.fails++ }
+
+func TestCorpusReplaySelfReport(t *testing.T) {
+	m := corpusMismatch{
+		area: "csi", suite: "cup", caseName: "filled_H_rnone_c0", kind: replayKindGolden,
+		diff: corpusDiff{line: 57, got: "screen.cursor.x=2", want: "screen.cursor.x=1", label: "end", near: "[screen primary]"},
+	}
+	want := "MISMATCH csi/cup case=filled_H_rnone_c0 kind=golden dump=end line 57\n" +
+		"  got:  screen.cursor.x=2\n" +
+		"  want: screen.cursor.x=1\n" +
+		"  near: [screen primary]"
+	if got := corpusFormatMismatch(m); got != want {
+		t.Errorf("report\n got  %q\n want %q", got, want)
+	}
+	m.split, m.kind, m.diff.near = "op:2,at:5", replayKindActionsNoalloc, ""
+	want = "MISMATCH csi/cup case=filled_H_rnone_c0 kind=actions_noalloc split=op:2,at:5 dump=end line 57\n" +
+		"  got:  screen.cursor.x=2\n" +
+		"  want: screen.cursor.x=1"
+	if got := corpusFormatMismatch(m); got != want {
+		t.Errorf("split report\n got  %q\n want %q", got, want)
+	}
+
+	st := &corpusSuiteStats{cases: 1330, run: 20, skipped: 1, skippedLines: 4}
+	st.mismatch[replayKindGolden] = 2
+	st.mismatch[replayKindActions] = 1
+	if got, want := corpusSummary("csi", "cup", st, false),
+		"SUITE csi/cup cases=1330 run=20 skipped=1 mismatch=3 (golden=2 actions=1) skipped_lines=4"; got != want {
+		t.Errorf("summary %q, want %q", got, want)
+	}
+	if got, want := corpusSummary("csi", "cup", &corpusSuiteStats{cases: 3, run: 3}, true),
+		"SUITE csi/cup cases=3 run=3 skipped=0 mismatch=0 layout_lines_differ=0"; got != want {
+		t.Errorf("summary %q, want %q", got, want)
+	}
+
+	// Caps: 10 reports per suite and 50 per test; the rest are only failures.
+	run := &corpusRun{}
+	var rep corpusSelfReporter
+	for s := 0; s < 7; s++ {
+		suite := &corpusSuiteStats{}
+		for i := 0; i < 12; i++ {
+			corpusReport(&rep, run, suite, m)
+		}
+		if suite.mismatches() != 12 || suite.reported > 10 {
+			t.Errorf("suite %d: %d mismatches, %d reported", s, suite.mismatches(), suite.reported)
+		}
+	}
+	if rep.errors != 50 || rep.fails != 7*12-50 {
+		t.Errorf("%d reports and %d silent failures, want 50 and %d", rep.errors, rep.fails, 7*12-50)
+	}
+	// TERM51_REPORT_MAX.
+	run = &corpusRun{cfg: corpusConfig{reportMax: 2}}
+	rep = corpusSelfReporter{}
+	for s := 0; s < 4; s++ {
+		suite := &corpusSuiteStats{}
+		for i := 0; i < 5; i++ {
+			corpusReport(&rep, run, suite, m)
+		}
+	}
+	if rep.errors != 8 || rep.fails != 12 {
+		t.Errorf("REPORT_MAX=2: %d reports and %d silent failures, want 8 and 12", rep.errors, rep.fails)
+	}
+}
+
+// A fail list and a diff dir are written as documented.
+func TestCorpusReplaySelfFailListAndDiffDir(t *testing.T) {
+	dir := t.TempDir()
+	run := &corpusRun{cfg: corpusConfig{failList: filepath.Join(dir, "fails"), diffDir: filepath.Join(dir, "diff")}}
+	m := corpusMismatch{area: "csi", suite: "cup", caseName: "a/b", kind: replayKindActions}
+	run.appendFailList(m)
+	m.kind = replayKindGolden
+	run.appendFailList(m)
+	data, err := os.ReadFile(run.cfg.failList)
+	if err != nil || string(data) != "csi/cup:a/b:actions\ncsi/cup:a/b:golden\n" {
+		t.Errorf("fail list %q, %v", data, err)
+	}
+	run.writeDiff(t, m, []byte("got"), []byte("want"))
+	got, err1 := os.ReadFile(filepath.Join(run.cfg.diffDir, "csi.cup.a_b.golden.got"))
+	want, err2 := os.ReadFile(filepath.Join(run.cfg.diffDir, "csi.cup.a_b.golden.want"))
+	if err1 != nil || err2 != nil || string(got) != "got" || string(want) != "want" {
+		t.Errorf("diff dir: %q %q %v %v", got, want, err1, err2)
+	}
+}
+
+func TestCorpusReplaySelfSectionsReader(t *testing.T) {
+	long := strings.Repeat("y", 3<<20) // longer than the reader's buffer
+	data := "## case a\nl1\nl2\n## case b\n## case notstart\n" + long + "\n## case c\n" + long + "\n## case d\nlast"
+	s := corpusSectionsReader(strings.NewReader(data))
+	for i, want := range []struct{ name, text string }{
+		{"a", "## case a\nl1\nl2\n"},
+		{"b", "## case b\n"},
+	} {
+		name, text, err := s.section(i)
+		if err != nil || name != want.name || string(text) != want.text {
+			t.Errorf("section %d: %q %q %v", i, name, text, err)
+		}
+	}
+	// "## case notstart" is a header like any other: sections are cut at
+	// every line that starts with it.
+	name, text, err := s.section(3)
+	if err != nil || name != "c" || string(text) != "## case c\n"+long+"\n" {
+		t.Errorf("section 3: %q %d %v", name, len(text), err)
+	}
+	if _, _, err := s.section(2); err == nil {
+		t.Error("going back succeeded")
+	}
+	name, text, err = s.section(4)
+	if err != nil || name != "d" || string(text) != "## case d\nlast" {
+		t.Errorf("section 4: %q %q %v", name, text, err)
+	}
+	if _, _, err := s.section(5); !errors.Is(err, errCorpusSectionsEnd) {
+		t.Errorf("section 5: %v", err)
+	}
+
+	// Skipping, counting.
+	s = corpusSectionsReader(strings.NewReader(data))
+	if n, err := s.count(); err != nil || n != 5 {
+		t.Errorf("count %d, %v", n, err)
+	}
+	s = corpusSectionsReader(strings.NewReader(""))
+	if n, err := s.count(); err != nil || n != 0 {
+		t.Errorf("empty count %d, %v", n, err)
+	}
+	s = corpusSectionsReader(strings.NewReader("junk\n## case a\n"))
+	if _, _, err := s.section(0); err == nil {
+		t.Error("a file that does not start with a section was accepted")
+	}
+	// A body line that merely contains the prefix is not a header.
+	s = corpusSectionsReader(strings.NewReader("## case a\n x## case b\n"))
+	if n, _ := s.count(); n != 1 {
+		t.Errorf("count %d, want 1", n)
+	}
+}
+
+// The section files of every area and kind read back in the order of the case
+// file, at least the first sections (the first 256 KB; all of them, counted
+// against the case file, with TERM51_FULL=1).
+func TestCorpusReplaySelfSectionFiles(t *testing.T) {
+	full := os.Getenv("TERM51_FULL") != ""
+	files, sections := 0, 0
+	for _, area := range corpusAreas {
+		for _, suite := range corpusSuiteNames(t, area) {
+			parsed := corpusReadSuite(t, area, suite)
+			for _, kind := range parsed.kinds.kinds() {
+				name := corpusGoldenName(suite, kind)
+				var s *corpusSections
+				if full {
+					s = corpusSectionsFile(t, area, name)
+				} else {
+					s = corpusSectionsWindow(t, area, name, 256<<10)
+				}
+				n := 0
+				for {
+					got, _, ok, err := s.read(false)
+					if err != nil {
+						t.Fatalf("%s/%s: %v", area.name, name, err)
+					}
+					if !ok {
+						break
+					}
+					if n >= len(parsed.cases) || got != parsed.cases[n].name {
+						t.Fatalf("%s/%s: section %d is %q", area.name, name, n, got)
+					}
+					n++
+				}
+				s.Close()
+				if (full || n == len(parsed.cases)) && n != len(parsed.cases) {
+					t.Errorf("%s/%s: %d sections, the case file has %d", area.name, name, n, len(parsed.cases))
+				}
+				if n == 0 {
+					t.Errorf("%s/%s: no section", area.name, name)
+				}
+				files++
+				sections += n
+			}
+		}
+	}
+	t.Logf("%d output files, %d sections read (full=%v)", files, sections, full)
+	inManifest := 0
+	for path := range corpusManifest(t) {
+		area, _, _ := strings.Cut(path, "/")
+		for _, a := range corpusAreas {
+			if a.name == area {
+				inManifest++
+			}
+		}
+	}
+	if files != inManifest {
+		t.Errorf("%d output files read, MANIFEST has %d", files, inManifest)
+	}
+}
+
+// produce on the cases that never reach the port: a case marked
+// upstream_invalid, and the markers' first lines.
+func TestCorpusReplaySelfProduce(t *testing.T) {
+	var buf bytes.Buffer
+	ops := []replayOp{{Tag: replayOpUpstreamInvalid}, {Tag: replayOpFeed, Feed: []uint8("x")}}
+	if err := produceSuite([]replayNamed{{"inv", ops}}, replayKindGolden, &buf); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := buf.String(), "## case inv\n!upstream-integrity-failure\n"; got != want {
+		t.Errorf("upstream_invalid: %q, want %q", got, want)
+	}
+	buf.Reset()
+	ops = []replayOp{{Tag: replayOpTransientInvariant}, {Tag: replayOpUpstreamInvalid}}
+	if err := produce(ops, replayKindGolden, feedMode{}, &buf); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := buf.String(), "!transient-upstream-invariant-failure-end-state-verified\n!upstream-integrity-failure\n"; got != want {
+		t.Errorf("transient + invalid: %q, want %q", got, want)
+	}
+	if !expectsCrash([]replayOp{{Tag: replayOpFeed}, {Tag: replayOpExpectCrash}}) || expectsCrash(nil) ||
+		!isUpstreamInvalid(ops) || isUpstreamInvalid([]replayOp{{Tag: replayOpFeed}}) {
+		t.Error("expectsCrash or isUpstreamInvalid")
+	}
+	// The trace kinds are not replayed yet: an error, which corpusProduce
+	// turns into a line of the output.
+	out := corpusProduce(replayNamed{"x", []replayOp{{Tag: replayOpFeed, Feed: []uint8("x")}}}, replayKindParser)
+	if !bytes.HasPrefix(out, []byte("## case x\n!replay error=")) {
+		t.Errorf("corpusProduce of an unrun kind: %q", out)
+	}
+	// The run of an upstream_invalid case is never reached.
+	func() {
+		defer func() {
+			if r := recover(); r != "unreachable" {
+				t.Errorf("runCaseUpstreamInvalid recovered %v", r)
+			}
+		}()
+		runCaseUpstreamInvalid(&runCaseState{})
+	}()
+}
+
+// ---------------------------------------------------------------------------
+// The dump.
+
+type dumpSelfTag uint8
+
+const (
+	dumpSelfTagNone dumpSelfTag = iota
+	dumpSelfTagCursorUp
+	dumpSelfTagPin
+)
+
+func (self dumpSelfTag) String() string {
+	switch self {
+	case dumpSelfTagNone:
+		return "none"
+	case dumpSelfTagCursorUp:
+		return "cursor_up"
+	case dumpSelfTagPin:
+		return "pin"
+	}
+	return ""
+}
+
+type dumpSelfEnum int8
+
+func (self dumpSelfEnum) String() string {
+	if self == 3 {
+		return "three"
+	}
+	return ""
+}
+
+type dumpSelfBools struct {
+	focused bool
+	dirty   bool
+	_pad    uint8
+}
+
+type dumpSelfOneBool struct {
+	focused bool
+}
+
+type dumpSelfInner struct {
+	x uint16
+	y int32
+}
+
+type dumpSelfUnion struct {
+	Tag      dumpSelfTag
+	CursorUp uint8
+	Pin      dumpSelfInner
+}
+
+type dumpSelfNames struct {
+	x132_column bool
+	default_    Optional[uint32]
+	_padding    uint16
+	fn          func()
+	Other       dumpSelfEnum
+}
+
+func dumpSelfText(prefix string, v any) string {
+	var buf bytes.Buffer
+	dumpAny(&buf, prefix, v)
+	return buf.String()
+}
+
+func TestCorpusReplaySelfDumpAny(t *testing.T) {
+	n := 5
+	for _, c := range []struct {
+		name string
+		v    any
+		want string
+	}{
+		{"bool", true, "p=1\n"},
+		{"false", false, "p=0\n"},
+		{"uint", uint16(65535), "p=65535\n"},
+		{"int", int64(-7), "p=-7\n"},
+		{"enum", dumpSelfEnum(3), "p=three\n"},
+		{"unnamed", dumpSelfEnum(-2), "p=#-2\n"},
+		{"optional null", Optional[uint32]{}, "p=null\n"},
+		{"optional", Some(uint32(90)), "p=90\n"},
+		{"optional enum", Some(dumpSelfEnum(3)), "p=three\n"},
+		{"optional struct", Some(dumpSelfInner{x: 1, y: -2}), "p.x=1\np.y=-2\n"},
+		{"bools", dumpSelfBools{focused: true, dirty: true}, "p=focused|dirty\n"},
+		{"bools one", dumpSelfBools{dirty: true}, "p=dirty\n"},
+		{"bools none", dumpSelfBools{}, "p=none\n"},
+		{"one bool is a plain struct", dumpSelfOneBool{focused: true}, "p.focused=1\n"},
+		{"struct", dumpSelfInner{x: 3, y: 4}, "p.x=3\np.y=4\n"},
+		{"union void", dumpSelfUnion{Tag: dumpSelfTagNone, CursorUp: 9}, "p=none\n"},
+		{"union", dumpSelfUnion{Tag: dumpSelfTagCursorUp, CursorUp: 9}, "p=cursor_up\np.cursor_up=9\n"},
+		{"union struct", dumpSelfUnion{Tag: dumpSelfTagPin, Pin: dumpSelfInner{x: 1}}, "p=pin\np.pin.x=1\np.pin.y=0\n"},
+		{"bytes", []uint8("a\\\x00\x7f\n~"), "p=a\\x5c\\x00\\x7f\\x0a~\n"},
+		{"empty bytes", []uint8{}, "p=\n"},
+		{"byte array", [3]uint8{0x41, 0x1b, 0x5c}, "p=A\\x1b\\x5c\n"},
+		{"int slice", []uint16{1, 22, 65535}, "p=[1,22,65535]\n"},
+		{"empty int slice", []int{}, "p=[]\n"},
+		{"int array", [2]uint16{7, 8}, "p.len=2\np[0]:\np[]=7\np[1]:\np[]=8\n"},
+		{"enum slice", []dumpSelfEnum{3, 1}, "p.len=2\np[0]:\np[]=three\np[1]:\np[]=#1\n"},
+		{"struct slice", []dumpSelfInner{{1, 2}}, "p.len=1\np[0]:\np[].x=1\np[].y=2\n"},
+		{"pointer", &dumpSelfInner{x: 5}, "p.*.x=5\np.*.y=0\n"},
+		{"nil pointer", (*dumpSelfInner)(nil), "p=null\n"},
+		{"pointer to int", &n, "p.*=5\n"},
+		{"float", 1.5, "p=1.5\n"},
+		{"float zero", float32(0), "p=0\n"},
+		{"float small", 0.00001, "p=0.00001\n"},
+		{"float big", 1e21, "p=1000000000000000000000\n"},
+		{"names", dumpSelfNames{x132_column: true, default_: Some(uint32(2)), _padding: 7, Other: 3},
+			"p.132_column=1\np.default=2\np.Other=three\n"},
+	} {
+		if got := dumpSelfText("p", c.v); got != c.want {
+			t.Errorf("%s:\n got  %q\n want %q", c.name, got, c.want)
+		}
+	}
+	// A name that is a keyword in Zig and a bool struct with the mapped name.
+	type flags struct {
+		x132_column bool
+		default_    bool
+	}
+	if got, want := dumpSelfText("m", flags{true, true}), "m=132_column|default\n"; got != want {
+		t.Errorf("mapped bool names: %q, want %q", got, want)
+	}
+	// NaN and the infinities are Zig's.
+	for f, want := range map[float64]string{nan(): "p=nan\n", inf(1): "p=inf\n", inf(-1): "p=-inf\n"} {
+		if got := dumpSelfText("p", f); got != want {
+			t.Errorf("%v: %q, want %q", f, got, want)
+		}
+	}
+	func() {
+		defer func() {
+			if r := recover(); r == nil || !strings.Contains(fmt.Sprint(r), "unsupported type") {
+				t.Errorf("a string did not panic: %v", r)
+			}
+		}()
+		dumpSelfText("p", "text")
+	}()
+}
+
+func nan() float64 { z := 0.0; return z / z }
+
+func inf(sign int) float64 {
+	z := 0.0
+	if sign < 0 {
+		return -1 / z
+	}
+	return 1 / z
+}
+
+func TestCorpusReplaySelfNames(t *testing.T) {
+	for in, want := range map[string]string{
+		"x132_column": "132_column", "default_": "default", "xerox": "xerox", "x": "x", "cols": "cols", "mouse_event_x10": "mouse_event_x10",
+	} {
+		if got := zigName(in); got != want {
+			t.Errorf("zigName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for in, want := range map[string]string{"cursor_up": "CursorUp", "cl": "Cl", "pin": "Pin", "a_b_c": "ABC"} {
+		if got := zigCamel(in); got != want {
+			t.Errorf("zigCamel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestCorpusReplaySelfWriters(t *testing.T) {
+	var buf bytes.Buffer
+	writeEscaped(&buf, []uint8("a\\b\x00\xff~ "))
+	if got, want := buf.String(), `a\x5cb\x00\xff~ `; got != want {
+		t.Errorf("writeEscaped %q, want %q", got, want)
+	}
+
+	for _, c := range []struct {
+		name string
+		s    Style
+		want string
+	}{
+		{"default", Style{}, "{fg=none,bg=none,ul=none,flags=none}"},
+		{"colors", Style{
+			fg_color:        StyleColor{Tag: StyleColorPalette, Palette: 5},
+			bg_color:        StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: 0x0a, g: 0xbb, b: 0xff}},
+			underline_color: StyleColor{Tag: StyleColorPalette, Palette: 255},
+		}, "{fg=pal:5,bg=rgb:0abbff,ul=pal:255,flags=none}"},
+		{"flags", Style{flags: styleFlags{bold: true, overline: true, blink: true}},
+			"{fg=none,bg=none,ul=none,flags=bold|blink|overline}"},
+	} {
+		buf.Reset()
+		writeStyle(&buf, c.s)
+		if buf.String() != c.want {
+			t.Errorf("%s: %q, want %q", c.name, buf.String(), c.want)
+		}
+	}
+
+	plain := PageCell{content_tag: PageCellContentTagCodepoint}
+	plain.content.codepoint = 'A'
+	empty := PageCell{}
+	space := PageCell{}
+	space.content.codepoint = 0x20
+	ctrl := PageCell{}
+	ctrl.content.codepoint = 0x1f
+	del := PageCell{}
+	del.content.codepoint = 0x7f
+	styled := plain
+	styled.style_id = 1
+	wide := plain
+	wide.wide = PageCellWideWide
+	prot := plain
+	prot.protected = true
+	link := plain
+	link.hyperlink = true
+	sem := plain
+	sem.semantic_content = PageCellSemanticContentInput
+	bg := PageCell{content_tag: PageCellContentTagBgColorPalette}
+	bg.content.color_palette = 9
+	for _, c := range []struct {
+		name                       string
+		cell                       PageCell
+		plainAscii, isDefault, att bool
+	}{
+		{"plain", plain, true, false, true},
+		{"empty", empty, false, true, true},
+		{"space", space, true, false, true},
+		{"control", ctrl, false, false, true},
+		{"delete", del, false, false, true},
+		{"styled", styled, false, false, false},
+		{"wide", wide, false, false, false},
+		{"protected", prot, false, false, false},
+		{"hyperlink", link, false, false, false},
+		{"semantic", sem, false, false, false},
+		{"bg palette", bg, false, false, true},
+	} {
+		if got := isPlainAscii(&c.cell); got != c.plainAscii {
+			t.Errorf("isPlainAscii(%s) = %v", c.name, got)
+		}
+		if got := cellIsDefault(&c.cell); got != c.isDefault {
+			t.Errorf("cellIsDefault(%s) = %v", c.name, got)
+		}
+		if got := cellAttrsDefault(&c.cell); got != c.att {
+			t.Errorf("cellAttrsDefault(%s) = %v", c.name, got)
+		}
+	}
+
+	// The cell lines that need no lookup in the page.
+	for _, c := range []struct {
+		cell PageCell
+		want string
+	}{
+		{ctrl, " c 4: cp=1f\n"},
+		{prot, " c 4: cp=41 protected\n"},
+		{bg, " c 4: bgpal=9\n"},
+		{PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{1, 0xab, 0xff}}},
+			" c 4: bgrgb=01abff\n"},
+	} {
+		buf.Reset()
+		dumpScreenCell(&buf, 4, &c.cell, nil)
+		if buf.String() != c.want {
+			t.Errorf("dumpScreenCell = %q, want %q", buf.String(), c.want)
+		}
+	}
+	if boolInt(true) != 1 || boolInt(false) != 0 {
+		t.Error("boolInt")
+	}
+	// dumpUnwrap fails like Zig's `.?` on null.
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("dumpUnwrap of null did not panic")
+			}
+		}()
+		dumpUnwrap(None[int]())
+	}()
+}
+
+// ---------------------------------------------------------------------------
+// The dumper against the recorded text: the dump lines of the types whose
+// values need no enum name (so they run without the port) are rebuilt from
+// the recorded lines and dumped again.
+
+// dumpSelfGoldenLines are the lines of the first sections (the first 256 KB)
+// of a golden file.
+func dumpSelfGoldenLines(t *testing.T, area, name string) []string {
+	t.Helper()
+	s := corpusSectionsWindow(t, corpusAreaByName(t, area), name, 256<<10)
+	defer s.Close()
+	var lines []string
+	for {
+		_, text, ok, err := s.read(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			return lines
+		}
+		lines = append(lines, strings.Split(string(text), "\n")...)
+	}
+}
+
+// dumpSelfSetBools sets the bool fields named in `a|b|none` of the struct that
+// ptr points to.
+func dumpSelfSetBools(t *testing.T, ptr any, names string) {
+	t.Helper()
+	v := reflect.ValueOf(ptr).Elem()
+	if names == "none" {
+		return
+	}
+	for _, name := range strings.Split(names, "|") {
+		found := false
+		for i := 0; i < v.NumField(); i++ {
+			if !strings.HasPrefix(v.Type().Field(i).Name, "_") && zigName(v.Type().Field(i).Name) == name {
+				dumpField(v, i).SetBool(true)
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("%T has no field %q", ptr, name)
+		}
+	}
+}
+
+func TestCorpusReplaySelfDumpAgainstGolden(t *testing.T) {
+	// The bool sets: modes (values, saved, default), the dirty flags, the
+	// kitty keyboard flags. Every distinct recorded line is rebuilt.
+	seen := map[string]bool{}
+	for _, suite := range corpusSuiteNames(t, corpusAreaByName(t, "modes")) {
+		for _, line := range dumpSelfGoldenLines(t, "modes", suite+".golden.gz") {
+			key, names, ok := strings.Cut(line, "=")
+			if !ok || seen[line] {
+				continue
+			}
+			var ptr any
+			switch {
+			case key == "term.modes.values" || key == "term.modes.saved" || key == "term.modes.default":
+				ptr = &ModesModePacked{}
+			case key == "term.flags.dirty":
+				ptr = &TerminalDirty{}
+			case key == "screen.dirty":
+				ptr = &ScreenDirty{}
+			case strings.HasPrefix(key, "screen.kitty_keyboard.flags["):
+				ptr = &KittyKeyFlags{}
+			default:
+				continue
+			}
+			seen[line] = true
+			dumpSelfSetBools(t, ptr, names)
+			if got := dumpSelfText(key, reflect.ValueOf(ptr).Elem().Interface()); got != line+"\n" {
+				t.Errorf("dump %q, recorded %q", got, line)
+			}
+		}
+	}
+	if len(seen) < 60 {
+		t.Errorf("only %d distinct bool-set lines in the modes suites", len(seen))
+	}
+
+	lines := dumpSelfGoldenLines(t, "csi", "cup.golden.gz")
+	var flags, region, colors []string
+	for i, l := range lines { // the first section only
+		if i > 0 && strings.HasPrefix(l, corpusSectionPrefix) {
+			break
+		}
+		switch {
+		case strings.HasPrefix(l, "term.flags."):
+			flags = append(flags, strings.SplitN(l, "=", 2)[0][len("term.flags."):])
+		case strings.HasPrefix(l, "term.scrolling_region."):
+			region = append(region, l)
+		case strings.HasPrefix(l, "term.colors.") && !strings.Contains(l, "palette"):
+			colors = append(colors, l)
+		}
+	}
+	// The order of the fields of Terminal.flags.
+	var fields []string
+	ft := reflect.TypeOf(TerminalFlags{})
+	for i := 0; i < ft.NumField(); i++ {
+		fields = append(fields, zigName(ft.Field(i).Name))
+	}
+	if !reflect.DeepEqual(flags, fields) {
+		t.Errorf("term.flags fields\n recorded %v\n Go       %v", flags, fields)
+	}
+	// Scrolling region and the unset dynamic colors.
+	if got := dumpSelfText("term.scrolling_region", TerminalScrollingRegion{top: 0, bottom: 4, left: 0, right: 9}); got != strings.Join(region, "\n")+"\n" {
+		t.Errorf("scrolling region %q, recorded %q", got, region)
+	}
+	var unset string
+	for _, name := range []string{"background", "foreground", "cursor"} {
+		unset += dumpSelfText("term.colors."+name, ColorDynamicRGB{})
+	}
+	if unset != strings.Join(colors, "\n")+"\n" {
+		t.Errorf("unset colors %q, recorded %q", unset, colors)
+	}
+
+	// A set dynamic color: r, g, b in this order, decimal.
+	for _, l := range dumpSelfGoldenLines(t, "osc", "all.golden.gz") {
+		if strings.HasPrefix(l, "term.colors.foreground.override.r=") {
+			want := "term.colors.foreground.override.r=255\nterm.colors.foreground.override.g=10\nterm.colors.foreground.override.b=0\n"
+			got := dumpSelfText("term.colors.foreground", ColorDynamicRGB{override: Some(ColorRGB{r: 255, g: 10, b: 0})})
+			if !strings.HasPrefix(got, want) || !strings.HasSuffix(got, "term.colors.foreground.default=null\n") {
+				t.Errorf("set color %q", got)
+			}
+			return
+		}
+	}
+	t.Error("no set foreground color in the osc/all golden window")
+}

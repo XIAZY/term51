@@ -56,7 +56,16 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self CSISizeReportStyle) String() string { panic(notImplemented) }
+func (self CSISizeReportStyle) String() string {
+	return csiSizeReportStyleNames[self]
+}
+
+var csiSizeReportStyleNames = [...]string{
+	CSISizeReportStyleCsi14T: "csi_14_t",
+	CSISizeReportStyleCsi16T: "csi_16_t",
+	CSISizeReportStyleCsi18T: "csi_18_t",
+	CSISizeReportStyleCsi21T: "csi_21_t",
+}
 
 // CSITitlePushPop is TitlePushPop: XTWINOPS CSI 22/23.
 type CSITitlePushPop struct {

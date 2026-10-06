@@ -756,7 +756,7 @@ func TestCb2_term51_CircBuf_getPtrSlice_every_tail_length_offset_and_slice_lengt
 						}
 					}
 					it := buf.Iterator(DatastructCircBufIteratorDirectionForward)
-					it.SeekBy(int(o))
+					it.SeekBy(int64(o))
 					for k := uint8(0); uint(k) < n; k++ {
 						expectEqual(t, 100+k, cbNext(t, &it))
 					}

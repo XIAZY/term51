@@ -183,7 +183,7 @@ func sw2ExpectData(t *testing.T, w *SearchSlidingWindow, expected string) {
 func sw2Meta(t *testing.T, w *SearchSlidingWindow, i uint) *searchSlidingWindowMeta {
 	t.Helper()
 	it := w.meta.Iterator(DatastructCircBufIteratorDirectionForward)
-	it.SeekBy(int(i))
+	it.SeekBy(int64(i))
 	m := it.Next()
 	if m == nil {
 		t.Fatalf("unwrapped a null optional")

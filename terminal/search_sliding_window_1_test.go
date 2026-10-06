@@ -242,7 +242,7 @@ func sw1AKExpectData(t *testing.T, w *SearchSlidingWindow, expected string) {
 func sw1AKMeta(t *testing.T, w *SearchSlidingWindow, i uint) *searchSlidingWindowMeta {
 	t.Helper()
 	it := w.meta.Iterator(DatastructCircBufIteratorDirectionForward)
-	it.SeekBy(int(i))
+	it.SeekBy(int64(i))
 	return sw1Unwrap(t, it.Next())
 }
 

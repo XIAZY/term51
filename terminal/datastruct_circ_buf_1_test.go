@@ -1257,8 +1257,9 @@ func TestCb1_term51_CircBuf_Iterator_seekBy_clamps_at_zero_and_saturates_at_the_
 	expectEqual(t, uint(math.MaxUint), it.idx)
 	expect(t, it.Next() == nil, "it.next() == null")
 	it.SeekBy(math.MinInt64)
-	if uint64(math.MaxUint) > isizeMinMagnitude {
-		expectEqual(t, uint(uint64(math.MaxUint)-isizeMinMagnitude), it.idx)
+	maxUint := uint64(math.MaxUint)
+	if maxUint > isizeMinMagnitude {
+		expectEqual(t, uint(maxUint-isizeMinMagnitude), it.idx)
 	} else {
 		expectEqual(t, uint(0), it.idx)
 	}

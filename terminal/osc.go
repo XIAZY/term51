@@ -33,6 +33,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // ErrWriteFailed is Zig's error.WriteFailed (std.Io.Writer.Error): a write
@@ -64,6 +65,12 @@ type oscWriter struct {
 	// oscWriterAllocating (Zig's `Allocating.init`, whose buffer is empty)
 	// behave as in Zig.
 	vtable oscWriterVTable
+
+	// Zig: Discarding.count: u64, the field of the std.Io.Writer.Discarding
+	// that embeds this writer. Go cannot recover the Discarding from its
+	// writer in drain (Zig's @fieldParentPtr), so the count lives here and
+	// only the Discarding vtable uses it; see oscWriterDiscarding.
+	count uint64
 }
 
 // oscWriterVTable selects the implementation of std.Io.Writer (Zig's
@@ -81,6 +88,9 @@ const (
 
 	// std.Io.Writer.Allocating: drain is Allocating.drain.
 	oscWriterVTableAllocating
+
+	// std.Io.Writer.Discarding: drain is Discarding.drain.
+	oscWriterVTableDiscarding
 )
 
 // isAllocating reports whether the writer's vtable is Allocating's.
@@ -278,9 +288,12 @@ func oscWriterFixedDrain(w *oscWriter, data [][]uint8, splat int) (int, error) {
 	}
 }
 
-// drain is the writer's vtable.drain: oscWriterFixedDrain or
-// oscWriterAllocatingDrain.
+// drain is the writer's vtable.drain: oscWriterFixedDrain,
+// oscWriterAllocatingDrain or oscWriterDiscardingDrain.
 func (self *oscWriter) drain(data [][]uint8, splat int) (int, error) {
+	if self.vtable == oscWriterVTableDiscarding {
+		return oscWriterDiscardingDrain(self, data, splat)
+	}
 	if self.isAllocating() {
 		return oscWriterAllocatingDrain(self, data, splat)
 	}
@@ -333,6 +346,128 @@ func (self *oscWriter) writeByte(byte_ uint8) error {
 	self.buffer[self.end] = byte_
 	self.end += 1
 	return nil
+}
+
+// printUnicodeCodepoint is std.Io.Writer.printUnicodeCodepoint (what `{u}`
+// prints): the UTF-8 encoding of c, or U+FFFD for a surrogate half or a
+// codepoint above U+10FFFF. Zig's std.unicode.utf8Encode is Go's
+// utf8.EncodeRune, which encodes and replaces exactly those.
+//
+// Zig: c is a u21.
+func (self *oscWriter) printUnicodeCodepoint(c uint32) error {
+	var buf [4]uint8
+	len_ := utf8.EncodeRune(buf[:], rune(c))
+	return self.writeAll(buf[0:len_])
+}
+
+// countSplat is std.Io.Writer.countSplat: the number of bytes of data, the
+// last slice counted splat times.
+func oscWriterCountSplat(data [][]uint8, splat int) int {
+	total := 0
+	for _, buf := range data[0 : len(data)-1] {
+		total += len(buf)
+	}
+	total += len(data[len(data)-1]) * splat
+	return total
+}
+
+// writeSplat is std.Io.Writer.writeSplat: if the number of bytes to write
+// based on `data` and `splat` fits inside the unused capacity, this does
+// not fail, does not call into the vtable, and returns the full number of
+// bytes.
+func (self *oscWriter) writeSplat(data [][]uint8, splat int) (int, error) {
+	assert(len(data) > 0)
+	buffer := self.buffer
+	count := oscWriterCountSplat(data, splat)
+	if self.end+count > len(buffer) {
+		return self.drain(data, splat)
+	}
+	for _, bytes := range data[0 : len(data)-1] {
+		copy(buffer[self.end:][0:len(bytes)], bytes)
+		self.end += len(bytes)
+	}
+	pattern := data[len(data)-1]
+	switch len(pattern) {
+	case 0:
+	case 1:
+		for i := range buffer[self.end:][0:splat] {
+			buffer[self.end+i] = pattern[0]
+		}
+		self.end += splat
+	default:
+		for i := 0; i < splat; i++ {
+			copy(buffer[self.end:][0:len(pattern)], pattern)
+			self.end += len(pattern)
+		}
+	}
+	return count, nil
+}
+
+// splatByteAll is std.Io.Writer.splatByteAll: writes the same byte many
+// times, performing the underlying write call as many times as necessary.
+//
+// Zig: n is a usize.
+func (self *oscWriter) splatByteAll(byte_ uint8, n int) error {
+	remaining := n
+	for remaining > 0 {
+		written, err := self.splatByte(byte_, remaining)
+		if err != nil {
+			return err
+		}
+		remaining -= written
+	}
+	return nil
+}
+
+// splatByte is std.Io.Writer.splatByte: writes the same byte many times,
+// allowing short writes. Does maximum of one underlying `VTable.drain`.
+func (self *oscWriter) splatByte(byte_ uint8, n int) (int, error) {
+	if self.end+n <= len(self.buffer) {
+		for i := range self.buffer[self.end:][0:n] {
+			self.buffer[self.end+i] = byte_
+		}
+		self.end += n
+		return n, nil
+	}
+	return self.writeSplat([][]uint8{{byte_}}, n)
+}
+
+// oscWriterDiscarding stands in for std.Io.Writer.Discarding: a writer
+// that discards everything written to it and counts the bytes. Zig's
+// `discarding.count` is `discarding.writer.count` (see oscWriter.count).
+// Only `init`, `count` and `drain` are ported; `fullCount` and `sendFile`
+// have no caller.
+type oscWriterDiscarding struct {
+	// Zig: writer: std.Io.Writer. Its `count` field is Discarding.count.
+	writer oscWriter
+}
+
+// oscWriterDiscardingInit is std.Io.Writer.Discarding.init. Zig:
+// `var discarding: std.Io.Writer.Discarding = .init(&.{});` is
+// `discarding := oscWriterDiscardingInit(nil)`.
+func oscWriterDiscardingInit(buffer []uint8) oscWriterDiscarding {
+	return oscWriterDiscarding{
+		writer: oscWriter{
+			vtable: oscWriterVTableDiscarding,
+			buffer: buffer,
+			count:  0,
+		},
+	}
+}
+
+// oscWriterDiscardingDrain is std.Io.Writer.Discarding.drain: count the
+// buffered bytes and every byte of data (the last slice splat times), then
+// empty the buffer.
+func oscWriterDiscardingDrain(w *oscWriter, data [][]uint8, splat int) (int, error) {
+	slice := data[0 : len(data)-1]
+	pattern := data[len(slice)]
+	written := len(pattern) * splat
+	for _, bytes := range slice {
+		written += len(bytes)
+	}
+	w.count += uint64(w.end + written)
+	w.end = 0
+	return written, nil
 }
 
 // OSCCommand is osc.Command.

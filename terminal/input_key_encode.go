@@ -130,7 +130,9 @@
 //   - `inputKeyEncodeCtrlSeqCtrlOnly`, ctrlSeq's
 //     `comptime (key.Mods{ .ctrl = true }).int()`, computed once at
 //     start-up;
-//   - `inputKeyEncodeKittySequenceEventNames`, the names table of String.
+//   - `inputKeyEncodeKittySequenceEventNames`, the names table of String;
+//   - `inputKeyEncodeSlicesOverlap`, the aliasing check of copyToBuf's
+//     @memcpy.
 //
 // # Omitted
 //
@@ -1048,7 +1050,7 @@ func inputKeyEncodePcStyleFunctionKey(
 // inputKeyEncodeCtrlSeqCtrlOnly is ctrlSeq's
 // `const ctrl_only = comptime (key.Mods{ .ctrl = true }).int();`, computed
 // once at start-up.
-var inputKeyEncodeCtrlSeqCtrlOnly InputKeyModsModsBacking = 0b10 // TEMP-ENC-B: becomes InputKeyMods{ctrl: true}.Int() once Mods.Int exists
+var inputKeyEncodeCtrlSeqCtrlOnly = InputKeyMods{ctrl: true}.Int()
 
 // inputKeyEncodeCtrlSeq is key_encode.ctrlSeq: returns the C0 byte for the
 // key event if it should be used. This converts a key event into the

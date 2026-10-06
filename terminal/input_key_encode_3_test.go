@@ -101,6 +101,9 @@ func ke3ABExpect(t *testing.T, f ke3WriterFn, expected string, event InputKeyKey
 		w2 := oscWriterFixed(small[0:capacity:capacity])
 		if capacity < len(expected) {
 			ke3ExpectError(t, ErrWriteFailed, f(&w2, event, opts))
+			// Go-only check: a fixed writer keeps what fit before the failure,
+			// which is the start of the expected output.
+			expectEqualStrings(t, expected[0:capacity], string(w2.buffered()))
 		} else {
 			zigTry(t, f(&w2, event, opts))
 			expectEqualStrings(t, expected, string(w2.buffered()))
@@ -2365,4 +2368,28 @@ func TestKe3_panic_pcStyleFunctionKey_key_outside_the_table(t *testing.T) {
 	ke3ExpectPanic(t, func() {
 		inputKeyEncodePcStyleFunctionKey(InputKeyKey(-1), InputKeyMods{}, false, false, false, false)
 	})
+}
+
+// Go-only: panic test: inputKeyEncodeCopyToBuf: the source overlaps the
+// destination (@memcpy arguments alias)
+func TestKe3_panic_copyToBuf_arguments_alias(t *testing.T) {
+	testPlatform(t, "linux")
+	var buf [8]uint8
+	// The same bytes.
+	ke3ExpectPanic(t, func() {
+		inputKeyEncodeCopyToBuf(buf[0:4], buf[0:4])
+	})
+	// The source starts inside the destination.
+	ke3ExpectPanic(t, func() {
+		inputKeyEncodeCopyToBuf(buf[0:8], buf[2:6])
+	})
+	// The destination starts inside the source.
+	ke3ExpectPanic(t, func() {
+		inputKeyEncodeCopyToBuf(buf[2:8], buf[0:4])
+	})
+	// Adjacent ranges do not alias: copied as usual.
+	copy(buf[0:4], "abcd")
+	got, err := inputKeyEncodeCopyToBuf(buf[4:8], buf[0:4])
+	zigTry(t, err)
+	expectEqualStrings(t, "abcd", string(got))
 }

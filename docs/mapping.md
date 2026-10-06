@@ -1044,7 +1044,7 @@ bit-exact.
   Go counterparts are in the other two files (`std.hash.autoHashStrat` is
   `auto_hash.hash`, i.e. a `stdHashAutoHashHash...` function).
 
-#### `std_hash_auto_hash.go` (instantiations reached by `PageEntry.hash`)
+#### `std_hash_auto_hash.go` (instantiations reached by `PageEntry.hash` and `KeyEvent.bindingHash`)
 
 - `hash`, `hashPointer`, `hashArray` and `autoHash` dispatch on the key type
   at compile time. Each instantiation the library reaches is written out as
@@ -1059,12 +1059,26 @@ bit-exact.
   | `autoHash(&h, v)` (v: `size.OffsetInt` = u32) | `stdHashAutoHashAutoHashU32(&h, v)` -> `stdHashAutoHashHashU32` |
   | `autoHashStrat(&h, slice, .Deep)` (`[]const u8`) | `stdHashAutoHashHashSliceU8(&h, slice, stdHashAutoHashHashStrategyDeep)` -> `stdHashAutoHashHashPointerSliceU8` -> `stdHashAutoHashHashArraySliceU8` -> `stdHashAutoHashHashU8` per byte, then `stdHashAutoHashHashUsize(len)` |
 
+  | Zig call (in `input.key.KeyEvent.bindingHash`) | Go |
+  |---|---|
+  | `autoHash(&h, self.key)` (`key.Key`: enum(c_int)) | `stdHashAutoHashAutoHashEnumCInt(&h, int32(key))` -> `stdHashAutoHashHashEnumCInt` |
+  | `autoHash(&h, self.unshifted_codepoint)` (u21) | `stdHashAutoHashAutoHashU21(&h, cp)` -> `stdHashAutoHashHashU21` |
+  | `autoHash(&h, self.mods.binding())` (`key_mods.Mods`: packed struct(u16)) | `stdHashAutoHashAutoHashPackedStructU16(&h, mods.Binding().Int())` -> `stdHashAutoHashHashPackedStructU16` |
+
+  The Go functions appear in auto_hash.zig's order: the `hashPointer`,
+  `hashArray` and `hash` instantiations first, then the `autoHash` ones.
+
 - `HashStrategy` is `stdHashAutoHashHashStrategy` (`...Shallow`, `...Deep`,
   `...DeepRecursive`) with a `String()` from a name table.
 - Bytes hashed: the enum(u1) tag is 1 byte (enums have a unique
   representation, `@sizeOf` is 1); a u32 is its 4 little-endian bytes; a
   `[]const u8` with `.Deep` is every byte through a separate `update` call,
-  then the length as a usize. **usize is hashed as 8 bytes on every
+  then the length as a usize. An enum(c_int) is its 4 bytes (unique
+  representation). A u21 has no unique representation (`@sizeOf` is 4 for
+  21 bits), so the Shallow shortcut is not taken and the integer prong
+  hashes `divCeil(21, 8)` = 3 low bytes. A packed struct(u16) has a unique
+  representation (16 bits in 2 bytes) and is hashed as its 2 bytes with
+  `.Shallow`, the only strategy `autoHash` passes. **usize is hashed as 8 bytes on every
   platform** (the recorded data's width); Zig built for 32-bit ARM would
   hash 4 bytes and give different hyperlink hashes (checked: e.g.
   `autoHashStrat("hello", .Deep)` is 0x759b537a1dec968b on aarch64,
@@ -1078,14 +1092,19 @@ bit-exact.
   (`@intFromPtr`), which Go cannot take without `unsafe` and the library
   never does: the Go function panics `not ported` there.
 - `stdHashAutoHashHashEnumU1` asserts its argument is 0 or 1 (a u1 cannot
-  hold more).
+  hold more); `stdHashAutoHashHashU21` asserts its argument is at most
+  0x1FFFFF (a u21 cannot hold more).
+- `stdHashAutoHashHashPackedStructU16` with `.Deep` or `.DeepRecursive`
+  would hash the struct field by field in Zig; no caller passes them, and the
+  Go function panics `not ported` there.
 - `hash_map.AutoContext` does not reach this file: every key type it is used
   with (u32, i32, u64, usize, `Offset(Cell)` = packed struct(u32)) has a
   unique representation, so `std.hash_map.getAutoHashFn` returns
   `Wyhash.hash(0, std.mem.asBytes(&key))`, i.e. `stdHashWyhashHash(0, <key
   bytes LE at the Zig width>)` (usize 8 bytes).
 - Not ported: every other instantiation (pointers, optionals, arrays,
-  vectors, structs, unions, error unions), `typeContainsSlice`.
+  vectors, structs other than a packed struct(u16) hashed shallowly, unions,
+  error unions, floats), `typeContainsSlice`.
 
 #### Tests
 
@@ -1098,15 +1117,19 @@ bit-exact.
   other instantiations; they are kept as comments). The unnamed `test { _ =
   ...; }` block has no assertions and is not translated.
 - `std_hash_auto_hash_test.go`: none of auto_hash.zig's 12 tests can be
-  translated (they hash only key types that are not ported; the list with
-  the type each needs is in the file header).
+  translated (they hash only key types that are not ported, none of them a
+  u21, an enum(c_int) or a packed struct(u16); the list with the type each
+  needs is in the file header).
 - Go-only tests (values printed by Zig 0.15.2, see "Cross-check"):
   `TestStdHashWyhash_go_only_seeded_inputs_match_zig`,
   `TestStdHash_go_only_int_u64_matches_zig`,
   `TestStdHashAutoHash_go_only_autoHash_u32`, `..._autoHash_enum_u1`,
   `..._enum_u1_out_of_range_panics`, `..._hash_usize_is_8_bytes`,
   `..._autoHashStrat_slice_u8`, `..._slice_shallow_panics`,
-  `..._page_entry_sequence_matches_zig`.
+  `..._page_entry_sequence_matches_zig` (PageEntry.hash instantiations);
+  `..._bindingHash_matches_zig`, `..._bindingHash_instantiations_match_zig`,
+  `..._u21_out_of_range_panics`, `..._packed_struct_u16_deep_panics`
+  (KeyEvent.bindingHash instantiations). 13 Go-only tests in all.
 
 #### Cross-check against Zig 0.15.2
 
@@ -1126,6 +1149,16 @@ recompute the same digests:
   slice; 5000 random entries, ids 0..120 bytes, uris 0..300 bytes) plus three
   fixed entries: Go equals 64-bit Zig (0x118773d096266e81). 32-bit Zig
   differs, as expected (usize length is 4 bytes there).
+- `KeyEvent.bindingHash` instantiations (enum(c_int) key, u21 codepoint,
+  packed struct(u16) mods): 800 rows (random seed, key, codepoint, mods;
+  rows 0 to 2 fixed: `.unidentified`/0/0, `.paste`/0x1FFFFF/0xffff,
+  `.key_a`/0x41/0x24f3), each giving `autoHash` of the key, of the
+  codepoint and of the mods alone, the sequence key, codepoint, mods,
+  codepoint, key, and `bindingHash`. Same digest on aarch64 and arm Zig
+  (0x980e85effae8addf; no usize is hashed) and in Go native and on 32-bit
+  ARM; the first five rows and the three fixed `bindingHash` values
+  (0xda83d4271fcd766d, 0x812652d9327a7a50, 0x5d10bb1a32970b2f) are pinned
+  individually.
 
 ### `size.zig`, `point.zig`, `Tabstops.zig`
 
@@ -2063,7 +2096,7 @@ short.
 | `self.gpa()` | `gpa()` returns nothing (wireframe); VtStream calls it and passes `terminalGpa{}` (an added empty type, NOT a Zig declaration) to `StreamInitAlloc`, which only tells nil from non-nil | the stream holds `&handler`, a pointer to its own copy of the value Zig stores |
 | `catch \|err\| switch (err) { ... }` over `Page.CloneFromError` (insertLines and deleteLines, inline twice) | `terminalCloneFromErrorAdjustment(err)` (NOT a Zig declaration), one helper for both | `default: panic("unreachable")` for an error outside the set; the `catch \|e\| switch (e)` on increaseCapacity is written in place (`ErrOutOfMemory`, `ErrOutOfSpace`, else unreachable) |
 | `std.unicode.Utf8View.init(str)` + iterator (printString) | `utf8.Valid`, then `range string(str)` | the osc_encoding.go equivalence; invalid input returns `ErrInvalidUtf8` before anything is printed, as Zig |
-| `std.io.fixedBufferStream(buf)` writer (printAttributes) | a local `writeAll` closure over `buf` and `pos`: copies what fits, `ErrNoSpaceLeft` if not all fits | the bytes left in `buf` on failure equal Zig's (std's writeAll writes until the buffer is full, then fails). `print` formats with `itoa` first, then writes. `input_key_mods.go`'s `inputKeyModsFixedBufferStream` is still a wireframe of another file, so it is not reused (could be shared later) |
+| `std.io.fixedBufferStream(buf)` writer (printAttributes) | a local `writeAll` closure over `buf` and `pos`: copies what fits, `ErrNoSpaceLeft` if not all fits | the bytes left in `buf` on failure equal Zig's (std's writeAll writes until the buffer is full, then fails). `print` formats with `itoa` first, then writes. `input_key_mods.go`'s `inputKeyModsFixedBufferStream` (implemented with the encoders) is a separate stand-in and is not reused (could be shared later, post-port optimisation item 30) |
 | `log.warn` / `log.err` | `warn("terminal", ...)`, `// Zig: log.err` where it is `err`; `std.log.warn` (index) is `warn("default", ...)`; `{}` of an error is `error.%v` | `log.debug` / `log.info` are comments |
 
 #### Pointers
@@ -2164,7 +2197,7 @@ implementation adds.
 | Zig | Go | Notes |
 |---|---|---|
 | `writer.print(fmt, args)` | one `writer.writeAll` of the same bytes, Zig's print line in a comment above | style.go precedent. `{d}` is `itoa`, `{x:0>2}` of a u8 is `formatterHex2` (two lowercase hex digits), `{s}`/`{c}` are concatenation; `print("{f}", .{x})` is `writeAll(x.Format())`. For the fixed, allocating and discarding writers, writing the pieces one after the other gives the same bytes and the same error as one write (fixedDrain fills to the brim either way) |
-| `std.io.fixedBufferStream(&buf)` + `.writer()` + `getWritten()` (formatWithState's HTML/VT header) | `oscWriterFixed(buf[:])`, `buffered()` | every write is `catch return error.WriteFailed`, and a fixed writer's failure is ErrWriteFailed; the unimplemented `inputKeyModsFixedBufferStream` (input_key_mods.go) is not used |
+| `std.io.fixedBufferStream(&buf)` + `.writer()` + `getWritten()` (formatWithState's HTML/VT header) | `oscWriterFixed(buf[:])`, `buffered()` | every write is `catch return error.WriteFailed`, and a fixed writer's failure is ErrWriteFailed; `inputKeyModsFixedBufferStream` (input_key_mods.go, a std.io.FixedBufferStream stand-in failing with ErrNoSpaceLeft) is not used |
 | `std.unicode.Utf8View.init(s) catch unreachable` + `iterator().nextCodepoint()` | `utf8.Valid(s)` (false panics "unreachable") + `utf8.DecodeRune` loop | Go's validation rejects exactly what Zig's does (overlong, surrogates, > U+10FFFF, truncated); on valid input both decode the same codepoints |
 | `ArrayList.appendNTimes`; `ensureUnusedCapacity` + `appendNTimesAssumeCapacity` | `formatterAppendNTimes[T](list *[]T, v T, n uint64)` | `catch return error.WriteFailed` on list growth cannot happen in Go |
 | `std.enums.values(charsets.Slots)` | package var `formatterCharsetsSlotsValues` | built once |
@@ -2536,8 +2569,9 @@ error name as their text for the same reason.
 
 Files: `input_key_encode.go`, `input_key_mods.go`, `input_key.go`,
 `input_kitty.go`, `input_function_keys.go`, `input_paste.go`,
-`input_config.go`, `platform.go`, and the u21 case in
-`std_hash_auto_hash.go`. Ported by mitchellh (project lead), reviewed by
+`input_config.go`, `platform.go`, and the three autoHash cases that
+`KeyEvent.bindingHash` reaches in `std_hash_auto_hash.go` (enum(c_int), u21,
+packed struct(u16)). Ported by mitchellh (project lead), reviewed by
 anchron.
 
 - **Tables** (the `Key` enum and its names, the key codepoint map, the kitty
@@ -2557,8 +2591,10 @@ anchron.
 - **`KeyEvent.bindingHash`** uses the ported Wyhash with Zig's `autoHash`
   feeding: the key as a 4-byte c_int enum, the u21 codepoint as 3
   little-endian bytes, and `mods.binding()` as its 2-byte packed value.
-- **Fixed-buffer stream** for `RemapSet` formatting writes what fits, then
-  returns `ErrNoSpaceLeft`, as `std.io.fixedBufferStream` does. It is a
+- **Fixed-buffer stream** (`inputKeyModsFixedBufferStream`) for `RemapSet`
+  formatting, also used by `Key.fromW3C` and `Key.w3c` (input_key.go),
+  writes what fits, then returns `ErrNoSpaceLeft`, as
+  `std.io.fixedBufferStream` does. It is a
   separate stand-in from Terminal's `printAttributes` one (consolidation is
   post-port optimisation item 30).
 

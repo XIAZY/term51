@@ -65,6 +65,9 @@ func ke2Expect(t *testing.T, f ke2Func, expected string, event InputKeyKeyEvent,
 		w2 := oscWriterFixed(small[0:capacity])
 		if capacity < len(expected) {
 			ke2ExpectWriteFailed(t, f(&w2, event, opts))
+			// Go-only check: a fixed writer keeps what fit before the failure,
+			// which is the start of the expected output.
+			expectEqualStrings(t, expected[0:capacity], string(w2.buffered()))
 		} else {
 			zigTry(t, f(&w2, event, opts))
 			expectEqualStrings(t, expected, string(w2.buffered()))
@@ -86,6 +89,9 @@ func ke2ExpectSeq(t *testing.T, expected string, seq inputKeyEncodeKittySequence
 		w2 := oscWriterFixed(small[0:capacity])
 		if capacity < len(expected) {
 			ke2ExpectWriteFailed(t, seq.Encode(&w2))
+			// Go-only check: a fixed writer keeps what fit before the failure,
+			// which is the start of the expected output.
+			expectEqualStrings(t, expected[0:capacity], string(w2.buffered()))
 		} else {
 			zigTry(t, seq.Encode(&w2))
 			expectEqualStrings(t, expected, string(w2.buffered()))

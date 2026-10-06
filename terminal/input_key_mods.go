@@ -25,7 +25,7 @@
 //
 // libghostty-vt uses `Mods` (through key.zig and the encoders). `RemapSet`
 // exists for the app's `key-remap` config and is not used by any encoder;
-// it is declared in full because the project's tests (patch 0017, 64 tests
+// it is declared in full because the project's tests (patch 0017, 60 tests
 // "term51: RemapSet...") cover every function of it.
 //
 // # Packed structs
@@ -34,10 +34,10 @@
 // `RemapSet.Mask` (u12) are ordinary Go structs with the same fields in the
 // same order, comparable with `==` as `expectEqual` compares them. The
 // packed-integer conversions that key_mods.zig writes as `@bitCast` or
-// `.int()` are stubs: `Int` on each (Zig's own `int` for Mods and
-// Mods.Keys; a stand-in for `@bitCast` for Mods.Side and Mask) and
-// `...FromInt` for Mods, Mods.Keys and Mods.Side (used by `unset`, `apply`
-// and `Mask.update`). The bit layout is Zig's: first field in bit 0.
+// `.int()` are `Int` on each (Zig's own `int` for Mods and Mods.Keys; a
+// stand-in for `@bitCast` for Mods.Side and Mask) and `...FromInt` for
+// Mods, Mods.Keys and Mods.Side (used by `keys`, `unset`, `apply` and
+// `Mask.update`). The bit layout is Zig's: first field in bit 0.
 // `Mods._padding` (u6, bits 10 to 15) is kept as a field: Mods.int and
 // therefore `empty` and `equal` see it. A Go field wider than its Zig field
 // (a Mod.Side above 1, a _padding above 0x3F) holds a value that cannot
@@ -55,11 +55,12 @@
 // # Go-memory rule
 //
 //   - Every allocator parameter is dropped (`parseCLI`, `parse`, `deinit`,
-//     `clone`). `Deinit` is kept as a stub because the tests call it.
+//     `clone`). `Deinit` is kept because the tests call it; it resets the
+//     map.
 //   - `RemapSet.map` (field `map_`: `map` is a Go keyword) is
 //     `std.AutoArrayHashMapUnmanaged(Mods, Mods)`, an insertion-ordered
 //     map: `inputKeyModsRemapSetMap`, two parallel slices
-//     with stubs for the operations key_mods.zig and the tests use, under
+//     with the operations key_mods.zig and the tests use, under
 //     their std names (as `pageListPinSet` in PageList.go): `Put`, `Get`,
 //     `SwapRemove`, `ClearRetainingCapacity`, `Keys`, `Values`, `Count`,
 //     `Clone`, `Sort`. Not declared: `deinit` (only frees) and `iterator`
@@ -122,6 +123,19 @@
 //     Mask (stand-ins for `@bitCast`);
 //   - `inputKeyModsRemapSetMap`, `inputKeyModsRemapSetEntryFormatter`,
 //     `inputKeyModsFixedBufferStream` (std stand-ins, above);
+//   - `inputKeyModsStringToEnumMod`, `inputKeyModsStringToEnumModSide`:
+//     `std.meta.stringToEnum(Mod, s)` and `std.meta.stringToEnum(Mod.Side,
+//     s)`. Zig 0.15.2 looks the name up in a std.StaticStringMap of the tag
+//     names; the Go functions are a loop over the tag names comparing the
+//     whole string, which gives the StaticStringMap's exact-match result
+//     (the value whose name is exactly s, else null);
+//   - `inputKeyModsRemapSetFinalizeSideMask`, finalize's
+//     `comptime Mods.side_mask.int()`, computed once at start-up;
+//   - `inputKeyModsRemapSetFormatModFields` and
+//     `inputKeyModsRemapSetFormatModNames`, formatMod's comptime tuple of
+//     names (above);
+//   - `inputKeyModsModsKeyField` and `inputKeyModsModsSideField`, the
+//     `@field` accessors (above);
 //   - `inputKeyModsIsDarwin` (above);
 //   - ErrMissingAssignment, ErrInvalidMod.
 //
@@ -754,8 +768,8 @@ func (self *InputKeyModsRemapSet) Parse(input []uint8) error {
 	return nil
 }
 
-// Deinit is key_mods.RemapSet.deinit. It only frees in Zig; the stub is
-// kept because every test calls it.
+// Deinit is key_mods.RemapSet.deinit. It only frees in Zig; it is kept
+// because every test calls it.
 //
 // Zig: self.map.deinit(alloc), which frees and leaves the map undefined;
 // Go resets the map to its zero value (the GC frees). The mask is left as
@@ -880,8 +894,9 @@ func (self InputKeyModsRemapSet) FormatEntry(formatter inputKeyModsRemapSetEntry
 // inputKeyModsFixedBufferStream stands for std.io.FixedBufferStream([]u8):
 // a buffer and a write position. Not a Zig declaration. Zig's
 // `fbs.writer()` is the stream itself here; a write that does not fit
-// fails with ErrNoSpaceLeft (color.go). Wireframe: fields, Init and
-// getWritten; the implementation adds writeAll and writeByte.
+// fails with ErrNoSpaceLeft (color.go). Declared: the fields, Init,
+// getWritten, write (FixedBufferStream.write), and writeAll and writeByte
+// (the writer's methods).
 type inputKeyModsFixedBufferStream struct {
 	buffer []uint8
 	// Zig: pos: usize.

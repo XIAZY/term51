@@ -1,6 +1,7 @@
 // Port of the part of Zig 0.15.2's lib/std/hash/auto_hash.zig (the toolchain
 // that built the recorded corpus) that the library reaches. Nothing here is
-// ported from a Ghostty source file. See docs/mapping-pending/p3-small.md.
+// ported from a Ghostty source file. See docs/mapping.md, section "Zig std
+// hashing: `std.hash.Wyhash`, `std.hash.int`, `std.hash.autoHash`".
 //
 // auto_hash.zig's `hash`, `hashPointer`, `hashArray` and `autoHash` are
 // generic over the key type (`anytype`) and dispatch on it at compile time
@@ -56,8 +57,9 @@
 //
 // Not ported: the instantiations for other types (pointers hashed by
 // address, optionals, arrays, vectors, structs other than a packed
-// struct(u16) hashed shallowly, unions, error unions, floats), `typeContainsSlice` (a compile-time check that only makes
-// autoHash refuse slices; none of the instantiations above contains one).
+// struct(u16) hashed shallowly, unions, error unions, floats),
+// `typeContainsSlice` (a compile-time check that only makes autoHash refuse
+// slices; none of the instantiations above contains one).
 
 package terminal
 
@@ -228,31 +230,6 @@ func stdHashAutoHashHashSliceU8(hasher *stdHashWyhash, key []uint8, strat stdHas
 	stdHashAutoHashHashPointerSliceU8(hasher, key, strat)
 }
 
-// stdHashAutoHashAutoHashEnumU1 is auto_hash.autoHash(hasher, key)
-// (std.hash.autoHash) with @TypeOf(key) an enum whose tag type is u1; key is
-// @intFromEnum of the value.
-//
-// Provides generic hashing for any eligible type.
-// Only hashes `key` itself, pointers are not followed.
-// Slices as well as unions and structs containing slices are rejected to avoid
-// ambiguity on the user's intention.
-func stdHashAutoHashAutoHashEnumU1(hasher *stdHashWyhash, key uint8) {
-	// Zig: `comptime typeContainsSlice(Key)` is false for an enum.
-	stdHashAutoHashHashEnumU1(hasher, key, stdHashAutoHashHashStrategyShallow)
-}
-
-// stdHashAutoHashAutoHashU32 is auto_hash.autoHash(hasher, key)
-// (std.hash.autoHash) with @TypeOf(key) == u32.
-//
-// Provides generic hashing for any eligible type.
-// Only hashes `key` itself, pointers are not followed.
-// Slices as well as unions and structs containing slices are rejected to avoid
-// ambiguity on the user's intention.
-func stdHashAutoHashAutoHashU32(hasher *stdHashWyhash, key uint32) {
-	// Zig: `comptime typeContainsSlice(Key)` is false for an integer.
-	stdHashAutoHashHashU32(hasher, key, stdHashAutoHashHashStrategyShallow)
-}
-
 // stdHashAutoHashHashEnumCInt is auto_hash.hash(hasher, key, strat) with
 // @TypeOf(key) an enum whose tag type is c_int (32 bits on every port
 // target and on the recording build), such as input.key.Key. key is
@@ -319,6 +296,31 @@ func stdHashAutoHashHashPackedStructU16(hasher *stdHashWyhash, key uint16, strat
 	// Zig: switch (@typeInfo(Key)) { .@"struct" => hash of every field }:
 	// reached only with .Deep or .DeepRecursive, which no caller passes.
 	panic("not ported: auto_hash.hash of a packed struct field by field")
+}
+
+// stdHashAutoHashAutoHashEnumU1 is auto_hash.autoHash(hasher, key)
+// (std.hash.autoHash) with @TypeOf(key) an enum whose tag type is u1; key is
+// @intFromEnum of the value.
+//
+// Provides generic hashing for any eligible type.
+// Only hashes `key` itself, pointers are not followed.
+// Slices as well as unions and structs containing slices are rejected to avoid
+// ambiguity on the user's intention.
+func stdHashAutoHashAutoHashEnumU1(hasher *stdHashWyhash, key uint8) {
+	// Zig: `comptime typeContainsSlice(Key)` is false for an enum.
+	stdHashAutoHashHashEnumU1(hasher, key, stdHashAutoHashHashStrategyShallow)
+}
+
+// stdHashAutoHashAutoHashU32 is auto_hash.autoHash(hasher, key)
+// (std.hash.autoHash) with @TypeOf(key) == u32.
+//
+// Provides generic hashing for any eligible type.
+// Only hashes `key` itself, pointers are not followed.
+// Slices as well as unions and structs containing slices are rejected to avoid
+// ambiguity on the user's intention.
+func stdHashAutoHashAutoHashU32(hasher *stdHashWyhash, key uint32) {
+	// Zig: `comptime typeContainsSlice(Key)` is false for an integer.
+	stdHashAutoHashHashU32(hasher, key, stdHashAutoHashHashStrategyShallow)
 }
 
 // stdHashAutoHashAutoHashEnumCInt is auto_hash.autoHash(hasher, key)

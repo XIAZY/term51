@@ -1,7 +1,8 @@
 // Port of the part of Zig 0.15.2's lib/std/hash.zig (the toolchain that
 // built the recorded corpus) that the library reaches: `std.hash.int` for a
 // u64, which style.Style.hash calls. Nothing here is ported from a Ghostty
-// source file. See docs/mapping-pending/p3-small.md.
+// source file. See docs/mapping.md, section "Zig std hashing:
+// `std.hash.Wyhash`, `std.hash.int`, `std.hash.autoHash`".
 //
 // `int` is generic over its integer type (`anytype`) and picks the mixer by
 // the bit width at compile time. Only the u64 instantiation is used, so it is

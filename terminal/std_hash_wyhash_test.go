@@ -15,8 +15,9 @@
 //     kept so the test list matches Zig's.
 //
 // The Go-only tests at the end compare the port with values printed by Zig
-// 0.15.2's std.hash.Wyhash on seeded inputs (see
-// docs/mapping-pending/p3-small.md for the cross-check).
+// 0.15.2's std.hash.Wyhash on seeded inputs (see docs/mapping.md, section
+// "Zig std hashing: `std.hash.Wyhash`, `std.hash.int`, `std.hash.autoHash`",
+// "Cross-check against Zig 0.15.2").
 
 package terminal
 

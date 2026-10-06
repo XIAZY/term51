@@ -15,7 +15,7 @@
 //     family also includes tvOS, watchOS, visionOS and DriverKit, which Go
 //     does not target)
 //
-// The per-file stubs inputKeyEncodeIsMacos, inputKeyEncodeIsDarwin,
+// The per-file functions inputKeyEncodeIsMacos, inputKeyEncodeIsDarwin,
 // inputKeyModsIsDarwin and inputKeyIsDarwin keep their names and read this.
 
 package terminal

@@ -163,11 +163,29 @@ sampled: 10,567 passed, 7 skipped (upstream's own), 0 failed. Sampled split:
 esc, fuzz, modes, osc, parser, resize, and 4 of scroll's 6 suites). It was
 stopped there (project lead ruling, 2026-10-06): scroll's last suite pushes
 12,000 lines through a tiny scrollback on every cut and ran for hours under
-emulation; that suite and the text area are covered by the native sampled
-split above and by the phone's sampled split on the real 32-bit chip.
+emulation; that suite and the text area are covered by the native splits
+above (full-state and sampled).
 
-Phone (project lead's runs): every recorded case in full and every unit test
-pass on the real device (the only failures were self-tests missing source
-files in the copy); the rerun on the final commit with the sampled split:
-PHONE_FINAL (the project lead fills this in when the run ends).
+Phone (project lead's runs, BlackBerry 10 on the real 32-bit ARM chip,
+`GOMEMLIMIT=900MiB`):
+
+- Every test except the split runs (`TERM51_FULL=1`) on 845fb1c: 204,962
+  passed, 7 skipped (upstream's own), 4 failed. The 4 were self-tests that
+  read source files missing from the copy on the phone
+  (`TestCorpusReplaySelfZigParseIntSites`, `...MarkerProduce`,
+  `...RunCaseResizeChecked`, `...SearchProductionCapacity`), not library
+  failures.
+- Rerun on b40fcb9 (binary built at 62fa33e) of what the later merges can
+  reach: the Screen, Terminal, page and PageList tests and every self-test,
+  with the source files in place: 5,061 passed (subtests included), 0 failed;
+  the 4 self-tests above now pass.
+- Sampled split on b40fcb9: 114 suites, 2,284 cases, 218,143 variants, 0
+  mismatches (csi, dcs, esc, fuzz, modes, osc, parser, resize and scroll,
+  all but the last sampled case of `scroll/page_size_drift`). It was stopped
+  there (project lead ruling, 2026-10-06): the remaining cases are covered
+  by the native splits above and repeat coverage already clean.
+- The text area in full on b40fcb9 (`TERM51_FULL=1`, which the split rerun
+  had not reached): 14 suites, 6,806 cases, 0 mismatches, including the
+  `text/style_split` cases fixed by the last merge (one `upstream_invalid`
+  case checked by its own rule, as natively).
 

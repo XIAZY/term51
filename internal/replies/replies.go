@@ -82,20 +82,20 @@ func DefaultConfig() Config {
 type Kind int
 
 const (
-	PrimaryDA     Kind = iota // CSI c
-	SecondaryDA               // CSI > c
-	TertiaryDA                // CSI = c
-	XTVersion                 // CSI > q
-	StatusReport              // CSI 5 n
-	CursorReport              // CSI 6 n
-	ColorScheme               // CSI ? 996 n
-	ModeQuery                 // CSI Pm $ p (ANSI) or CSI ? Pm $ p (DEC)
-	ColorQuery                // OSC 4 ; i ; ? / OSC 10, 11, 12 ; ?
-	TextAreaChars             // CSI 18 t
-	TextAreaPixels            // CSI 14 t
-	CellPixels                // CSI 16 t
-	KittyFlags                // CSI ? u
-	Enquiry                   // ENQ
+	PrimaryDA      Kind = iota // CSI c
+	SecondaryDA                // CSI > c
+	TertiaryDA                 // CSI = c
+	XTVersion                  // CSI > q
+	StatusReport               // CSI 5 n
+	CursorReport               // CSI 6 n
+	ColorScheme                // CSI ? 996 n
+	ModeQuery                  // CSI Pm $ p (ANSI) or CSI ? Pm $ p (DEC)
+	ColorQuery                 // OSC 4 ; i ; ? / OSC 10, 11, 12 ; ?
+	TextAreaChars              // CSI 18 t
+	TextAreaPixels             // CSI 14 t
+	CellPixels                 // CSI 16 t
+	KittyFlags                 // CSI ? u
+	Enquiry                    // ENQ
 )
 
 // ColorTarget is which colour an OSC colour query asks for.
@@ -127,11 +127,11 @@ type Query struct {
 type ModeState int
 
 const (
-	ModeUnknown       ModeState = 0
-	ModeSet           ModeState = 1
-	ModeReset         ModeState = 2
-	ModePermanentSet  ModeState = 3
-	ModePermanentRset ModeState = 4
+	ModeUnknown        ModeState = 0
+	ModeSet            ModeState = 1
+	ModeReset          ModeState = 2
+	ModePermanentSet   ModeState = 3
+	ModePermanentReset ModeState = 4
 )
 
 // RGB is a colour.
@@ -156,7 +156,6 @@ type State interface {
 }
 
 const (
-	esc = "\x1b"
 	csi = "\x1b["
 	osc = "\x1b]"
 	st  = "\x1b\\"
@@ -301,5 +300,3 @@ func Answer(cfg Config, s State, q Query) []byte {
 	}
 	return nil
 }
-
-var _ = esc

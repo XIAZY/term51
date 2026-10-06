@@ -29,6 +29,7 @@ package terminal
 
 import (
 	"math"
+	"math/bits"
 	"testing"
 )
 
@@ -3805,6 +3806,14 @@ func TestTm5_panic_setCursorPos_column_overflow_in_origin_mode(t *testing.T) {
 	defer tm.Deinit()
 	tm.scrolling_region.left = 1
 	tm.modes.Set(ModesModeOrigin, true)
+	// The addition is in 64-bit usize (the reference) on every platform. A
+	// Go uint is 32 bits on 32-bit ARM, where maxInt(uint) + 1 fits a
+	// usize: no trap, the column clamps to the margin as on the reference.
+	if bits.UintSize == 32 {
+		tm.SetCursorPos(1, math.MaxUint)
+		expectEqual(t, SizeCellCountInt(tm.scrolling_region.right), tm.screens.active.cursor.x)
+		return
+	}
 	tm5ExpectPanic(t, func() { tm.SetCursorPos(1, math.MaxUint) })
 }
 
@@ -3816,5 +3825,11 @@ func TestTm5_panic_setCursorPos_row_overflow_in_origin_mode(t *testing.T) {
 	defer tm.Deinit()
 	tm.scrolling_region.top = 1
 	tm.modes.Set(ModesModeOrigin, true)
+	// As above: no trap where a Go uint is 32 bits; the row clamps.
+	if bits.UintSize == 32 {
+		tm.SetCursorPos(math.MaxUint, 1)
+		expectEqual(t, SizeCellCountInt(tm.scrolling_region.bottom), tm.screens.active.cursor.y)
+		return
+	}
 	tm5ExpectPanic(t, func() { tm.SetCursorPos(math.MaxUint, 1) })
 }

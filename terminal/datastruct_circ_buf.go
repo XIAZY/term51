@@ -77,7 +77,18 @@
 // # Declarations that are not Zig declarations
 //
 //   - the field `default_` (Zig's comptime parameter `default`);
-//   - the `String` method of DatastructCircBufIteratorDirection.
+//   - the `String` method of DatastructCircBufIteratorDirection and its
+//     name table datastructCircBufIteratorDirectionNames.
+//
+// # Integer traps made explicit
+//
+// Zig traps on usize overflow and underflow; Go wraps. Asserted: `len() +
+// amount` in ensureUnusedCapacity, `offset + slice_len` in getPtrSlice
+// (before upstream's own assert), `storage.len - len()` in advance and in
+// len() (a length beyond the capacity after a shrink). Division by a zero
+// capacity (`% capacity()` in Iterator.next, `% storage.len` in
+// rotateToZero) panics in Go as it traps in Zig. `@memset` and
+// `fastmem.copy` are loops and Go's `copy`.
 //
 // # Omitted
 //

@@ -72,7 +72,37 @@
 // # Declarations that are not Zig declarations
 //
 //   - ErrFeedRequired and ErrSearchComplete: members of `TickError`;
-//   - the `String` methods of searchScreenState and SearchScreenSelect.
+//   - the `String` methods of searchScreenState and SearchScreenSelect, and
+//     their name tables searchScreenStateNames and searchScreenSelectNames;
+//   - searchScreenHistoryWouldFeed (the ruling below).
+//
+// # Rulings (project lead)
+//
+//   - `feed` on a completed search whose history searcher still has a page
+//     to feed reaches upstream's `.complete => unreachable` arm (safe
+//     builds abort; the release behaviour is undefined; finding 20, the 48
+//     `changes_prune` cases with no recorded result). The port returns
+//     ErrSearchComplete, which `tick` returns in that state, and changes
+//     nothing. To change nothing, `Feed` asks before calling
+//     `history.feed()`: searchScreenHistoryWouldFeed runs
+//     PageListSearch.feed on a fresh reverse window and an untracked copy
+//     of the pin, which gives the same result (feed's result depends only
+//     on the pin and on the byte counts `append` returns for the nodes).
+//     When it says false, the real `history.feed()` runs as upstream (the
+//     complete search prunes its stale history results; with an empty
+//     needle feed still appends one page and returns false, finding 16).
+//     The `.complete => unreachable` arm stays and cannot be reached.
+//   - Empty needle: `init` and everything it drives find nothing; the
+//     window's `next` returns null (search_sliding_window.go), so the
+//     active and history results stay empty and selection finds nothing.
+//     `active.update` with an empty needle follows the release build
+//     (search_active.go).
+//
+// # Integer traps made explicit
+//
+// `prev.idx + 1` (selectNext), `m.idx += added_len` and `m.idx +=
+// active_results.len` (reloadActive) are asserted not to overflow, and
+// `m.idx -= old_active_len` not to underflow: Zig traps there.
 //
 // # Omitted
 //

@@ -86,7 +86,35 @@
 //
 // # Declarations that are not Zig declarations
 //
-//   - the `String` method of searchSlidingWindowDirection.
+//   - the `String` method of searchSlidingWindowDirection and its name
+//     table searchSlidingWindowDirectionNames;
+//   - searchSlidingWindowCellCount: `@intCast` of a cell map y (u32) to a
+//     chunk row (u16), asserting that the value fits as Zig's cast does;
+//   - searchSlidingWindowReverseChunkField: `std.mem.reverse` on one column
+//     of the chunk MultiArrayList (`slice.items(.node)`, `.start`, `.end`).
+//     `highlight` reverses the node, start and end columns of a reverse
+//     match but not the serial column, so in a multi-chunk reverse match the
+//     serials stay in data order while the nodes are in screen order
+//     (upstream quirk, findings section 19 item 4); the Go code reverses
+//     the three columns one by one to keep that.
+//
+// # Control flow
+//
+// Labeled blocks: `slices:`, `prefix:`, `suffix:` and `formatter:` are
+// plain blocks that assign a variable; `overlap:` and `prune:` are
+// closures whose early `return` is `break :overlap` / `break :prune`; `tl:`
+// is a closure returning the local struct. `while (...) |meta| { ... }
+// else { ... }` is a loop followed by a test of a `found` flag (`break`
+// skips the else branch). Every `else unreachable` and the switch on an
+// exhaustive enum end in `panic("unreachable")`. `.?` on an iterator result
+// is `assert(meta != nil)`.
+//
+// # Integer traps made explicit
+//
+// `data_len - self.data_offset` in `next`, `start + len - 1` in
+// `highlight`, the u16 `ends[0] - 1` and `starts[last] + 1` of the
+// reverse fixup, `@intCast` of the cell map y values, and `rows - 1` in
+// `append` are asserted, since Zig traps there.
 //
 // # Omitted
 //

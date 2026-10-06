@@ -101,7 +101,7 @@ replayer self-tests for the new corpus suite) with term51 2326139.
 | Run | Platform | Rule |
 |---|---|---|
 | Every test except the split runs (all unit tests, every recorded area, search, input in all three platform modes, tables, self-tests) | native | `TERM51_FULL=1` |
-| Split | native | full rule for csi, esc, modes, resize, text, parser, fuzz; reduced rule (`TERM51_SPLIT_LONG=64,64,64`) for dcs, osc, scroll |
+| Split | native | started as: full rule for csi, esc, modes, resize, text, parser, fuzz; reduced rule (`TERM51_SPLIT_LONG=64,64,64`) for dcs, osc, scroll. Stopped part-way and finished with the sampled default split (see "Why the full-state splits stopped") |
 | Every test except the split runs | 32-bit ARM (qemu) | all unit tests; the recorded areas sampled (default run) |
 | Split | 32-bit ARM (qemu) | the sampled default run |
 | Everything, every recorded case in full, plus the sampled split | the BlackBerry phone (real 32-bit ARM, QNX) | run by the project lead |
@@ -120,7 +120,54 @@ The phone is the full 32-bit gate (project lead, 2026-10-06): it runs every
 recorded case in full on the real chip. The emulated ARM run therefore keeps
 all unit tests and samples the recorded cases and the split.
 
+### Why the full-state splits stopped (project lead ruling, 2026-10-06)
+
+Unlike the stream layer's splits, every variant here also replays and
+compares the whole terminal state. That proved far heavier than estimated:
+after about three hours csi's last suite and `text/style_split` (46,708-column
+screens, feeds of about 1 MB, with the page self-checks on) were still
+running, and dcs, esc, modes, resize, parser and fuzz had not started. The
+full-state splits were stopped at that point, all clean, and the rest ran
+with the sampled default split, as on ARM and the phone. The reason this is
+enough: the stream layer's splits already proved under the full and reduced
+rules, in every area, that every cut gives the same action sequence
+(11,114,684 variants, 0 mismatches), and the terminal state is a function of
+that sequence.
+
+Full-state split variants completed before the stop (0 mismatches each):
+
+| Area | Rule | Suites | Variants (actions and golden) |
+|---|---|---|---|
+| csi | full | 44 of 45 | 9,998,362 |
+| text | full | 13 of 14 | 702,658 |
+| osc, scroll | reduced | 11 of 13 | 1,660,329 |
+| total | | | 12,361,349 |
+
 ### Results
 
-Filled in when the runs finish.
+Native, every test except the split runs (`TERM51_FULL=1`): 204,963 passed on
+ababf3f, 7 skipped (exactly the tests upstream itself skips); the only
+failures were the two `text/style_split` crash cases and three self-tests
+that count them, all fixed by the merge that followed. Rerun on b40fcb9 of
+everything that merge can reach (the Screen, Terminal, page and PageList
+tests and the self-tests): 9,455 passed, 0 failed. The text area in full on b40fcb9: 6,806 of 6,806
+cases.
+
+Native sampled split on b40fcb9 (csi, text, scroll, dcs, esc, modes, resize,
+parser, fuzz): 2,426 cases, 228,813 variants (actions and golden), 0
+mismatches.
+
+32-bit ARM (qemu), every test except the split runs, recorded cases
+sampled: 10,567 passed, 7 skipped (upstream's own), 0 failed. Sampled split:
+113 of 129 suites, 2,264 cases, 216,695 variants, 0 mismatches (csi, dcs,
+esc, fuzz, modes, osc, parser, resize, and 4 of scroll's 6 suites). It was
+stopped there (project lead ruling, 2026-10-06): scroll's last suite pushes
+12,000 lines through a tiny scrollback on every cut and ran for hours under
+emulation; that suite and the text area are covered by the native sampled
+split above and by the phone's sampled split on the real 32-bit chip.
+
+Phone (project lead's runs): every recorded case in full and every unit test
+pass on the real device (the only failures were self-tests missing source
+files in the copy); the rerun on the final commit with the sampled split:
+PHONE_FINAL (the project lead fills this in when the run ends).
 

@@ -20,6 +20,52 @@ and optimise later"):
 
 A recommended order is at the end.
 
+## The target: faithful in behaviour, Go in form (project owner, 2026-10-06)
+
+"A faithful port that makes sense in Go": the same behaviour as upstream,
+proven by every test and recorded case, in code a Go programmer recognises
+as Go. Measured that way, everything below falls into two groups.
+
+**Change (shape only; behaviour identical):**
+
+- Data types: `Optional[T]` becomes `(value, ok)` or pointers; the
+  every-variant-in-one-struct unions become small types or interfaces; Go
+  field names and receivers (sections 2.1 to 2.3).
+- Control flow: `goto` for labelled blocks and the `errdefer` closures become
+  ordinary Go structure (2.10, 2.11).
+- Errors instead of panics wherever a caller's input can reach them; internal
+  invariants stay as asserts, possibly debug-only (2.4).
+- Zig leftovers removed: allocator parameters, `Deinit` methods that free
+  nothing, errors that cannot happen (2.5, 2.6).
+- Output through `io.Writer` / `bytes.Buffer` instead of the emulated Zig
+  writer, keeping partial-write behaviour only where output depends on it
+  (3.1).
+- Configuration instead of package-level switches (5.1).
+- Package layout and API: internal packages, a small exported `vt` API,
+  everything else unexported (1.1 to 1.4).
+- Hot paths written the Go way (`post-port-optimizations.md`).
+- Go's standard library wherever it behaves identically to Zig's (3.2 to
+  3.6).
+
+**Keep (behaviour depends on it):**
+
+- Zig's float parser and maths, its hashes and the UTF-8 decoder, where
+  results are visible (3.2, 3.3, 3.5).
+- The 64-bit integer rules on 32-bit ARM (2.9).
+- The byte bookkeeping that decides scrollback retention (4.1); it may be
+  rewritten in plain Go as long as it computes the same numbers.
+- Upstream's quirks (`term51/docs/deliberate-fixes.md` decides those
+  separately).
+
+**The cost.** Reshaped code no longer lines up function by function with
+upstream, so porting future Ghostty changes takes more work. The tests and
+the recorded corpus remain the proof that behaviour is unchanged.
+
+**How.** After the final sign-off, one "Go-native pass", module by module in
+the order of the port. After each module the full test suite and every
+recorded case must still match upstream, natively, on 32-bit ARM and on the
+phone.
+
 ## 1. The public surface
 
 1.1 **There is no idiomatic Go API yet.** Every exported name is a Zig

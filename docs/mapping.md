@@ -2548,14 +2548,9 @@ side.
   `datastruct_circ_buf_2_test.go` (`SeekBy(int(o))` -> `int64(o)`);
   `search_sliding_window_1_test.go`, `search_sliding_window_2_test.go`
   (`SeekBy(int(i))` -> `int64(i)`).
-- Two Go-only panic tests contradict the feed-on-complete ruling and fail:
-  `TestSs1_panic_feed_complete_state_with_more_history_to_feed`
-  (search_screen_1_test.go) and
-  `TestSs2_panic_Feed_complete_state_with_history_to_feed`
-  (search_screen_2_test.go) expect the `.complete => unreachable` panic; the
-  ruling (and `TestSearchRuling_feed_complete_*`) wants ErrSearchComplete.
-  They should be removed (or turned into ErrSearchComplete checks) and
-  their rows in docs/go-only-tests.md dropped.
+- The two Go-only panic tests that expected the `.complete => unreachable`
+  panic in `feed` (written before the feed-on-complete ruling) were removed
+  (2e45967); `TestSearchRuling_feed_complete_*` cover the same states.
 - New test files for std: `std_mem_test.go` (2 tests), `std_ascii_test.go`
   (3 tests); not checked by scripts/check-test-mapping.py (std files).
 

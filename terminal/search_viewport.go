@@ -63,6 +63,8 @@
 
 package terminal
 
+import "math"
+
 // SearchViewport is viewport.ViewportSearch (re-exported as
 // search.Viewport).
 //
@@ -245,7 +247,8 @@ func (self *SearchViewport) Update(list *PageList) (_ bool, err error) {
 	// exists) so we can cover the overlap. We only do this for the
 	// soft-wrapped prior pages.
 	node_ := fingerprint.nodes[0].prev
-	var added uint = 0
+	// Zig: usize, 64 bits on the reference on every platform.
+	var added uint64 = 0
 	for ; node_ != nil; node_ = node_.prev {
 		node := node_
 		// If the last row of this node isn't wrapped we can't overlap.
@@ -263,10 +266,12 @@ func (self *SearchViewport) Update(list *PageList) (_ bool, err error) {
 		if err != nil {
 			return false, err
 		}
-		added += n
+		// Zig: usize addition traps on overflow.
+		assert(added <= math.MaxUint64-uint64(n))
+		added += uint64(n)
 		// Zig: `needle.len - 1` wraps for an empty needle in the release
 		// build (project lead's ruling, see the file header).
-		if added >= uint(len(self.window.needle))-1 {
+		if added >= uint64(len(self.window.needle))-1 {
 			break
 		}
 	}
@@ -297,8 +302,10 @@ func (self *SearchViewport) Update(list *PageList) (_ bool, err error) {
 			if err != nil {
 				return
 			}
-			added += n
-			if added >= uint(len(self.window.needle))-1 {
+			// Zig: usize addition traps on overflow.
+			assert(added <= math.MaxUint64-uint64(n))
+			added += uint64(n)
+			if added >= uint64(len(self.window.needle))-1 {
 				break
 			}
 

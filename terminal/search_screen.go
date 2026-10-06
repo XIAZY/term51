@@ -80,7 +80,8 @@
 //
 //   - `feed` on a completed search whose history searcher still has a page
 //     to feed reaches upstream's `.complete => unreachable` arm (safe
-//     builds abort; the release behaviour is undefined; finding 20, the 48
+//     builds abort; the release behaviour is undefined; findings section 19
+//     item 21, the 48
 //     `changes_prune` cases with no recorded result). The port returns
 //     ErrSearchComplete, which `tick` returns in that state, and changes
 //     nothing. To change nothing, `Feed` asks before calling

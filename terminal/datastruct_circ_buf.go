@@ -362,13 +362,20 @@ func (self DatastructCircBuf[T]) Last() *T {
 // usize) Allocator.Error!void. The allocator parameter is dropped. The
 // error is ErrOutOfMemory (dcs.go).
 func (self *DatastructCircBuf[T]) EnsureUnusedCapacity(amount uint) error {
-	// Zig: usize addition traps on overflow.
-	assert(amount <= math.MaxUint-self.Len())
-	new_cap := self.Len() + amount
-	if new_cap <= self.Capacity() {
+	// Zig: usize addition traps on overflow. usize is 64 bits on the
+	// reference on every platform, so the sum is computed in uint64.
+	assert(uint64(amount) <= math.MaxUint64-uint64(self.Len()))
+	new_cap := uint64(self.Len()) + uint64(amount)
+	if new_cap <= uint64(self.Capacity()) {
 		return nil
 	}
-	return self.Resize(new_cap)
+	// A capacity beyond what a Go uint can index (only on 32-bit
+	// platforms) cannot be allocated: the reference's allocation fails
+	// there too, with OutOfMemory.
+	if new_cap > math.MaxUint {
+		return ErrOutOfMemory
+	}
+	return self.Resize(uint(new_cap))
 }
 
 // Resize is CircBuf.resize.
@@ -513,8 +520,9 @@ func (self *DatastructCircBuf[T]) GetPtrSlice(offset uint, slice_len uint) [2][]
 	// which generates ~10% faster code than without it.
 	//
 	// Zig: the usize addition `offset + slice_len` traps on overflow first.
-	assert(offset <= math.MaxUint-slice_len)
-	assert(offset+slice_len <= self.Capacity())
+	// usize is 64 bits on the reference on every platform.
+	assert(uint64(offset) <= math.MaxUint64-uint64(slice_len))
+	assert(uint64(offset)+uint64(slice_len) <= uint64(self.Capacity()))
 
 	// End offset is the last offset (exclusive) for our slice.
 	// We use exclusive because it makes the math easier and it

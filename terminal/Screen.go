@@ -2856,14 +2856,28 @@ func (self *Screen) ManualStyleUpdate() error {
 func (self *Screen) splitForCapacity(pin PageListPin) error {
 	// Get our capacities. We include our target row because its
 	// capacity will be preserved.
-	bytes_above := PageLayoutOf(pin.node.data.ExactRowCapacity(
+	//
+	// term51 (docs/mapping.md, "Page-layer bookkeeping"; term51
+	// docs/upstream-crashes.md): upstream traps in exactRowCapacity's
+	// `.styles = @intCast(styles_cap)` when one of the two ranges references
+	// every id of a full style set of the maximum capacity. The port returns
+	// ErrOutOfSpace (the page cannot be split) before anything has changed.
+	cap_above, err := pin.node.data.exactRowCapacityOrError(
 		0,
 		uint(pin.y)+1,
-	)).total_size
-	bytes_below := PageLayoutOf(pin.node.data.ExactRowCapacity(
+	)
+	if err != nil {
+		return err
+	}
+	bytes_above := PageLayoutOf(cap_above).total_size
+	cap_below, err := pin.node.data.exactRowCapacityOrError(
 		uint(pin.y),
 		uint(pin.node.data.size.rows),
-	)).total_size
+	)
+	if err != nil {
+		return err
+	}
+	bytes_below := PageLayoutOf(cap_below).total_size
 
 	// We need to track the old cursor pin because if our split
 	// moves the cursor pin we need to update our accounting.
@@ -2897,6 +2911,20 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 	new_cursor := *self.cursor.page_pin
 	*self.cursor.page_pin = old_cursor
 	self.cursorChangePin(new_cursor)
+
+	// term51 (ruled departure, docs/mapping.md "Page-layer bookkeeping";
+	// term51 docs/upstream-crashes.md and upstream-findings.md section 15,
+	// Screen items 6 and 33): upstream stops here and leaves page_row and
+	// page_cell pointing at the row of the OLD page, which the split cleared
+	// and hid. Its release build then prints into that hidden row and later
+	// leaves a styled cell in a row not marked styled, a state its own
+	// integrity check rejects (its Debug build aborts). The port reloads the
+	// cached row and cell from the moved pin, as cursorAbsolute does after
+	// cursorChangePin; x and y are unchanged (the split does not move the
+	// cursor on screen).
+	page_rac := self.cursor.page_pin.RowAndCell()
+	self.cursor.page_row = page_rac.row
+	self.cursor.page_cell = page_rac.cell
 	return nil
 }
 

@@ -1075,6 +1075,23 @@ func (self *pageCellCountSet) count() uint {
 //
 // Zig: self is *const Page.
 func (self *Page) ExactRowCapacity(y_start uint, y_end uint) PageCapacity {
+	cap_, err := self.exactRowCapacityOrError(y_start, y_end)
+	// Zig: `.styles = @intCast(styles_cap)` traps when the style capacity
+	// does not fit the style count type.
+	assert(err == nil)
+	return cap_
+}
+
+// exactRowCapacityOrError is NOT a Zig declaration. It is the body of
+// ExactRowCapacity (page.Page.exactRowCapacity), except that the one cast
+// terminal input can make fail, `.styles = @intCast(styles_cap)`, returns
+// ErrOutOfSpace instead of trapping: a range of rows that references every
+// id of a full style set of the maximum capacity (53,247 styles) needs a
+// style capacity of 65,536, one more than the u16 holds. upstream aborts
+// there in splitForCapacity (term51 docs/upstream-crashes.md); the port
+// fails the split instead (docs/mapping.md, "Page-layer bookkeeping").
+// The other casts stay assertions.
+func (self *Page) exactRowCapacityOrError(y_start uint, y_end uint) (PageCapacity, error) {
 	assert(y_start < y_end)
 	assert(y_end <= uint(self.size.rows))
 
@@ -1166,8 +1183,11 @@ func (self *Page) ExactRowCapacity(y_start uint, y_end uint) PageCapacity {
 	// All the intCasts below are safe because we should have a
 	// capacity strictly less than or equal to this page's capacity.
 	//
-	// Zig: each @intCast traps when the value does not fit; asserted.
-	assert(styles_cap <= math.MaxUint16)
+	// Zig: each @intCast traps when the value does not fit; asserted,
+	// except the style capacity (see above).
+	if styles_cap > math.MaxUint16 {
+		return PageCapacity{}, ErrOutOfSpace
+	}
 	assert(grapheme_bytes <= math.MaxUint32)
 	assert(uint64(hyperlink_cap)*hyperlinkSetItemSizeOf <= math.MaxUint16)
 	assert(string_bytes <= math.MaxUint32)
@@ -1178,7 +1198,7 @@ func (self *Page) ExactRowCapacity(y_start uint, y_end uint) PageCapacity {
 		grapheme_bytes:  SizeGraphemeBytesInt(grapheme_bytes),
 		hyperlink_bytes: SizeHyperlinkCountInt(uint64(hyperlink_cap) * hyperlinkSetItemSizeOf),
 		string_bytes:    SizeStringBytesInt(string_bytes),
-	}
+	}, nil
 }
 
 // CloneFrom is page.Page.cloneFrom.

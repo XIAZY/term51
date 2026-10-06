@@ -1,0 +1,2 @@
+input.KeyMods = terminal.InputKeyModsMods: name already taken by terminal.InputKeyMods
+search.NewSlidingWindow = terminal.SearchSlidingWindowInit: its signature needs a type that is not exported

@@ -29,7 +29,8 @@
 // suffix F64 and one that is generic over the mantissa type (always u64 for
 // f64) the suffix U64. Comptime value parameters (base, ParseInfo,
 // precision) are ordinary parameters. The f16, f32, f80 and f128 branches of
-// the type switches are not ported. See docs/mapping-pending/pf.md.
+// the type switches are not ported. See docs/mapping.md, "`std.fmt.parseFloat(f64)`:
+// `terminal/std_fmt_parse_float.go`".
 //
 // Floating point: the only float arithmetic is in convertFast (a single
 // multiplication or division, no addition), so Go cannot fuse anything.

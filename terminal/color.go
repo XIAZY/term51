@@ -1065,7 +1065,8 @@ func colorLABLerp(t float32, a colorLAB, b colorLAB) colorLAB {
 // x11_color.go and kitty_color.go. Nothing here is ported from a Ghostty
 // source file; each one follows the Zig 0.15.2 source it names (the
 // toolchain that built the recorded corpus), because the Go standard
-// library differs (see docs/mapping-pending/colors.md). They belong in
+// library differs (see docs/mapping.md, "Colours and SGR", "Floating point
+// (all of `color.zig`)"). They belong in
 // zig.go; they are here so that this port adds no code to a file another
 // port is editing.
 //

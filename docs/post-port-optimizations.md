@@ -5,6 +5,30 @@ slower in Go than the original is in Zig. Nothing here may be changed until
 every translated test and every recorded case passes; then each item is its
 own change, measured before and after.
 
+## Baseline (before any change)
+
+`terminal/bench_test.go` (`go test ./terminal -run '^$' -bench . -benchtime 2s`),
+at the signed-off port plus the benchmark commit (d7720fb), 2026-10-06. The
+stream benchmarks run the parser and stream with a handler that does
+nothing; the Terminal benchmarks feed the same bytes to a real 80x24
+terminal with the page self-checks off, as a release build has them. Inputs
+of about 128 KB: plain ASCII lines, coloured text (SGR), and a mixed stream
+with cursor movement, erases and CJK wide characters.
+
+| Benchmark | Development machine (arm64, 12 cores) | BlackBerry phone (32-bit ARM, 4 cores) | allocs/op |
+|---|---:|---:|---:|
+| Stream, ASCII | 16.7 MB/s | 5.46 MB/s | 0 |
+| Stream, SGR | 6.2 MB/s | 1.93 MB/s | 0 |
+| Stream, mixed | 3.2 MB/s | 1.48 MB/s | 0 |
+| Terminal, ASCII | 5.3 MB/s | 1.45 MB/s | 54 |
+| Terminal, SGR | 3.9 MB/s | 1.02 MB/s | 37 |
+| Terminal, mixed | 2.5 MB/s | 0.83 MB/s | 21 |
+
+The phone ran with `GOMEMLIMIT=900MiB`. Every change below is measured
+against these numbers, on both machines.
+
+## Items
+
 | # | Where | What is slow | Why it is that way now |
 |---|---|---|---|
 | 1 | `Parser.Next` and `Stream` | Returns `[3]Optional[ParserAction]` per input byte. `ParserAction` is a struct holding every payload, including a whole OSC command by value, so three of them are copied for every byte, and again on the way through `Stream`. Measured by the project lead on 2026-10-05: parser and stream run at about 6 MB/s on ordinary coloured output (zero allocations); these copies account for most of the time in the profile (upstream: hundreds of MB/s). First item of the optimisation phase. | Zig returns `[3]?Action`, a small tagged union; the struct-with-tag mapping makes it large. |

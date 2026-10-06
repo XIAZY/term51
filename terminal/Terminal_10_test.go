@@ -40,19 +40,19 @@ func tmaInit(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Termin
 // tmaPrint is `try h.vt(.print, .{ .cp = cp })`.
 func tmaPrint(t *testing.T, h *StreamReadonlyHandler, cp uint32) {
 	t.Helper()
-	zigTry(t, h.Vt(StreamActionKeyPrint, StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: cp}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: cp}}))
 }
 
 // tmaSetMode is `try h.vt(.set_mode, .{ .mode = mode })`.
 func tmaSetMode(t *testing.T, h *StreamReadonlyHandler, mode ModesMode) {
 	t.Helper()
-	zigTry(t, h.Vt(StreamActionKeySetMode, StreamAction{Tag: StreamActionKeySetMode, SetMode: StreamActionMode{mode: mode}}))
+	zigTry(t, h.Vt(StreamActionKeySetMode, &StreamAction{Tag: StreamActionKeySetMode, SetMode: StreamActionMode{mode: mode}}))
 }
 
 // tmaResetMode is `try h.vt(.reset_mode, .{ .mode = mode })`.
 func tmaResetMode(t *testing.T, h *StreamReadonlyHandler, mode ModesMode) {
 	t.Helper()
-	zigTry(t, h.Vt(StreamActionKeyResetMode, StreamAction{Tag: StreamActionKeyResetMode, ResetMode: StreamActionMode{mode: mode}}))
+	zigTry(t, h.Vt(StreamActionKeyResetMode, &StreamAction{Tag: StreamActionKeyResetMode, ResetMode: StreamActionMode{mode: mode}}))
 }
 
 // tmaTerminalExpectPlain is term51AATerminalExpectPlain: expect the plain

@@ -2949,14 +2949,14 @@ func TestTm3_term51_vtHandler_handler_wraps_this_terminal(t *testing.T) {
 	defer h.Deinit()
 	expect(t, h.terminal == &tm, "h.terminal == &t")
 
-	zigTry(t, h.Vt(StreamActionKeyPrint, StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'h'}}))
-	zigTry(t, h.Vt(StreamActionKeyPrint, StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'i'}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'h'}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'i'}}))
 	tm3SExpectPlain(t, &tm, "hi")
 	tm3SExpectCursor(t, &tm, 2, 0, false)
 
-	zigTry(t, h.Vt(StreamActionKeyCarriageReturn, StreamAction{Tag: StreamActionKeyCarriageReturn}))
-	zigTry(t, h.Vt(StreamActionKeyLinefeed, StreamAction{Tag: StreamActionKeyLinefeed}))
-	zigTry(t, h.Vt(StreamActionKeyPrint, StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'x'}}))
+	zigTry(t, h.Vt(StreamActionKeyCarriageReturn, &StreamAction{Tag: StreamActionKeyCarriageReturn}))
+	zigTry(t, h.Vt(StreamActionKeyLinefeed, &StreamAction{Tag: StreamActionKeyLinefeed}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'x'}}))
 	tm3SExpectPlain(t, &tm, "hi\nx")
 }
 

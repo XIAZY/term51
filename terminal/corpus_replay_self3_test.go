@@ -131,7 +131,7 @@ func TestCorpusReplaySelfActionHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("%q: %v", l, err)
 				}
-				if err := h.Vt(StreamActionKeyPrint, StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: uint32(cp)}}); err != nil {
+				if err := h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: uint32(cp)}}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -153,11 +153,11 @@ func TestCorpusReplaySelfActionHandler(t *testing.T) {
 	var buf bytes.Buffer
 	h := &actionHandler{w: &buf}
 	h.flush()
-	h.Vt(StreamActionKeyPrint, StreamAction{Print: StreamActionPrint{cp: 0x41}})
+	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{cp: 0x41}})
 	h.flush()
 	h.flush()
-	h.Vt(StreamActionKeyPrint, StreamAction{Print: StreamActionPrint{cp: 0x1f600}})
-	h.Vt(StreamActionKeyPrint, StreamAction{Print: StreamActionPrint{cp: 0x7e}})
+	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{cp: 0x1f600}})
+	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{cp: 0x7e}})
 	h.flush()
 	if got, want := buf.String(), "@print 41\n@print 1f600,7e\n"; got != want {
 		t.Errorf("runs %q, want %q", got, want)

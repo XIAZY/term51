@@ -27,8 +27,8 @@ import (
 // benchNopHandler is a stream handler that does nothing.
 type benchNopHandler struct{ n int }
 
-func (h *benchNopHandler) Vt(StreamActionKey, StreamAction) error { h.n++; return nil }
-func (h *benchNopHandler) Deinit()                                {}
+func (h *benchNopHandler) Vt(StreamActionKey, *StreamAction) error { h.n++; return nil }
+func (h *benchNopHandler) Deinit()                                 {}
 
 const benchInputSize = 128 << 10
 

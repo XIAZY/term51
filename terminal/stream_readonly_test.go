@@ -136,7 +136,7 @@ func sroModesWith(bits ModesModePacked, mode ModesMode, value bool) ModesModePac
 // sroVt is `try h.vt(tag, value)`: the action carries its own tag.
 func sroVt(t *testing.T, h *StreamReadonlyHandler, a StreamAction) {
 	t.Helper()
-	zigTry(t, h.Vt(a.Tag, a))
+	zigTry(t, h.Vt(a.Tag, &a))
 }
 
 // Constructors for the StreamAction of each payload shape.

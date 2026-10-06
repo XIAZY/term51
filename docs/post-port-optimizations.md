@@ -27,6 +27,53 @@ with cursor movement, erases and CJK wide characters.
 The phone ran with `GOMEMLIMIT=900MiB`. Every change below is measured
 against these numbers, on both machines.
 
+## Changes made
+
+How the numbers are taken. The development machine has slow and fast cores,
+so an unpinned run varies by a factor of two (the table above was unpinned).
+From here on the native numbers are the best of 5 runs of one second each,
+pinned to one of the two fastest cores (`taskset -c 1`, `-test.cpu 1`). The
+phone numbers are the best of 3 runs of one second. On the phone the stream
+numbers repeat within 1%; the Terminal numbers vary by about 10% from run to
+run, so a Terminal difference smaller than that is not a result.
+
+Native, MB/s:
+
+| Benchmark | Baseline (d7720fb) | Items 1, 2 (4682b6e) | Item 31 |
+|---|---:|---:|---:|
+| Stream, ASCII | 25.1 | 25.0 | 40.3 |
+| Stream, SGR | 6.5 | 19.3 | 24.0 |
+| Stream, mixed | 4.8 | 23.1 | 26.2 |
+| Terminal, ASCII | 6.1 | 6.0 | 6.1 |
+| Terminal, SGR | 4.0 | 6.9 | 7.1 |
+| Terminal, mixed | 3.1 | 6.3 | 6.4 |
+
+Phone, MB/s:
+
+| Benchmark | Baseline (d7720fb) | Items 1, 2 (4682b6e) | Item 31 |
+|---|---:|---:|---:|
+| Stream, ASCII | 5.46 | 5.61 | 13.48 |
+| Stream, SGR | 1.93 | 5.84 | 7.66 |
+| Stream, mixed | 1.48 | 6.28 | 8.13 |
+| Terminal, ASCII | 1.45 | 1.83 | 1.80 |
+| Terminal, SGR | 1.02 | 1.83 | 1.69 |
+| Terminal, mixed | 0.83 | 1.59 | 1.52 |
+
+Allocations per run did not change (0 for the stream; 54, 37 and 21 for the
+Terminal).
+
+- Items 1 and 2 (4682b6e): `Parser.nextInto` writes the three action slots
+  into storage the stream owns instead of returning them by value, and the
+  deferred closure is gone. Sequences are three to five times faster; plain
+  text, which never reaches the parser, is unchanged.
+- Item 31: the handler receives a pointer to one `StreamAction` the stream
+  owns and reuses, instead of a 624-byte value per action. The stream is up
+  to 2.4 times faster on the phone. The Terminal numbers do not move beyond
+  the phone's run-to-run variation: with the stream out of the way, a
+  Terminal run is now almost entirely `Terminal.Print` and the functions it
+  calls (about 80% of the native profile on plain text, of which the `defer`
+  in `Terminal.Print` alone is about 12%). That is the next item.
+
 ## Items
 
 | # | Where | What is slow | Why it is that way now |
@@ -61,3 +108,4 @@ against these numbers, on both machines.
 | 28 | `render.go` cell set | Membership by linear scan, so `LinkCells` is quadratic in linked cells; an index map beside the slice fixes it. | Insertion-ordered slice keeps Zig's iteration order simply. |
 | 29 | `render.go` `UpdateHighlightsFlattened` | rows x highlights x chunks loop. | Upstream flags it as slow too. |
 | 30 | `Terminal.printAttributes` / `input_key_mods` fixed buffer streams | Two private fixed-buffer-stream stand-ins could be one shared helper. | Ported in parallel branches. |
+| 31 | `StreamHandler.Vt` | Every action, every printed character included, built a `StreamAction` (a struct with a field per payload, 624 bytes) and passed it to the handler by value. Done: the handler now gets a pointer to an action the stream owns and reuses, valid only during the call (see "Changes made"). | Zig passes a small tagged union; the struct-with-tag mapping makes it large. |

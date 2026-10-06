@@ -48,7 +48,7 @@ type streamReentrantH struct {
 
 func (h *streamReentrantH) Deinit() {}
 
-func (h *streamReentrantH) Vt(action StreamActionKey, value StreamAction) error {
+func (h *streamReentrantH) Vt(action StreamActionKey, value *StreamAction) error {
 	h.log = append(h.log, action.String())
 	// On the window title, feed a complete CSI sequence to the same stream
 	// from inside the handler.

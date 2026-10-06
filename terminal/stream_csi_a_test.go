@@ -211,7 +211,7 @@ func (self *strB_recorder) push(e strB_event) error {
 	return nil
 }
 
-func (self *strB_recorder) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strB_recorder) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyCursorUp:
 		return self.push(strB_event{kind: strB_cursor_up, u16: value.CursorUp.value})

@@ -50,7 +50,7 @@ type strC_recorder struct {
 	n      uint
 }
 
-func (self *strC_recorder) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strC_recorder) Vt(action StreamActionKey, value *StreamAction) error {
 	ev := strC_event{tag: action}
 	switch action {
 	case StreamActionKeySizeReport:

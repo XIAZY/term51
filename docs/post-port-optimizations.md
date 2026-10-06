@@ -39,25 +39,25 @@ run, so a Terminal difference smaller than that is not a result.
 
 Native, MB/s:
 
-| Benchmark | Baseline (d7720fb) | Items 1, 2 (4682b6e) | Item 31 |
-|---|---:|---:|---:|
-| Stream, ASCII | 25.1 | 25.0 | 40.3 |
-| Stream, SGR | 6.5 | 19.3 | 24.0 |
-| Stream, mixed | 4.8 | 23.1 | 26.2 |
-| Terminal, ASCII | 6.1 | 6.0 | 6.1 |
-| Terminal, SGR | 4.0 | 6.9 | 7.1 |
-| Terminal, mixed | 3.1 | 6.3 | 6.4 |
+| Benchmark | Baseline (d7720fb) | Items 1, 2 (4682b6e) | Item 31 | Item 32 |
+|---|---:|---:|---:|---:|
+| Stream, ASCII | 25.1 | 25.0 | 40.3 | same |
+| Stream, SGR | 6.5 | 19.3 | 24.0 | same |
+| Stream, mixed | 4.8 | 23.1 | 26.2 | same |
+| Terminal, ASCII | 6.1 | 6.0 | 6.1 | 11.6 |
+| Terminal, SGR | 4.0 | 6.9 | 7.1 | 9.9 |
+| Terminal, mixed | 3.1 | 6.3 | 6.4 | 7.8 |
 
 Phone, MB/s:
 
-| Benchmark | Baseline (d7720fb) | Items 1, 2 (4682b6e) | Item 31 |
-|---|---:|---:|---:|
-| Stream, ASCII | 5.46 | 5.61 | 13.48 |
-| Stream, SGR | 1.93 | 5.84 | 7.66 |
-| Stream, mixed | 1.48 | 6.28 | 8.13 |
-| Terminal, ASCII | 1.45 | 1.83 | 1.80 |
-| Terminal, SGR | 1.02 | 1.83 | 1.69 |
-| Terminal, mixed | 0.83 | 1.59 | 1.52 |
+| Benchmark | Baseline (d7720fb) | Items 1, 2 (4682b6e) | Item 31 | Item 32 |
+|---|---:|---:|---:|---:|
+| Stream, ASCII | 5.46 | 5.61 | 13.48 | same |
+| Stream, SGR | 1.93 | 5.84 | 7.66 | same |
+| Stream, mixed | 1.48 | 6.28 | 8.13 | same |
+| Terminal, ASCII | 1.45 | 1.83 | 1.80 | 3.10 |
+| Terminal, SGR | 1.02 | 1.83 | 1.69 | 2.17 |
+| Terminal, mixed | 0.83 | 1.59 | 1.52 | 1.83 |
 
 Allocations per run did not change (0 for the stream; 54, 37 and 21 for the
 Terminal).
@@ -73,6 +73,13 @@ Terminal).
   Terminal run is now almost entirely `Terminal.Print` and the functions it
   calls (about 80% of the native profile on plain text, of which the `defer`
   in `Terminal.Print` alone is about 12%). That is the next item.
+- Item 32: the integrity check that `Terminal.Print`, `Terminal.printCell`
+  and `Screen.CursorRight` deferred is now an ordinary call at the end of
+  each. Plain text through a terminal is 1.7 times faster on the phone and
+  1.9 times natively, more than the `defer`'s share of the profile; where
+  the rest comes from has not been broken down. A Zig `defer` does
+  not run when the function panics, so the ordinary call is also the closer
+  translation. The stream benchmarks do not reach this code.
 
 ## Items
 
@@ -109,3 +116,4 @@ Terminal).
 | 29 | `render.go` `UpdateHighlightsFlattened` | rows x highlights x chunks loop. | Upstream flags it as slow too. |
 | 30 | `Terminal.printAttributes` / `input_key_mods` fixed buffer streams | Two private fixed-buffer-stream stand-ins could be one shared helper. | Ported in parallel branches. |
 | 31 | `StreamHandler.Vt` | Every action, every printed character included, built a `StreamAction` (a struct with a field per payload, 624 bytes) and passed it to the handler by value. Done: the handler now gets a pointer to an action the stream owns and reuses, valid only during the call (see "Changes made"). | Zig passes a small tagged union; the struct-with-tag mapping makes it large. |
+| 32 | `Terminal.Print`, `Terminal.printCell`, `Screen.CursorRight` | A `defer` of the screen integrity check runs for every printed character. Done for these three (see "Changes made"); the other functions that defer the check (cursor moves, erases, scrolls) run once per sequence, not per character, and keep the `defer`. | Zig's `defer` costs nothing; Go's costs a deferred call and blocks inlining. |

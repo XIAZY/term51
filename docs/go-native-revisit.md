@@ -33,8 +33,8 @@ Go literal does not give" sections in the file headers).
 mouse, paste and focus encoders taking value types. The `terminal` package
 then becomes an internal package.
 
-1.2 **One very large package.** About 100 files and about 5,000 tests in
-`package terminal`, because Zig's file-level namespaces became name prefixes
+1.2 **One very large package.** 84 source files (about 58,000 lines) and
+140 test files (about 6,300 test functions) in `package terminal`, because Zig's file-level namespaces became name prefixes
 instead of packages (`InputKeyModsRemapSet`, `OSCParsersKittyTextSizingOSC`,
 `SearchSlidingWindow`). Some names are mechanically long, for example
 `UucodeXTypesGraphemeBreakNoControl` and `InputKeyKeyKeyA`.
@@ -54,11 +54,12 @@ Zig's file-struct capitalisation; Go convention is lower case.
 
 2.1 **`Optional[T]` instead of Go idioms.** Zig's `?T` is a struct with
 `Valid` and `Value` throughout (`Optional[ColorRGB]`,
-`Optional[PageListPin]`, `Optional[[]uint8]`). Go would use `(T, bool)`
+`Optional[PageListPin]`, `Optional[[]uint8]`): 316 type uses, 338
+`Some`/`None` calls and 446 `.Valid` checks in the non-test code. Go would use `(T, bool)`
 returns, pointers, or a zero value with documented meaning.
 
 2.2 **Tagged unions as structs with a `Tag` field and one field per
-payload.** For example `StreamAction`, `OSCCommand`, `SGRAttribute`, `Point`,
+payload** (23 union types). For example `StreamAction`, `OSCCommand`, `SGRAttribute`, `Point`,
 `PageListScroll` and `Selection` bounds. Every variant's payload field exists
 in every value, which makes them large (this is also performance item 1),
 and `==` compares inactive fields, which is why points must be compared
@@ -71,7 +72,7 @@ and an `X` prefix marks names that start with a digit (`X8Bg`,
 `x132_column`).
 
 2.4 **Panics for Zig's traps and assertions.** About 1,100 `assert` and
-`panic` sites reproduce Zig's safety checks: integer overflow,
+`panic` sites (601 `assert` calls and 261 `panic("unreachable")` among them) reproduce Zig's safety checks: integer overflow,
 out-of-range casts, `unreachable`. A Go library normally returns errors and
 does not panic on caller input. The upstream inputs that abort are already
 ruled to return errors (`term51/docs/upstream-crashes.md`); the remaining
@@ -80,17 +81,19 @@ asserts guard internal invariants.
 behind a debug build tag) or reachable from a caller (return an error).
 
 2.5 **Errors that cannot happen.** Functions keep Zig's error unions where
-Go cannot fail: allocation errors with no allocator, and `TabstopsInit` or
-`Resize` returning `error`. Error values are bare sentinels named after
+Go cannot fail: allocation errors with no allocator (27 `return ...
+ErrOutOfMemory` sites), and `TabstopsInit` or `Resize` returning `error`.
+There are 33 sentinel errors. Error values are bare sentinels named after
 Zig's errors (`ErrOutOfMemory`, `ErrWriteFailed`) and are never wrapped,
 which the replayer relies on.
 
-2.6 **Allocator leftovers.** `alloc any` parameters and fields exist only
+2.6 **Allocator leftovers and `Init`/`Deinit` pairs** (42 `...Init`
+constructors, 37 `Deinit` methods). `alloc any` parameters and fields exist only
 to tell "has an allocator" from "has none" (`StreamInitAlloc`,
 `OSCParserInit`), and `Deinit` methods exist that free nothing, kept because
 tests call them.
 
-2.7 **Explicit generic instantiation everywhere.** For example
+2.7 **Explicit generic instantiation everywhere** (26 generic types). For example
 `RefCountedSetInit[Style, StyleId, SizeCellCountInt, StyleSetContext](...)`
 and `BitmapAllocatorInit[uint32](4, ...)`, mirroring Zig's compile-time type
 parameters. Most would disappear if these became ordinary types for their one
@@ -106,6 +109,25 @@ are `uint64`, scroll deltas are `int64`, and `usize` hashing is 8 bytes, so
 the 32-bit phone matches the 64-bit reference. That is correct and should
 stay; but the mix of `uint`, `uint64`, `SizeCellCountInt` (`uint16`) and
 `int64` in signatures needs conversions at almost every call site.
+
+2.10 **`goto` and closures for Zig's labelled blocks.** `break :label
+value` and labelled `continue` have no Go equivalent, so the port uses 105
+`goto` statements (21 labels such as `prong:`, `outer:`, `shiftLeft:`) and
+closures returned from in place. Go would restructure these into helper
+functions or early returns; the literal form exists so each function still
+reads side by side with Zig.
+
+2.11 **`errdefer` as deferred closures on named error results.** Zig's
+`errdefer` (cleanup only when the function fails) becomes `defer func() {
+if err != nil {...} }()` with a named `err` result (45 deferred closures, in
+Zig's unwinding order), and block-scoped `defer` becomes a closure called in
+place. Idiomatic Go would undo state explicitly on each error path or
+restructure so there is nothing to undo.
+
+2.12 **`// Zig:` comments.** 1,668 comments record the Zig construct each
+Go line stands for. They are what makes review possible and should stay as
+long as the code stays literal; an idiomatic rewrite of a function would
+drop them.
 
 ## 3. Zig standard library stand-ins
 
@@ -134,7 +156,14 @@ insertion sort in `RemapSet.finalize`. Several exist only because upstream's
 byte bookkeeping (option A) needs their exact fill points; the rest could be
 Go maps, slices and `sort`.
 
-3.5 **Small std helpers**: `std_mem.go`, `std_ascii.go`, `std_unicode.go`, and
+3.5 **Zig's float maths.** `color.go` hand-ports Zig's `pow`, `cbrt`,
+`exp` and `log` (Go's `math` gives different last bits), and every stored
+product is explicitly rounded (`float64(x*y)`) so Go cannot fuse
+multiply-adds, which Zig never does (`scripts/check-no-fma.sh` enforces it).
+Go would use `math.Pow` and plain expressions. Keep while the recorded
+colour data must match bit for bit.
+
+3.6 **Small std helpers**: `std_mem.go`, `std_ascii.go`, `std_unicode.go`, and
 the duplicated `splitScalar` and `tokenize` helpers per OSC sub-parser
 (performance item 3).
 
@@ -146,8 +175,9 @@ scrollback retention matches Ghostty exactly. That is a decision, not
 an accident, but it is the most Zig-shaped part of the package.
 
 4.2 **Pointer arithmetic stand-ins.** `cellIndex` and `rowIndex` use
-`unsafe` (the one sanctioned use) and `BitmapAllocator.Free` uses
-`reflect` address differences to turn a pointer back into a position, as Zig
+`unsafe` (the one sanctioned use; 11 `unsafe.` references) and
+`BitmapAllocator.Free` uses `reflect` address differences (12 `reflect.`
+references in all, including `SetPwd`'s and the copy helpers' aliasing checks) to turn a pointer back into a position, as Zig
 does with pointer subtraction. Keeping indexes instead of pointers in the
 cursor and pins would remove both (performance items 14 and 24).
 
@@ -165,7 +195,12 @@ these settings.
 *Revisit:* move them into configuration carried by the terminal or the
 encoder options.
 
-5.2 **Start-up tables** computed by package-level variable initialisers:
+5.2 **Run-time stand-ins for compile-time work.** Besides the tables below:
+the `vt_raw` and `has_deleted` fields (Zig's `@hasDecl`), `elem_size` and
+`elem_align` in `BitmapAllocator` (Zig's `@sizeOf`/`@alignOf`), and the one
+per-call type switch in `hashMapAutoContext.Hash`.
+
+5.3 **Start-up tables** computed by package-level variable initialisers:
 mode lookup, Unicode tables, the X11 color map, key tables, kitty entries.
 This is fine in Go, but it is several megabytes initialised at program start
 whether used or not.
@@ -206,3 +241,9 @@ requirement for the app, not a library change.
 4. **Package split and export clean-up (1.2 to 1.4).**
 5. **Idioms (section 2) and std stand-ins (section 3)**, file by file, each
    only where behaviour does not depend on the Zig version.
+
+## Counts
+
+The figures above are for the non-test code in `terminal/` (84 files, about
+58,000 lines) at Go commit b40fcb9, 2026-10-06, counted with `grep`; they are
+a size guide, not exact inventories.

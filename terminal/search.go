@@ -1,12 +1,6 @@
-// WIREFRAME for src/terminal/search.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Port of src/terminal/search.zig (Ghostty v1.3.1).
 //
 // Search functionality for the terminal.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
 //
 // search.zig has no function. It is a namespace file whose declarations
 // take the prefix `Search`, and it re-exports the main type of four files

@@ -19,9 +19,11 @@
 //   - Pointer comparisons of storage elements stay pointer comparisons of
 //     `&buf.storage[i]`; comparisons of a slice's raw `.ptr` are slice-index
 //     comparisons (`&s[0] == &buf.storage[i]`).
-//   - Zig's `usize` is `uint`, `isize` is `int`; `std.math.maxInt(usize)` and
-//     friends use math.MaxUint / math.MaxInt so that the tests hold for a
-//     32-bit build too.
+//   - Zig's `usize` is `uint`; `std.math.maxInt(usize)` uses math.MaxUint so
+//     that the tests hold for a 32-bit build too. `isize` (seekBy's amount)
+//     is `int64`, the reference's isize on every platform (project lead's
+//     ruling); the expected values of a seek beyond the largest `uint` are
+//     the 64-bit reference's values saturated to that `uint`.
 
 package terminal
 
@@ -1225,27 +1227,42 @@ func TestCb1_term51_CircBuf_Iterator_seekBy_clamps_at_zero_and_saturates_at_the_
 	defer buf.Deinit()
 	buf.AppendSliceAssumeCapacity([]uint8{1, 2, 3})
 
-	// isize's magnitude of minInt is maxInt(isize) + 1 (2^63 in the Zig
-	// 64-bit build); it is written platform-independently.
-	const isizeMinMagnitude = uint(math.MaxInt) + 1
+	// isize's magnitude of minInt is maxInt(isize) + 1 (2^63; isize is int64
+	// on every platform).
+	const isizeMinMagnitude = uint64(math.MaxInt64) + 1
+	// Go-only: on a 32-bit target `uint` is narrower than the reference's
+	// usize, so a value of the 64-bit reference above the largest `uint`
+	// saturates to it (`+|=`), and `-|=` of a magnitude above the index
+	// clamps at zero.
+	satUint := func(v uint64) uint {
+		if v > uint64(math.MaxUint) {
+			return math.MaxUint
+		}
+		return uint(v)
+	}
 
 	it := buf.Iterator(DatastructCircBufIteratorDirectionForward)
 	it.SeekBy(-1)
 	expectEqual(t, 0, it.idx)
-	it.SeekBy(math.MinInt)
+	it.SeekBy(math.MinInt64)
 	expectEqual(t, 0, it.idx)
 	expectEqual(t, 1, cbNext(t, &it))
 
-	it.SeekBy(math.MaxInt)
-	expectEqual(t, uint(math.MaxInt)+1, it.idx)
+	it.SeekBy(math.MaxInt64)
+	expectEqual(t, satUint(uint64(math.MaxInt64)+1), it.idx)
 	expect(t, it.Next() == nil, "it.next() == null")
-	it.SeekBy(math.MaxInt)
-	it.SeekBy(math.MaxInt)
+	it.SeekBy(math.MaxInt64)
+	it.SeekBy(math.MaxInt64)
 	// 2^63 + 2*(2^63 - 1) overflows usize: saturate.
 	expectEqual(t, uint(math.MaxUint), it.idx)
 	expect(t, it.Next() == nil, "it.next() == null")
-	it.SeekBy(math.MinInt)
-	expectEqual(t, uint(math.MaxUint)-isizeMinMagnitude, it.idx)
+	it.SeekBy(math.MinInt64)
+	maxUint := uint64(math.MaxUint)
+	if maxUint > isizeMinMagnitude {
+		expectEqual(t, uint(maxUint-isizeMinMagnitude), it.idx)
+	} else {
+		expectEqual(t, uint(0), it.idx)
+	}
 }
 
 // Zig: test "term51: CircBuf.Iterator.seekBy: does not clamp to the buffer length"

@@ -29,17 +29,53 @@ upstream-crashes.md). Rule: an error where upstream aborts.
 - Go-only tests: `Screen_split_rulings_test.go`
   (`TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_change`,
   `TestScreenSplitRuling_full_style_set_in_the_rows_below_fails_the_style_change`).
-  Rows for docs/go-only-tests.md:
-  `| Screen_split_rulings_test.go | TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_change | ruling (Screen.splitForCapacity returns ErrOutOfSpace where upstream aborts in Page.exactRowCapacity's style-capacity cast; docs/mapping.md "Page-layer bookkeeping") |`
-  `| Screen_split_rulings_test.go | TestScreenSplitRuling_full_style_set_in_the_rows_below_fails_the_style_change | ruling (as above, the range below the cursor) |`
+  (rows for docs/go-only-tests.md: below).
 
-## Open (not implemented): stale cursor row pointers after a split that moves the cursor row
+## Page-layer bookkeeping: cursor row pointers after a split that moves the cursor row (ruled departure)
 
 Upstream-findings section 15, Screen items 6 and 33; term51 case
-`text/style_split/split_moves_cursor_row_erase` (`upstream_invalid`). After
-`splitForCapacity` moves the cursor row to a new page, Zig's
-`cursor.page_row`/`page_cell` still point into the old page and pointer
-arithmetic on them (`cursorRight`, `cursorCellRight`, ...) keeps working there;
-Go's `cellIndex` resolves the cell against the cursor's new page and panics
-("cell is not in the page", `Screen.CursorRight`, Screen.go:1083, the first
-print after the split). Awaiting the project lead's decision.
+`text/style_split/split_moves_cursor_row_erase` (`upstream_invalid`, stays
+excluded). After `splitForCapacity` moves the cursor row to a new page,
+upstream leaves `cursor.page_row`/`page_cell` pointing at the old page's row,
+which the split cleared and hid. Its release build prints into that hidden
+row, then (after CR or a same-row CUP, which reload only `page_cell`) leaves a
+styled cell in a visible row not marked styled: a state its own
+`verifyIntegrity` rejects (`UnmarkedStyleRow`); its Debug build aborts on the
+next page check. Ruling (project lead): same class as `Screen.clone` — where
+upstream's release build ends in a state its own integrity check rejects, the
+port does the evidently intended thing (or returns an error) rather than
+reproduce the corrupted state; a ruled departure, not a fix (term51
+docs/upstream-crashes.md, aborts and invalid-states list; deliberate-fixes.md
+entry 8).
+
+- `splitForCapacity` (Screen.go), after `cursorChangePin(new_cursor)`, sets
+  `page_row`/`page_cell` from `cursor.page_pin.RowAndCell()`, exactly the lines
+  `cursorAbsolute` runs after its `cursorChangePin`. Not `cursorReload`: x and y
+  are unchanged by the split, and `cursorReload` would also re-run
+  `manualStyleUpdate` (the caller of `splitForCapacity`) for a non-default style.
+  Before: Go panicked at the first print after the split ("cell is not in the
+  page", `Screen.CursorRight`).
+- Go-only test: `TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visible_row`
+  (the corpus case's steps: the text lands in the visible row with the new
+  style, the row is marked styled, every page passes `VerifyIntegrity` and the
+  page list `verifyIntegrity`, also after the erase that makes upstream's Debug
+  build abort). Checked to fail without the change.
+
+## Rows ready for docs/go-only-tests.md
+
+| Screen_split_rulings_test.go | TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_change | ruling (Screen.splitForCapacity returns ErrOutOfSpace where upstream aborts in Page.exactRowCapacity's style-capacity cast; docs/mapping.md "Page-layer bookkeeping") |
+| Screen_split_rulings_test.go | TestScreenSplitRuling_full_style_set_in_the_rows_below_fails_the_style_change | ruling (as above, the range below the cursor) |
+| Screen_split_rulings_test.go | TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visible_row | ruling (Screen.splitForCapacity reloads cursor.page_row/page_cell when the split moves the cursor row to a new page; upstream ends in a state its integrity check rejects; docs/mapping.md "Page-layer bookkeeping") |
+
+## Text ready for docs/mapping.md ("Page-layer bookkeeping", next to the clone deviation)
+
+`splitForCapacity` returns `ErrOutOfSpace` where upstream aborts in
+`exactRowCapacity`'s `.styles = @intCast(styles_cap)` (a row range referencing
+every id of a full style set of the maximum capacity; helper
+`exactRowCapacityOrError`, not a Zig declaration; `ExactRowCapacity` itself
+still asserts, and so does `PageList.Compact`'s call, unreachable from the
+library). When the split moves the cursor row to a new page,
+`splitForCapacity` reloads `cursor.page_row`/`page_cell` from the moved pin
+(upstream leaves them in the old page and ends in a state its integrity check
+rejects). Both are project-lead rulings; Go-only tests in
+`Screen_split_rulings_test.go`.

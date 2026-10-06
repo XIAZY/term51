@@ -20,6 +20,17 @@
 // returns the error, the stream handler ignores it, and printing continues
 // with the previous style.
 //
+// Second ruling (stale cursor pointers, a ruled departure of the same class
+// as Screen.clone's): when the split succeeds and moves the cursor row to a
+// new page, upstream leaves cursor.page_row/page_cell in the old page
+// (Screen.zig:2118-2129). Its release build then prints into a hidden row and
+// leaves a styled cell in a row not marked styled, which its own integrity
+// check rejects (term51 upstream-findings section 15, Screen item 33; case
+// text/style_split split_moves_cursor_row_erase, upstream_invalid). The port
+// reloads the cached row and cell from the moved pin at the end of
+// splitForCapacity: the text lands in the visible row and the page stays
+// valid.
+//
 // The tests use the production page capacity (grapheme_bytes 8192, the
 // default when testStdCapacity is not called), as the corpus does.
 
@@ -155,4 +166,67 @@ func TestScreenSplitRuling_full_style_set_in_the_rows_below_fails_the_style_chan
 	expect(t, s.cursor.style == old_style && s.cursor.style_id == old_id, "the previous style is restored")
 	expect(t, s.pages.pages.first == node && node.next == nil, "the page is not split")
 	ssrCheckIntegrity(t, &term)
+}
+
+// Go-only: ruling (Screen.splitForCapacity reloads cursor.page_row/page_cell when the split moves the cursor row to a new page, where upstream leaves them in the old page; term51 docs/upstream-crashes.md)
+func TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visible_row(t *testing.T) {
+	opts := terminalOptionsDefault(ssrCols, 3)
+	opts.max_scrollback = 0
+	term, err := TerminalInit(opts)
+	zigTry(t, err)
+	defer term.Deinit()
+	stream := term.VtStream()
+	defer stream.Deinit()
+
+	// Row 2 holds the first 6,539 styles, row 0 the other 46,708; the cursor
+	// waits on the empty row 1, so neither range of splitForCapacity holds
+	// every id and the split succeeds at the cursor row.
+	below := ssrStyles - ssrCols
+	fill := []byte("\x1b[3;1H")
+	for i := range below {
+		fill = append(fill, ssrCell(i)...)
+	}
+	fill = append(fill, "\x1b[1;1H"...)
+	for i := below; i < ssrStyles; i++ {
+		fill = append(fill, ssrCell(i)...)
+	}
+	fill = append(fill, "\x1b[2;1H"...)
+	ssrFeed(t, &stream, fill)
+
+	s := term.screens.active
+	first := s.pages.pages.first
+	expect(t, first.next == nil, "one page before the split")
+	expect(t, s.cursor.x == 0 && s.cursor.y == 1, "cursor on row 1")
+
+	ssrFeed(t, &stream, []byte("\x1b[48;5;208m"))
+	expect(t, s.pages.pages.first == first && first.next != nil, "the page was split")
+	expect(t, first.data.size.rows == 1, "row 0 stays in the old page")
+	second := first.next
+	expect(t, s.cursor.page_pin.node == second && s.cursor.page_pin.y == 0, "the cursor row moved to the new page")
+	expect(t, s.cursor.style == ssrPaletteStyle(254, 208), "the new style is set")
+	rac := s.cursor.page_pin.RowAndCell()
+	expect(t, s.cursor.page_row == rac.row, "page_row is the visible cursor row")
+	expect(t, s.cursor.page_cell == rac.cell, "page_cell is the visible cursor cell")
+	ssrCheckIntegrity(t, &term)
+
+	// The same steps as the corpus case: print, CR + print, CUP within the
+	// row + print, erase row 2.
+	ssrFeed(t, &stream, []byte("AB\rC\x1b[2;5HD"))
+	style_id := s.cursor.style_id
+	row := second.data.GetRow(0)
+	expect(t, row.styled, "the cursor row is marked styled")
+	for _, c := range []struct {
+		x  uint
+		cp uint32
+	}{{0, 'C'}, {1, 'B'}, {4, 'D'}} {
+		cell := second.data.GetRowAndCell(c.x, 0).cell
+		expect(t, cell.content.codepoint == c.cp, fmt.Sprintf("cell %d holds %c", c.x, rune(c.cp)))
+		expect(t, cell.style_id == style_id, fmt.Sprintf("cell %d has the new style", c.x))
+	}
+	expect(t, s.cursor.x == 5 && s.cursor.y == 1, "cursor after D")
+	ssrCheckIntegrity(t, &term)
+
+	ssrFeed(t, &stream, []byte("\x1b[3;1H\x1b[K"))
+	ssrCheckIntegrity(t, &term)
+	expect(t, s.pages.verifyIntegrity() == nil, "page list integrity")
 }

@@ -2911,6 +2911,20 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 	new_cursor := *self.cursor.page_pin
 	*self.cursor.page_pin = old_cursor
 	self.cursorChangePin(new_cursor)
+
+	// term51 (ruled departure, docs/mapping.md "Page-layer bookkeeping";
+	// term51 docs/upstream-crashes.md and upstream-findings.md section 15,
+	// Screen items 6 and 33): upstream stops here and leaves page_row and
+	// page_cell pointing at the row of the OLD page, which the split cleared
+	// and hid. Its release build then prints into that hidden row and later
+	// leaves a styled cell in a row not marked styled, a state its own
+	// integrity check rejects (its Debug build aborts). The port reloads the
+	// cached row and cell from the moved pin, as cursorAbsolute does after
+	// cursorChangePin; x and y are unchanged (the split does not move the
+	// cursor on screen).
+	page_rac := self.cursor.page_pin.RowAndCell()
+	self.cursor.page_row = page_rac.row
+	self.cursor.page_cell = page_rac.cell
 	return nil
 }
 

@@ -50,6 +50,14 @@ build.
 | `terminal/stream_readonly.zig` | `terminal/stream_readonly.go` | done | 168 of 168, all pass | - | pass |
 | `terminal/formatter.zig` | `terminal/formatter.go` | done | 177 of 180 (3 allocation-failure tests not translated), plus 20 Go-only: 197 pass | - | pass |
 | `terminal/render.zig` | `terminal/render.go` | done | all 44 (incl. 2 Go-only) pass | - | pass |
+| `datastruct/circ_buf.zig` | `terminal/datastruct_circ_buf.go` | done | 117 (both files), all pass | - | pass |
+| `terminal/search/sliding_window.zig` | `terminal/search_sliding_window.go` | done | 101, all pass | search corpus | pass |
+| `terminal/search/pagelist.zig` | `terminal/search_pagelist.go` | done | 30, all pass | search corpus | pass |
+| `terminal/search/active.zig` | `terminal/search_active.go` | done | 28, all pass | search corpus | pass |
+| `terminal/search/viewport.zig` | `terminal/search_viewport.go` | done | 40, all pass | search corpus | pass |
+| `terminal/search/screen.zig` | `terminal/search_screen.go` | done | 113, all pass (2 superseded Go-only panic tests removed) | search corpus: 7,872 replayed, 228 no_result, 0 mismatches (native full); ARM sampled 0 | pass |
+| `terminal/search.zig` | `terminal/search.go` | done | 4, all pass; 33 ruling tests | - | pass |
+| `terminal/search/Thread.zig` | not ported | app code, compiled out of the library | - | - | - |
 | std `hash/wyhash.zig`, `hash.zig` (`int`), `hash/auto_hash.zig` | `terminal/std_hash_wyhash.go`, `std_hash.go`, `std_hash_auto_hash.go` | done (int: u64; autoHash: the cases PageEntry.hash and KeyEvent.bindingHash reach: u8, u32, usize, enum(u1), []const u8, enum(c_int), u21, packed struct(u16)) | wyhash 5 of 5, int 1 (u64 lines), auto_hash 0 of 12 (key types not ported); 13 Go-only tests (1 wyhash, 1 int, 11 auto_hash) pinning Zig output and the panics | - | pass |
 | std `fmt/parse_float.zig` + `parse_float/*.zig` (f64) | `terminal/std_fmt_parse_float.go` | done | 6 of 12 std tests (6 f16/f32/f80/f128-only not translated); 2 Go-only; bit for bit with Zig on 11,643,449 inputs | osc/rgbi_float: 57 cases match (actions kinds) | pass |
 

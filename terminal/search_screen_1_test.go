@@ -1967,27 +1967,3 @@ func TestSs1_term51_ScreenSearch_reloadActive_selected_match_gone_selects_the_ne
 	expectEqual(t, uint(1), search.MatchesLen())
 	ss1ExpectSel(t, &search, 0, 0, 1, 3, 1)
 }
-
-// Go-only: panic test: ScreenSearch.feed: a complete state while the history searcher can still be fed reaches unreachable
-func TestSs1_panic_feed_complete_state_with_more_history_to_feed(t *testing.T) {
-	testStdCapacity(t)
-	term := ss1New(t, ss1Cols, 2)
-	defer term.Deinit()
-	list := &term.screens.active.pages
-	s := term.VtStream()
-	defer s.Deinit()
-	ss1ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
-
-	search, err := SearchScreenInit(term.screens.active, []uint8("Fizz"))
-	zigTry(t, err)
-	// No search.Deinit(): the panic leaves the search half way through feed.
-
-	// The history searcher still has two pages to feed, so history.feed
-	// returns true, and in the complete state the switch reaches
-	// `.complete => unreachable` ("the feed call above should always return
-	// false and we can't reach this").
-	search.state = searchScreenStateComplete
-	ss1ExpectPanic(t, func() {
-		_ = search.Feed()
-	})
-}

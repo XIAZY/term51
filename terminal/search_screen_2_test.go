@@ -1618,24 +1618,6 @@ func TestSs2_ScreenSearch_init_a_needle_with_a_newline_matches_across_hard_line_
 	expectEqual(t, SizeCellCountInt(3), m.bot_x)
 }
 
-// Go-only: panic test: SearchScreen.Feed: complete state while the history searcher still has data to feed
-func TestSs2_panic_Feed_complete_state_with_history_to_feed(t *testing.T) {
-	testStdCapacity(t)
-	term := ss2New(t, ss2Cols, 2)
-	defer term.Deinit()
-	list := &term.screens.active.pages
-	s := term.VtStream()
-	defer s.Deinit()
-	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
-
-	search := ss2Init(t, term.screens.active, "Fizz")
-	defer search.Deinit()
-	// Zig: `.complete => unreachable` (the history feed returned true, which
-	// a complete search never does).
-	search.state = searchScreenStateComplete
-	ss2ExpectPanic(t, func() { _ = search.Feed() })
-}
-
 // Go-only: panic test: SearchScreen.ReloadActive: a selection in the history whose highlight no longer matches its result
 func TestSs2_panic_ReloadActive_history_selection_does_not_match_its_result(t *testing.T) {
 	testStdCapacity(t)

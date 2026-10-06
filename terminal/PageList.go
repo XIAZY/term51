@@ -5294,6 +5294,11 @@ func (self *PageList) TrackedPins() []*PageListPin {
 // expensive operation since we traverse the entire linked list in the
 // worst case. Only for runtime safety/debug.
 //
+// Debug-only call: it panics unless pageSlowRuntimeSafety is on. Upstream
+// starts the body with `comptime assert(build_options.slow_runtime_safety)`,
+// so calling it in a release build is a compile error; a run-time panic is
+// Go's nearest equivalent (project lead ruling, 2026-10-06).
+//
 // Zig: self is *const PageList.
 func (self *PageList) PinIsValid(p PageListPin) bool {
 	// This is very slow so we want to ensure we only ever

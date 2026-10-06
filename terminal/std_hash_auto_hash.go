@@ -1,6 +1,7 @@
 // Port of the part of Zig 0.15.2's lib/std/hash/auto_hash.zig (the toolchain
 // that built the recorded corpus) that the library reaches. Nothing here is
-// ported from a Ghostty source file. See docs/mapping-pending/p3-small.md.
+// ported from a Ghostty source file. See docs/mapping.md, section "Zig std
+// hashing: `std.hash.Wyhash`, `std.hash.int`, `std.hash.autoHash`".
 //
 // auto_hash.zig's `hash`, `hashPointer`, `hashArray` and `autoHash` are
 // generic over the key type (`anytype`) and dispatch on it at compile time
@@ -22,6 +23,16 @@
 //	  hashArray(hasher, <[]const u8>, .Shallow)      stdHashAutoHashHashArraySliceU8
 //	  hash(hasher, <u8>, .Shallow)                   stdHashAutoHashHashU8
 //	  hash(hasher, <usize>, .Shallow)                stdHashAutoHashHashUsize
+//
+// Instantiations reached (input.key.KeyEvent.bindingHash):
+//
+//	autoHash(&hasher, self.key)  (key.Key: enum(c_int))      stdHashAutoHashAutoHashEnumCInt
+//	  hash(hasher, <enum(c_int)>, .Shallow)                   stdHashAutoHashHashEnumCInt
+//	autoHash(&hasher, self.unshifted_codepoint)  (u21)       stdHashAutoHashAutoHashU21
+//	  hash(hasher, <u21>, .Shallow)                           stdHashAutoHashHashU21
+//	autoHash(&hasher, self.mods.binding())  (packed struct(u16))
+//	                                                          stdHashAutoHashAutoHashPackedStructU16
+//	  hash(hasher, <packed struct(u16)>, .Shallow)            stdHashAutoHashHashPackedStructU16
 //
 // hash_map.AutoContext does not reach this file: every key type it is used
 // with has a unique representation, so std.hash_map.getAutoHashFn calls
@@ -45,9 +56,10 @@
 // such a build.
 //
 // Not ported: the instantiations for other types (pointers hashed by
-// address, optionals, arrays, vectors, structs, unions, error unions,
-// floats), `typeContainsSlice` (a compile-time check that only makes
-// autoHash refuse slices; none of the instantiations above contains one).
+// address, optionals, arrays, vectors, structs other than a packed
+// struct(u16) hashed shallowly, unions, error unions, floats),
+// `typeContainsSlice` (a compile-time check that only makes autoHash refuse
+// slices; none of the instantiations above contains one).
 
 package terminal
 
@@ -218,6 +230,74 @@ func stdHashAutoHashHashSliceU8(hasher *stdHashWyhash, key []uint8, strat stdHas
 	stdHashAutoHashHashPointerSliceU8(hasher, key, strat)
 }
 
+// stdHashAutoHashHashEnumCInt is auto_hash.hash(hasher, key, strat) with
+// @TypeOf(key) an enum whose tag type is c_int (32 bits on every port
+// target and on the recording build), such as input.key.Key. key is
+// @intFromEnum of the value.
+//
+// Provides generic hashing for any eligible type.
+// Strategy is provided to determine if pointers should be followed or not.
+func stdHashAutoHashHashEnumCInt(hasher *stdHashWyhash, key int32, strat stdHashAutoHashHashStrategy) {
+	// Zig: std.meta.hasUniqueRepresentation is true for every enum, so the
+	// enum's memory (@sizeOf is 4, the c_int) is hashed.
+	var bytes [4]uint8 // std.mem.asBytes(&key)
+	binary.LittleEndian.PutUint32(bytes[:], uint32(key))
+	if strat == stdHashAutoHashHashStrategyShallow {
+		hasher.update(bytes[:])
+		return
+	}
+
+	// Zig: switch (@typeInfo(Key)) { .@"enum" => hash(hasher,
+	// @intFromEnum(key), strat) }: the c_int instantiation is signed, so it
+	// hashes @as(u32, @bitCast(key)), an unsigned integer with a unique
+	// representation: the same 4 bytes.
+	hasher.update(bytes[:])
+}
+
+// stdHashAutoHashHashU21 is auto_hash.hash(hasher, key, strat) with
+// @TypeOf(key) == u21.
+//
+// Provides generic hashing for any eligible type.
+// Strategy is provided to determine if pointers should be followed or not.
+func stdHashAutoHashHashU21(hasher *stdHashWyhash, key uint32, strat stdHashAutoHashHashStrategy) {
+	// A u21 cannot hold more than 21 bits.
+	assert(key <= 0x1FFFFF)
+
+	// Zig: std.meta.hasUniqueRepresentation(u21) is false (@sizeOf is 4,
+	// 32 bits for 21), so the Shallow shortcut is not taken.
+	//
+	// Zig: switch (@typeInfo(Key)) { .int => unsigned, no unique
+	// representation }:
+	// Take only the part containing the key value, the remaining
+	// bytes are undefined and must not be hashed!
+	// byte_size = divCeil(21, 8) = 3: the three low bytes, little-endian.
+	var bytes [4]uint8 // std.mem.asBytes(&key)
+	binary.LittleEndian.PutUint32(bytes[:], key)
+	hasher.update(bytes[0:3])
+}
+
+// stdHashAutoHashHashPackedStructU16 is auto_hash.hash(hasher, key, strat)
+// with @TypeOf(key) a packed struct(u16), such as input.key_mods.Mods. key
+// is the struct's @bitCast to its u16 backing integer.
+//
+// Provides generic hashing for any eligible type.
+// Strategy is provided to determine if pointers should be followed or not.
+func stdHashAutoHashHashPackedStructU16(hasher *stdHashWyhash, key uint16, strat stdHashAutoHashHashStrategy) {
+	// Zig: std.meta.hasUniqueRepresentation of a packed struct is
+	// `@sizeOf(T) * 8 == @bitSizeOf(T)`: 16 == 16, true. With .Shallow the
+	// struct's memory, its 2 bytes, is hashed.
+	var bytes [2]uint8 // std.mem.asBytes(&key)
+	binary.LittleEndian.PutUint16(bytes[:], key)
+	if strat == stdHashAutoHashHashStrategyShallow {
+		hasher.update(bytes[:])
+		return
+	}
+
+	// Zig: switch (@typeInfo(Key)) { .@"struct" => hash of every field }:
+	// reached only with .Deep or .DeepRecursive, which no caller passes.
+	panic("not ported: auto_hash.hash of a packed struct field by field")
+}
+
 // stdHashAutoHashAutoHashEnumU1 is auto_hash.autoHash(hasher, key)
 // (std.hash.autoHash) with @TypeOf(key) an enum whose tag type is u1; key is
 // @intFromEnum of the value.
@@ -241,4 +321,43 @@ func stdHashAutoHashAutoHashEnumU1(hasher *stdHashWyhash, key uint8) {
 func stdHashAutoHashAutoHashU32(hasher *stdHashWyhash, key uint32) {
 	// Zig: `comptime typeContainsSlice(Key)` is false for an integer.
 	stdHashAutoHashHashU32(hasher, key, stdHashAutoHashHashStrategyShallow)
+}
+
+// stdHashAutoHashAutoHashEnumCInt is auto_hash.autoHash(hasher, key)
+// (std.hash.autoHash) with @TypeOf(key) an enum whose tag type is c_int;
+// key is @intFromEnum of the value.
+//
+// Provides generic hashing for any eligible type.
+// Only hashes `key` itself, pointers are not followed.
+// Slices as well as unions and structs containing slices are rejected to avoid
+// ambiguity on the user's intention.
+func stdHashAutoHashAutoHashEnumCInt(hasher *stdHashWyhash, key int32) {
+	// Zig: `comptime typeContainsSlice(Key)` is false for an enum.
+	stdHashAutoHashHashEnumCInt(hasher, key, stdHashAutoHashHashStrategyShallow)
+}
+
+// stdHashAutoHashAutoHashU21 is auto_hash.autoHash(hasher, key)
+// (std.hash.autoHash) with @TypeOf(key) == u21.
+//
+// Provides generic hashing for any eligible type.
+// Only hashes `key` itself, pointers are not followed.
+// Slices as well as unions and structs containing slices are rejected to avoid
+// ambiguity on the user's intention.
+func stdHashAutoHashAutoHashU21(hasher *stdHashWyhash, key uint32) {
+	// Zig: `comptime typeContainsSlice(Key)` is false for an integer.
+	stdHashAutoHashHashU21(hasher, key, stdHashAutoHashHashStrategyShallow)
+}
+
+// stdHashAutoHashAutoHashPackedStructU16 is auto_hash.autoHash(hasher, key)
+// (std.hash.autoHash) with @TypeOf(key) a packed struct(u16) whose fields
+// contain no slice; key is its @bitCast to u16.
+//
+// Provides generic hashing for any eligible type.
+// Only hashes `key` itself, pointers are not followed.
+// Slices as well as unions and structs containing slices are rejected to avoid
+// ambiguity on the user's intention.
+func stdHashAutoHashAutoHashPackedStructU16(hasher *stdHashWyhash, key uint16) {
+	// Zig: `comptime typeContainsSlice(Key)` is false: Mods holds bools,
+	// a packed struct of enums and a u6.
+	stdHashAutoHashHashPackedStructU16(hasher, key, stdHashAutoHashHashStrategyShallow)
 }

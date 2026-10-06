@@ -1,10 +1,4 @@
-// WIREFRAME for src/input/paste.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/input/paste.zig (Ghostty v1.3.1).
 //
 // File naming: paste.zig lives in src/input/, so the file is
 // `input_paste.go` and every declaration takes the prefix `InputPaste`:
@@ -44,8 +38,13 @@
 //
 // # Omitted
 //
-// The import aliases `std` and `Terminal` (use `Terminal`). `encode`'s
-// local `strip` table is a body detail.
+// The import aliases `std` and `Terminal` (use `Terminal`).
+//
+// `encode`'s local constant `strip` is the package-level inputPasteStrip,
+// shared by the two instantiations (it is the same comptime constant in
+// both). `std.mem.indexOfAny` is stdMemIndexOfAny (std_mem.go),
+// `std.mem.indexOfScalar` is bytes.IndexByte, `std.mem.indexOf` with a
+// non-empty needle is bytes.Index, `std.mem.replaceScalar` is a loop.
 // No C ABI declaration exists in this file.
 //
 // # Zig defaults a Go literal does not give
@@ -54,7 +53,10 @@
 
 package terminal
 
-import "errors"
+import (
+	"bytes"
+	"errors"
+)
 
 // ErrMutableRequired is Zig's error.MutableRequired (paste.Error): returned
 // if encoding requires a mutable copy of the data. This can only be
@@ -71,7 +73,42 @@ type InputPasteOptions struct {
 
 // InputPasteOptionsFromTerminal is paste.Options.fromTerminal: return the
 // encoding options based on the current terminal state.
-func InputPasteOptionsFromTerminal(t *Terminal) InputPasteOptions { panic(notImplemented) }
+func InputPasteOptionsFromTerminal(t *Terminal) InputPasteOptions {
+	return InputPasteOptions{
+		bracketed: t.modes.Get(ModesModeBracketedPaste),
+	}
+}
+
+// inputPasteStrip is encode's local `strip`.
+//
+// These are the set of byte values that are always replaced by
+// a space (per xterm's behavior) for any text insertion method e.g.
+// a paste, drag and drop, etc. These are copied directly from xterm's
+// source.
+var inputPasteStrip = []uint8{
+	0x00, // NUL
+	0x08, // BS
+	0x05, // ENQ
+	0x04, // EOT
+	0x1B, // ESC
+	0x7F, // DEL
+
+	// These can be overridden by the running terminal program
+	// via tcsetattr, so they aren't totally safe to hardcode like
+	// this. In practice, I haven't seen modern programs change these
+	// and its a much bigger architectural change to pass these through
+	// so for now they're hardcoded.
+	0x03, // VINTR (Ctrl+C)
+	0x1C, // VQUIT (Ctrl+\)
+	0x15, // VKILL (Ctrl+U)
+	0x1A, // VSUSP (Ctrl+Z)
+	0x11, // VSTART (Ctrl+Q)
+	0x13, // VSTOP (Ctrl+S)
+	0x17, // VWERASE (Ctrl+W)
+	0x16, // VLNEXT (Ctrl+V)
+	0x12, // VREPRINT (Ctrl+R)
+	0x0F, // VDISCARD (Ctrl+O)
+}
 
 // InputPasteEncode is paste.encode instantiated with `data: []const u8`:
 // encode the given data for pasting. The resulting value can be written to
@@ -96,7 +133,38 @@ func InputPasteOptionsFromTerminal(t *Terminal) InputPasteOptions { panic(notImp
 // Zig: Error![3][]const u8. Never modifies data; the error is
 // ErrMutableRequired. See the file header.
 func InputPasteEncode(data []uint8, opts InputPasteOptions) ([3][]uint8, error) {
-	panic(notImplemented)
+	// Zig: const mutable = @TypeOf(data) == []u8; false here.
+
+	result := [3][]uint8{[]uint8(""), data, []uint8("")}
+
+	// If we have any of the strip values, then we need to replace them
+	// with spaces. This is what xterm does and it does it regardless
+	// of bracketed paste mode. This is a security measure to prevent pastes
+	// from containing bytes that could be used to inject commands.
+	if stdMemIndexOfAny(data, inputPasteStrip).Valid {
+		// Zig: if (comptime !mutable) return Error.MutableRequired; the
+		// replacement loop after it is the mutable instantiation's only.
+		return [3][]uint8{}, ErrMutableRequired
+	}
+
+	// Bracketed paste mode (mode 2004) wraps pasted data in
+	// fenceposts so that the terminal can ignore things like newlines.
+	if opts.bracketed {
+		result[0] = []uint8("\x1b[200~")
+		result[2] = []uint8("\x1b[201~")
+		return result, nil
+	}
+
+	// Non-bracketed. We have to replace newline with `\r`. This matches
+	// the behavior of xterm and other terminals. For `\r\n` this will
+	// result in `\r\r` which does match xterm.
+	//
+	// Zig: `if (comptime mutable) { ... } else if (...)`: the const branch.
+	if bytes.IndexByte(data, '\n') >= 0 {
+		return [3][]uint8{}, ErrMutableRequired
+	}
+
+	return result, nil
 }
 
 // InputPasteEncodeMutable is paste.encode instantiated with `data: []u8`:
@@ -106,7 +174,48 @@ func InputPasteEncode(data []uint8, opts InputPasteOptions) ([3][]uint8, error) 
 //
 // Zig: [3][]const u8.
 func InputPasteEncodeMutable(data []uint8, opts InputPasteOptions) [3][]uint8 {
-	panic(notImplemented)
+	// Zig: const mutable = @TypeOf(data) == []u8; true here.
+
+	result := [3][]uint8{[]uint8(""), data, []uint8("")}
+
+	// If we have any of the strip values, then we need to replace them
+	// with spaces. This is what xterm does and it does it regardless
+	// of bracketed paste mode. This is a security measure to prevent pastes
+	// from containing bytes that could be used to inject commands.
+	if stdMemIndexOfAny(data, inputPasteStrip).Valid {
+		// Zig: `if (comptime !mutable) return ...` is false here.
+		var offset uint = 0
+		for {
+			idx := stdMemIndexOfAny(data[offset:], inputPasteStrip)
+			if !idx.Valid {
+				break
+			}
+			offset += idx.Value
+			data[offset] = ' '
+			offset += 1
+		}
+	}
+
+	// Bracketed paste mode (mode 2004) wraps pasted data in
+	// fenceposts so that the terminal can ignore things like newlines.
+	if opts.bracketed {
+		result[0] = []uint8("\x1b[200~")
+		result[2] = []uint8("\x1b[201~")
+		return result
+	}
+
+	// Non-bracketed. We have to replace newline with `\r`. This matches
+	// the behavior of xterm and other terminals. For `\r\n` this will
+	// result in `\r\r` which does match xterm.
+	//
+	// Zig: `if (comptime mutable)`: std.mem.replaceScalar(u8, data, '\n', '\r').
+	for i := range data {
+		if data[i] == '\n' {
+			data[i] = '\r'
+		}
+	}
+
+	return result
 }
 
 // InputPasteIsSafe is paste.isSafe: returns true if the data looks safe to
@@ -121,4 +230,7 @@ func InputPasteEncodeMutable(data []uint8, opts InputPasteOptions) [3][]uint8 {
 // consider `\x1b[201~` unsafe. The existence of these types of bytes
 // should raise suspicion that the producer of the paste data is
 // acting strangely.
-func InputPasteIsSafe(data []uint8) bool { panic(notImplemented) }
+func InputPasteIsSafe(data []uint8) bool {
+	return bytes.Index(data, []uint8("\n")) < 0 &&
+		bytes.Index(data, []uint8("\x1b[201~")) < 0
+}

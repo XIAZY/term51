@@ -11,7 +11,9 @@
 // assertions and is not translated.
 //
 // The Go-only test at the end compares the port with values printed by Zig
-// 0.15.2's std.hash.int(u64) (see docs/mapping-pending/p3-small.md).
+// 0.15.2's std.hash.int(u64) (see docs/mapping.md, section "Zig std
+// hashing: `std.hash.Wyhash`, `std.hash.int`, `std.hash.autoHash`",
+// "Cross-check against Zig 0.15.2").
 
 package terminal
 

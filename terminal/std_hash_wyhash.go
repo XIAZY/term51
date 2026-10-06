@@ -2,8 +2,9 @@
 // toolchain that built the recorded corpus. Nothing here is ported from a
 // Ghostty source file. Callers: hyperlink.PageEntry.hash (Wyhash.init,
 // update through autoHash, final) and hash_map.AutoContext.hash
-// (Wyhash.hash with seed 0 over the key's bytes); see
-// docs/mapping-pending/p3-small.md.
+// (Wyhash.hash with seed 0 over the key's bytes); see docs/mapping.md,
+// section "Zig std hashing: `std.hash.Wyhash`, `std.hash.int`,
+// `std.hash.autoHash`".
 //
 // The Go standard library has no Wyhash (hash/maphash is a different,
 // randomly seeded function), so the whole of wyhash.zig's Wyhash is ported,

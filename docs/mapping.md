@@ -2531,3 +2531,38 @@ that has no name, and the dumper prints such a value as `#N` (decimal), as the
 recorder's `dumpAny` does (project lead, 2026-10-05). The replayer
 (`terminal/corpus_replay*_test.go`) depends on it. Sentinel errors carry Zig's
 error name as their text for the same reason.
+
+## Input encoders: implementation notes
+
+Files: `input_key_encode.go`, `input_key_mods.go`, `input_key.go`,
+`input_kitty.go`, `input_function_keys.go`, `input_paste.go`,
+`input_config.go`, `platform.go`, and the u21 case in
+`std_hash_auto_hash.go`. Ported by mitchellh (project lead), reviewed by
+anchron.
+
+- **Tables** (the `Key` enum and its names, the key codepoint map, the kitty
+  entries, the function-key tables, the key_mods alias table) were
+  generated mechanically from the pinned Zig sources by a throwaway script,
+  not typed by hand, and are built once at package start-up. Their contents
+  are checked by the translated tests and by the keyboard corpus in all
+  three platform modes.
+- **Platform:** `platformGOOS` is `runtime.GOOS` at start-up;
+  `platformIsMacos()` is "darwin" (Zig `os.tag == .macos`) and
+  `platformIsDarwin()` is "darwin" or "ios" (Zig `isDarwin()`). Each upstream
+  call site keeps the check it uses, so the iOS mode (Apple platform, not
+  macOS) behaves as upstream does.
+- **`RemapSet.finalize`** sorts with Zig's `std.sort.insertionContext`
+  replicated step for step (`inputKeyModsRemapSetMap.Sort`), because its
+  comparator ignores one index and the result depends on the algorithm.
+- **`KeyEvent.bindingHash`** uses the ported Wyhash with Zig's `autoHash`
+  feeding: the key as a 4-byte c_int enum, the u21 codepoint as 3
+  little-endian bytes, and `mods.binding()` as its 2-byte packed value.
+- **Fixed-buffer stream** for `RemapSet` formatting writes what fits, then
+  returns `ErrNoSpaceLeft`, as `std.io.fixedBufferStream` does. It is a
+  separate stand-in from Terminal's `printAttributes` one (consolidation is
+  post-port optimisation item 30).
+
+Verification at merge: 417 encoder and hash tests pass natively and on
+32-bit ARM (qemu); the mapping check is OK for all seven input files (412
+Zig tests); the keyboard and paste corpus replays with `TERM51_FULL=1`
+pass in all three platform modes (Linux, macOS, iOS).

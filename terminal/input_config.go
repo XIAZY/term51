@@ -1,10 +1,4 @@
-// WIREFRAME for src/input/config.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/input/config.zig (Ghostty v1.3.1).
 //
 // File naming: config.zig lives in src/input/, a sibling of src/terminal/,
 // so the subdirectory is part of the name: `input_config.go`, and every
@@ -44,5 +38,15 @@ const (
 )
 
 // String returns the Zig tag name (@tagName): "false", "true", "left",
-// "right". It is also the name std.meta.stringToEnum matches.
-func (self InputConfigOptionAsAlt) String() string { panic(notImplemented) }
+// "right". It is also the name std.meta.stringToEnum matches. A value
+// outside the enum panics (index out of range), as @tagName of an invalid
+// value of an exhaustive enum does.
+func (self InputConfigOptionAsAlt) String() string { return inputConfigOptionAsAltNames[self] }
+
+// inputConfigOptionAsAltNames holds the Zig tag names, indexed by value.
+var inputConfigOptionAsAltNames = [inputConfigOptionAsAltCount]string{
+	"false",
+	"true",
+	"left",
+	"right",
+}

@@ -1,11 +1,4 @@
-// WIREFRAME for src/input/key.zig (Ghostty v1.3.1). NOT YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented) and every table is left at its zero value. The
-// implementation is added only after the project owner and the project lead
-// both approve it. Do not fill in bodies before then. See the header of
-// color.go for the rules.
+// Port of src/input/key.zig (Ghostty v1.3.1).
 //
 // File naming: key.zig lives in src/input/, so the file is `input_key.go`
 // and every declaration takes the prefix `InputKey` (`inputKey` for private
@@ -32,11 +25,27 @@
 //
 // # Comptime
 //
-// `fromASCII`, `w3c`, `printable` and `codepoint` compute their answer for
-// every key at compile time (`inline else` + `comptime`); the Go
-// implementation computes the same answer at run time (or in a table filled
-// at start-up). `w3c` returns static memory in Zig; Go returns a []uint8
-// the caller must not modify.
+// `fromASCII`, `w3c`, `printable`, `keypad` and `codepoint` compute their
+// answer for every key at compile time (`inline else` + `comptime`). In Go
+// each comptime block is a function run once at start-up that fills a
+// table indexed by the key (or by the byte, for fromASCII), with the same
+// loop over `codepoint_map` or over the tag name:
+// inputKeyKeyFromASCIITable, inputKeyKeyW3cTable, inputKeyKeyPrintableTable,
+// inputKeyKeyKeypadTable, inputKeyKeyCodepointTable. Each method is one
+// table load. `w3c` returns static memory in Zig; Go returns the table's
+// []uint8, which the caller must not modify.
+//
+// Tables transcribed from key.zig: the tag names (inputKeyKeyNames, what
+// `@tagName` returns) and `codepoint_map` were generated mechanically from
+// key.zig by a throwaway script, in upstream's order.
+//
+// `std.meta.stringToEnum(Key, s)` (fromW3C): Key has more than 100 fields,
+// so Zig 0.15.2 compares s with every tag name in order (`inline for` +
+// `mem.eql`); inputKeyStringToEnumKey does the same loop.
+// `std.ascii.lowerString`, `toLower` and `toUpper` are
+// inputKeyAsciiLowerString, inputKeyAsciiToLower and inputKeyAsciiToUpper
+// (Zig 0.15.2's code). `std.io.fixedBufferStream` is key_mods.go's
+// inputKeyModsFixedBufferStream (same std type, already ported there).
 //
 // # bindingHash
 //
@@ -45,9 +54,10 @@
 // `unshifted_codepoint` (a u21: autoHash feeds 3 bytes, little-endian,
 // measured against Zig 0.15.2: autoHash(u21 0x41) equals
 // Wyhash.hash(0, {0x41, 0, 0})) and `mods.binding()` (a packed
-// struct(u16): its 2 bytes). The implementation must reproduce Zig's values
-// exactly; it uses the ported Wyhash (std_hash_wyhash.go) and needs a u21
-// case in std_hash_auto_hash.go.
+// struct(u16): its 2 bytes). The port reproduces Zig's values exactly with
+// the ported Wyhash (std_hash_wyhash.go) and three instantiations of
+// std.hash.autoHash added to std_hash_auto_hash.go for these key types
+// (stdHashAutoHashAutoHashEnumCInt, ...U21, ...PackedStructU16).
 //
 // # Darwin
 //
@@ -98,6 +108,8 @@
 // 0) are the Go zero value.
 
 package terminal
+
+import "strings"
 
 // InputKeyMods is key.Mods, a re-export of key_mods.Mods.
 type InputKeyMods = InputKeyModsMods
@@ -165,12 +177,34 @@ type InputKeyKeyEvent struct {
 // EffectiveMods is key.KeyEvent.effectiveMods: returns the effective
 // modifiers for this event. The effective modifiers are the mods that
 // should be considered for keybindings.
-func (self InputKeyKeyEvent) EffectiveMods() InputKeyMods { panic(notImplemented) }
+func (self InputKeyKeyEvent) EffectiveMods() InputKeyMods {
+	if len(self.utf8) == 0 {
+		return self.mods
+	}
+	return self.mods.Unset(self.consumed_mods)
+}
 
 // BindingHash is key.KeyEvent.bindingHash: returns a unique hash for this
 // key event to be used for tracking uniquess specifically with bindings.
 // This omits fields that are irrelevant for bindings. See the file header.
-func (self InputKeyKeyEvent) BindingHash() uint64 { panic(notImplemented) }
+func (self InputKeyKeyEvent) BindingHash() uint64 {
+	hasher := stdHashWyhashInit(0)
+
+	// These are all the fields that are explicitly part of Trigger.
+	stdHashAutoHashAutoHashEnumCInt(&hasher, int32(self.key))
+	stdHashAutoHashAutoHashU21(&hasher, self.unshifted_codepoint)
+	stdHashAutoHashAutoHashPackedStructU16(&hasher, self.mods.Binding().Int())
+
+	// Notes on unmapped things and why:
+	//
+	// - action: we don't have action-specific bindings right now
+	//   AND we want to know if a key resulted in a binding regardless
+	//   of action because a press should also ignore a release and so on.
+	//
+	// We can add to this if there is other confusion.
+
+	return hasher.final()
+}
 
 // InputKeyAction is key.Action: the action associated with an input event.
 // This is backed by a c_int so that we can use the enum as-is for our
@@ -190,7 +224,11 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self InputKeyAction) String() string { panic(notImplemented) }
+// A value outside the enum panics (index out of range).
+func (self InputKeyAction) String() string { return inputKeyActionNames[self] }
+
+// inputKeyActionNames holds the Zig tag names, indexed by value.
+var inputKeyActionNames = [inputKeyActionCount]string{"release", "press", "repeat"}
 
 // InputKeyKey is key.Key: the set of key codes that Ghostty is aware of.
 // These represent physical keys on the keyboard. The logical key (or key
@@ -419,12 +457,201 @@ const (
 )
 
 // String returns the Zig tag name (@tagName), e.g. "key_a", "fn"; also the
-// name std.meta.stringToEnum matches in fromW3C.
-func (self InputKeyKey) String() string { panic(notImplemented) }
+// name std.meta.stringToEnum matches in fromW3C. A value outside the enum
+// panics (index out of range), as @tagName of an invalid value does.
+func (self InputKeyKey) String() string { return inputKeyKeyNames[self] }
+
+// inputKeyKeyNames holds the Zig tag names, indexed by value (generated
+// from key.zig).
+var inputKeyKeyNames = [inputKeyKeyCount]string{
+	"unidentified",
+	"backquote",
+	"backslash",
+	"bracket_left",
+	"bracket_right",
+	"comma",
+	"digit_0",
+	"digit_1",
+	"digit_2",
+	"digit_3",
+	"digit_4",
+	"digit_5",
+	"digit_6",
+	"digit_7",
+	"digit_8",
+	"digit_9",
+	"equal",
+	"intl_backslash",
+	"intl_ro",
+	"intl_yen",
+	"key_a",
+	"key_b",
+	"key_c",
+	"key_d",
+	"key_e",
+	"key_f",
+	"key_g",
+	"key_h",
+	"key_i",
+	"key_j",
+	"key_k",
+	"key_l",
+	"key_m",
+	"key_n",
+	"key_o",
+	"key_p",
+	"key_q",
+	"key_r",
+	"key_s",
+	"key_t",
+	"key_u",
+	"key_v",
+	"key_w",
+	"key_x",
+	"key_y",
+	"key_z",
+	"minus",
+	"period",
+	"quote",
+	"semicolon",
+	"slash",
+	"alt_left",
+	"alt_right",
+	"backspace",
+	"caps_lock",
+	"context_menu",
+	"control_left",
+	"control_right",
+	"enter",
+	"meta_left",
+	"meta_right",
+	"shift_left",
+	"shift_right",
+	"space",
+	"tab",
+	"convert",
+	"kana_mode",
+	"non_convert",
+	"delete",
+	"end",
+	"help",
+	"home",
+	"insert",
+	"page_down",
+	"page_up",
+	"arrow_down",
+	"arrow_left",
+	"arrow_right",
+	"arrow_up",
+	"num_lock",
+	"numpad_0",
+	"numpad_1",
+	"numpad_2",
+	"numpad_3",
+	"numpad_4",
+	"numpad_5",
+	"numpad_6",
+	"numpad_7",
+	"numpad_8",
+	"numpad_9",
+	"numpad_add",
+	"numpad_backspace",
+	"numpad_clear",
+	"numpad_clear_entry",
+	"numpad_comma",
+	"numpad_decimal",
+	"numpad_divide",
+	"numpad_enter",
+	"numpad_equal",
+	"numpad_memory_add",
+	"numpad_memory_clear",
+	"numpad_memory_recall",
+	"numpad_memory_store",
+	"numpad_memory_subtract",
+	"numpad_multiply",
+	"numpad_paren_left",
+	"numpad_paren_right",
+	"numpad_subtract",
+	"numpad_separator",
+	"numpad_up",
+	"numpad_down",
+	"numpad_right",
+	"numpad_left",
+	"numpad_begin",
+	"numpad_home",
+	"numpad_end",
+	"numpad_insert",
+	"numpad_delete",
+	"numpad_page_up",
+	"numpad_page_down",
+	"escape",
+	"f1",
+	"f2",
+	"f3",
+	"f4",
+	"f5",
+	"f6",
+	"f7",
+	"f8",
+	"f9",
+	"f10",
+	"f11",
+	"f12",
+	"f13",
+	"f14",
+	"f15",
+	"f16",
+	"f17",
+	"f18",
+	"f19",
+	"f20",
+	"f21",
+	"f22",
+	"f23",
+	"f24",
+	"f25",
+	"fn",
+	"fn_lock",
+	"print_screen",
+	"scroll_lock",
+	"pause",
+	"browser_back",
+	"browser_favorites",
+	"browser_forward",
+	"browser_home",
+	"browser_refresh",
+	"browser_search",
+	"browser_stop",
+	"eject",
+	"launch_app_1",
+	"launch_app_2",
+	"launch_mail",
+	"media_play_pause",
+	"media_select",
+	"media_stop",
+	"media_track_next",
+	"media_track_previous",
+	"power",
+	"sleep",
+	"audio_volume_down",
+	"audio_volume_mute",
+	"audio_volume_up",
+	"wake_up",
+	"copy",
+	"cut",
+	"paste",
+}
 
 // InputKeyKeyValues stands for Zig's `std.enums.values(Key)`: every key, in
 // declaration order. Not a Zig declaration.
-func InputKeyKeyValues() []InputKeyKey { panic(notImplemented) }
+// Returns a new slice on each call.
+func InputKeyKeyValues() []InputKeyKey {
+	values := make([]InputKeyKey, inputKeyKeyCount)
+	for i := range values {
+		values[i] = InputKeyKey(i)
+	}
+	return values
+}
 
 // InputKeyKeyFromASCII is key.Key.fromASCII: converts an ASCII character to
 // a key, if possible. This returns null if the character is unknown.
@@ -435,7 +662,39 @@ func InputKeyKeyValues() []InputKeyKey { panic(notImplemented) }
 //
 // This is what we want, we want people to create keybindings that
 // are independent of the physical key.
-func InputKeyKeyFromASCII(ch uint8) Optional[InputKeyKey] { panic(notImplemented) }
+//
+// Zig: `switch (ch) { inline else => |comptime_ch| comptime ... }`: one
+// load from inputKeyKeyFromASCIITable.
+func InputKeyKeyFromASCII(ch uint8) Optional[InputKeyKey] {
+	return inputKeyKeyFromASCIITable[ch]
+}
+
+// inputKeyKeyFromASCIITable is fromASCII's comptime result for every u8,
+// filled once at start-up by inputKeyKeyFromASCIIInit.
+var inputKeyKeyFromASCIITable = inputKeyKeyFromASCIIInit()
+
+// inputKeyKeyFromASCIIInit runs fromASCII's comptime `result:` block for
+// every value of ch.
+func inputKeyKeyFromASCIIInit() [256]Optional[InputKeyKey] {
+	var table [256]Optional[InputKeyKey]
+	for comptime_ch := range table {
+		table[comptime_ch] = func() Optional[InputKeyKey] {
+			for _, entry := range inputKeyKeyCodepointMap {
+				// No ASCII characters should ever map to a keypad key
+				if entry.x1.Keypad() {
+					continue
+				}
+
+				if entry.x0 == uint32(comptime_ch) {
+					return Some(entry.x1)
+				}
+			}
+
+			return None[InputKeyKey]()
+		}()
+	}
+	return table
+}
 
 // InputKeyKeyFromW3C is key.Key.fromW3C: converts a W3C key code to a
 // Ghostty key enum value.
@@ -443,17 +702,190 @@ func InputKeyKeyFromASCII(ch uint8) Optional[InputKeyKey] { panic(notImplemented
 // All required W3C key codes are supported, but there are a number of
 // non-standard key codes that are not supported. In the case the value is
 // invalid or unsupported, this function will return null.
-func InputKeyKeyFromW3C(code []uint8) Optional[InputKeyKey] { panic(notImplemented) }
+func InputKeyKeyFromW3C(code []uint8) Optional[InputKeyKey] {
+	var result [128]uint8
+
+	// If the code is bigger than our buffer it can't possibly match.
+	if len(code) > len(result) {
+		return None[InputKeyKey]()
+	}
+
+	// First just check the whole thing lowercased, this is the simple case
+	if key := inputKeyStringToEnumKey(
+		inputKeyAsciiLowerString(result[:], code),
+	); key.Valid {
+		return key
+	}
+
+	// We need to convert FooBar to foo_bar
+	fbs := inputKeyModsFixedBufferStreamInit(result[:])
+	w := &fbs
+	for i, ch := range code {
+		switch {
+		case ch >= 'a' && ch <= 'z':
+			if w.writeByte(ch) != nil {
+				return None[InputKeyKey]()
+			}
+
+		// Caps and numbers trigger underscores
+		case ch >= 'A' && ch <= 'Z', ch >= '0' && ch <= '9':
+			if i > 0 {
+				if w.writeByte('_') != nil {
+					return None[InputKeyKey]()
+				}
+			}
+			if w.writeByte(inputKeyAsciiToLower(ch)) != nil {
+				return None[InputKeyKey]()
+			}
+
+		// We don't know of any key codes that aren't alphanumeric.
+		default:
+			return None[InputKeyKey]()
+		}
+	}
+
+	return inputKeyStringToEnumKey(fbs.getWritten())
+}
+
+// inputKeyStringToEnumKey is std.meta.stringToEnum(Key, s). Key has more
+// than 100 fields, so Zig 0.15.2 compares s with each tag name in
+// declaration order (`inline for` + `mem.eql`) and returns the first match.
+// Not a Ghostty declaration.
+func inputKeyStringToEnumKey(s []uint8) Optional[InputKeyKey] {
+	for i := range inputKeyKeyNames {
+		if string(s) == inputKeyKeyNames[i] {
+			return Some(InputKeyKey(i))
+		}
+	}
+	return None[InputKeyKey]()
+}
+
+// inputKeyAsciiLowerString is std.ascii.lowerString (Zig 0.15.2): writes a
+// lower case copy of ascii_string to output and returns that part of
+// output. output must be at least as long (asserted, as std does).
+func inputKeyAsciiLowerString(output []uint8, ascii_string []uint8) []uint8 {
+	assert(len(output) >= len(ascii_string))
+	for i, c := range ascii_string {
+		output[i] = inputKeyAsciiToLower(c)
+	}
+	return output[0:len(ascii_string)]
+}
+
+// inputKeyAsciiToLower is std.ascii.toLower (Zig 0.15.2): lowercases the
+// character and returns it as-is if already lowercase or not a letter.
+func inputKeyAsciiToLower(c uint8) uint8 {
+	var mask uint8
+	if c >= 'A' && c <= 'Z' { // isUpper
+		mask = 1 << 5
+	}
+	return c | mask
+}
+
+// inputKeyAsciiToUpper is std.ascii.toUpper (Zig 0.15.2): uppercases the
+// character and returns it as-is if already uppercase or not a letter.
+func inputKeyAsciiToUpper(c uint8) uint8 {
+	var mask uint8
+	if c >= 'a' && c <= 'z' { // isLower
+		mask = 1 << 5
+	}
+	return c ^ mask
+}
 
 // W3c is key.Key.w3c: converts a Ghostty key enum value to a W3C key code.
-func (self InputKeyKey) W3c() []uint8 { panic(notImplemented) }
+//
+// Zig: `switch (self) { inline else => |tag| comptime w3c: { ... } }`: one
+// load from inputKeyKeyW3cTable. The caller must not modify the result.
+func (self InputKeyKey) W3c() []uint8 {
+	return inputKeyKeyW3cTable[self]
+}
+
+// inputKeyKeyW3cTable is w3c's comptime result for every key, filled once
+// at start-up by inputKeyKeyW3cInit.
+var inputKeyKeyW3cTable = inputKeyKeyW3cInit()
+
+// inputKeyKeyW3cInit runs w3c's comptime `w3c:` block for every key.
+func inputKeyKeyW3cInit() [inputKeyKeyCount][]uint8 {
+	var table [inputKeyKeyCount][]uint8
+	for t := range table {
+		tag := InputKeyKey(t)
+		name := tag.String()
+
+		var buf [128]uint8
+		fbs := inputKeyModsFixedBufferStreamInit(buf[:])
+		w := &fbs
+		i := 0
+		for i < len(name) {
+			if i == 0 {
+				if w.writeByte(inputKeyAsciiToUpper(name[i])) != nil {
+					panic("unreachable")
+				}
+			} else if name[i] == '_' {
+				i += 1
+				if w.writeByte(inputKeyAsciiToUpper(name[i])) != nil {
+					panic("unreachable")
+				}
+			} else {
+				if w.writeByte(name[i]) != nil {
+					panic("unreachable")
+				}
+			}
+
+			i += 1
+		}
+
+		written := buf
+		result := written[0:len(fbs.getWritten())]
+		table[t] = result
+	}
+	return table
+}
 
 // Printable is key.Key.printable: true if this key represents a printable
 // character.
-func (self InputKeyKey) Printable() bool { panic(notImplemented) }
+func (self InputKeyKey) Printable() bool {
+	return inputKeyKeyPrintableTable[self]
+}
+
+// inputKeyKeyPrintableTable is printable's comptime result for every key,
+// filled once at start-up by inputKeyKeyPrintableInit.
+var inputKeyKeyPrintableTable = inputKeyKeyPrintableInit()
+
+// inputKeyKeyPrintableInit runs printable's comptime `result:` block for
+// every key.
+func inputKeyKeyPrintableInit() [inputKeyKeyCount]bool {
+	var table [inputKeyKeyCount]bool
+	for t := range table {
+		tag := InputKeyKey(t)
+		table[t] = func() bool {
+			for _, entry := range inputKeyKeyCodepointMap {
+				if entry.x1 == tag {
+					return true
+				}
+			}
+
+			return false
+		}()
+	}
+	return table
+}
 
 // Modifier is key.Key.modifier: true if this key is a modifier.
-func (self InputKeyKey) Modifier() bool { panic(notImplemented) }
+func (self InputKeyKey) Modifier() bool {
+	switch self {
+	case InputKeyKeyShiftLeft,
+		InputKeyKeyControlLeft,
+		InputKeyKeyAltLeft,
+		InputKeyKeyMetaLeft,
+		InputKeyKeyShiftRight,
+		InputKeyKeyControlRight,
+		InputKeyKeyAltRight,
+		InputKeyKeyMetaRight:
+		return true
+
+	default:
+		return false
+	}
+}
 
 // ShouldBeRemappable is key.Key.shouldBeRemappable: whether this key should
 // be remappable by the operating system.
@@ -475,31 +907,140 @@ func (self InputKeyKey) Modifier() bool { panic(notImplemented) }
 // and keyboard layout", we allow all other keys to be remapped by default
 // since they should be fairly harmless. We might consider making this
 // configurable, but for now this should at least placate most people.
-func (self InputKeyKey) ShouldBeRemappable() bool { panic(notImplemented) }
+func (self InputKeyKey) ShouldBeRemappable() bool {
+	switch self {
+	// "Writing System Keys" § 3.1.1
+	case InputKeyKeyBackquote,
+		InputKeyKeyBackslash,
+		InputKeyKeyBracketLeft,
+		InputKeyKeyBracketRight,
+		InputKeyKeyComma,
+		InputKeyKeyDigit0,
+		InputKeyKeyDigit1,
+		InputKeyKeyDigit2,
+		InputKeyKeyDigit3,
+		InputKeyKeyDigit4,
+		InputKeyKeyDigit5,
+		InputKeyKeyDigit6,
+		InputKeyKeyDigit7,
+		InputKeyKeyDigit8,
+		InputKeyKeyDigit9,
+		InputKeyKeyEqual,
+		InputKeyKeyIntlBackslash,
+		InputKeyKeyIntlRo,
+		InputKeyKeyIntlYen,
+		InputKeyKeyKeyA,
+		InputKeyKeyKeyB,
+		InputKeyKeyKeyC,
+		InputKeyKeyKeyD,
+		InputKeyKeyKeyE,
+		InputKeyKeyKeyF,
+		InputKeyKeyKeyG,
+		InputKeyKeyKeyH,
+		InputKeyKeyKeyI,
+		InputKeyKeyKeyJ,
+		InputKeyKeyKeyK,
+		InputKeyKeyKeyL,
+		InputKeyKeyKeyM,
+		InputKeyKeyKeyN,
+		InputKeyKeyKeyO,
+		InputKeyKeyKeyP,
+		InputKeyKeyKeyQ,
+		InputKeyKeyKeyR,
+		InputKeyKeyKeyS,
+		InputKeyKeyKeyT,
+		InputKeyKeyKeyU,
+		InputKeyKeyKeyV,
+		InputKeyKeyKeyW,
+		InputKeyKeyKeyX,
+		InputKeyKeyKeyY,
+		InputKeyKeyKeyZ,
+		InputKeyKeyMinus,
+		InputKeyKeyPeriod,
+		InputKeyKeyQuote,
+		InputKeyKeySemicolon,
+		InputKeyKeySlash:
+		return false
+
+	default:
+		return true
+	}
+}
 
 // Keypad is key.Key.keypad: returns true if this is a keypad key (its tag
 // name starts with "numpad_").
-func (self InputKeyKey) Keypad() bool { panic(notImplemented) }
+func (self InputKeyKey) Keypad() bool {
+	return inputKeyKeyKeypadTable[self]
+}
+
+// inputKeyKeyKeypadTable is keypad's comptime result for every key
+// (`comptime std.mem.startsWith(u8, @tagName(tag), "numpad_")`), filled
+// once at start-up by inputKeyKeyKeypadInit.
+var inputKeyKeyKeypadTable = inputKeyKeyKeypadInit()
+
+// inputKeyKeyKeypadInit computes keypad's comptime result for every key.
+func inputKeyKeyKeypadInit() [inputKeyKeyCount]bool {
+	var table [inputKeyKeyCount]bool
+	for t := range table {
+		name := InputKeyKey(t).String()
+		table[t] = strings.HasPrefix(name, "numpad_")
+	}
+	return table
+}
 
 // Codepoint is key.Key.codepoint: returns the codepoint representing this
 // key, or null if the key is not printable.
 //
 // Zig: ?u21.
-func (self InputKeyKey) Codepoint() Optional[uint32] { panic(notImplemented) }
+func (self InputKeyKey) Codepoint() Optional[uint32] {
+	return inputKeyKeyCodepointTable[self]
+}
+
+// inputKeyKeyCodepointTable is codepoint's comptime result for every key,
+// filled once at start-up by inputKeyKeyCodepointInit.
+var inputKeyKeyCodepointTable = inputKeyKeyCodepointInit()
+
+// inputKeyKeyCodepointInit runs codepoint's comptime `result:` block for
+// every key.
+func inputKeyKeyCodepointInit() [inputKeyKeyCount]Optional[uint32] {
+	var table [inputKeyKeyCount]Optional[uint32]
+	for t := range table {
+		tag := InputKeyKey(t)
+		table[t] = func() Optional[uint32] {
+			for _, entry := range inputKeyKeyCodepointMap {
+				if entry.x1 == tag {
+					return Some(entry.x0)
+				}
+			}
+
+			return None[uint32]()
+		}()
+	}
+	return table
+}
 
 // CtrlOrSuper is key.Key.ctrlOrSuper: true if this key is one of the left
 // or right versions of super (MacOS) or ctrl.
 //
 // Darwin: see the file header. Off Darwin: control_left or control_right.
-func (self InputKeyKey) CtrlOrSuper() bool { panic(notImplemented) }
+func (self InputKeyKey) CtrlOrSuper() bool {
+	if inputKeyIsDarwin() {
+		return self == InputKeyKeyMetaLeft || self == InputKeyKeyMetaRight
+	}
+	return self == InputKeyKeyControlLeft || self == InputKeyKeyControlRight
+}
 
 // LeftOrRightShift is key.Key.leftOrRightShift: true if this key is either
 // left or right shift.
-func (self InputKeyKey) LeftOrRightShift() bool { panic(notImplemented) }
+func (self InputKeyKey) LeftOrRightShift() bool {
+	return self == InputKeyKeyShiftLeft || self == InputKeyKeyShiftRight
+}
 
 // LeftOrRightAlt is key.Key.leftOrRightAlt: true if this key is either left
 // or right alt.
-func (self InputKeyKey) LeftOrRightAlt() bool { panic(notImplemented) }
+func (self InputKeyKey) LeftOrRightAlt() bool {
+	return self == InputKeyKeyAltLeft || self == InputKeyKeyAltRight
+}
 
 // inputKeyKeyCodepointMapEntry is the element type of Key.codepoint_map:
 // `struct { u21, Key }`. Not a Zig declaration (an anonymous tuple).
@@ -511,11 +1052,81 @@ type inputKeyKeyCodepointMapEntry struct {
 
 // inputKeyKeyCodepointMap is key.Key.codepoint_map.
 //
-// Wireframe: left nil; the implementation fills it with upstream's 65
-// entries in upstream's order ('a'..'z', '0'..'9', the ASCII punctuation
-// keys, '\t' tab, then the keypad entries, which must stay last so that
-// fromASCII never maps to them).
-var inputKeyKeyCodepointMap []inputKeyKeyCodepointMapEntry
+// Upstream's 65 entries in upstream's order (generated from key.zig).
+var inputKeyKeyCodepointMap = []inputKeyKeyCodepointMapEntry{
+	{'a', InputKeyKeyKeyA},
+	{'b', InputKeyKeyKeyB},
+	{'c', InputKeyKeyKeyC},
+	{'d', InputKeyKeyKeyD},
+	{'e', InputKeyKeyKeyE},
+	{'f', InputKeyKeyKeyF},
+	{'g', InputKeyKeyKeyG},
+	{'h', InputKeyKeyKeyH},
+	{'i', InputKeyKeyKeyI},
+	{'j', InputKeyKeyKeyJ},
+	{'k', InputKeyKeyKeyK},
+	{'l', InputKeyKeyKeyL},
+	{'m', InputKeyKeyKeyM},
+	{'n', InputKeyKeyKeyN},
+	{'o', InputKeyKeyKeyO},
+	{'p', InputKeyKeyKeyP},
+	{'q', InputKeyKeyKeyQ},
+	{'r', InputKeyKeyKeyR},
+	{'s', InputKeyKeyKeyS},
+	{'t', InputKeyKeyKeyT},
+	{'u', InputKeyKeyKeyU},
+	{'v', InputKeyKeyKeyV},
+	{'w', InputKeyKeyKeyW},
+	{'x', InputKeyKeyKeyX},
+	{'y', InputKeyKeyKeyY},
+	{'z', InputKeyKeyKeyZ},
+	{'0', InputKeyKeyDigit0},
+	{'1', InputKeyKeyDigit1},
+	{'2', InputKeyKeyDigit2},
+	{'3', InputKeyKeyDigit3},
+	{'4', InputKeyKeyDigit4},
+	{'5', InputKeyKeyDigit5},
+	{'6', InputKeyKeyDigit6},
+	{'7', InputKeyKeyDigit7},
+	{'8', InputKeyKeyDigit8},
+	{'9', InputKeyKeyDigit9},
+	{';', InputKeyKeySemicolon},
+	{' ', InputKeyKeySpace},
+	{'\'', InputKeyKeyQuote},
+	{',', InputKeyKeyComma},
+	{'`', InputKeyKeyBackquote},
+	{'.', InputKeyKeyPeriod},
+	{'/', InputKeyKeySlash},
+	{'-', InputKeyKeyMinus},
+	{'=', InputKeyKeyEqual},
+	{'[', InputKeyKeyBracketLeft},
+	{']', InputKeyKeyBracketRight},
+	{'\\', InputKeyKeyBackslash},
+
+	// Control characters
+	{'\t', InputKeyKeyTab},
+
+	// Keypad entries. We just assume keypad with the numpad_ prefix
+	// so that has some special meaning. These must also always be last,
+	// so that our `fromASCII` function doesn't accidentally map them
+	// over normal numerics and other keys.
+	{'0', InputKeyKeyNumpad0},
+	{'1', InputKeyKeyNumpad1},
+	{'2', InputKeyKeyNumpad2},
+	{'3', InputKeyKeyNumpad3},
+	{'4', InputKeyKeyNumpad4},
+	{'5', InputKeyKeyNumpad5},
+	{'6', InputKeyKeyNumpad6},
+	{'7', InputKeyKeyNumpad7},
+	{'8', InputKeyKeyNumpad8},
+	{'9', InputKeyKeyNumpad9},
+	{'.', InputKeyKeyNumpadDecimal},
+	{'/', InputKeyKeyNumpadDivide},
+	{'*', InputKeyKeyNumpadMultiply},
+	{'-', InputKeyKeyNumpadSubtract},
+	{'+', InputKeyKeyNumpadAdd},
+	{'=', InputKeyKeyNumpadEqual},
+}
 
 // InputKeyCtrlOrSuper is key.ctrlOrSuper: this sets either "ctrl" or
 // "super" to true (but not both) on mods depending on if the build target
@@ -523,9 +1134,18 @@ var inputKeyKeyCodepointMap []inputKeyKeyCodepointMapEntry
 // non-Mac we default to ctrl (i.e. ctrl+c for copy).
 //
 // Darwin: see the file header. Off Darwin it sets ctrl.
-func InputKeyCtrlOrSuper(mods InputKeyMods) InputKeyMods { panic(notImplemented) }
+func InputKeyCtrlOrSuper(mods InputKeyMods) InputKeyMods {
+	copy := mods
+	if inputKeyIsDarwin() {
+		copy.super = true
+	} else {
+		copy.ctrl = true
+	}
+
+	return copy
+}
 
 // inputKeyIsDarwin stands for the comptime check
 // `builtin.target.os.tag.isDarwin()` in Key.ctrlOrSuper and ctrlOrSuper.
 // It returns platformIsDarwin() (platform.go).
-func inputKeyIsDarwin() bool { panic(notImplemented) }
+func inputKeyIsDarwin() bool { return platformIsDarwin() }

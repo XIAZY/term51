@@ -303,6 +303,8 @@ var zigSentinels = []struct {
 	err  error
 }{
 	{"ErrOutOfMemory", ErrOutOfMemory},
+	{"ErrScreenCloneCursorOutside", ErrScreenCloneCursorOutside},
+	{"ErrCodepointTooLarge", ErrCodepointTooLarge},
 	{"ErrMissingOperation", ErrMissingOperation},
 	{"ErrNoDefaultValue", ErrNoDefaultValue},
 	{"ErrInvalidFormat", ErrInvalidFormat},

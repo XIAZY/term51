@@ -806,6 +806,8 @@ var dumpVoidTags = map[reflect.Type][]string{
 		"xtversion", "kitty_keyboard_query", "dcs_unhook",
 		"apc_start", "apc_end", "end_hyperlink", "decaln",
 	},
+	// Screen.zig:113 SemanticClick, reached through screen.semantic_prompt.click.
+	reflect.TypeOf(ScreenSemanticPromptSemanticClick{}): {"none", "click_events"},
 	reflect.TypeOf(SGRAttribute{}): {
 		"unset", "bold", "reset_bold", "italic", "reset_italic", "faint",
 		"reset_underline_color", "overline", "reset_overline", "blink",

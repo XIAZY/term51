@@ -1343,6 +1343,15 @@ func TestCorpusReplaySelfUnionsAgainstZig(t *testing.T) {
 			types = append(types, ut)
 		}
 	}
+	// The state dump (dump.zig dumpTerminal, dumpScreen) passes these fields
+	// to dumpAny; the unions reachable from them must be registered too.
+	for _, root := range dumpStateRootTypes(t) {
+		for _, ut := range dumpUnionTypes(root) {
+			if !slices.Contains(types, ut) {
+				types = append(types, ut)
+			}
+		}
+	}
 	registered := map[reflect.Type]bool{}
 	for _, ut := range types {
 		registered[ut] = true
@@ -1411,9 +1420,38 @@ func TestCorpusReplaySelfUnionsAgainstZig(t *testing.T) {
 	}
 	for ut := range dumpVoidTags {
 		if !registered[ut] {
-			t.Errorf("dumpVoidTags has %s, which is not reachable from StreamAction or ParserAction", ut)
+			t.Errorf("dumpVoidTags has %s, which is not reachable from StreamAction, ParserAction or the state dump", ut)
 		}
 	}
+}
+
+// dumpStateRootTypes is the types of the Terminal and Screen fields that
+// dumpTerminal and dumpScreen (corpus_replay_dump_test.go) pass to dumpAny.
+// Only those fields: a walk of all of Terminal would reach page internals
+// the dump prints by hand. Keep it in step with the dumpAny calls there.
+func dumpStateRootTypes(t *testing.T) []reflect.Type {
+	field := func(rt reflect.Type, names ...string) []reflect.Type {
+		var out []reflect.Type
+		for _, n := range names {
+			f, ok := rt.FieldByName(n)
+			if !ok {
+				t.Fatalf("%s has no field %s", rt, n)
+			}
+			out = append(out, f.Type)
+		}
+		return out
+	}
+	var roots []reflect.Type
+	roots = append(roots, field(reflect.TypeOf(Terminal{}), "colors", "flags", "modes", "mouse_shape",
+		"previous_char", "scrolling_region", "status_display")...)
+	roots = append(roots, field(reflect.TypeOf(Screen{}), "charset", "dirty", "kitty_keyboard",
+		"protected_mode", "semantic_prompt")...)
+	roots = append(roots, field(reflect.TypeOf(ScreenCursor{}), "cursor_style", "semantic_content",
+		"semantic_content_clear_eol", "style_id", "hyperlink_id", "hyperlink_implicit_id", "protected",
+		"pending_wrap")...)
+	roots = append(roots, field(reflect.TypeOf(ScreenSavedCursor{}), "charset", "origin", "pending_wrap",
+		"protected")...)
+	return roots
 }
 
 func sortedCopy(s []string) []string {

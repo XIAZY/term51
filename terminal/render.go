@@ -1,15 +1,9 @@
-// WIREFRAME for src/terminal/render.zig (Ghostty v1.3.1). NOT YET PORTED.
+// Ported from src/terminal/render.zig (Ghostty v1.3.1).
 //
 // Developer note: this is in src/terminal and not src/renderer because
 // the goal is that this remains generic to multiple renderers. This can
 // aid specifically with libghostty-vt with converting terminal state to
 // a renderable form.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
 //
 // File naming: render.zig is a namespace file, so its declarations take the
 // prefix `Render`, except `render.RenderState`, which is `RenderState` (a
@@ -102,11 +96,12 @@
 //
 // No signature in this file needs a type from an unported file, so no
 // function is blocked. `string` uses
-// `std.unicode.utf8CodepointSequenceLength` (Go: `unicode/utf8.RuneLen`,
-// which also returns -1 above U+10FFFF; Zig accepts surrogate halves, which
-// `{u}` then prints as U+FFFD) and std.Io facilities that the writer
-// stand-in does not have yet (`print` with `{u}`, `writeAll`), to be added
-// to osc.go with Zig's names when implemented.
+// `std.unicode.utf8CodepointSequenceLength`, ported as
+// stdUnicodeUtf8CodepointSequenceLength (std_unicode.go): Go's
+// `unicode/utf8.RuneLen` returns -1 for surrogate halves, for which Zig
+// returns 3 (and `{u}` then prints U+FFFD, also 3 bytes). `print("{u}", cp)`
+// is oscWriter.printUnicodeCodepoint and `writeAll` is oscWriter.writeAll
+// (osc.go).
 //
 // # Zig defaults a Go literal does not give
 //
@@ -219,10 +214,32 @@ type RenderState struct {
 // .primary }` (viewport_pin and selection_cache null by default). Three
 // fields are not the Go zero value: `colors.palette` (ColorDefault),
 // `cursor.visual_style` (CursorStyleBlock) and `cursor.visible` (true);
-// `cursor.style` is undefined in Zig and zero in Go. Wireframe: left zero,
-// as ColorDefault is in color.go; the implementation initialises it once at
-// start-up.
-var RenderStateEmpty RenderState
+// `cursor.style` is undefined in Zig and zero in Go. Initialised once at
+// start-up (Go's package initialisation runs ColorDefault's initialiser
+// first).
+var RenderStateEmpty = RenderState{
+	rows: 0,
+	cols: 0,
+	colors: RenderStateColors{
+		background: ColorRGB{},
+		foreground: ColorRGB{},
+		cursor:     None[ColorRGB](),
+		palette:    ColorDefault,
+	},
+	cursor: RenderStateCursor{
+		active:         PointCoordinate{x: 0, y: 0},
+		viewport:       None[RenderStateCursorViewport](),
+		cell:           PageCell{},
+		style:          Style{}, // Zig: undefined.
+		visual_style:   CursorStyleBlock,
+		password_input: false,
+		visible:        true,
+		blinking:       false,
+	},
+	row_data: nil,
+	dirty:    RenderStateDirtyFalse,
+	screen:   ScreenSetKeyPrimary,
+}
 
 // RenderStateColors is render.RenderState.Colors.
 //
@@ -381,7 +398,14 @@ const (
 )
 
 // String returns the Zig tag name (@tagName).
-func (self RenderStateDirty) String() string { panic(notImplemented) }
+func (self RenderStateDirty) String() string { return renderStateDirtyNames[self] }
+
+// renderStateDirtyNames are the tag names of RenderStateDirty, in order.
+var renderStateDirtyNames = [...]string{
+	"false",
+	"partial",
+	"full",
+}
 
 // renderStateSelectionCache is render.RenderState.SelectionCache (private
 // in Zig).
@@ -395,7 +419,16 @@ type renderStateSelectionCache struct {
 //
 // Zig: pub fn deinit(self: *RenderState, alloc: Allocator) void. The
 // allocator is dropped; the stub is kept because every test calls it.
-func (self *RenderState) Deinit() { panic(notImplemented) }
+func (self *RenderState) Deinit() {
+	// Zig: each row's arena is promoted and deinitialised and its cells
+	// list deinitialised, then row_data is deinitialised. The memory is
+	// Go's; the lists are left at their zero value (docs/mapping.md:
+	// deinit leaves a list undefined, which is the Go zero value).
+	for i := range self.row_data {
+		self.row_data[i].cells = nil
+	}
+	self.row_data = nil
+}
 
 // Update is render.RenderState.update.
 //
@@ -406,7 +439,474 @@ func (self *RenderState) Deinit() { panic(notImplemented) }
 //
 // Zig: pub fn update(self: *RenderState, alloc: Allocator, t: *Terminal)
 // Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
-func (self *RenderState) Update(t *Terminal) error { panic(notImplemented) }
+func (self *RenderState) Update(t *Terminal) error {
+	s := t.screens.active
+	viewport_pin := s.pages.GetTopLeft(PointTagViewport)
+	var redraw bool
+	// redraw:
+	{
+		// If our screen key changed, we need to do a full rebuild
+		// because our render state is viewport-specific.
+		if t.screens.active_key != self.screen {
+			redraw = true
+			goto redraw_done
+		}
+
+		// If our terminal is dirty at all, we do a full rebuild. These
+		// dirty values are full-terminal dirty values.
+		//
+		// Zig: the packed struct's backing integer > 0, that is any flag
+		// set.
+		if t.flags.dirty != (TerminalDirty{}) {
+			redraw = true
+			goto redraw_done
+		}
+
+		// If our screen is dirty at all, we do a full rebuild. This is
+		// a full screen dirty tracker.
+		//
+		// Zig: the packed struct's backing integer > 0, that is any flag
+		// set.
+		if t.screens.active.dirty != (ScreenDirty{}) {
+			redraw = true
+			goto redraw_done
+		}
+
+		// If our dimensions changed, we do a full rebuild.
+		if self.rows != s.pages.rows ||
+			self.cols != s.pages.cols {
+			redraw = true
+			goto redraw_done
+		}
+
+		// If our viewport pin changed, we do a full rebuild.
+		if self.viewport_pin.Valid {
+			old := self.viewport_pin.Value
+			if !old.Eql(viewport_pin) {
+				redraw = true
+				goto redraw_done
+			}
+		}
+
+		redraw = false
+	}
+redraw_done:
+
+	// Always set our cheap fields, its more expensive to compare
+	self.rows = s.pages.rows
+	self.cols = s.pages.cols
+	self.viewport_pin = Some(viewport_pin)
+	self.cursor.active = PointCoordinate{x: s.cursor.x, y: uint32(s.cursor.y)}
+	self.cursor.cell = *s.cursor.page_cell
+	self.cursor.style = s.cursor.style
+	self.cursor.visual_style = s.cursor.cursor_style
+	self.cursor.password_input = t.flags.password_input
+	self.cursor.visible = t.modes.Get(ModesModeCursorVisible)
+	self.cursor.blinking = t.modes.Get(ModesModeCursorBlinking)
+
+	// Always reset the cursor viewport position. In the future we can
+	// probably cache this by comparing the cursor pin and viewport pin
+	// but may not be worth it.
+	self.cursor.viewport = None[RenderStateCursorViewport]()
+
+	// Colors.
+	self.colors.cursor = t.colors.cursor.Get()
+	self.colors.palette = t.colors.palette.current
+	// bg_fg:
+	{
+		// Background/foreground can be unset initially which would
+		// depend on "default" background/foreground. The expected use
+		// case of Terminal is that the caller set their own configured
+		// defaults on load so this doesn't happen.
+		bg := t.colors.background.Get()
+		if !bg.Valid {
+			goto bg_fg_done
+		}
+		fg := t.colors.foreground.Get()
+		if !fg.Valid {
+			goto bg_fg_done
+		}
+		if t.modes.Get(ModesModeReverseColors) {
+			self.colors.background = fg.Value
+			self.colors.foreground = bg.Value
+		} else {
+			self.colors.background = bg.Value
+			self.colors.foreground = fg.Value
+		}
+	}
+bg_fg_done:
+
+	// Ensure our row length is exactly our height, freeing or allocating
+	// data as necessary. In most cases we'll have a perfectly matching
+	// size.
+	if len(self.row_data) != int(self.rows) {
+		if len(self.row_data) < int(self.rows) {
+			// Resize our rows to the desired length, marking any added
+			// values undefined.
+			old_len := len(self.row_data)
+			self.row_data = renderResize(self.row_data, int(self.rows))
+
+			// Initialize all our values. Its faster to use slice() + set()
+			// because appendAssumeCapacity does this multiple times.
+			row_data := self.row_data
+			for y := old_len; y < int(self.rows); y++ {
+				row_data[y] = RenderStateRow{
+					// Zig: .arena = .{} (dropped).
+					pin:        PageListPin{}, // Zig: undefined.
+					raw:        PageRow{},     // Zig: undefined.
+					cells:      nil,
+					dirty:      true,
+					selection:  None[[2]SizeCellCountInt](),
+					highlights: nil,
+				}
+			}
+		} else {
+			row_data := self.row_data
+			for i := range row_data[self.rows:] {
+				// Zig: the row's arena is promoted and deinitialised and
+				// its cells list deinitialised.
+				row_data[int(self.rows)+i].cells = nil
+			}
+			self.row_data = self.row_data[:self.rows]
+		}
+	}
+
+	// Break down our row data
+	//
+	// Zig: row_data.items(.<field>) for arena, pin, raw, cells,
+	// selection, highlights and dirty. Go: row_data[y].<field>; the arena
+	// is dropped.
+	row_data := self.row_data
+
+	// Track the last page that we know was dirty. This lets us
+	// more quickly do the full-page dirty check.
+	var last_dirty_page *Page = nil
+
+	// Go through and setup our rows.
+	row_it := s.pages.RowIterator(
+		PageListDirectionRightDown,
+		Point{Tag: PointTagViewport, Viewport: PointCoordinate{}},
+		None[Point](),
+	)
+	var y SizeCellCountInt = 0
+	var any_dirty bool = false
+	for row_pin_ := row_it.Next(); row_pin_.Valid; row_pin_, y = row_it.Next(), renderAddOneU16(y) {
+		row_pin := row_pin_.Value
+
+		// Find our cursor if we haven't found it yet. We do this even
+		// if the row is not dirty because the cursor is unrelated.
+		if !self.cursor.viewport.Valid &&
+			row_pin.node == s.cursor.page_pin.node &&
+			row_pin.y == s.cursor.page_pin.y {
+			var wide_tail bool
+			if s.cursor.x > 0 {
+				wide_tail = s.CursorCellLeft(1).wide == PageCellWideWide
+			} else {
+				wide_tail = false
+			}
+			self.cursor.viewport = Some(RenderStateCursorViewport{
+				y: y,
+				x: s.cursor.x,
+
+				// Future: we should use our own state here to look this
+				// up rather than calling this.
+				wide_tail: wide_tail,
+			})
+		}
+
+		// Store our pin. We have to store these even if we're not dirty
+		// because dirty is only a renderer optimization. It doesn't
+		// apply to memory movement. This will let us remap any cell
+		// pins back to an exact entry in our RenderState.
+		row_data[y].pin = row_pin
+
+		// Get all our cells in the page.
+		p := &row_pin.node.data
+		page_rac := row_pin.RowAndCell()
+
+		// dirty:
+		{
+			// If we're redrawing then we're definitely dirty.
+			if redraw {
+				goto dirty
+			}
+
+			// If our page is the same as last time then its dirty.
+			if p == last_dirty_page {
+				goto dirty
+			}
+			if p.dirty {
+				// If this page is dirty then clear the dirty flag
+				// of the last page and then store this one. This benchmarks
+				// faster than iterating pages again later.
+				if last_dirty_page != nil {
+					last_dirty_page.dirty = false
+				}
+				last_dirty_page = p
+				goto dirty
+			}
+
+			// If our row is dirty then we're dirty.
+			if page_rac.row.dirty {
+				goto dirty
+			}
+
+			// Not dirty!
+			continue
+		}
+	dirty:
+
+		// Set that at least one row was dirty.
+		any_dirty = true
+
+		// Clear our row dirty, we'll clear our page dirty later.
+		// We can't clear it now because we have more rows to go through.
+		page_rac.row.dirty = false
+
+		// Promote our arena. State is copied by value so we need to
+		// restore it on all exit paths so we don't leak memory.
+		//
+		// Zig: `var arena = row_arenas[y].promote(alloc); defer
+		// row_arenas[y] = arena.state;`. The arena is dropped.
+
+		// Reset our cells if we're rebuilding this row.
+		if len(row_data[y].cells) > 0 {
+			// Zig: _ = arena.reset(.retain_capacity) (dropped).
+			row_data[y].cells = row_data[y].cells[:0]
+			row_data[y].selection = None[[2]SizeCellCountInt]()
+			row_data[y].highlights = nil
+		}
+		row_data[y].dirty = true
+
+		// Get all our cells in the page.
+		page_cells := p.GetCells(page_rac.row)
+		assert(len(page_cells) == int(self.cols))
+
+		// Copy our raw row data
+		row_data[y].raw = *page_rac.row
+
+		// Note: our cells MultiArrayList uses our general allocator.
+		// We do this on purpose because as rows become dirty, we do
+		// not want to reallocate space for cells (which are large). This
+		// was a source of huge slowdown.
+		//
+		// Our per-row arena is only used for temporary allocations
+		// pertaining to cells directly (e.g. graphemes, hyperlinks).
+		cells := &row_data[y].cells
+		*cells = renderResize(*cells, int(self.cols))
+
+		// We always copy our raw cell data. In the case we have no
+		// managed memory, we can skip setting any other fields.
+		//
+		// This is an important optimization. For plain-text screens
+		// this ends up being something around 300% faster based on
+		// the `screen-clone` benchmark.
+		cells_slice := *cells
+		// Zig: fastmem.copy(page.Cell, cells_slice.items(.raw), page_cells).
+		for x := range page_cells {
+			cells_slice[x].raw = page_cells[x]
+		}
+		if !page_rac.row.ManagedMemory() {
+			continue
+		}
+
+		for x := range page_cells {
+			page_cell := &page_cells[x]
+			// Append assuming its a single-codepoint, styled cell
+			// (most common by far).
+			if page_cell.style_id > 0 {
+				cells_slice[x].style = *p.styles.Get(
+					page_cell.style_id,
+				)
+			}
+
+			// Switch on our content tag to handle less likely cases.
+			switch page_cell.content_tag {
+			case PageCellContentTagCodepoint:
+				// Primary codepoint goes into `raw` field.
+
+			// If we have a multi-codepoint grapheme, look it up and
+			// set our content type.
+			case PageCellContentTagCodepointGrapheme:
+				// Zig: arena_alloc.dupe(u21, p.lookupGrapheme(page_cell)
+				// orelse &.{}).
+				var src []uint32
+				if g := p.LookupGrapheme(page_cell); g.Valid {
+					src = g.Value
+				} else {
+					src = []uint32{}
+				}
+				dup := make([]uint32, len(src))
+				copy(dup, src)
+				cells_slice[x].grapheme = dup
+
+			case PageCellContentTagBgColorRgb:
+				cells_slice[x].style = Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+					r: page_cell.content.color_rgb.r,
+					g: page_cell.content.color_rgb.g,
+					b: page_cell.content.color_rgb.b,
+				}}}
+
+			case PageCellContentTagBgColorPalette:
+				cells_slice[x].style = Style{bg_color: StyleColor{
+					Tag:     StyleColorPalette,
+					Palette: page_cell.content.color_palette,
+				}}
+
+			default:
+				panic("unreachable")
+			}
+		}
+	}
+	assert(y == self.rows)
+
+	// If our screen has a selection, then mark the rows with the
+	// selection. We do this outside of the loop above because its unlikely
+	// a selection exists and because the way our selections are structured
+	// today is very inefficient.
+	//
+	// NOTE: To improve the performance of the block below, we'll need
+	// to rethink how we model selections in general.
+	//
+	// There are performance improvements that can be made here, though.
+	// For example, `containedRow` recalculates a bunch of information
+	// we can cache.
+	if s.selection.Valid {
+		sel := &s.selection.Value
+		// selection:
+		{
+			// Populate our selection cache to avoid some expensive
+			// recalculation.
+			var cache *renderStateSelectionCache
+			// cache:
+			{
+				if self.selection_cache.Valid {
+					c := &self.selection_cache.Value
+					// cache_check:
+					{
+						// If we're redrawing, we recalculate the cache just to
+						// be safe.
+						if redraw {
+							goto cache_check_done
+						}
+
+						// If our selection isn't equal, we aren't cached!
+						if !c.selection.Eql(*sel) {
+							goto cache_check_done
+						}
+
+						// If we have no dirty rows, we can not recalculate.
+						if !any_dirty {
+							goto selection_done
+						}
+
+						// We have dirty rows, we can utilize the cache.
+						cache = c
+						goto cache_done
+					}
+				cache_check_done:
+				}
+
+				// Create a new cache
+				tl_pin := sel.TopLeft(s)
+				br_pin := sel.BottomRight(s)
+				self.selection_cache = Some(renderStateSelectionCache{
+					selection: SelectionInit(tl_pin, br_pin, sel.rectangle),
+					tl_pin:    tl_pin,
+					br_pin:    br_pin,
+				})
+				cache = &self.selection_cache.Value
+			}
+		cache_done:
+
+			// Grab the inefficient data we need from the selection. At
+			// least we can cache it.
+			tl_ := s.pages.PointFromPin(PointTagScreen, cache.tl_pin)
+			assert(tl_.Valid) // .?
+			tl := tl_.Value.Screen
+			br_ := s.pages.PointFromPin(PointTagScreen, cache.br_pin)
+			assert(br_.Valid) // .?
+			br := br_.Value.Screen
+
+			// We need to determine if our selection is within the viewport.
+			// The viewport is generally very small so the efficient way to
+			// do this is to traverse the viewport pages and check for the
+			// matching selection pages.
+			for i := range row_data {
+				pin := row_data[i].pin
+				sel_bounds := &row_data[i].selection
+				p_ := s.pages.PointFromPin(PointTagScreen, pin)
+				assert(p_.Valid) // .?
+				p := p_.Value.Screen
+				row_sel_ := sel.ContainedRowCached(
+					s,
+					cache.tl_pin,
+					cache.br_pin,
+					pin,
+					tl,
+					br,
+					p,
+				)
+				if !row_sel_.Valid {
+					continue
+				}
+				row_sel := row_sel_.Value
+				start := row_sel.Start()
+				end := row_sel.End()
+				assert(start.node == end.node)
+				assert(start.x <= end.x)
+				assert(start.y == end.y)
+				*sel_bounds = Some([2]SizeCellCountInt{start.x, end.x})
+			}
+		}
+	selection_done:
+	}
+
+	// Handle dirty state.
+	if redraw {
+		// Fully redraw resets some other state.
+		self.screen = t.screens.active_key
+		self.dirty = RenderStateDirtyFull
+
+		// Note: we don't clear any row_data here because our rebuild
+		// above did this.
+	} else if any_dirty && self.dirty == RenderStateDirtyFalse {
+		self.dirty = RenderStateDirtyPartial
+	}
+
+	// Finalize our final dirty page
+	if last_dirty_page != nil {
+		last_dirty_page.dirty = false
+	}
+
+	// Clear our dirty flags
+	t.flags.dirty = TerminalDirty{}
+	s.dirty = ScreenDirty{}
+	return nil
+}
+
+// renderResize is std.MultiArrayList.resize on the Go slice that stands in
+// for it (not a declaration of render.zig): set the length to new_len,
+// keeping the capacity. As in Zig, the items between the old and the new
+// length are undefined: within the capacity they keep whatever the slice
+// held (Zig keeps the old bytes too), beyond it they are the Go zero value.
+func renderResize[T any](list []T, new_len int) []T {
+	if new_len <= cap(list) {
+		return list[:new_len]
+	}
+	grown := make([]T, new_len)
+	copy(grown, list)
+	return grown
+}
+
+// renderAddOneU16 is Zig's `y + 1` on a u16, which traps on overflow (not a
+// declaration of render.zig).
+func renderAddOneU16(v SizeCellCountInt) SizeCellCountInt {
+	if v == 0xFFFF {
+		panic("integer overflow")
+	}
+	return v + 1
+}
 
 // UpdateHighlightsFlattened is render.RenderState.updateHighlightsFlattened.
 //
@@ -422,7 +922,78 @@ func (self *RenderState) Update(t *Terminal) error { panic(notImplemented) }
 // alloc: Allocator, tag: u8, hls: []const highlight.Flattened)
 // Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
 func (self *RenderState) UpdateHighlightsFlattened(tag uint8, hls []HighlightFlattened) error {
-	panic(notImplemented)
+	// Fast path, we have no highlights!
+	if len(hls) == 0 {
+		return nil
+	}
+
+	// This is, admittedly, horrendous. This is some low hanging fruit
+	// to optimize. In my defense, screens are usually small, the number
+	// of highlights is usually small, and this only happens on the
+	// viewport outside of a locked area. Still, I'd love to see this
+	// improved someday.
+
+	// We need to track whether any row had a match so we can mark
+	// the dirty state.
+	var any_dirty bool = false
+
+	// Zig: row_data.items(.arena), (.dirty), (.pin), (.highlights). Go:
+	// row_data[r].<field>; the arena is dropped.
+	row_data := self.row_data
+	for r := range row_data {
+		row_pin := row_data[r].pin
+		row_highlights := &row_data[r].highlights
+		dirty := &row_data[r].dirty
+		for _, hl := range hls {
+			// Zig: hl.chunks.slice().items(.node), (.start), (.end).
+			chunks := hl.chunks
+			for i := range chunks {
+				node := chunks[i].node
+				// If this node doesn't match or we're not within
+				// the row range, skip it.
+				if node != row_pin.node ||
+					row_pin.y < chunks[i].start ||
+					row_pin.y >= chunks[i].end {
+					continue
+				}
+
+				// We're a match!
+				//
+				// Zig: `var arena = row_arena.promote(alloc); defer
+				// row_arena.* = arena.state;` (dropped).
+				var lo, hi SizeCellCountInt
+				if i == 0 &&
+					row_pin.y == chunks[0].start {
+					lo = hl.top_x
+				} else {
+					lo = 0
+				}
+				// Zig: `ends[nodes.len - 1] - 1` on u16 cannot trap here:
+				// this chunk's end is above row_pin.y.
+				if i == len(chunks)-1 &&
+					row_pin.y == chunks[len(chunks)-1].end-1 {
+					hi = hl.bot_x
+				} else {
+					// Zig: `self.cols - 1` on u16; cols > 0 when there
+					// are rows.
+					hi = self.cols - 1
+				}
+				*row_highlights = append(*row_highlights, RenderStateHighlight{
+					tag:    tag,
+					range_: [2]SizeCellCountInt{lo, hi},
+				})
+
+				*dirty = true
+				any_dirty = true
+			}
+		}
+	}
+
+	// Mark our dirty state.
+	if any_dirty && self.dirty == RenderStateDirtyFalse {
+		self.dirty = RenderStateDirtyPartial
+	}
+	return nil
 }
 
 // RenderStateStringMap is render.RenderState.StringMap.
@@ -465,7 +1036,64 @@ type RenderStateStringMapParam struct {
 // ErrOutOfMemory (dcs.go). This is not a fmt.Stringer `String() string`:
 // the Zig name `string` capitalised.
 func (self *RenderState) String(writer *oscWriter, map_ Optional[RenderStateStringMapParam]) error {
-	panic(notImplemented)
+	// Zig: row_slice.items(.raw), (.cells). Go: row_data[y].raw, .cells.
+	row_data := self.row_data
+
+	for y := range row_data {
+		row := row_data[y].raw
+		cells := row_data[y].cells
+		cells_slice := cells
+		for x := range cells_slice {
+			cell := cells_slice[x].raw
+			graphemes := cells_slice[x].grapheme
+			len__, err := stdUnicodeUtf8CodepointSequenceLength(cell.Codepoint())
+			if err != nil {
+				return ErrWriteFailed
+			}
+			var len_ uint = uint(len__)
+			// Zig: try writer.print("{u}", .{cell.codepoint()}).
+			if err := writer.printUnicodeCodepoint(cell.Codepoint()); err != nil {
+				return err
+			}
+			if cell.HasGrapheme() {
+				for _, cp := range graphemes {
+					n, err := stdUnicodeUtf8CodepointSequenceLength(cp)
+					if err != nil {
+						return ErrWriteFailed
+					}
+					len_ += uint(n)
+					// Zig: try writer.print("{u}", .{cp}).
+					if err := writer.printUnicodeCodepoint(cp); err != nil {
+						return err
+					}
+				}
+			}
+
+			if map_.Valid {
+				m := map_.Value
+				// Zig: @intCast(x) to u16 and @intCast(y) to u32; x < cols
+				// and y < rows, so both fit.
+				formatterAppendNTimes(m.map_, PointCoordinate{
+					x: SizeCellCountInt(x),
+					y: uint32(y),
+				}, uint64(len_))
+			}
+		}
+
+		if !row.wrap {
+			if err := writer.writeAll([]uint8("\n")); err != nil {
+				return err
+			}
+			if map_.Valid {
+				m := map_.Value
+				*m.map_ = append(*m.map_, PointCoordinate{
+					x: SizeCellCountInt(len(cells_slice)),
+					y: uint32(y),
+				})
+			}
+		}
+	}
+	return nil
 }
 
 // RenderStateCellSet is render.RenderState.CellSet.
@@ -485,19 +1113,36 @@ type RenderStateCellSet struct {
 //
 // Zig: put(self, alloc, key, {}) Allocator.Error!void. The error is
 // ErrOutOfMemory (dcs.go).
-func (self *RenderStateCellSet) Put(key PointCoordinate) error { panic(notImplemented) }
+func (self *RenderStateCellSet) Put(key PointCoordinate) error {
+	if self.Contains(key) {
+		return nil
+	}
+	self.keys = append(self.keys, key)
+	return nil
+}
 
 // Deinit is std's deinit. The allocator is dropped; kept because the tests
 // call it.
-func (self *RenderStateCellSet) Deinit() { panic(notImplemented) }
+func (self *RenderStateCellSet) Deinit() {
+	self.keys = nil
+}
 
 // Count is std's count: the number of keys.
 //
 // Zig: usize.
-func (self RenderStateCellSet) Count() uint { panic(notImplemented) }
+func (self RenderStateCellSet) Count() uint {
+	return uint(len(self.keys))
+}
 
 // Contains is std's contains: whether key is in the set.
-func (self RenderStateCellSet) Contains(key PointCoordinate) bool { panic(notImplemented) }
+func (self RenderStateCellSet) Contains(key PointCoordinate) bool {
+	for _, k := range self.keys {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
 
 // LinkCells is render.RenderState.linkCells.
 //
@@ -515,5 +1160,82 @@ func (self RenderStateCellSet) Contains(key PointCoordinate) bool { panic(notImp
 // viewport_point: point.Coordinate) Allocator.Error!CellSet. The error is
 // ErrOutOfMemory (dcs.go).
 func (self *RenderState) LinkCells(viewport_point PointCoordinate) (RenderStateCellSet, error) {
-	panic(notImplemented)
+	var result RenderStateCellSet = RenderStateCellSet{}
+	// Zig: errdefer result.deinit(alloc) (memory only).
+
+	// Zig: row_slice.items(.pin), (.cells). Go: row_data[y].pin, .cells.
+	row_data := self.row_data
+
+	// Our viewport point is sent in by the caller and can't be trusted.
+	// If it is outside the valid area then just return empty because
+	// we can't possibly have a link there.
+	if viewport_point.x >= self.cols ||
+		uint(viewport_point.y) >= uint(len(row_data)) {
+		return result, nil
+	}
+
+	// Grab our link ID
+	link_pin := row_data[viewport_point.y].pin
+	link_page := &link_pin.node.data
+	var link *HyperlinkPageEntry
+	// link:
+	{
+		rac := link_page.GetRowAndCell(
+			uint(viewport_point.x),
+			uint(link_pin.y),
+		)
+
+		// The likely scenario is that our mouse isn't even over a link.
+		if !rac.cell.hyperlink {
+			return result, nil
+		}
+
+		link_id := link_page.LookupHyperlink(rac.cell)
+		if !link_id.Valid {
+			return result, nil
+		}
+		link = link_page.hyperlink_set.Get(
+			link_id.Value,
+		)
+	}
+
+	for y := range row_data {
+		pin := row_data[y].pin
+		cells := row_data[y].cells
+		for x := range cells {
+			cell := cells[x].raw
+			if !cell.hyperlink {
+				continue
+			}
+
+			other_page := &pin.node.data
+			var other *HyperlinkPageEntry
+			// link:
+			{
+				rac := other_page.GetRowAndCell(uint(x), uint(pin.y))
+				link_id := other_page.LookupHyperlink(rac.cell)
+				if !link_id.Valid {
+					continue
+				}
+				other = other_page.hyperlink_set.Get(
+					link_id.Value,
+				)
+			}
+
+			// Zig: link.eql(link_page.memory, other, other_page.memory).
+			if link.Eql(
+				other,
+			) {
+				// Zig: @intCast(y) to u32 and @intCast(x) to u16; both fit.
+				if err := result.Put(PointCoordinate{
+					y: uint32(y),
+					x: SizeCellCountInt(x),
+				}); err != nil {
+					return RenderStateCellSet{}, err
+				}
+			}
+		}
+	}
+
+	return result, nil
 }

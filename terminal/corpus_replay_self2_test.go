@@ -260,14 +260,17 @@ func TestCorpusReplaySelfSplitSizes(t *testing.T) {
 	}
 	t.Logf("%d cases, %d feeds (%d longer than 1000 bytes); offsets of all feeds %d, of feeds up to 1000 bytes %d; plan: full %d (+%d bytewise), default %d (+%d bytewise)",
 		cases, feeds, longFeeds, offsetsAll, offsetsShort, planFull, planCases, planDef, planCases)
-	if offsetsAll < 22_550_000 || offsetsAll > 22_650_000 {
-		t.Errorf("all offsets %d, the design says 22.6 M", offsetsAll)
+	// The design's 22.6 M was measured before term51 2326139, whose
+	// text/style_split cases (a 46,708-column screen) add 1.84 M offsets
+	// and 3 feeds longer than 1000 bytes.
+	if offsetsAll < 24_400_000 || offsetsAll > 24_500_000 {
+		t.Errorf("all offsets %d, want about 24.4 M (the design's 22.6 M plus text/style_split)", offsetsAll)
 	}
 	if offsetsShort < 9_650_000 || offsetsShort > 9_750_000 {
 		t.Errorf("offsets of feeds up to 1000 bytes %d, the design says 9.7 M", offsetsShort)
 	}
-	if longFeeds != 1417 {
-		t.Errorf("%d feeds longer than 1000 bytes, the design says 1,417", longFeeds)
+	if longFeeds != 1420 {
+		t.Errorf("%d feeds longer than 1000 bytes, want 1,420 (the design's 1,417 plus text/style_split)", longFeeds)
 	}
 	if planFull < offsetsShort || planFull > offsetsShort+longFeeds*(256+256+1024) {
 		t.Errorf("full plan %d outside [%d, %d]", planFull, offsetsShort, offsetsShort+longFeeds*(256+256+1024))

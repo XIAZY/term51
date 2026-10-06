@@ -245,7 +245,8 @@ func corpusSelfMarkerPrefix(ops []replayOp) string {
 // The marked cases of the corpus: the marker is the first op of the case, every
 // golden section of a marked case starts with its lines and no other section
 // starts with a `!` line, in every kind file; the numbers are the corpus's
-// (114 expect_crash and 951 transient_invariant cases, 340 and 1,902 sections).
+// (116 expect_crash and 951 transient_invariant cases, 344 and 1,902 sections;
+// 1 upstream_invalid case, text/style_split/split_moves_cursor_row_erase).
 // Which files are read: the files of the suites that have a marked case, every
 // file of the trace kinds (not with -short), and with TERM51_FULL every file.
 func TestCorpusReplaySelfMarkerFirstLines(t *testing.T) {
@@ -254,6 +255,7 @@ func TestCorpusReplaySelfMarkerFirstLines(t *testing.T) {
 	wantCases := map[string][2]int{ // area/suite: expect_crash, transient_invariant
 		"osc/all": {72, 0}, "osc/unterminated": {40, 0}, "text/grapheme_churn": {2, 0},
 		"fuzz/resize_scrolled": {0, 949}, "fuzz/with_resize": {0, 2},
+		"text/style_split": {2, 0},
 	}
 	gotCases := map[string][2]int{}
 	sections := map[key][2]int{} // sections whose first line is the marker's
@@ -265,8 +267,8 @@ func TestCorpusReplaySelfMarkerFirstLines(t *testing.T) {
 			var counts [2]int
 			for _, c := range parsed.cases {
 				prefix := corpusSelfMarkerPrefix(c.ops)
-				if strings.Contains(prefix, "!upstream-integrity-failure") {
-					t.Errorf("%s/%s: upstream_invalid, which the corpus has 0 of", id, c.name)
+				if strings.Contains(prefix, "!upstream-integrity-failure") && id+"/"+c.name != "text/style_split/split_moves_cursor_row_erase" {
+					t.Errorf("%s/%s: upstream_invalid, which the corpus has only text/style_split/split_moves_cursor_row_erase of", id, c.name)
 				}
 				for k, tag := range []replayOpTag{replayOpExpectCrash, replayOpTransientInvariant} {
 					n := 0
@@ -327,8 +329,8 @@ func TestCorpusReplaySelfMarkerFirstLines(t *testing.T) {
 		crash += f[0]
 		transient += f[1]
 	}
-	if crash != 340 || transient != 1902 {
-		t.Errorf("%d expect_crash and %d transient_invariant sections, want 340 and 1902", crash, transient)
+	if crash != 344 || transient != 1902 {
+		t.Errorf("%d expect_crash and %d transient_invariant sections, want 344 and 1902", crash, transient)
 	}
 	// Per golden file: the number of marked sections is the number of marked
 	// cases, in every kind file the suite has.

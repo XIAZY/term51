@@ -69,7 +69,7 @@ var corpusSelfCounts = map[string][2]int{
 	"parser": {27, 78397},
 	"resize": {8, 4116},
 	"scroll": {6, 5345},
-	"text":   {13, 6803},
+	"text":   {14, 6806},
 }
 
 // Every case file of every area parses; its cases equal the cases= of every
@@ -109,11 +109,13 @@ func TestCorpusReplaySelfParseAllAreas(t *testing.T) {
 		totalSuites += suites
 		totalCases += cases
 	}
-	if totalSuites != 128 || totalCases != 190104 {
-		t.Errorf("%d suites %d cases, want 128 and 190104", totalSuites, totalCases)
+	// term51 2326139: text/style_split adds 3 cases (2 expect_crash, 1
+	// upstream_invalid).
+	if totalSuites != 129 || totalCases != 190107 {
+		t.Errorf("%d suites %d cases, want 129 and 190107", totalSuites, totalCases)
 	}
-	if markers[replayOpExpectCrash] != 114 || markers[replayOpTransientInvariant] != 951 || markers[replayOpUpstreamInvalid] != 0 {
-		t.Errorf("markers expect_crash=%d transient_invariant=%d upstream_invalid=%d, want 114 951 0",
+	if markers[replayOpExpectCrash] != 116 || markers[replayOpTransientInvariant] != 951 || markers[replayOpUpstreamInvalid] != 1 {
+		t.Errorf("markers expect_crash=%d transient_invariant=%d upstream_invalid=%d, want 116 951 1",
 			markers[replayOpExpectCrash], markers[replayOpTransientInvariant], markers[replayOpUpstreamInvalid])
 	}
 	t.Logf("%d suites, %d cases; output files per kind %v", totalSuites, totalCases, kindFiles)

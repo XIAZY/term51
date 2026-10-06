@@ -90,3 +90,37 @@ per-byte loop on every platform), and the full ARM area run covers the
 
 Sign-off: the stream layer was signed off by the project lead on these
 native results (2026-10-05); the ARM area run confirms it.
+
+## Final gate: the whole library (project lead rulings, 2026-10-06)
+
+Code: Go b40fcb9 (library code identical to fdb1e46; b40fcb9 only updates
+replayer self-tests for the new corpus suite) with term51 2326139.
+
+### The rule run
+
+| Run | Platform | Rule |
+|---|---|---|
+| Every test except the split runs (all unit tests, every recorded area, search, input in all three platform modes, tables, self-tests) | native | `TERM51_FULL=1` |
+| Split | native | full rule for csi, esc, modes, resize, text, parser, fuzz; reduced rule (`TERM51_SPLIT_LONG=64,64,64`) for dcs, osc, scroll |
+| Every test except the split runs | 32-bit ARM (qemu) | all unit tests; the recorded areas sampled (default run) |
+| Split | 32-bit ARM (qemu) | the sampled default run |
+| Everything, every recorded case in full, plus the sampled split | the BlackBerry phone (real 32-bit ARM, QNX) | run by the project lead |
+
+### Why dcs moved to the reduced rule, and emulated ARM to sampling
+
+The final gate replays the golden kind (the whole terminal state) for every
+split variant, not only the actions as for the stream layer. Under the full
+rule dcs alone took about 4 hours with actions only; its 300 KB feeds now
+also dump a whole terminal per variant. dcs's long feeds are payload runs,
+`NextSlice` is per-byte (see "Why not the full rule everywhere" above), and
+csi's full split with full state was clean, so dcs joins osc and scroll on
+the reduced rule.
+
+The phone is the full 32-bit gate (project lead, 2026-10-06): it runs every
+recorded case in full on the real chip. The emulated ARM run therefore keeps
+all unit tests and samples the recorded cases and the split.
+
+### Results
+
+Filled in when the runs finish.
+

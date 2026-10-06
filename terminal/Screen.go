@@ -2856,14 +2856,28 @@ func (self *Screen) ManualStyleUpdate() error {
 func (self *Screen) splitForCapacity(pin PageListPin) error {
 	// Get our capacities. We include our target row because its
 	// capacity will be preserved.
-	bytes_above := PageLayoutOf(pin.node.data.ExactRowCapacity(
+	//
+	// term51 (docs/mapping.md, "Page-layer bookkeeping"; term51
+	// docs/upstream-crashes.md): upstream traps in exactRowCapacity's
+	// `.styles = @intCast(styles_cap)` when one of the two ranges references
+	// every id of a full style set of the maximum capacity. The port returns
+	// ErrOutOfSpace (the page cannot be split) before anything has changed.
+	cap_above, err := pin.node.data.exactRowCapacityOrError(
 		0,
 		uint(pin.y)+1,
-	)).total_size
-	bytes_below := PageLayoutOf(pin.node.data.ExactRowCapacity(
+	)
+	if err != nil {
+		return err
+	}
+	bytes_above := PageLayoutOf(cap_above).total_size
+	cap_below, err := pin.node.data.exactRowCapacityOrError(
 		uint(pin.y),
 		uint(pin.node.data.size.rows),
-	)).total_size
+	)
+	if err != nil {
+		return err
+	}
+	bytes_below := PageLayoutOf(cap_below).total_size
 
 	// We need to track the old cursor pin because if our split
 	// moves the cursor pin we need to update our accounting.

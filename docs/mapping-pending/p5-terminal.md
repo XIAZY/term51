@@ -91,10 +91,10 @@ touches the next row's first cell in both.
 
 #### Tests
 
-Terminal_1..10_test.go: 1,313 Go tests, each run on its own (a
+Terminal_1..10_test.go: 1,213 Go tests, each run on its own (a
 not-implemented panic aborts a whole-file run), natively (arm64) and under
 32-bit ARM qemu with identical results: 867 pass (all 30 Go-only panic tests
-among them), 0 fail, 435 blocked on formatter.go (`ScreenFormatterInit`,
+among them), 0 fail, 335 blocked on formatter.go (`ScreenFormatterInit`,
 reached through `plainString` / `Screen.dumpString*`), 11 blocked on
 stream_readonly.go (`StreamReadonlyHandlerInit`, through `vtHandler` /
 `vtStream`).

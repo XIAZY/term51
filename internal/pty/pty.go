@@ -78,20 +78,83 @@ type Size struct {
 // Open opens a new pseudo-terminal. It returns the master side, which this
 // process reads the program's output from and writes input to, and the slave
 // side, which is given to the program.
+//
+// It first tries the POSIX calls (posix_openpt). BlackBerry 10 may declare
+// them but provide only BSD-style pseudo-terminals with no /dev/ptmx (found
+// on a real phone on 2026-10-03), so when they fail it falls back to openBSD.
 func Open() (master, slave *os.File, err error) {
+	master, slave, perr := openPOSIXFunc()
+	if perr == nil {
+		return master, slave, nil
+	}
+	master, slave, berr := openBSD(bsdDevDir)
+	if berr == nil {
+		return master, slave, nil
+	}
+	return nil, nil, fmt.Errorf("pty: no pseudo-terminal: %v; %v", perr, berr)
+}
+
+// openPOSIXFunc is openPOSIX; tests replace it to force the BSD fallback.
+var openPOSIXFunc = openPOSIX
+
+// openPOSIX opens a pseudo-terminal with posix_openpt, grantpt, unlockpt and
+// ptsname.
+func openPOSIX() (master, slave *os.File, err error) {
 	var name [256]C.char
 	fd, cerr := C.open_master(&name[0], C.size_t(len(name)))
 	if fd < 0 {
-		return nil, nil, fmt.Errorf("pty: opening the master: %w", cerr)
+		return nil, nil, fmt.Errorf("posix_openpt: %w", cerr)
 	}
 	master = os.NewFile(uintptr(fd), "/dev/ptmx")
 	path := C.GoString(&name[0])
 	slave, err = os.OpenFile(path, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		master.Close()
-		return nil, nil, fmt.Errorf("pty: opening the slave %s: %w", path, err)
+		return nil, nil, fmt.Errorf("opening the slave %s: %w", path, err)
 	}
 	return master, slave, nil
+}
+
+// bsdDevDir is where BSD-style pseudo-terminals live; tests change it.
+var bsdDevDir = "/dev"
+
+// BSD pseudo-terminal names: masters dir/ptyXY, slaves dir/ttyXY, with X in
+// bsdBanks and Y in bsdUnits.
+const (
+	bsdBanks = "pqrs"
+	bsdUnits = "0123456789abcdefghijklmnopqrstuv"
+)
+
+// openBSD opens the first free BSD-style pseudo-terminal in dir: a master
+// dir/ptyXY that opens (one already in use refuses a second open) and its
+// slave dir/ttyXY.
+func openBSD(dir string) (master, slave *os.File, err error) {
+	tried := 0
+	for _, x := range bsdBanks {
+		for _, y := range bsdUnits {
+			mpath := fmt.Sprintf("%s/pty%c%c", dir, x, y)
+			m, err := os.OpenFile(mpath, os.O_RDWR|syscall.O_NOCTTY, 0)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				tried++
+				continue // in use, or not permitted
+			}
+			tried++
+			spath := fmt.Sprintf("%s/tty%c%c", dir, x, y)
+			s, err := os.OpenFile(spath, os.O_RDWR|syscall.O_NOCTTY, 0)
+			if err != nil {
+				m.Close()
+				continue
+			}
+			return m, s, nil
+		}
+	}
+	if tried == 0 {
+		return nil, nil, fmt.Errorf("no BSD pseudo-terminals in %s", dir)
+	}
+	return nil, nil, fmt.Errorf("all %d BSD pseudo-terminals in %s are in use or refused", tried, dir)
 }
 
 // SetSize sets the terminal size the program sees (TIOCSWINSZ). The kernel

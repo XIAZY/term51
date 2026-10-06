@@ -112,3 +112,83 @@ func TestStartRejectsPresetStdio(t *testing.T) {
 		t.Fatal("Start accepted a cmd with Stdout set")
 	}
 }
+
+// openBSD scans dir for a free ptyXY master and opens the matching ttyXY.
+// The test builds a fake /dev with plain files: an absent pair, a master
+// that cannot be opened (no permission, as one in use refuses), and a free
+// pair, which must be the one chosen. On a phone with real BSD ptys,
+// TestOpenBSDRealDevices exercises the actual devices.
+func TestOpenBSDScansForAFreePair(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores the permission bits this test relies on")
+	}
+	dir := t.TempDir()
+	mk := func(name string, mode os.FileMode) {
+		if err := os.WriteFile(dir+"/"+name, nil, mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("ptyp1", 0o000) // refuses to open, like a master in use
+	mk("ttyp1", 0o600)
+	mk("ptyp2", 0o600)
+	mk("ttyp2", 0o600)
+	m, s, err := openBSD(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	defer s.Close()
+	if m.Name() != dir+"/ptyp2" || s.Name() != dir+"/ttyp2" {
+		t.Fatalf("got %s and %s, want ptyp2 and ttyp2", m.Name(), s.Name())
+	}
+}
+
+func TestOpenBSDNoDevices(t *testing.T) {
+	if _, _, err := openBSD(t.TempDir()); err == nil {
+		t.Fatal("openBSD found a pseudo-terminal in an empty directory")
+	}
+}
+
+// On a system with real BSD pseudo-terminals (BlackBerry 10), the fallback
+// opens a working pair: bytes written to the slave come out of the master.
+func TestOpenBSDRealDevices(t *testing.T) {
+	if _, err := os.Stat("/dev/ptyp0"); err != nil {
+		t.Skip("no BSD pseudo-terminals here")
+	}
+	m, s, err := openBSD("/dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	defer s.Close()
+	if _, err := s.Write([]byte("ping\n")); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, m, "ping", 10*time.Second)
+}
+
+// When the POSIX calls fail, Open falls back to the BSD scan.
+func TestOpenFallsBackToBSD(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores permission bits")
+	}
+	dir := t.TempDir()
+	for _, n := range []string{"ptyq3", "ttyq3"} {
+		if err := os.WriteFile(dir+"/"+n, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	oldPOSIX, oldDir := openPOSIXFunc, bsdDevDir
+	defer func() { openPOSIXFunc, bsdDevDir = oldPOSIX, oldDir }()
+	openPOSIXFunc = func() (*os.File, *os.File, error) { return nil, nil, os.ErrNotExist }
+	bsdDevDir = dir
+	m, s, err := Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	defer s.Close()
+	if m.Name() != dir+"/ptyq3" {
+		t.Fatalf("got %s, want the BSD master ptyq3", m.Name())
+	}
+}

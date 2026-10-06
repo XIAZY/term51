@@ -40,6 +40,16 @@ build.
 | `terminal/page.zig` | `terminal/page.go` | done | 320 of 331 (11 not translated), all pass, plus Go-only panic tests (405 page tests in all) | page_layout.txt: 27,060 of 27,060 lines | pass |
 | `terminal/PageList.zig` | `terminal/PageList.go` | done | 737 of 768 (31 not translated), all pass, plus Go-only panic tests (849 PageList tests in all; 1 mistranslated test fixed) | replay areas need Terminal | pass |
 | `unicode/lut.zig`, `props.zig`, `props_table.zig`, `grapheme.zig` (+ uucode types) | `terminal/unicode_lut.go`, `unicode_props.go`, `unicode_props_table.go`, `unicode_grapheme.go`, `uucode.go` | done (tables dumped from the pinned build, embedded) | 2 of 5 (3 not translated: refAllDecls and the two dump tests); 2 Go-only panic tests | all u21 codepoints, all 8,192 precompute bytes, 5,780 graphemeBreak calls; Unicode 17.0.0 = Go | pass |
+| `terminal/cursor.zig` | `terminal/cursor.go` | done | no tests upstream | - | pass |
+| `terminal/StringMap.zig` | `terminal/StringMap.go` | done | 3 of 3, all pass | - | pass |
+| `terminal/highlight.zig` | `terminal/highlight.go` | done | all 26 (incl. 3 Go-only), pass | - | pass |
+| `terminal/Selection.zig` | `terminal/Selection.go` | done | all 81 (incl. 3 Go-only), pass | - | pass |
+| `terminal/Screen.zig` | `terminal/Screen.go` | done | all 614 Screen tests (incl. Go-only) pass | golden replay: full gate running | pass |
+| `terminal/ScreenSet.zig` | `terminal/ScreenSet.go` | done | all 17 pass | - | pass |
+| `terminal/Terminal.zig` | `terminal/Terminal.go` | done | all 1,213 Terminal tests (incl. 30 Go-only) pass | golden replay: full gate running | pass |
+| `terminal/stream_readonly.zig` | `terminal/stream_readonly.go` | done | 168 of 168, all pass | - | pass |
+| `terminal/formatter.zig` | `terminal/formatter.go` | done | 177 of 180 (3 allocation-failure tests not translated), plus 20 Go-only: 197 pass | - | pass |
+| `terminal/render.zig` | `terminal/render.go` | done | all 44 (incl. 2 Go-only) pass | - | pass |
 | std `hash/wyhash.zig`, `hash.zig` (`int`), `hash/auto_hash.zig` | `terminal/std_hash_wyhash.go`, `std_hash.go`, `std_hash_auto_hash.go` | done (int: u64; autoHash: the cases PageEntry.hash reaches) | wyhash 5 of 5, int 1 (u64 lines), auto_hash 0 of 12 (key types not ported); 9 Go-only tests pinning Zig output | - | pass |
 | std `fmt/parse_float.zig` + `parse_float/*.zig` (f64) | `terminal/std_fmt_parse_float.go` | done | 6 of 12 std tests (6 f16/f32/f80/f128-only not translated); 2 Go-only; bit for bit with Zig on 11,643,449 inputs | osc/rgbi_float: 57 cases match (actions kinds) | pass |
 

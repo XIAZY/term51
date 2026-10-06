@@ -247,7 +247,7 @@ func sc4RDump(t *testing.T, s *Screen, tl PageListPin, br Optional[PageListPin],
 	t.Helper()
 	aw := oscWriterAllocatingInit()
 	defer aw.deinit()
-	zigTry(t, s.DumpString(&aw.writer, ScreenDumpStringOptions{tl: tl, br: br, unwrap: unwrap}))
+	zigTry(t, s.dumpString(&aw.writer, ScreenDumpStringOptions{tl: tl, br: br, unwrap: unwrap}))
 	// toOwnedSlice
 	return append([]uint8(nil), aw.written()...)
 }
@@ -2204,7 +2204,7 @@ func TestSc4_dumpString_wrapped_rows_are_joined_only_when_unwrapping(t *testing.
 	// The default of the option is to unwrap.
 	aw := oscWriterAllocatingInit()
 	defer aw.deinit()
-	zigTry(t, s.DumpString(&aw.writer, screenDumpStringOptionsDefault(tl)))
+	zigTry(t, s.dumpString(&aw.writer, screenDumpStringOptionsDefault(tl)))
 	expectEqualStrings(t, "1ABCD2EFGH\nx", string(aw.written()))
 }
 
@@ -2328,12 +2328,12 @@ func TestSc4_dumpString_writer_failure_is_propagated(t *testing.T) {
 
 	var buf [2]uint8
 	w := oscWriter{buffer: buf[:]}
-	sc4ExpectError(t, ErrWriteFailed, s.DumpString(&w, screenDumpStringOptionsDefault(s.pages.GetTopLeft(PointTagScreen))))
+	sc4ExpectError(t, ErrWriteFailed, s.dumpString(&w, screenDumpStringOptionsDefault(s.pages.GetTopLeft(PointTagScreen))))
 
 	// A big enough fixed buffer succeeds and is exact.
 	var big [64]uint8
 	w2 := oscWriter{buffer: big[:]}
-	zigTry(t, s.DumpString(&w2, screenDumpStringOptionsDefault(s.pages.GetTopLeft(PointTagScreen))))
+	zigTry(t, s.dumpString(&w2, screenDumpStringOptionsDefault(s.pages.GetTopLeft(PointTagScreen))))
 	expectEqualStrings(t, "hello world", string(w2.buffer[:w2.end]))
 }
 

@@ -257,7 +257,7 @@ func inputKey(it *replayTokens, w *bytes.Buffer) error {
 
 	aw := oscWriterAllocatingInit()
 	defer aw.deinit()
-	if err := InputKeyEncodeEncode(&aw.writer, event, opts); err != nil {
+	if err := inputKeyEncodeEncode(&aw.writer, event, opts); err != nil {
 		fmt.Fprintf(w, "=> !%s\n", zigErrorName(err))
 		return nil
 	}

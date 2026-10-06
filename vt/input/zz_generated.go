@@ -8,6 +8,24 @@ import (
 	"github.com/XIAZY/libghostty-vt-go/terminal"
 )
 
+// EncodeKey is [terminal.InputKeyEncodeEncode].
+func EncodeKey(w io.Writer, event KeyEvent, opts KeyEncodeOptions) error {
+	return terminal.InputKeyEncodeEncode(w, event, opts)
+}
+
+// EncodePaste is [terminal.InputPasteEncode].
+func EncodePaste(data []uint8, opts PasteOptions) ([3][]uint8, error) {
+	return terminal.InputPasteEncode(data, opts)
+}
+
+// EncodePasteMutable is [terminal.InputPasteEncodeMutable].
+func EncodePasteMutable(data []uint8, opts PasteOptions) [3][]uint8 {
+	return terminal.InputPasteEncodeMutable(data, opts)
+}
+
+// IsSafePaste is [terminal.InputPasteIsSafe].
+func IsSafePaste(data []uint8) bool { return terminal.InputPasteIsSafe(data) }
+
 // Key is [terminal.InputKeyKey].
 type Key = terminal.InputKeyKey
 

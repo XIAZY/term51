@@ -3462,7 +3462,7 @@ func (self *Screen) SelectionString(opts ScreenSelectionString) ([]uint8, error)
 
 	// Emit. Since this is an allocating writer, a failed write
 	// just becomes an OOM.
-	if err := formatter.Format(&aw.writer); err != nil {
+	if err := formatter.format(&aw.writer); err != nil {
 		return nil, ErrOutOfMemory
 	}
 
@@ -4387,7 +4387,7 @@ type ScreenDumpStringOptions struct {
 // opts: struct { tl: Pin, br: ?Pin = null, unwrap: bool = true })
 // std.Io.Writer.Error!void. The writer is the stand-in oscWriter (osc.go);
 // the error is ErrWriteFailed (osc.go).
-func (self *Screen) DumpString(writer *oscWriter, opts ScreenDumpStringOptions) error {
+func (self *Screen) dumpString(writer *oscWriter, opts ScreenDumpStringOptions) error {
 	// Create a formatter and use that to emit our text.
 	formatter := FormatterScreenFormatterInit(self, FormatterOptions{
 		emit:   FormatterFormatPlain,
@@ -4418,7 +4418,7 @@ func (self *Screen) DumpString(writer *oscWriter, opts ScreenDumpStringOptions) 
 	}
 
 	// Emit
-	return formatter.Format(writer)
+	return formatter.format(writer)
 }
 
 // ErrUnknownPoint is Zig's error.UnknownPoint (dumpStringAlloc and
@@ -4443,7 +4443,7 @@ func (self *Screen) DumpStringAlloc(tl Point) ([]uint8, error) {
 	if !br.Valid {
 		return nil, ErrUnknownPoint
 	}
-	if err := self.DumpString(&builder.writer, ScreenDumpStringOptions{
+	if err := self.dumpString(&builder.writer, ScreenDumpStringOptions{
 		tl:     tl_pin,
 		br:     Some(br.Value),
 		unwrap: false,
@@ -4473,7 +4473,7 @@ func (self *Screen) DumpStringAllocUnwrapped(tl Point) ([]uint8, error) {
 	if !br.Valid {
 		return nil, ErrUnknownPoint
 	}
-	if err := self.DumpString(&builder.writer, ScreenDumpStringOptions{
+	if err := self.dumpString(&builder.writer, ScreenDumpStringOptions{
 		tl:     tl_pin,
 		br:     Some(br.Value),
 		unwrap: true,

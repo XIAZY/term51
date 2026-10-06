@@ -241,7 +241,7 @@ func InputKeyEncodeOptionsFromTerminal(t *Terminal) InputKeyEncodeOptions {
 // they care about that.
 //
 // Zig: std.Io.Writer.Error!void. The error is ErrWriteFailed (osc.go).
-func InputKeyEncodeEncode(writer *oscWriter, event InputKeyKeyEvent, opts InputKeyEncodeOptions) error {
+func inputKeyEncodeEncode(writer *oscWriter, event InputKeyKeyEvent, opts InputKeyEncodeOptions) error {
 	//std.log.warn("KEYENCODER event={} opts={}", .{ event, opts });
 	if opts.kitty_flags.Int() != 0 {
 		return inputKeyEncodeKitty(

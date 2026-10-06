@@ -631,7 +631,7 @@ func TestRender_string(t *testing.T) {
 	w := oscWriterAllocatingInit()
 	defer w.deinit()
 
-	zigTry(t, state.String(&w.writer, Optional[RenderStateStringMapParam]{}))
+	zigTry(t, state.stringW(&w.writer, Optional[RenderStateStringMapParam]{}))
 
 	result, err := w.toOwnedSlice()
 	zigTry(t, err)
@@ -2054,7 +2054,7 @@ func TestRender_term51_RenderState_string_wrapped_rows_wide_characters_and_graph
 	var map_ RenderStateStringMap
 	// Zig-only: defer map.deinit(alloc);
 
-	zigTry(t, state.String(&w.writer, rnMapParam(&map_)))
+	zigTry(t, state.stringW(&w.writer, rnMapParam(&map_)))
 	expectEqualStrings(t,
 		"a\xe4\xb8\xad\x00c\x00\n"+
 			"e\xcc\x81f\x00\x00\x00\n"+
@@ -2096,7 +2096,7 @@ func TestRender_term51_RenderState_string_soft_wrapped_rows_have_no_newline(t *t
 
 	w := oscWriterAllocatingInit()
 	defer w.deinit()
-	zigTry(t, state.String(&w.writer, Optional[RenderStateStringMapParam]{}))
+	zigTry(t, state.stringW(&w.writer, Optional[RenderStateStringMapParam]{}))
 	expectEqualStrings(t, "hello worl"+"d\x00\x00\x00\x00\n", string(w.writer.buffered()))
 
 	// With a map, there is one entry per byte and none for the missing
@@ -2105,7 +2105,7 @@ func TestRender_term51_RenderState_string_soft_wrapped_rows_have_no_newline(t *t
 	defer w2.deinit()
 	var map_ RenderStateStringMap
 	// Zig-only: defer map.deinit(alloc);
-	zigTry(t, state.String(&w2.writer, rnMapParam(&map_)))
+	zigTry(t, state.stringW(&w2.writer, rnMapParam(&map_)))
 	expectEqual(t, len(w2.writer.buffered()), len(map_))
 	expectEqual(t, PointCoordinate{x: 4, y: 0}, map_[4])
 	expectEqual(t, PointCoordinate{x: 0, y: 1}, map_[5])
@@ -2126,7 +2126,7 @@ func TestRender_term51_RenderState_string_background_cells_empty_state_and_write
 		defer w.deinit()
 		var map_ RenderStateStringMap
 		// Zig-only: defer map.deinit(alloc);
-		zigTry(t, state.String(&w.writer, rnMapParam(&map_)))
+		zigTry(t, state.stringW(&w.writer, rnMapParam(&map_)))
 		expectEqualStrings(t, "", string(w.writer.buffered()))
 		expectEqual(t, 0, len(map_))
 	}
@@ -2144,7 +2144,7 @@ func TestRender_term51_RenderState_string_background_cells_empty_state_and_write
 	{
 		w := oscWriterAllocatingInit()
 		defer w.deinit()
-		zigTry(t, state.String(&w.writer, Optional[RenderStateStringMapParam]{}))
+		zigTry(t, state.stringW(&w.writer, Optional[RenderStateStringMapParam]{}))
 		expectEqualStrings(t, "a\x00\x00\x00\n", string(w.writer.buffered()))
 	}
 
@@ -2152,7 +2152,7 @@ func TestRender_term51_RenderState_string_background_cells_empty_state_and_write
 	{
 		var buf [3]uint8
 		w := oscWriterFixed(buf[:])
-		rnExpectError(t, ErrWriteFailed, state.String(&w, Optional[RenderStateStringMapParam]{}))
+		rnExpectError(t, ErrWriteFailed, state.stringW(&w, Optional[RenderStateStringMapParam]{}))
 	}
 }
 
@@ -2175,7 +2175,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 		defer w.deinit()
 		var map_ RenderStateStringMap
 		// Zig-only: defer map.deinit(alloc);
-		zigTry(t, state.String(&w.writer, rnMapParam(&map_)))
+		zigTry(t, state.stringW(&w.writer, rnMapParam(&map_)))
 		expectEqualStrings(t, "a\xef\xbf\xbdc\x00\n", string(w.writer.buffered()))
 		expectEqual(t, len(w.writer.buffered()), len(map_))
 	}
@@ -2188,7 +2188,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 		zigTry(t, state.Update(term))
 		w := oscWriterAllocatingInit()
 		defer w.deinit()
-		rnExpectError(t, ErrWriteFailed, state.String(&w.writer, Optional[RenderStateStringMapParam]{}))
+		rnExpectError(t, ErrWriteFailed, state.stringW(&w.writer, Optional[RenderStateStringMapParam]{}))
 		// Everything before the bad codepoint was written.
 		expectEqualStrings(t, "a", string(w.writer.buffered()))
 	}
@@ -2204,7 +2204,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 		expectEqualSlices(t, []uint32{0x110000}, rnCell(&state, 2, 0).grapheme)
 		w := oscWriterAllocatingInit()
 		defer w.deinit()
-		rnExpectError(t, ErrWriteFailed, state.String(&w.writer, Optional[RenderStateStringMapParam]{}))
+		rnExpectError(t, ErrWriteFailed, state.stringW(&w.writer, Optional[RenderStateStringMapParam]{}))
 		// The base codepoint of that cell was written before the failure.
 		expectEqualStrings(t, "abc", string(w.writer.buffered()))
 	}

@@ -60,6 +60,7 @@ type edit struct {
 func main() {
 	write := flag.Bool("w", false, "write the files")
 	allowFile := flag.String("types", "", "file listing the types whose fields are exported, one name or prefix* per line (default: every exported struct type)")
+	renames := flag.String("rename", "", "comma-separated Type.Method=new or Func=new: rename these functions instead of exporting fields")
 	flag.Parse()
 	dir := flag.Arg(0)
 	var allowExact = map[string]bool{}
@@ -193,9 +194,44 @@ func main() {
 		}
 	}
 
+	// -rename: functions and methods by name, instead of fields.
+	funcRename := map[*types.Func]string{}
+	if *renames != "" {
+		rename = map[*types.Var]string{}
+		collisions = nil
+		for _, r := range strings.Split(*renames, ",") {
+			old, nn, ok := strings.Cut(strings.TrimSpace(r), "=")
+			if !ok {
+				panic("bad -rename entry " + r)
+			}
+			var obj types.Object
+			if tname, mname, isMethod := strings.Cut(old, "."); isMethod {
+				tn, _ := scope.Lookup(tname).(*types.TypeName)
+				if tn == nil {
+					panic("no type " + tname)
+				}
+				obj, _, _ = types.LookupFieldOrMethod(tn.Type(), true, pkg.Types, mname)
+			} else {
+				obj = scope.Lookup(old)
+			}
+			f, _ := obj.(*types.Func)
+			if f == nil {
+				panic("no function " + old)
+			}
+			funcRename[f.Origin()] = nn
+		}
+	}
+
 	// Every identifier that defines or uses one of those fields.
 	edits := map[string][]edit{}
 	add := func(id *ast.Ident, obj types.Object) {
+		if f, ok := obj.(*types.Func); ok {
+			if n, ok := funcRename[f.Origin()]; ok {
+				pos := fset.Position(id.Pos())
+				edits[pos.Filename] = append(edits[pos.Filename], edit{pos.Offset, id.Name, n})
+			}
+			return
+		}
 		v, ok := obj.(*types.Var)
 		if !ok || !v.IsField() {
 			return

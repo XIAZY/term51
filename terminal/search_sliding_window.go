@@ -840,7 +840,7 @@ func (self *SearchSlidingWindow) Append(node *PageListNode) (uint, error) {
 			map_: &meta.cell_map,
 		})
 	}
-	if err := formatter.Format(&encoded.writer); err != nil {
+	if err := formatter.format(&encoded.writer); err != nil {
 		// writer uses anyerror but the only realistic error on
 		// an ArrayList is out of memory.
 		return 0, ErrOutOfMemory

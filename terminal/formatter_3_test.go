@@ -116,7 +116,7 @@ func fm3Coord(x SizeCellCountInt, y uint32) PointCoordinate {
 
 // fm3Formatter is "any formatter that has a `format` method".
 type fm3Formatter interface {
-	Format(writer *oscWriter) error
+	format(writer *oscWriter) error
 }
 
 // fm3Out is term51ZOut: format with any formatter and return the output.
@@ -124,7 +124,7 @@ func fm3Out(tt *testing.T, f fm3Formatter) string {
 	tt.Helper()
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
-	zigTry(tt, f.Format(&builder.writer))
+	zigTry(tt, f.format(&builder.writer))
 	out, err := builder.toOwnedSlice()
 	zigTry(tt, err)
 	return string(out)
@@ -149,7 +149,7 @@ func fm3Run(tt *testing.T, f FormatterPageFormatter) fm3Res {
 	tt.Helper()
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
-	state, err := f.FormatWithState(&builder.writer)
+	state, err := f.formatWithState(&builder.writer)
 	zigTry(tt, err)
 	out, err := builder.toOwnedSlice()
 	zigTry(tt, err)
@@ -1433,7 +1433,7 @@ func TestFm3_term51_PageFormatter_format_matches_formatWithState_output_and_disc
 	var buf [4]uint8
 	w := oscWriterFixed(buf[:])
 	f := FormatterPageFormatterInit(fm3Page(term), FormatterOptionsPlain)
-	fm3ExpectWriteFailed(t, f.Format(&w))
+	fm3ExpectWriteFailed(t, f.format(&w))
 }
 
 // Zig: test "term51: PageFormatter.formatWithState: trim and wrapped rows with unwrap"
@@ -3056,10 +3056,10 @@ func TestFm3_term51_TerminalFormatter_format_allocation_failure_of_the_pin_map_a
 	// Zig-only: defer alloc.free(buf);
 	for cap_ := 0; cap_ < len(out); cap_++ {
 		w := oscWriterFixed(buf[0:cap_])
-		fm3ExpectWriteFailed(t, f.Format(&w))
+		fm3ExpectWriteFailed(t, f.format(&w))
 	}
 	w := oscWriterFixed(buf)
-	zigTry(t, f.Format(&w))
+	zigTry(t, f.format(&w))
 	expectEqualStrings(t, out, string(w.buffered()))
 }
 
@@ -3080,12 +3080,12 @@ func TestFm3_term51_ScreenFormatter_format_small_writers_fail_in_content_and_ext
 		buf := make([]uint8, cap_)
 		// Zig-only: defer alloc.free(buf);
 		w := oscWriterFixed(buf)
-		fm3ExpectWriteFailed(t, f.Format(&w))
+		fm3ExpectWriteFailed(t, f.format(&w))
 	}
 	buf := make([]uint8, len(out))
 	// Zig-only: defer alloc.free(buf);
 	w := oscWriterFixed(buf)
-	zigTry(t, f.Format(&w))
+	zigTry(t, f.format(&w))
 	expectEqualStrings(t, out, string(w.buffered()))
 }
 
@@ -3214,7 +3214,7 @@ func TestFm3_panic_ScreenFormatter_format_charsets_extra_gr_is_G0(t *testing.T) 
 	f.content = fm3ContentNone
 	f.extra.charsets = true
 	term.screens.active.charset.gr = CharsetsSlotsG0
-	fm3ExpectPanic(t, func() { _ = f.Format(&b.writer) })
+	fm3ExpectPanic(t, func() { _ = f.format(&b.writer) })
 }
 
 // Go-only: panic test: PageFormatter.formatWithState: a codepoint_grapheme cell with no grapheme data (`self.page.lookupGrapheme(cell).?`)
@@ -3228,7 +3228,7 @@ func TestFm3_panic_PageFormatter_formatWithState_grapheme_cell_without_grapheme_
 	defer b.deinit()
 
 	f := FormatterPageFormatterInit(fm3Page(term), FormatterOptionsPlain)
-	fm3ExpectPanic(t, func() { _, _ = f.FormatWithState(&b.writer) })
+	fm3ExpectPanic(t, func() { _, _ = f.formatWithState(&b.writer) })
 }
 
 // Go-only: panic test: PageFormatter.formatWithState: codepoint map string replacement that is not valid UTF-8 (`std.unicode.Utf8View.init(s) catch unreachable`)
@@ -3246,5 +3246,5 @@ func TestFm3_panic_PageFormatter_formatWithState_replacement_string_not_valid_ut
 			Tag: FormatterCodepointMapReplacementString, String: []uint8("\xff")}},
 	})
 	f := FormatterPageFormatterInit(fm3Page(term), opts)
-	fm3ExpectPanic(t, func() { _, _ = f.FormatWithState(&b.writer) })
+	fm3ExpectPanic(t, func() { _, _ = f.formatWithState(&b.writer) })
 }

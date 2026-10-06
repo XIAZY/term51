@@ -543,7 +543,7 @@ func FormatterTerminalFormatterInit(terminal *Terminal, opts FormatterOptions) F
 // std.Io.Writer.Error!void. The writer is the stand-in oscWriter (osc.go);
 // the error is ErrWriteFailed (osc.go), also returned when appending to the
 // pin map fails. See the file header for why this is not `Format() string`.
-func (self FormatterTerminalFormatter) Format(writer *oscWriter) error {
+func (self FormatterTerminalFormatter) format(writer *oscWriter) error {
 	// Emit palette before screen content if using VT format. Technically
 	// we could do this after but this way if replay is slow for whatever
 	// reason the colors will be right right away.
@@ -597,7 +597,7 @@ func (self FormatterTerminalFormatter) Format(writer *oscWriter) error {
 			extra_formatter.pin_map = None[FormatterPinMap]()
 			extra_formatter.extra = FormatterTerminalFormatterExtraNone
 			extra_formatter.extra.palette = true
-			if err := extra_formatter.Format(&discarding.writer); err != nil {
+			if err := extra_formatter.format(&discarding.writer); err != nil {
 				return err
 			}
 
@@ -651,7 +651,7 @@ palette:
 			extra_formatter.pin_map = None[FormatterPinMap]()
 			extra_formatter.extra = FormatterTerminalFormatterExtraNone
 			extra_formatter.extra.modes = true
-			if err := extra_formatter.Format(&discarding.writer); err != nil {
+			if err := extra_formatter.format(&discarding.writer); err != nil {
 				return err
 			}
 
@@ -669,7 +669,7 @@ palette:
 	screen_formatter.content = self.content
 	screen_formatter.extra = self.extra.screen
 	screen_formatter.pin_map = self.pin_map
-	if err := screen_formatter.Format(writer); err != nil {
+	if err := screen_formatter.format(writer); err != nil {
 		return err
 	}
 
@@ -759,7 +759,7 @@ palette:
 			extra_formatter.extra.tabstops = self.extra.tabstops
 			extra_formatter.extra.keyboard = self.extra.keyboard
 			extra_formatter.extra.pwd = self.extra.pwd
-			if err := extra_formatter.Format(&discarding.writer); err != nil {
+			if err := extra_formatter.format(&discarding.writer); err != nil {
 				return err
 			}
 
@@ -958,7 +958,7 @@ func FormatterScreenFormatterInit(screen *Screen, opts FormatterOptions) Formatt
 // std.Io.Writer.Error!void. The writer is the stand-in oscWriter (osc.go);
 // the error is ErrWriteFailed (osc.go), also returned when appending to the
 // pin map fails. See the file header for why this is not `Format() string`.
-func (self FormatterScreenFormatter) Format(writer *oscWriter) error {
+func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	switch self.content.Tag {
 	case FormatterScreenFormatterContentNone:
 
@@ -973,7 +973,7 @@ func (self FormatterScreenFormatter) Format(writer *oscWriter) error {
 			list_formatter.bottom_right = Some(sel.BottomRight(self.screen))
 			list_formatter.rectangle = sel.rectangle
 		}
-		if err := list_formatter.Format(writer); err != nil {
+		if err := list_formatter.format(writer); err != nil {
 			return err
 		}
 
@@ -1164,7 +1164,7 @@ func (self FormatterScreenFormatter) Format(writer *oscWriter) error {
 		extra_formatter := self
 		extra_formatter.content = FormatterScreenFormatterContent{Tag: FormatterScreenFormatterContentNone}
 		extra_formatter.pin_map = None[FormatterPinMap]()
-		if err := extra_formatter.Format(&discarding.writer); err != nil {
+		if err := extra_formatter.format(&discarding.writer); err != nil {
 			return err
 		}
 
@@ -1248,7 +1248,7 @@ func FormatterPageListFormatterInit(list *PageList, opts FormatterOptions) Forma
 // std.Io.Writer.Error!void. The writer is the stand-in oscWriter (osc.go);
 // the error is ErrWriteFailed (osc.go), also returned when appending to the
 // pin map fails. See the file header for why this is not `Format() string`.
-func (self FormatterPageListFormatter) Format(writer *oscWriter) error {
+func (self FormatterPageListFormatter) format(writer *oscWriter) error {
 	var tl PageListPin
 	if self.top_left.Valid {
 		tl = self.top_left.Value
@@ -1307,7 +1307,7 @@ func (self FormatterPageListFormatter) Format(writer *oscWriter) error {
 			formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 		}
 
-		state, err := formatter.FormatWithState(writer)
+		state, err := formatter.formatWithState(writer)
 		if err != nil {
 			return err
 		}
@@ -1452,8 +1452,8 @@ func FormatterPageFormatterInit(page *Page, opts FormatterOptions) FormatterPage
 // std.Io.Writer.Error!void: formatWithState with the state discarded. The
 // writer is the stand-in oscWriter (osc.go); the error is ErrWriteFailed
 // (osc.go). See the file header for why this is not `Format() string`.
-func (self FormatterPageFormatter) Format(writer *oscWriter) error {
-	_, err := self.FormatWithState(writer)
+func (self FormatterPageFormatter) format(writer *oscWriter) error {
+	_, err := self.formatWithState(writer)
 	return err
 }
 
@@ -1463,7 +1463,7 @@ func (self FormatterPageFormatter) Format(writer *oscWriter) error {
 // std.Io.Writer.Error!TrailingState. The writer is the stand-in oscWriter
 // (osc.go); the error is ErrWriteFailed (osc.go), also returned when
 // appending to the point map fails.
-func (self FormatterPageFormatter) FormatWithState(writer *oscWriter) (FormatterPageFormatterTrailingState, error) {
+func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (FormatterPageFormatterTrailingState, error) {
 	var blank_rows uint = 0
 	var blank_cells uint = 0
 

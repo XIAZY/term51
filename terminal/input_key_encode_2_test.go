@@ -576,7 +576,7 @@ func TestKe2_term51_Options_fromTerminal_kitty_flags_follow_the_active_screen_st
 	// The option feeds straight into the encoder.
 	var buf [32]uint8
 	w := oscWriterFixed(buf[:])
-	zigTry(t, InputKeyEncodeEncode(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, InputKeyEncodeOptionsFromTerminal(term)))
+	zigTry(t, inputKeyEncodeEncode(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, InputKeyEncodeOptionsFromTerminal(term)))
 	expectEqualStrings(t, "\x1b[27u", string(w.buffered()))
 }
 
@@ -1651,7 +1651,7 @@ func TestKe2_term51_kitty_macos_option_as_alt_and_associated_text_with_alt(t *te
 						want = "\x1b[119;3;8721u"
 					}
 					ke2Expect(t, inputKeyEncodeKitty, want, ev, opts)
-					ke2Expect(t, InputKeyEncodeEncode, want, ev, opts)
+					ke2Expect(t, inputKeyEncodeEncode, want, ev, opts)
 
 					// Other text-preventing modifiers are never affected.
 					ev2 := ev
@@ -1773,7 +1773,7 @@ func TestKe2_term51_encode_disabled_kitty_flags_use_legacy_any_flag_uses_kitty(t
 		if bits == 0 {
 			esc_want = "\x1b"
 		}
-		ke2Expect(t, InputKeyEncodeEncode, esc_want, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts)
+		ke2Expect(t, inputKeyEncodeEncode, esc_want, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts)
 
 		// ctrl+a: C0 byte in legacy, CSI u in kitty.
 		ctrl_a := InputKeyKeyEvent{
@@ -1787,6 +1787,6 @@ func TestKe2_term51_encode_disabled_kitty_flags_use_legacy_any_flag_uses_kitty(t
 		if bits == 0 {
 			ca_want = "\x01"
 		}
-		ke2Expect(t, InputKeyEncodeEncode, ca_want, ctrl_a, opts)
+		ke2Expect(t, inputKeyEncodeEncode, ca_want, ctrl_a, opts)
 	}
 }

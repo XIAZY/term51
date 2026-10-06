@@ -116,7 +116,7 @@ func (self OSCParsersSemanticPromptCommand) ReadOption(
 // Zig: the error set is std.Io.Writer.Error || error{DecodeError}, i.e.
 // ErrWriteFailed (osc.go) or ErrDecodeError. The writer is a
 // *std.Io.Writer; see oscWriter in osc.go.
-func (self OSCParsersSemanticPromptCommand) WriteCommandLine(writer *oscWriter) error {
+func (self OSCParsersSemanticPromptCommand) writeCommandLine(writer *oscWriter) error {
 	if command_line := self.ReadOption(OSCParsersSemanticPromptOptionCmdline).Cmdline; command_line.Valid {
 		if err := OsStringEncodingPrintfQDecode(writer, command_line.Value); err != nil {
 			return err

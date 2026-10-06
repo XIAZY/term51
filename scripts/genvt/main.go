@@ -84,6 +84,7 @@ var namespaces = map[string][]entry{
 		{"InputPasteOptions", "PasteOptions"}, {"InputKeyKey", "Key"}, {"InputKeyAction", "KeyAction"},
 		{"InputKeyKeyEvent", "KeyEvent"}, {"InputKeyMods", "KeyMods"}, {"InputKeyModsMods", "KeyMods"},
 		{"InputKeyEncodeOptions", "KeyEncodeOptions"},
+		{"InputKeyEncodeEncode", "EncodeKey"}, {"InputPasteIsSafe", "IsSafePaste"}, {"InputPasteEncode", "EncodePaste"},
 	},
 }
 

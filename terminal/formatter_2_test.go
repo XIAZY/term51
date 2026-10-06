@@ -109,7 +109,7 @@ func fm2Page(tt *testing.T, term *Terminal) *Page {
 
 // fm2Formatter is "any formatter that has a format method".
 type fm2Formatter interface {
-	Format(writer *oscWriter) error
+	format(writer *oscWriter) error
 }
 
 // fm2PageOut is term51ZPageOut: format the first page of the terminal with
@@ -119,7 +119,7 @@ func fm2PageOut(tt *testing.T, term *Terminal, opts FormatterOptions) []uint8 {
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
 	f := FormatterPageFormatterInit(fm2Page(tt, term), opts)
-	zigTry(tt, f.Format(&builder.writer))
+	zigTry(tt, f.format(&builder.writer))
 	return append([]uint8(nil), builder.writer.buffered()...)
 }
 
@@ -129,7 +129,7 @@ func fm2Out(tt *testing.T, f fm2Formatter) []uint8 {
 	tt.Helper()
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
-	zigTry(tt, f.Format(&builder.writer))
+	zigTry(tt, f.format(&builder.writer))
 	return append([]uint8(nil), builder.writer.buffered()...)
 }
 
@@ -238,7 +238,7 @@ func TestFm2_Screen_plain_with_selection(t *testing.T) {
 	}
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "line2", string(output))
 
@@ -275,7 +275,7 @@ func TestFm2_Screen_vt_with_cursor_position(t *testing.T) {
 	formatter.extra.cursor = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -327,7 +327,7 @@ func TestFm2_Screen_vt_with_style(t *testing.T) {
 	formatter.extra.style = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -373,7 +373,7 @@ func TestFm2_Screen_vt_with_hyperlink(t *testing.T) {
 	formatter.extra.hyperlink = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -427,7 +427,7 @@ func TestFm2_Screen_vt_with_protection(t *testing.T) {
 	formatter.extra.protection = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -472,7 +472,7 @@ func TestFm2_Screen_vt_with_kitty_keyboard(t *testing.T) {
 	formatter.extra.kitty_keyboard = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -519,7 +519,7 @@ func TestFm2_Screen_vt_with_charsets(t *testing.T) {
 	formatter.extra.charsets = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -562,7 +562,7 @@ func TestFm2_panic_ScreenFormatter_format_charsets_gr_is_G0(t *testing.T) {
 	formatter.extra.charsets = true
 
 	fm2ExpectPanic(t, func() {
-		_ = formatter.Format(&builder.writer)
+		_ = formatter.format(&builder.writer)
 	})
 }
 
@@ -584,7 +584,7 @@ func TestFm2_Terminal_vt_with_scrolling_region(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	formatter.extra.scrolling_region = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -624,7 +624,7 @@ func TestFm2_Terminal_vt_with_modes(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	formatter.extra.modes = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -664,7 +664,7 @@ func TestFm2_Terminal_vt_with_tabstops(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	formatter.extra.tabstops = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -705,7 +705,7 @@ func TestFm2_Terminal_vt_with_keyboard_modes(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	formatter.extra.keyboard = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -740,7 +740,7 @@ func TestFm2_Terminal_vt_with_pwd(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	formatter.extra.pwd = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -774,7 +774,7 @@ func TestFm2_Page_html_with_multiple_styles(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -804,7 +804,7 @@ func TestFm2_Page_html_plain_text(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Plain text without styles should be wrapped in monospace div
@@ -832,7 +832,7 @@ func TestFm2_Page_html_with_colors(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -864,7 +864,7 @@ func TestFm2_TerminalFormatter_html_with_palette(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsHtml)
 	formatter.extra.palette = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := string(builder.writer.buffered())
 
 	// Verify palette CSS variables are emitted
@@ -896,7 +896,7 @@ func TestFm2_Page_html_with_background_and_foreground_colors(t *testing.T) {
 	opts.foreground = Some(ColorRGB{r: 0xab, g: 0xcd, b: 0xef})
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -926,7 +926,7 @@ func TestFm2_Page_html_with_escaping(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1000,7 +1000,7 @@ func TestFm2_Page_html_with_unicode_as_numeric_entities(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Expected: box drawing chars as numeric entities
@@ -1028,7 +1028,7 @@ func TestFm2_Page_html_ascii_characters_unchanged(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// ASCII should be emitted directly
@@ -1055,7 +1055,7 @@ func TestFm2_Page_html_mixed_ascii_and_unicode(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Mix of ASCII and Unicode entities
@@ -1087,7 +1087,7 @@ func TestFm2_Page_VT_with_palette_option_emits_RGB(t *testing.T) {
 	{
 		fm2Clear(&builder)
 		formatter := FormatterPageFormatterInit(page, FormatterOptionsVt)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "\x1b[0m\x1b[38;5;1mred\x1b[0m", string(output))
 	}
@@ -1098,7 +1098,7 @@ func TestFm2_Page_VT_with_palette_option_emits_RGB(t *testing.T) {
 		opts := FormatterOptionsVt
 		opts.palette = &term.colors.palette.current
 		formatter := FormatterPageFormatterInit(page, opts)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "\x1b[0m\x1b[38;2;171;205;239mred\x1b[0m", string(output))
 	}
@@ -1126,7 +1126,7 @@ func TestFm2_Page_html_with_palette_option_emits_RGB(t *testing.T) {
 	{
 		fm2Clear(&builder)
 		formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t,
 			"<div style=\"font-family: monospace; white-space: pre;\">"+
@@ -1142,7 +1142,7 @@ func TestFm2_Page_html_with_palette_option_emits_RGB(t *testing.T) {
 		opts := FormatterOptionsHtml
 		opts.palette = &term.colors.palette.current
 		formatter := FormatterPageFormatterInit(page, opts)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t,
 			"<div style=\"font-family: monospace; white-space: pre;\">"+
@@ -1172,7 +1172,7 @@ func TestFm2_Page_VT_style_reset_properly_closes_styles(t *testing.T) {
 
 	fm2Clear(&builder)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsVt)
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// The reset should properly close the bold style
@@ -1211,7 +1211,7 @@ func TestFm2_Page_codepoint_map_single_replacement(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hellx wxrld", string(output))
 
@@ -1265,7 +1265,7 @@ func TestFm2_Page_codepoint_map_conflicting_replacement_prefers_last(t *testing.
 	opts.codepoint_map = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "helly", string(output))
 }
@@ -1302,7 +1302,7 @@ func TestFm2_Page_codepoint_map_replace_with_string(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hellXYZ", string(output))
 
@@ -1349,7 +1349,7 @@ func TestFm2_Page_codepoint_map_range_replacement(t *testing.T) {
 	opts.codepoint_map = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "aXXXXfg", string(output))
 }
@@ -1386,7 +1386,7 @@ func TestFm2_Page_codepoint_map_multiple_ranges(t *testing.T) {
 	opts.codepoint_map = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	// h e l l o   w o r l d
 	// A A A A Z   Z Z Z A A
@@ -1425,7 +1425,7 @@ func TestFm2_Page_codepoint_map_unicode_replacement(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello 🔥 world", string(output))
 
@@ -1487,7 +1487,7 @@ func TestFm2_Page_codepoint_map_with_styled_formats(t *testing.T) {
 	opts.codepoint_map = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	// Should preserve styles while replacing text
 	// "red text" becomes "rXd tXxt"
@@ -1519,7 +1519,7 @@ func TestFm2_Page_codepoint_map_empty_map(t *testing.T) {
 	opts.codepoint_map = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello world", string(output))
 }
@@ -1551,7 +1551,7 @@ func TestFm2_Page_VT_background_color_on_trailing_blank_cells(t *testing.T) {
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsVt)
 	formatter.opts.trim = false // Don't trim so we can see the trailing behavior
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := string(builder.writer.buffered())
 
 	// The output should preserve the red background SGR for trailing cells on line 1.
@@ -1592,7 +1592,7 @@ func TestFm2_Page_HTML_with_hyperlinks(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1622,7 +1622,7 @@ func TestFm2_Page_HTML_with_multiple_hyperlinks(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1653,7 +1653,7 @@ func TestFm2_Page_HTML_with_hyperlink_escaping(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1682,7 +1682,7 @@ func TestFm2_Page_HTML_with_styled_hyperlink(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1712,7 +1712,7 @@ func TestFm2_Page_HTML_hyperlink_closes_style_before_anchor(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1745,7 +1745,7 @@ func TestFm2_Page_HTML_hyperlink_point_map_maps_closing_to_previous_cell(t *test
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	const expected_output = "<div style=\"font-family: monospace; white-space: pre;\">" +

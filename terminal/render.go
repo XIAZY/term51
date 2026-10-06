@@ -1035,7 +1035,7 @@ type RenderStateStringMapParam struct {
 // oscWriter (osc.go); the error is ErrWriteFailed (osc.go) or
 // ErrOutOfMemory (dcs.go). This is not a fmt.Stringer `String() string`:
 // the Zig name `string` capitalised.
-func (self *RenderState) String(writer *oscWriter, map_ Optional[RenderStateStringMapParam]) error {
+func (self *RenderState) stringW(writer *oscWriter, map_ Optional[RenderStateStringMapParam]) error {
 	// Zig: row_slice.items(.raw), (.cells). Go: row_data[y].raw, .cells.
 	row_data := self.row_data
 

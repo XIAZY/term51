@@ -166,7 +166,7 @@ func ke3ACRun(t *testing.T, buf []uint8, event InputKeyKeyEvent, opts InputKeyEn
 	zigTry(t, inputKeyEncodeLegacy(&w, event, opts))
 	var buf2 [128]uint8
 	w2 := oscWriterFixed(buf2[:])
-	zigTry(t, InputKeyEncodeEncode(&w2, event, opts))
+	zigTry(t, inputKeyEncodeEncode(&w2, event, opts))
 	expectEqualStrings(t, string(w.buffered()), string(w2.buffered()))
 	return w.buffered()
 }
@@ -193,14 +193,14 @@ func ke3ACExpectFit(t *testing.T, expected string, event InputKeyKeyEvent, opts 
 	}
 	{
 		w := oscWriterFixed(buf[0:len(expected):len(expected)])
-		zigTry(t, InputKeyEncodeEncode(&w, event, opts))
+		zigTry(t, inputKeyEncodeEncode(&w, event, opts))
 		expectEqualStrings(t, expected, string(w.buffered()))
 	}
 	for n := 0; n < len(expected); n++ {
 		w := oscWriterFixed(buf[0:n:n])
 		ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeLegacy(&w, event, opts))
 		w2 := oscWriterFixed(buf[0:n:n])
-		ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w2, event, opts))
+		ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeEncode(&w2, event, opts))
 	}
 }
 
@@ -616,10 +616,10 @@ func TestKe3_term51_encode_each_kitty_flag_alone_selects_kitty(t *testing.T) {
 		KittyKeyFlagsTrue,
 	}
 	for _, f := range flags {
-		ke3ABExpect(t, InputKeyEncodeEncode, "\x1b[27u", ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{kitty_flags: f})
+		ke3ABExpect(t, inputKeyEncodeEncode, "\x1b[27u", ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{kitty_flags: f})
 	}
-	ke3ABExpect(t, InputKeyEncodeEncode, "\x1b", ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{kitty_flags: KittyKeyFlagsDisabled})
-	ke3ABExpect(t, InputKeyEncodeEncode, "\x1b", ke3Key(InputKeyKeyEscape), InputKeyEncodeOptionsDefault)
+	ke3ABExpect(t, inputKeyEncodeEncode, "\x1b", ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{kitty_flags: KittyKeyFlagsDisabled})
+	ke3ABExpect(t, inputKeyEncodeEncode, "\x1b", ke3Key(InputKeyKeyEscape), InputKeyEncodeOptionsDefault)
 }
 
 // Zig: test "term51: encode: matches kitty and legacy exactly"
@@ -639,13 +639,13 @@ func TestKe3_term51_encode_matches_kitty_and_legacy_exactly(t *testing.T) {
 		var b2 [64]uint8
 		w1 := oscWriterFixed(b1[:])
 		w2 := oscWriterFixed(b2[:])
-		zigTry(t, InputKeyEncodeEncode(&w1, ev, ke3ABFull))
+		zigTry(t, inputKeyEncodeEncode(&w1, ev, ke3ABFull))
 		zigTry(t, inputKeyEncodeKitty(&w2, ev, ke3ABFull))
 		expectEqualStrings(t, string(w2.buffered()), string(w1.buffered()))
 
 		w3 := oscWriterFixed(b1[:])
 		w4 := oscWriterFixed(b2[:])
-		zigTry(t, InputKeyEncodeEncode(&w3, ev, InputKeyEncodeOptions{}))
+		zigTry(t, inputKeyEncodeEncode(&w3, ev, InputKeyEncodeOptions{}))
 		zigTry(t, inputKeyEncodeLegacy(&w4, ev, InputKeyEncodeOptions{}))
 		expectEqualStrings(t, string(w4.buffered()), string(w3.buffered()))
 	}
@@ -654,7 +654,7 @@ func TestKe3_term51_encode_matches_kitty_and_legacy_exactly(t *testing.T) {
 // Zig: test "term51: encode: legacy options"
 func TestKe3_term51_encode_legacy_options(t *testing.T) {
 	testPlatform(t, "linux")
-	ke3ABRunCases(t, InputKeyEncodeEncode, []ke3ABCase{
+	ke3ABRunCases(t, inputKeyEncodeEncode, []ke3ABCase{
 		// cursor_key_application
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: InputKeyEncodeOptions{}, want: "\x1b[A"},
 		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: InputKeyEncodeOptions{cursor_key_application: true}, want: "\x1bOA"},
@@ -696,13 +696,13 @@ func TestKe3_term51_encode_macos_option_as_alt_with_every_value(t *testing.T) {
 				if ke3ACMac(goos) && (oa == InputConfigOptionAsAltFalse || oa == InputConfigOptionAsAltRight) {
 					leftWant = "c"
 				}
-				ke3ABExpect(t, InputKeyEncodeEncode, leftWant, ev, opts)
+				ke3ABExpect(t, inputKeyEncodeEncode, leftWant, ev, opts)
 				// Right alt.
 				rightWant := "\x1bc"
 				if ke3ACMac(goos) && (oa == InputConfigOptionAsAltFalse || oa == InputConfigOptionAsAltLeft) {
 					rightWant = "c"
 				}
-				ke3ABExpect(t, InputKeyEncodeEncode, rightWant, evr, opts)
+				ke3ABExpect(t, inputKeyEncodeEncode, rightWant, evr, opts)
 			}
 		})
 	}
@@ -711,7 +711,7 @@ func TestKe3_term51_encode_macos_option_as_alt_with_every_value(t *testing.T) {
 // Zig: test "term51: encode: actions and composing"
 func TestKe3_term51_encode_actions_and_composing(t *testing.T) {
 	testPlatform(t, "linux")
-	ke3ABRunCases(t, InputKeyEncodeEncode, []ke3ABCase{
+	ke3ABRunCases(t, inputKeyEncodeEncode, []ke3ABCase{
 		// Legacy only encodes press and repeat and never while composing.
 		{ev: InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRelease}, opts: InputKeyEncodeOptions{}, want: ""},
 		{ev: InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRepeat}, opts: InputKeyEncodeOptions{}, want: "\x1b"},
@@ -729,21 +729,21 @@ func TestKe3_term51_encode_write_errors_are_propagated(t *testing.T) {
 	testPlatform(t, "linux")
 	var empty [0]uint8
 	w := oscWriterFixed(empty[:])
-	ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{}))
-	ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyEscape), ke3ABDis))
-	ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyArrowUp), InputKeyEncodeOptions{}))
-	ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyArrowUp), ke3ABFull))
-	ke3ExpectError(t, ErrWriteFailed, InputKeyEncodeEncode(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, InputKeyEncodeOptions{}))
+	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeEncode(&w, ke3Key(InputKeyKeyEscape), InputKeyEncodeOptions{}))
+	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeEncode(&w, ke3Key(InputKeyKeyEscape), ke3ABDis))
+	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeEncode(&w, ke3Key(InputKeyKeyArrowUp), InputKeyEncodeOptions{}))
+	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeEncode(&w, ke3Key(InputKeyKeyArrowUp), ke3ABFull))
+	ke3ExpectError(t, ErrWriteFailed, inputKeyEncodeEncode(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, InputKeyEncodeOptions{}))
 	// No output means no error.
-	zigTry(t, InputKeyEncodeEncode(&w, InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRelease}, InputKeyEncodeOptions{}))
-	zigTry(t, InputKeyEncodeEncode(&w, InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRelease}, ke3ABDis))
-	zigTry(t, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyUnidentified), InputKeyEncodeOptions{}))
-	zigTry(t, InputKeyEncodeEncode(&w, ke3Key(InputKeyKeyUnidentified), ke3ABDisAll))
+	zigTry(t, inputKeyEncodeEncode(&w, InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRelease}, InputKeyEncodeOptions{}))
+	zigTry(t, inputKeyEncodeEncode(&w, InputKeyKeyEvent{key: InputKeyKeyEscape, action: InputKeyActionRelease}, ke3ABDis))
+	zigTry(t, inputKeyEncodeEncode(&w, ke3Key(InputKeyKeyUnidentified), InputKeyEncodeOptions{}))
+	zigTry(t, inputKeyEncodeEncode(&w, ke3Key(InputKeyKeyUnidentified), ke3ABDisAll))
 
 	// Each write point (a cut-off at every length) for a few sequences.
-	ke3ABExpect(t, InputKeyEncodeEncode, "\x1bOA", ke3Key(InputKeyKeyArrowUp), InputKeyEncodeOptions{cursor_key_application: true})
-	ke3ABExpect(t, InputKeyEncodeEncode, "\x1b[27;3;56~", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit8, utf8: []uint8("8"), mods: InputKeyMods{alt: true}, unshifted_codepoint: '8'}, InputKeyEncodeOptions{modify_other_keys_state_2: true, macos_option_as_alt: InputConfigOptionAsAltTrue})
-	ke3ABExpect(t, InputKeyEncodeEncode, "\x1b[97:65;2;65u", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_alternates: true, report_all: true, report_associated: true}})
+	ke3ABExpect(t, inputKeyEncodeEncode, "\x1bOA", ke3Key(InputKeyKeyArrowUp), InputKeyEncodeOptions{cursor_key_application: true})
+	ke3ABExpect(t, inputKeyEncodeEncode, "\x1b[27;3;56~", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit8, utf8: []uint8("8"), mods: InputKeyMods{alt: true}, unshifted_codepoint: '8'}, InputKeyEncodeOptions{modify_other_keys_state_2: true, macos_option_as_alt: InputConfigOptionAsAltTrue})
+	ke3ABExpect(t, inputKeyEncodeEncode, "\x1b[97:65;2;65u", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_alternates: true, report_all: true, report_associated: true}})
 }
 
 // Zig: test "term51: pcStyleFunctionKey: cursor and function keys with every modifier combination"
@@ -2334,7 +2334,7 @@ func TestKe3_term51_legacy_empty_buffer_works_when_there_is_no_output(t *testing
 		zigTry(t, inputKeyEncodeLegacy(&w, ev, InputKeyEncodeOptions{}))
 		expectEqual(t, 0, len(w.buffered()))
 		w2 := oscWriterFixed(empty[:])
-		zigTry(t, InputKeyEncodeEncode(&w2, ev, InputKeyEncodeOptions{}))
+		zigTry(t, inputKeyEncodeEncode(&w2, ev, InputKeyEncodeOptions{}))
 		expectEqual(t, 0, len(w2.buffered()))
 	}
 

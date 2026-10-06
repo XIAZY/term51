@@ -522,6 +522,11 @@ type Stream[H StreamHandler] struct {
 	parser      Parser
 	utf8decoder UTF8Decoder
 
+	// Zig: no fields. The parser's actions for the current byte and whether
+	// nextNonUtf8 is using them (see nextNonUtf8).
+	actions      [3]Optional[ParserAction]
+	actions_busy bool
+
 	// Zig: no field. `@hasDecl(T, "vtRaw")` is decided at compile time;
 	// the port decides it once, in StreamInit (mapping: compile-time work is
 	// done once at start-up). nil when the handler has no vtRaw.
@@ -952,20 +957,42 @@ csi_param:
 	// that causes weird behavior in some tests- I'm not sure if they
 	// miscompile or it's just very counter-intuitive comptime stuff,
 	// but regardless, this is the easy solution.
-	actions := self.parser.Next(c)
+	//
+	// Go: Zig's `const actions = self.parser.next(c)` is a small local
+	// array. The Go actions are large (see Parser.nextInto), so the stream
+	// keeps one array for its whole life and the parser fills it in place.
+	// A handler that feeds this same stream from inside a callback would
+	// overwrite the array while this loop still reads it, where Zig's local
+	// would be untouched; such a re-entrant call takes a local array.
+	if self.actions_busy {
+		actions := self.parser.Next(c)
+		return self.nextNonUtf8Actions(&actions)
+	}
+	self.actions_busy = true
+	self.parser.nextInto(c, &self.actions)
+	err := self.nextNonUtf8Actions(&self.actions)
+	self.actions_busy = false
+	return err
+}
 
-	for _, action_opt := range actions {
+// nextNonUtf8Actions is the loop of Stream(Handler).nextNonUtf8 over the
+// actions the parser produced (not a separate function in Zig; see the
+// comment at its call).
+func (self *Stream[H]) nextNonUtf8Actions(actions *[3]Optional[ParserAction]) error {
+	for i := range actions {
+		action_opt := &actions[i]
 		if !action_opt.Valid {
 			continue
 		}
-		action := action_opt.Value
+		// Go: a pointer, not a copy of the 840-byte action.
+		action := &action_opt.Value
 		// Zig: if (comptime debug) log.info("action: {f}", .{action});
 
 		// A handler can expose this to get the raw action before
 		// it is further parsed. If this returns `true` then we skip
 		// processing ourselves.
 		if self.vt_raw != nil {
-			skip, err := self.vt_raw.VtRaw(action)
+			skip, err := self.vt_raw.VtRaw(*action)
 			if err != nil {
 				warn("stream", "error handling action manually err=error.%v action=%s",
 					err,

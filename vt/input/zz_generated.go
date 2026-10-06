@@ -5,6 +5,8 @@
 package input
 
 import (
+	"io"
+
 	"github.com/XIAZY/libghostty-vt-go/terminal"
 )
 

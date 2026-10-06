@@ -1,11 +1,4 @@
-// WIREFRAME for src/terminal/search/sliding_window.zig (Ghostty v1.3.1). NOT
-// YET PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/terminal/search/sliding_window.zig (Ghostty v1.3.1).
 //
 // File naming: `search/sliding_window.zig` is `search_sliding_window.go`,
 // prefix `SearchSlidingWindow` (lowerCamel `searchSlidingWindow` for
@@ -75,6 +68,21 @@
 // `assertIntegrity`) is on in upstream's tests; the Go implementation keeps
 // the checks unconditionally. The `std.valgrind.runningOnValgrind()` check
 // has no Go counterpart.
+//
+// # Rulings (project lead)
+//
+//   - Empty needle: upstream's `next` reaches `highlight(0, 0)`, whose
+//     `start + len - 1` wraps and whose meta loops end in `unreachable`
+//     (ReleaseSafe: integer overflow; ReleaseFast: SIGSEGV). The port treats
+//     an empty needle as a search with no matches: `Next` returns null at
+//     once and leaves the window as it is. `init` and `append` accept the
+//     empty needle as upstream does (docs/upstream-crashes.md in term51;
+//     search_rulings_test.go).
+//   - The end of `next`, `self.data.len() - self.needle.len + 1`, underflows
+//     before the `+ 1` when pruning leaves exactly `needle.len - 1` bytes
+//     (sliding_window.zig:279): a safe build traps, the release build wraps
+//     to the intended 0, which is what the corpus records. The port computes
+//     `len + 1 - needle.len` (docs/search-corpus.md in term51).
 //
 // # Declarations that are not Zig declarations
 //
@@ -188,8 +196,17 @@ const (
 	searchSlidingWindowDirectionReverse
 )
 
+// searchSlidingWindowDirectionNames are the tag names of
+// searchSlidingWindowDirection, in order.
+var searchSlidingWindowDirectionNames = [...]string{
+	"forward",
+	"reverse",
+}
+
 // String returns the Zig tag name (@tagName).
-func (self searchSlidingWindowDirection) String() string { panic(notImplemented) }
+func (self searchSlidingWindowDirection) String() string {
+	return searchSlidingWindowDirectionNames[self]
+}
 
 // searchSlidingWindowDataBuf is SlidingWindow.DataBuf: CircBuf(u8, 0). Made
 // with DatastructCircBufInit[uint8](0, size).
@@ -214,7 +231,11 @@ type searchSlidingWindowMeta struct {
 // Zig: pub fn deinit(self: *Meta, alloc: Allocator) void. The allocator
 // parameter is dropped. It only frees `cell_map`; the stub is kept for the
 // callers.
-func (self *searchSlidingWindowMeta) Deinit() { panic(notImplemented) }
+func (self *searchSlidingWindowMeta) Deinit() {
+	// Zig: self.cell_map.deinit(alloc), which frees the list and leaves it
+	// undefined. The garbage collector frees; the list is dropped (nil).
+	self.cell_map = nil
+}
 
 // SearchSlidingWindowInit is SlidingWindow.init.
 //
@@ -226,19 +247,74 @@ func SearchSlidingWindowInit(
 	direction searchSlidingWindowDirection,
 	needle_unowned []uint8,
 ) (SearchSlidingWindow, error) {
-	panic(notImplemented)
+	data, err := DatastructCircBufInit[uint8](0, 0)
+	if err != nil {
+		return SearchSlidingWindow{}, err
+	}
+	// Zig: errdefer data.deinit(alloc); Go memory.
+
+	meta, err := DatastructCircBufInit(searchSlidingWindowMeta{}, 0)
+	if err != nil {
+		return SearchSlidingWindow{}, err
+	}
+	// Zig: errdefer meta.deinit(alloc); Go memory.
+
+	// Zig: alloc.dupe(u8, needle_unowned).
+	needle := make([]uint8, len(needle_unowned))
+	copy(needle, needle_unowned)
+	// Zig: errdefer alloc.free(needle); Go memory.
+	switch direction {
+	case searchSlidingWindowDirectionForward:
+	case searchSlidingWindowDirectionReverse:
+		stdMemReverse(needle)
+	default:
+		panic("unreachable")
+	}
+
+	overlap_buf := make([]uint8, len(needle)*2)
+	// Zig: errdefer alloc.free(overlap_buf); Go memory.
+
+	return SearchSlidingWindow{
+		data:        data,
+		meta:        meta,
+		chunk_buf:   nil, // .empty
+		needle:      needle,
+		direction:   direction,
+		overlap_buf: overlap_buf,
+	}, nil
 }
 
 // Deinit is SlidingWindow.deinit.
 //
 // Kept as a stub: every test calls it. It deinits every Meta and the
 // buffers.
-func (self *SearchSlidingWindow) Deinit() { panic(notImplemented) }
+func (self *SearchSlidingWindow) Deinit() {
+	// Zig: self.alloc.free(self.overlap_buf); self.alloc.free(self.needle).
+	// The garbage collector frees; the slices are dropped.
+	self.overlap_buf = nil
+	self.needle = nil
+	self.chunk_buf = nil // Zig: self.chunk_buf.deinit(self.alloc)
+	self.data.Deinit()
+
+	meta_it := self.meta.Iterator(DatastructCircBufIteratorDirectionForward)
+	for meta := meta_it.Next(); meta != nil; meta = meta_it.Next() {
+		meta.Deinit()
+	}
+	self.meta.Deinit()
+}
 
 // ClearAndRetainCapacity is SlidingWindow.clearAndRetainCapacity.
 //
 // Clear all data but retain allocated capacity.
-func (self *SearchSlidingWindow) ClearAndRetainCapacity() { panic(notImplemented) }
+func (self *SearchSlidingWindow) ClearAndRetainCapacity() {
+	meta_it := self.meta.Iterator(DatastructCircBufIteratorDirectionForward)
+	for meta := meta_it.Next(); meta != nil; meta = meta_it.Next() {
+		meta.Deinit()
+	}
+	self.meta.Clear()
+	self.data.Clear()
+	self.data_offset = 0
+}
 
 // Next is SlidingWindow.next.
 //
@@ -259,7 +335,160 @@ func (self *SearchSlidingWindow) ClearAndRetainCapacity() { panic(notImplemented
 // then they should clone it.
 //
 // Zig: ?FlattenedHighlight.
-func (self *SearchSlidingWindow) Next() Optional[HighlightFlattened] { panic(notImplemented) }
+func (self *SearchSlidingWindow) Next() Optional[HighlightFlattened] {
+	// Go-only (project lead's ruling, see the file header): an empty
+	// needle finds nothing. Upstream continues below to highlight(0, 0)
+	// and crashes.
+	if len(self.needle) == 0 {
+		return None[HighlightFlattened]()
+	}
+
+	var slices [2][]uint8
+	{
+		// slices:
+		// If we have less data then the needle then we can't possibly match
+		data_len := self.data.Len()
+		if data_len < uint(len(self.needle)) {
+			return None[HighlightFlattened]()
+		}
+
+		// Zig: usize subtraction traps on underflow.
+		assert(self.data_offset <= data_len)
+		slices = self.data.GetPtrSlice(
+			self.data_offset,
+			data_len-self.data_offset,
+		)
+	}
+
+	// Search the first slice for the needle.
+	if idx := stdASCIIIndexOfIgnoreCase(slices[0], self.needle); idx.Valid {
+		return Some(self.highlight(
+			idx.Value,
+			uint(len(self.needle)),
+		))
+	}
+
+	// Search the overlap buffer for the needle.
+	if len(slices[0]) > 0 && len(slices[1]) > 0 {
+		// overlap:
+		if hl, ok := func() (HighlightFlattened, bool) {
+			// Get up to needle.len - 1 bytes from each side (as much as
+			// we can) and store it in the overlap buffer.
+			var prefix []uint8
+			{
+				// prefix:
+				len_ := min(uint(len(slices[0])), uint(len(self.needle))-1)
+				idx := uint(len(slices[0])) - len_
+				prefix = slices[0][idx:]
+			}
+			var suffix []uint8
+			{
+				// suffix:
+				len_ := min(uint(len(slices[1])), uint(len(self.needle))-1)
+				suffix = slices[1][0:len_]
+			}
+			overlap_len := uint(len(prefix) + len(suffix))
+			assert(overlap_len <= uint(len(self.overlap_buf)))
+			copy(self.overlap_buf[0:len(prefix)], prefix)
+			copy(self.overlap_buf[len(prefix):overlap_len], suffix)
+
+			// Search the overlap
+			idx := stdASCIIIndexOfIgnoreCase(
+				self.overlap_buf[0:overlap_len],
+				self.needle,
+			)
+			if !idx.Valid {
+				return HighlightFlattened{}, false // break :overlap
+			}
+
+			// We found a match in the overlap buffer. We need to map the
+			// index back to the data buffer in order to get our selection.
+			return self.highlight(
+				uint(len(slices[0])-len(prefix))+idx.Value,
+				uint(len(self.needle)),
+			), true
+		}(); ok {
+			return Some(hl)
+		}
+	}
+
+	// Search the last slice for the needle.
+	if idx := stdASCIIIndexOfIgnoreCase(slices[1], self.needle); idx.Valid {
+		return Some(self.highlight(
+			uint(len(slices[0]))+idx.Value,
+			uint(len(self.needle)),
+		))
+	}
+
+	// Special case 1-lengthed needles to delete the entire buffer.
+	if len(self.needle) == 1 {
+		self.ClearAndRetainCapacity()
+		self.assertIntegrity()
+		return None[HighlightFlattened]()
+	}
+
+	// No match. We keep `needle.len - 1` bytes available to
+	// handle the future overlap case.
+	func() {
+		// prune:
+		meta_it := self.meta.Iterator(DatastructCircBufIteratorDirectionReverse)
+		var saved uint = 0
+		found := false
+		for meta := meta_it.Next(); meta != nil; meta = meta_it.Next() {
+			needed := uint(len(self.needle)) - 1 - saved
+			if uint(len(meta.cell_map)) >= needed {
+				// We save up to this meta. We set our data offset
+				// to exactly where it needs to be to continue
+				// searching.
+				self.data_offset = uint(len(meta.cell_map)) - needed
+				found = true
+				break
+			}
+
+			saved += uint(len(meta.cell_map))
+		}
+		if !found {
+			// If we exited the while loop naturally then we
+			// never got the amount we needed and so there is
+			// nothing to prune.
+			assert(saved < uint(len(self.needle))-1)
+			return // break :prune
+		}
+
+		prune_count := self.meta.Len() - meta_it.idx
+		if prune_count == 0 {
+			// This can happen if we need to save up to the first
+			// meta value to retain our window.
+			return // break :prune
+		}
+
+		// We can now delete all the metas up to but NOT including
+		// the meta we found through meta_it.
+		meta_it = self.meta.Iterator(DatastructCircBufIteratorDirectionForward)
+		var prune_data_len uint = 0
+		for range prune_count {
+			meta := meta_it.Next()
+			assert(meta != nil) // .?
+			prune_data_len += uint(len(meta.cell_map))
+			meta.Deinit()
+		}
+		self.meta.DeleteOldest(prune_count)
+		self.data.DeleteOldest(prune_data_len)
+	}()
+
+	// Our data offset now moves to needle.len - 1 from the end so
+	// that we can handle the overlap case.
+	//
+	// Zig: self.data.len() - self.needle.len + 1, which underflows before
+	// the `+ 1` when exactly needle.len - 1 bytes are left; the port adds
+	// first (project lead's ruling, see the file header). Any smaller
+	// length would still trap in Zig.
+	assert(self.data.Len()+1 >= uint(len(self.needle)))
+	self.data_offset = self.data.Len() + 1 - uint(len(self.needle))
+
+	self.assertIntegrity()
+	return None[HighlightFlattened]()
+}
 
 // highlight is SlidingWindow.highlight.
 //
@@ -274,8 +503,274 @@ func (self *SearchSlidingWindow) Next() Optional[HighlightFlattened] { panic(not
 // The start index is assumed to be relative to the offset. i.e.
 // index zero is actually at `self.data[self.data_offset]`. The
 // selection will account for the offset.
-func (self *SearchSlidingWindow) highlight(start_offset uint, len uint) HighlightFlattened {
-	panic(notImplemented)
+func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) HighlightFlattened {
+	start := start_offset + self.data_offset
+	// Zig: `start + len - 1` traps on overflow (len 0 at start 0; the
+	// empty needle never gets here, see Next).
+	assert(start+len_ >= 1)
+	end := start + len_ - 1
+	// Zig: if (comptime std.debug.runtime_safety); see the file header.
+	assert(start < self.data.Len())
+	assert(start+len_ <= self.data.Len())
+
+	// Clear our previous chunk buffer to store this result
+	self.chunk_buf = self.chunk_buf[:0]
+	result := HighlightFlattenedEmpty
+
+	// Go through the meta nodes to find our start.
+	type tlBr struct {
+		it       DatastructCircBufIterator[searchSlidingWindowMeta]
+		consumed uint
+	}
+	type tlPrune struct {
+		meta uint
+		data uint
+	}
+	type tlT struct {
+		// If non-null, we need to continue searching for the bottom-right.
+		br Optional[tlBr]
+
+		// Data to prune, both are lengths.
+		prune tlPrune
+	}
+	tl := func() tlT {
+		// tl:
+		meta_it := self.meta.Iterator(DatastructCircBufIteratorDirectionForward)
+		var meta_consumed uint = 0
+		for meta := meta_it.Next(); meta != nil; meta = meta_it.Next() {
+			// Always increment our consumed count so that our index
+			// is right for the end search if we do it.
+			prior_meta_consumed := meta_consumed
+			meta_consumed += uint(len(meta.cell_map))
+
+			// meta_i is the index we expect to find the match in the
+			// cell map within this meta if it contains it.
+			meta_i := start - prior_meta_consumed
+
+			// This meta doesn't contain the match. This means we
+			// can also prune this set of data because we only look
+			// forward.
+			if meta_i >= uint(len(meta.cell_map)) {
+				continue
+			}
+
+			// Now we look for the end. In MOST cases it is the same as
+			// our starting chunk because highlights are usually small and
+			// not on a boundary, so let's optimize for that.
+			end_i := end - prior_meta_consumed
+			if end_i < uint(len(meta.cell_map)) {
+				// The entire highlight is within this meta.
+				start_map := meta.cell_map[meta_i]
+				end_map := meta.cell_map[end_i]
+				result.top_x = start_map.x
+				result.bot_x = end_map.x
+				self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
+					node:   meta.node,
+					serial: meta.serial,
+					start:  searchSlidingWindowCellCount(start_map.y),
+					end:    searchSlidingWindowCellCount(end_map.y + 1),
+				})
+
+				return tlT{
+					br: None[tlBr](),
+					prune: tlPrune{
+						meta: meta_it.idx - 1,
+						data: prior_meta_consumed,
+					},
+				}
+			} else {
+				// We found the meta that contains the start of the match
+				// only. Consume this entire node from our start offset.
+				map_ := meta.cell_map[meta_i]
+				result.top_x = map_.x
+				self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
+					node:   meta.node,
+					serial: meta.serial,
+					start:  searchSlidingWindowCellCount(map_.y),
+					end:    meta.node.data.size.rows,
+				})
+
+				return tlT{
+					br: Some(tlBr{
+						it:       meta_it,
+						consumed: meta_consumed,
+					}),
+					prune: tlPrune{
+						meta: meta_it.idx - 1,
+						data: prior_meta_consumed,
+					},
+				}
+			}
+		}
+		// Precondition that the start index is within the data buffer.
+		panic("unreachable")
+	}()
+
+	// Search for our end.
+	if tl.br.Valid {
+		br := tl.br.Value
+		meta_it := br.it
+		meta_consumed := br.consumed
+		found := false
+		for meta := meta_it.Next(); meta != nil; meta = meta_it.Next() {
+			// meta_i is the index we expect to find the match in the
+			// cell map within this meta if it contains it.
+			meta_i := end - meta_consumed
+			if meta_i >= uint(len(meta.cell_map)) {
+				// This meta doesn't contain the match. We still add it
+				// to our results because we want the full flattened list.
+				self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
+					node:   meta.node,
+					serial: meta.serial,
+					start:  0,
+					end:    meta.node.data.size.rows,
+				})
+
+				meta_consumed += uint(len(meta.cell_map))
+				continue
+			}
+
+			// We found it
+			map_ := meta.cell_map[meta_i]
+			result.bot_x = map_.x
+			self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
+				node:   meta.node,
+				serial: meta.serial,
+				start:  0,
+				end:    searchSlidingWindowCellCount(map_.y + 1),
+			})
+			found = true
+			break
+		}
+		if !found {
+			// Precondition that the end index is within the data buffer.
+			panic("unreachable")
+		}
+	}
+
+	// Our offset into the current meta block is the start index
+	// minus the amount of data fully consumed. We then add one
+	// to move one past the match so we don't repeat it.
+	self.data_offset = start - tl.prune.data + 1
+
+	// If we went beyond our initial meta node we can prune.
+	if tl.prune.meta > 0 {
+		// Deinit all our memory in the meta blocks prior to our
+		// match.
+		meta_it := self.meta.Iterator(DatastructCircBufIteratorDirectionForward)
+		var meta_consumed uint = 0
+		for range tl.prune.meta {
+			meta := meta_it.Next()
+			assert(meta != nil) // .?
+			meta_consumed += uint(len(meta.cell_map))
+			meta.Deinit()
+		}
+		// Zig: if (comptime std.debug.runtime_safety); see the file header.
+		{
+			assert(meta_it.idx == tl.prune.meta)
+			next := meta_it.Next()
+			assert(next != nil) // .?
+			assert(next.node == self.chunk_buf[0].node)
+		}
+		self.meta.DeleteOldest(tl.prune.meta)
+
+		// Delete all the data up to our current index.
+		assert(tl.prune.data > 0)
+		self.data.DeleteOldest(tl.prune.data)
+	}
+
+	switch self.direction {
+	case searchSlidingWindowDirectionForward:
+	case searchSlidingWindowDirectionReverse:
+		// Zig: slice.items(.node), items(.start), items(.end): the fields
+		// of the chunks; `serial` is not among them.
+		chunks := self.chunk_buf
+
+		if len(self.chunk_buf) > 1 {
+			// Reverse all our chunks. This should be pretty obvious why.
+			//
+			// Zig: std.mem.reverse on the node, start and end columns of
+			// the MultiArrayList, each on its own; the serial column is
+			// not reversed.
+			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) *PageListNode { return c.node },
+				func(c *HighlightFlattenedChunk, v *PageListNode) { c.node = v })
+			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) SizeCellCountInt { return c.start },
+				func(c *HighlightFlattenedChunk, v SizeCellCountInt) { c.start = v })
+			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) SizeCellCountInt { return c.end },
+				func(c *HighlightFlattenedChunk, v SizeCellCountInt) { c.end = v })
+
+			// Now normally with forward traversal with multiple pages,
+			// the suffix of the first page and the prefix of the last
+			// page are used.
+			//
+			// For a reverse traversal, this is inverted (since the
+			// pages are in reverse order we get the suffix of the last
+			// page and the prefix of the first page). So we need to
+			// invert this.
+			//
+			// We DON'T need to do this for any middle pages because
+			// they always use the full page.
+			//
+			// This is a fixup that makes our start/end match the
+			// same logic as the loops above if they were in forward
+			// order.
+			n := len(chunks)
+			assert(n >= 2)
+			assert(chunks[0].end > 0) // Zig: u16 subtraction traps
+			chunks[0].start = chunks[0].end - 1
+			chunks[0].end = chunks[0].node.data.size.rows
+			assert(chunks[n-1].start < 0xFFFF) // Zig: u16 addition traps
+			chunks[n-1].end = chunks[n-1].start + 1
+			chunks[n-1].start = 0
+		} else {
+			// For a single chunk, the y values are in reverse order
+			// (start is the screen-end, end is the screen-start).
+			// Swap them to get proper top-to-bottom order.
+			start_y := chunks[0].start
+			assert(chunks[0].end > 0) // Zig: u16 subtraction traps
+			chunks[0].start = chunks[0].end - 1
+			assert(start_y < 0xFFFF) // Zig: u16 addition traps
+			chunks[0].end = start_y + 1
+		}
+
+		// X values also need to be reversed since the top/bottom
+		// are swapped for the nodes.
+		top_x := result.top_x
+		result.top_x = result.bot_x
+		result.bot_x = top_x
+	default:
+		panic("unreachable")
+	}
+
+	// Copy over our MultiArrayList so it points to the proper memory.
+	result.chunks = self.chunk_buf
+	return result
+}
+
+// searchSlidingWindowCellCount is `@intCast` of a cell map y (u32) to a
+// chunk row (size.CellCountInt, u16), which traps when the value does not
+// fit. Not a Zig declaration.
+func searchSlidingWindowCellCount(y uint32) SizeCellCountInt {
+	assert(y <= 0xFFFF) // Zig: @intCast traps
+	return SizeCellCountInt(y)
+}
+
+// searchSlidingWindowReverseChunkField is std.mem.reverse on one column of
+// the chunk MultiArrayList (`slice.items(.field)`), the other columns left
+// in place. Not a Zig declaration.
+func searchSlidingWindowReverseChunkField[F any](
+	chunks []HighlightFlattenedChunk,
+	get func(*HighlightFlattenedChunk) F,
+	set func(*HighlightFlattenedChunk, F),
+) {
+	column := make([]F, len(chunks))
+	for i := range chunks {
+		column[i] = get(&chunks[i])
+	}
+	stdMemReverse(column)
+	for i := range chunks {
+		set(&chunks[i], column[i])
+	}
 }
 
 // Append is SlidingWindow.append.
@@ -290,7 +785,97 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len uint) Highligh
 //
 // Zig: Allocator.Error!usize. The error is ErrOutOfMemory (dcs.go); Zig
 // also maps any formatter or writer error to it.
-func (self *SearchSlidingWindow) Append(node *PageListNode) (uint, error) { panic(notImplemented) }
+func (self *SearchSlidingWindow) Append(node *PageListNode) (uint, error) {
+	// Initialize our metadata for the node.
+	meta := searchSlidingWindowMeta{
+		node:     node,
+		serial:   node.serial,
+		cell_map: nil, // .empty
+	}
+	// Zig: errdefer meta.deinit(self.alloc); Go memory.
+
+	// This is suboptimal but we need to encode the page once to
+	// temporary memory, and then copy it into our circular buffer.
+	// In the future, we should benchmark and see if we can encode
+	// directly into the circular buffer.
+	encoded := oscWriterAllocatingInit()
+	defer encoded.deinit()
+
+	// Encode the page into the buffer.
+	var formatter FormatterPageFormatter
+	{
+		// formatter:
+		opts := FormatterOptionsPlain // .emit = .plain
+		opts.unwrap = true
+		formatter = FormatterPageFormatterInit(&meta.node.data, opts)
+		formatter.point_map = Some(FormatterPageFormatterPointMap{
+			map_: &meta.cell_map,
+		})
+	}
+	if err := formatter.Format(&encoded.writer); err != nil {
+		// writer uses anyerror but the only realistic error on
+		// an ArrayList is out of memory.
+		return 0, ErrOutOfMemory
+	}
+	assert(len(meta.cell_map) == len(encoded.written()))
+
+	// If the node we're adding isn't soft-wrapped, we add the
+	// trailing newline.
+	assert(node.data.size.rows > 0) // Zig: u16 subtraction traps
+	row := node.data.GetRow(uint(node.data.size.rows - 1))
+	if !row.wrap {
+		if err := encoded.writer.writeByte('\n'); err != nil {
+			return 0, ErrOutOfMemory
+		}
+		// Zig: meta.cell_map.getLastOrNull() orelse .{ .x = 0, .y = 0 }
+		last := PointCoordinate{x: 0, y: 0}
+		if len(meta.cell_map) > 0 {
+			last = meta.cell_map[len(meta.cell_map)-1]
+		}
+		meta.cell_map = append(meta.cell_map, last)
+	}
+
+	// If our written data is empty, then there is nothing to
+	// add to our data set.
+	written := encoded.written()
+	if len(written) == 0 {
+		self.assertIntegrity()
+		return 0, nil
+	}
+
+	// Get our written data. If we're doing a reverse search then we
+	// need to reverse all our encodings.
+	switch self.direction {
+	case searchSlidingWindowDirectionForward:
+	case searchSlidingWindowDirectionReverse:
+		stdMemReverse(written)
+		stdMemReverse(meta.cell_map)
+	default:
+		panic("unreachable")
+	}
+
+	// Ensure our buffers are big enough to store what we need.
+	if err := self.data.EnsureUnusedCapacity(uint(len(written))); err != nil {
+		return 0, err
+	}
+	if err := self.meta.EnsureUnusedCapacity(1); err != nil {
+		return 0, err
+	}
+	// Zig: try self.chunk_buf.ensureTotalCapacity(self.alloc,
+	// self.meta.capacity()).
+	if uint(cap(self.chunk_buf)) < self.meta.Capacity() {
+		chunk_buf := make([]HighlightFlattenedChunk, len(self.chunk_buf), self.meta.Capacity())
+		copy(chunk_buf, self.chunk_buf)
+		self.chunk_buf = chunk_buf
+	}
+
+	// Append our new node to the circular buffer.
+	self.data.AppendSliceAssumeCapacity(written)
+	self.meta.AppendAssumeCapacity(meta)
+
+	self.assertIntegrity()
+	return uint(len(written)), nil
+}
 
 // testChangeNeedle is SlidingWindow.testChangeNeedle.
 //
@@ -298,11 +883,39 @@ func (self *SearchSlidingWindow) Append(node *PageListNode) (uint, error) { pani
 //
 // Zig: new is []const u8; asserts it has the needle's length. It does NOT
 // reverse the new needle for a reverse window.
-func (self *SearchSlidingWindow) testChangeNeedle(new []uint8) { panic(notImplemented) }
+func (self *SearchSlidingWindow) testChangeNeedle(new []uint8) {
+	assert(len(new) == len(self.needle))
+	// Zig: self.alloc.free(self.needle); self.alloc.dupe(u8, new) catch
+	// unreachable.
+	needle := make([]uint8, len(new))
+	copy(needle, new)
+	self.needle = needle
+}
 
 // assertIntegrity is SlidingWindow.assertIntegrity.
 //
 // Integrity check: the data length equals the sum of the metas' cell map
 // lengths, and the data offset is within bounds. See "Build options" in
 // the file header.
-func (self *SearchSlidingWindow) assertIntegrity() { panic(notImplemented) }
+func (self *SearchSlidingWindow) assertIntegrity() {
+	// Zig: if (comptime !std.debug.runtime_safety) return; on in the port,
+	// see the file header.
+
+	// We don't run integrity checks on Valgrind because its soooooo slow,
+	// Valgrind is our integrity checker, and we run these during unit
+	// tests (non-Valgrind) anyways so we're verifying anyways.
+	//
+	// Zig: if (std.valgrind.runningOnValgrind() > 0) return; no Go
+	// counterpart.
+
+	// Integrity check: verify our data matches our metadata exactly.
+	meta_it := self.meta.Iterator(DatastructCircBufIteratorDirectionForward)
+	var data_len uint = 0
+	for m := meta_it.Next(); m != nil; m = meta_it.Next() {
+		data_len += uint(len(m.cell_map))
+	}
+	assert(data_len == self.data.Len())
+
+	// Integrity check: verify our data offset is within bounds.
+	assert(self.data.Len() == 0 || self.data_offset < self.data.Len())
+}

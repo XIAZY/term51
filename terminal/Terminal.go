@@ -49,8 +49,9 @@
 // # Widths
 //
 // As in Screen.go: every byte quantity is a `uint64` whatever the platform
-// word size, counts and indexes are `uint` (Zig `usize`), `isize` is `int`,
-// and fixed Zig widths stay fixed. Byte quantity: `Options.max_scrollback`
+// word size, counts and indexes are `uint` (Zig `usize`), `isize` is
+// `int64` (the reference's width: `ScrollViewport.delta`), and fixed Zig
+// widths stay fixed. Byte quantity: `Options.max_scrollback`
 // (passed to `ScreenSetInit` as `ScreenOptions.max_scrollback`). Counts
 // (`uint`): every `count`, `count_req`, `row_req`, `col_req`, `top_req`,
 // `bottom_req`, `left_req`, `right_req` parameter. `u21` is `uint32`;
@@ -2426,8 +2427,8 @@ type TerminalScrollViewport struct {
 
 	// Scroll by some delta amount, up is negative.
 	//
-	// Zig: isize.
-	Delta int
+	// Zig: isize (int64, the reference's width).
+	Delta int64
 }
 
 // TerminalScrollViewportTag is the tag of Terminal.ScrollViewport, values

@@ -106,11 +106,11 @@ func pl4ScrollRow(n uint) PageListScroll {
 	return PageListScroll{Tag: PageListScrollRow, Row: n}
 }
 
-func pl4ScrollDeltaRow(n int) PageListScroll {
+func pl4ScrollDeltaRow(n int64) PageListScroll {
 	return PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: n}
 }
 
-func pl4ScrollDeltaPrompt(n int) PageListScroll {
+func pl4ScrollDeltaPrompt(n int64) PageListScroll {
 	return PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: n}
 }
 
@@ -2632,7 +2632,7 @@ func TestPl4_term51_scroll_delta_row_from_pin_moving_up(t *testing.T) {
 
 	// Largest magnitude.
 	pl4LPinAt(t, s, 10)
-	s.Scroll(pl4ScrollDeltaRow(-math.MaxInt))
+	s.Scroll(pl4ScrollDeltaRow(-math.MaxInt64))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	// Without a cache: the pin moves, the cache stays null.
@@ -2664,27 +2664,27 @@ func TestPl4_term51_scroll_delta_row_from_pin_moving_down(t *testing.T) {
 
 	// Down to the last row above active: stays a pin.
 	pl4LPinAt(t, s, 1000)
-	s.Scroll(pl4ScrollDeltaRow(int(active_top - 1 - 1000)))
+	s.Scroll(pl4ScrollDeltaRow(int64(active_top - 1 - 1000)))
 	pl4LExpectViewportRow(t, s, active_top-1, true)
 
 	// Down to exactly the active top: active.
 	pl4LPinAt(t, s, 1000)
-	s.Scroll(pl4ScrollDeltaRow(int(active_top - 1000)))
+	s.Scroll(pl4ScrollDeltaRow(int64(active_top - 1000)))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// Down to the last row of the list (an offset, inside active): active.
 	pl4LPinAt(t, s, 1000)
-	s.Scroll(pl4ScrollDeltaRow(int(total - 1 - 1000)))
+	s.Scroll(pl4ScrollDeltaRow(int64(total - 1 - 1000)))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// One further: overflow, active.
 	pl4LPinAt(t, s, 1000)
-	s.Scroll(pl4ScrollDeltaRow(int(total - 1000)))
+	s.Scroll(pl4ScrollDeltaRow(int64(total - 1000)))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// Largest magnitude.
 	pl4LPinAt(t, s, 1000)
-	s.Scroll(pl4ScrollDeltaRow(math.MaxInt))
+	s.Scroll(pl4ScrollDeltaRow(math.MaxInt64))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// Without a cache.
@@ -2724,7 +2724,7 @@ func TestPl4_term51_scroll_delta_row_from_top(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 	s.Scroll(pl4ScrollDeltaRow(-1))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
-	s.Scroll(pl4ScrollDeltaRow(-math.MaxInt))
+	s.Scroll(pl4ScrollDeltaRow(-math.MaxInt64))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	// Forward: a pin viewport (slow path), cache reset.
@@ -2733,26 +2733,26 @@ func TestPl4_term51_scroll_delta_row_from_top(t *testing.T) {
 	pl4LExpectViewportRow(t, s, 1, false)
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	s.Scroll(pl4ScrollDeltaRow(int(c)))
+	s.Scroll(pl4ScrollDeltaRow(int64(c)))
 	pl4LExpectViewportRow(t, s, c, false)
 	expectEqual(t, s.pages.first.next, s.viewport_pin.node)
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	s.Scroll(pl4ScrollDeltaRow(int(active_top - 1)))
+	s.Scroll(pl4ScrollDeltaRow(int64(active_top - 1)))
 	pl4LExpectViewportRow(t, s, active_top-1, false)
 
 	// Exactly the active top, one past it, and overflow: active.
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	s.Scroll(pl4ScrollDeltaRow(int(active_top)))
+	s.Scroll(pl4ScrollDeltaRow(int64(active_top)))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	s.Scroll(pl4ScrollDeltaRow(int(active_top + 1)))
+	s.Scroll(pl4ScrollDeltaRow(int64(active_top + 1)))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	s.Scroll(pl4ScrollDeltaRow(int(total + 5)))
+	s.Scroll(pl4ScrollDeltaRow(int64(total + 5)))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	s.Scroll(pl4ScrollDeltaRow(math.MaxInt))
+	s.Scroll(pl4ScrollDeltaRow(math.MaxInt64))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 }
 
@@ -2767,7 +2767,7 @@ func TestPl4_term51_scroll_delta_row_from_active(t *testing.T) {
 	// Forward from active: nothing to do.
 	s.Scroll(pl4ScrollDeltaRow(1))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	s.Scroll(pl4ScrollDeltaRow(math.MaxInt))
+	s.Scroll(pl4ScrollDeltaRow(math.MaxInt64))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// Backward: a pin viewport, cache reset.
@@ -2783,18 +2783,18 @@ func TestPl4_term51_scroll_delta_row_from_active(t *testing.T) {
 
 	// To row 1, then row 0 which is converted to top.
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
-	s.Scroll(pl4ScrollDeltaRow(-int(active_top - 1)))
+	s.Scroll(pl4ScrollDeltaRow(-int64(active_top - 1)))
 	pl4LExpectViewportRow(t, s, 1, false)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
-	s.Scroll(pl4ScrollDeltaRow(-int(active_top)))
+	s.Scroll(pl4ScrollDeltaRow(-int64(active_top)))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	// Past the top: overflow end is the first row: top.
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
-	s.Scroll(pl4ScrollDeltaRow(-int(active_top + 1)))
+	s.Scroll(pl4ScrollDeltaRow(-int64(active_top + 1)))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
-	s.Scroll(pl4ScrollDeltaRow(-math.MaxInt))
+	s.Scroll(pl4ScrollDeltaRow(-math.MaxInt64))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 }
 
@@ -2893,7 +2893,7 @@ func TestPl4_term51_scrollPrompt_backward_from_active(t *testing.T) {
 	}
 
 	expected := []struct {
-		delta int
+		delta int64
 		row   uint
 	}{
 		{delta: -1, row: 30},
@@ -3053,7 +3053,7 @@ func TestPl4_term51_scrollPrompt_forward_from_top(t *testing.T) {
 	pl4LMark(t, s, 45, PageRowSemanticPromptPrompt)
 
 	expected := []struct {
-		delta int
+		delta int64
 		row   Optional[uint]
 	}{
 		{delta: 1, row: Some[uint](20)},
@@ -4259,7 +4259,7 @@ func TestPl4_panic_scroll_delta_row_of_the_smallest_isize_from_active(t *testing
 	s := pl4LInitPages(t, 100)
 	defer s.Deinit()
 	pl4ExpectPanic(t, func() {
-		s.Scroll(pl4ScrollDeltaRow(math.MinInt))
+		s.Scroll(pl4ScrollDeltaRow(math.MinInt64))
 	})
 }
 
@@ -4270,7 +4270,7 @@ func TestPl4_panic_scroll_delta_row_of_the_smallest_isize_from_a_pin_viewport(t 
 	defer s.Deinit()
 	pl4LPinAt(t, s, 100)
 	pl4ExpectPanic(t, func() {
-		s.Scroll(pl4ScrollDeltaRow(math.MinInt))
+		s.Scroll(pl4ScrollDeltaRow(math.MinInt64))
 	})
 }
 
@@ -4280,7 +4280,7 @@ func TestPl4_panic_scrollPrompt_delta_of_the_smallest_isize(t *testing.T) {
 	s := pl4LPromptList(t)
 	defer s.Deinit()
 	pl4ExpectPanic(t, func() {
-		s.scrollPrompt(math.MinInt)
+		s.scrollPrompt(math.MinInt64)
 	})
 }
 
@@ -4300,6 +4300,7 @@ func TestPl4_panic_compact_page_without_rows(t *testing.T) {
 
 // Go-only: panic test: split: pin row is beyond the rows of its page (assert(self.pinIsValid(p)))
 func TestPl4_panic_split_pin_row_is_beyond_the_rows_of_its_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()
@@ -4310,6 +4311,7 @@ func TestPl4_panic_split_pin_row_is_beyond_the_rows_of_its_page(t *testing.T) {
 
 // Go-only: panic test: split: pin column is beyond the columns of its page (assert(self.pinIsValid(p)))
 func TestPl4_panic_split_pin_column_is_beyond_the_columns_of_its_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()
@@ -4320,6 +4322,7 @@ func TestPl4_panic_split_pin_column_is_beyond_the_columns_of_its_page(t *testing
 
 // Go-only: panic test: split: pin node is not in the list (assert(self.pinIsValid(p)))
 func TestPl4_panic_split_pin_node_is_not_in_the_list(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()

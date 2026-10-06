@@ -100,8 +100,11 @@
 // # Widths
 //
 // As in page.go: every byte quantity is a `uint64` whatever the platform
-// word size, counts and indexes are `uint` (Zig `usize`), `isize` is `int`,
-// and fixed Zig widths stay fixed. Byte quantities, all `uint64`:
+// word size, counts and indexes are `uint` (Zig `usize`), and fixed Zig
+// widths stay fixed. `isize` is `int64`, the reference's width, on every
+// platform: `Scroll.delta_row`, `delta_prompt` and scrollPrompt's `delta`
+// (pageListUsizeFromIsize converts them to row counts). Byte quantities,
+// all `uint64`:
 //   - fields `PageList.page_size`, `explicit_max_size`, `min_max_size`;
 //   - `pageListStdSize` (`std_size`), `pageListPagePoolItemSize`
 //     (`PagePool.item_size`);
@@ -138,7 +141,8 @@
 //   - the `...Tag` types of the tagged unions and the `String` methods.
 //
 // Added by the implementation (not Zig declarations, each says what it
-// stands for): `pageListSatSub` (`-|` on usize), `pageListRotateOnce`
+// stands for): `pageListSatSub` (`-|` on usize), `pageListUsizeFromIsize`
+// (`@intCast` of a scroll delta to a count), `pageListRotateOnce`
 // (fastmem.rotateOnce), `pageListIncreaseCapacityDouble` (the body of
 // increaseCapacity's `inline else`), `pageListCastCellCount` and
 // `pageListPinOverflowOverflow` (downOverflow/upOverflow helpers), the
@@ -175,9 +179,11 @@
 //
 // # Build options
 //
-// `build_options.slow_runtime_safety` is the constant
-// `pageSlowRuntimeSafety` (page.go). `pause_integrity_checks` is `usize`
-// when it is set and `void` otherwise; the field is kept as a `uint`.
+// `build_options.slow_runtime_safety` is the package variable
+// `pageSlowRuntimeSafety` (page.go), false by default (upstream's release
+// builds) and switched on by the test binary. `pause_integrity_checks` is
+// `usize` when it is set and `void` otherwise; the field is kept as a
+// `uint64` (the 64-bit reference's usize, also on 32-bit ARM).
 //
 // # Zig defaults a Go literal does not give
 //
@@ -625,8 +631,8 @@ type PageList struct {
 	// only present with runtime safety enabled.
 	//
 	// Zig: usize (default 0) when build_options.slow_runtime_safety, void
-	// otherwise. See the file header.
-	pause_integrity_checks uint
+	// otherwise. uint64: the reference's usize. See the file header.
+	pause_integrity_checks uint64
 
 	// NOT a field of upstream's PageList: the term51 "candidate B"
 	// verification patch (term51 patches-candidates/
@@ -987,7 +993,7 @@ func (self *PageList) PauseIntegrityChecks(pause bool) {
 	}
 	if pause {
 		// Zig: += traps on overflow.
-		assert(self.pause_integrity_checks < ^uint(0))
+		assert(self.pause_integrity_checks < math.MaxUint64)
 		self.pause_integrity_checks += 1
 	} else {
 		// Zig: -= traps on underflow.
@@ -3375,15 +3381,15 @@ type PageListScroll struct {
 	// Scroll up (negative) or down (positive) by the given number of
 	// rows. This is clamped to the "top" and "active" top left.
 	//
-	// Zig: isize.
-	DeltaRow int
+	// Zig: isize. int64: the reference's isize, also on 32-bit ARM.
+	DeltaRow int64
 
 	// Jump forwards (positive) or backwards (negative) a set number of
 	// prompts. If the absolute value is greater than the number of prompts
 	// in either direction, jump to the furthest prompt in that direction.
 	//
-	// Zig: isize.
-	DeltaPrompt int
+	// Zig: isize. int64: the reference's isize, also on 32-bit ARM.
+	DeltaPrompt int64
 
 	// Scroll directly to a specific pin in the page. This will be set
 	// as the top left of the viewport (ignoring the pin x value).
@@ -3478,13 +3484,13 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 					// If we have a pin and we already calculated a row offset,
 					// then we can efficiently calculate the delta and move
 					// that much from that pin.
-					var delta int
+					var delta int64
 					{
 						// Zig: @intCast to isize traps when it does not fit.
-						assert(n <= math.MaxInt)
-						n_isize := int(n)
-						assert(v.Value <= math.MaxInt)
-						v_isize := int(v.Value)
+						assert(uint64(n) <= math.MaxInt64)
+						n_isize := int64(n)
+						assert(uint64(v.Value) <= math.MaxInt64)
+						v_isize := int64(v.Value)
 						delta = n_isize - v_isize
 					}
 					self.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: delta})
@@ -3582,15 +3588,16 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 					return
 
 				case n < 0:
-					assert(n != math.MinInt) // Zig: `-n` traps on overflow
-					ov := self.viewport_pin.UpOverflow(uint(-n))
+					assert(n != math.MinInt64) // Zig: `-n` traps on overflow
+					ov := self.viewport_pin.UpOverflow(pageListUsizeFromIsize(-n))
 					switch ov.Tag {
 					case PageListPinOverflowOffset:
 						new_pin := ov.Offset
 						*self.viewport_pin = new_pin
 						if self.viewport_pin_row_offset.Valid {
 							v := &self.viewport_pin_row_offset.Value
-							assert(*v >= uint(-n)) // Zig: usize `-=` traps
+							// Zig: usize `-=` traps
+							assert(uint64(*v) >= uint64(-n))
 							*v -= uint(-n)
 						}
 						return
@@ -3602,7 +3609,7 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 					}
 
 				default: // .gt
-					ov := self.viewport_pin.DownOverflow(uint(n))
+					ov := self.viewport_pin.DownOverflow(pageListUsizeFromIsize(n))
 					switch ov.Tag {
 					// If we offset its a valid pin but we still have to
 					// check if we're in the active area.
@@ -3614,6 +3621,8 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 							*self.viewport_pin = new_pin
 							if self.viewport_pin_row_offset.Valid {
 								v := &self.viewport_pin_row_offset.Value
+								// Zig: usize `+=`; n is below the
+								// rows of the list here.
 								*v += uint(n)
 							}
 						}
@@ -3632,8 +3641,8 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 			top := self.GetTopLeft(PointTagViewport)
 			var p PageListPin
 			if n < 0 {
-				assert(n != math.MinInt) // Zig: `-n` traps on overflow
-				ov := top.UpOverflow(uint(-n))
+				assert(n != math.MinInt64) // Zig: `-n` traps on overflow
+				ov := top.UpOverflow(pageListUsizeFromIsize(-n))
 				switch ov.Tag {
 				case PageListPinOverflowOffset:
 					p = ov.Offset
@@ -3641,7 +3650,7 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 					p = ov.Overflow.end
 				}
 			} else {
-				ov := top.DownOverflow(uint(n))
+				ov := top.DownOverflow(pageListUsizeFromIsize(n))
 				switch ov.Tag {
 				case PageListPinOverflowOffset:
 					p = ov.Offset
@@ -3680,23 +3689,37 @@ func (self *PageList) Scroll(behavior PageListScroll) {
 	}
 }
 
+// pageListUsizeFromIsize is NOT a Zig declaration: `@intCast(v)` of a
+// non-negative isize (Scroll.delta_row, delta_prompt) to a usize row or
+// prompt count (int64 to uint). On a 32-bit target a value above the
+// largest uint becomes the largest uint: such a count already exceeds every
+// row and prompt the list can hold, so it moves a pin or counts prompts
+// exactly as the reference's 64-bit value does.
+func pageListUsizeFromIsize(v int64) uint {
+	assert(v >= 0) // Zig: @intCast traps on a negative value
+	if uint64(v) > math.MaxUint {
+		return math.MaxUint
+	}
+	return uint(v)
+}
+
 // scrollPrompt is PageList.scrollPrompt.
 //
 // Jump the viewport forwards (positive) or backwards (negative) a set number of
 // prompts (delta).
 //
-// Zig: delta is isize.
-func (self *PageList) scrollPrompt(delta int) {
+// Zig: delta is isize (int64, the reference's isize).
+func (self *PageList) scrollPrompt(delta int64) {
 	// If we aren't jumping any prompts then we don't need to do anything.
 	if delta == 0 {
 		return
 	}
 	var delta_start uint
 	if delta > 0 {
-		delta_start = uint(delta)
+		delta_start = pageListUsizeFromIsize(delta)
 	} else {
-		assert(delta != math.MinInt) // Zig: `-delta` traps on overflow
-		delta_start = uint(-delta)
+		assert(delta != math.MinInt64) // Zig: `-delta` traps on overflow
+		delta_start = pageListUsizeFromIsize(-delta)
 	}
 	delta_rem := delta_start
 
@@ -5276,8 +5299,10 @@ func (self *PageList) PinIsValid(p PageListPin) bool {
 	// This is very slow so we want to ensure we only ever
 	// call this during slow runtime safety builds.
 	//
-	// Zig: comptime assert(build_options.slow_runtime_safety);
-	// pageSlowRuntimeSafety is the constant true.
+	// Zig: comptime assert(build_options.slow_runtime_safety): a call
+	// does not compile in a release build. Go cannot reject the call at
+	// compile time, so it panics at run time when the option is off.
+	assert(pageSlowRuntimeSafety)
 
 	for node := self.pages.first; node != nil; node = node.next {
 		if node != p.node {

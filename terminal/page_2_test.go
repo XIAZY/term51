@@ -1652,7 +1652,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_restores_the_integrity_pause_counte
 	defer dst.Deinit()
 	zigTry(t, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 0, 10))
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(0), dst.pause_integrity_checks)
+		expectEqual(t, uint64(0), dst.pause_integrity_checks)
 	}
 
 	// And on the error path too.
@@ -1663,7 +1663,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_restores_the_integrity_pause_counte
 	defer small.Deinit()
 	pg2ExpectError(t, ErrGraphemeAllocOutOfMemory, small.ClonePartialRowFrom(src, small.GetRow(0), src.GetRow(0), 0, 10))
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(0), small.pause_integrity_checks)
+		expectEqual(t, uint64(0), small.pause_integrity_checks)
 	}
 }
 
@@ -2647,9 +2647,7 @@ func TestPg2_panic_ClonePartialRowFrom_start_past_clamped_end(t *testing.T) {
 
 // Go-only: panic test: ClonePartialRowFrom: source row without managed memory flags has a hyperlink cell (slow_runtime_safety)
 func TestPg2_panic_ClonePartialRowFrom_unmarked_hyperlink_cell(t *testing.T) {
-	if !pageSlowRuntimeSafety {
-		t.Skip("needs slow_runtime_safety")
-	}
+	setPageSlowRuntimeSafety(t, true)
 	src := pg2New(t, 10, 1)
 	defer src.Deinit()
 	src.GetRowAndCell(1, 0).cell.hyperlink = true
@@ -2660,9 +2658,7 @@ func TestPg2_panic_ClonePartialRowFrom_unmarked_hyperlink_cell(t *testing.T) {
 
 // Go-only: panic test: ClonePartialRowFrom: source row without managed memory flags has a grapheme cell (slow_runtime_safety)
 func TestPg2_panic_ClonePartialRowFrom_unmarked_grapheme_cell(t *testing.T) {
-	if !pageSlowRuntimeSafety {
-		t.Skip("needs slow_runtime_safety")
-	}
+	setPageSlowRuntimeSafety(t, true)
 	src := pg2New(t, 10, 1)
 	defer src.Deinit()
 	src.GetRowAndCell(1, 0).cell.content_tag = PageCellContentTagCodepointGrapheme
@@ -2673,9 +2669,7 @@ func TestPg2_panic_ClonePartialRowFrom_unmarked_grapheme_cell(t *testing.T) {
 
 // Go-only: panic test: ClonePartialRowFrom: source row without managed memory flags has a styled cell (slow_runtime_safety)
 func TestPg2_panic_ClonePartialRowFrom_unmarked_styled_cell(t *testing.T) {
-	if !pageSlowRuntimeSafety {
-		t.Skip("needs slow_runtime_safety")
-	}
+	setPageSlowRuntimeSafety(t, true)
 	src := pg2New(t, 10, 1)
 	defer src.Deinit()
 	src.GetRowAndCell(1, 0).cell.style_id = 1
@@ -2726,9 +2720,7 @@ func TestPg2_panic_GetRow_y_past_size_rows(t *testing.T) {
 
 // Go-only: panic test: GetCells: row is not one of the page's rows (slow_runtime_safety)
 func TestPg2_panic_GetCells_row_of_another_page(t *testing.T) {
-	if !pageSlowRuntimeSafety {
-		t.Skip("needs slow_runtime_safety")
-	}
+	setPageSlowRuntimeSafety(t, true)
 	page := pg2New(t, 4, 2)
 	defer page.Deinit()
 	other := pg2New(t, 4, 2)
@@ -2755,6 +2747,7 @@ func TestPg2_panic_GetRowAndCell_x_past_size_cols(t *testing.T) {
 
 // Go-only: panic test: MoveCells: assertIntegrity after a spacer head moved to a row that is not wrapped
 func TestPg2_panic_MoveCells_spacer_head_to_unwrapped_row(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg2New(t, 6, 2)
 	defer page.Deinit()
 	page.GetRow(0).wrap = true
@@ -2764,6 +2757,7 @@ func TestPg2_panic_MoveCells_spacer_head_to_unwrapped_row(t *testing.T) {
 
 // Go-only: panic test: MoveCells: assertIntegrity after a spacer tail moved to the first column
 func TestPg2_panic_MoveCells_spacer_tail_to_first_column(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg2New(t, 6, 2)
 	defer page.Deinit()
 	page.GetRowAndCell(0, 0).cell.wide = PageCellWideWide
@@ -2773,6 +2767,7 @@ func TestPg2_panic_MoveCells_spacer_tail_to_first_column(t *testing.T) {
 
 // Go-only: panic test: SwapCells: assertIntegrity after a spacer tail is swapped to the first column
 func TestPg2_panic_SwapCells_spacer_tail_to_first_column(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg2New(t, 6, 1)
 	defer page.Deinit()
 	page.GetRowAndCell(0, 0).cell.wide = PageCellWideWide

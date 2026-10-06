@@ -237,7 +237,7 @@ type replayOp struct {
 	Init        replayOpInitArgs
 	Feed        []uint8
 	Resize      replayOpResizeArgs
-	ScrollDelta int // Zig: isize
+	ScrollDelta int64 // Zig: isize (the 64-bit reference)
 	Dump        string
 }
 
@@ -539,11 +539,11 @@ func parseOpScroll(it *replayTokens) (replayOp, error) {
 		if !ok {
 			return replayOp{}, errReplayBadCase
 		}
-		n, err := strconv.ParseInt(s, 10, strconv.IntSize)
+		n, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
 			return replayOp{}, err
 		}
-		return replayOp{Tag: replayOpScrollDelta, ScrollDelta: int(n)}, nil
+		return replayOp{Tag: replayOpScrollDelta, ScrollDelta: n}, nil
 	}
 	return replayOp{}, errReplayBadCase
 }

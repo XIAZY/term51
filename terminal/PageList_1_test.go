@@ -3558,7 +3558,7 @@ func TestPl1_PageList_erase_resets_viewport_to_active_if_moves_within_active(t *
 	cur_page.data.PauseIntegrityChecks(false)
 
 	// Move our viewport to the top
-	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -int(s.total_rows)})
+	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -int64(s.total_rows)})
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	// Erase the entire history, we should be back to just our active set.
@@ -3587,7 +3587,7 @@ func TestPl1_PageList_erase_resets_viewport_if_inside_erased_page_but_not_active
 	cur_page.data.PauseIntegrityChecks(false)
 
 	// Move our viewport to the top
-	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -int(s.total_rows)})
+	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -int64(s.total_rows)})
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	// Erase the entire history, we should be back to just our active set.
@@ -4859,6 +4859,7 @@ func TestPl1_panic_PageListInit_zero_rows(t *testing.T) {
 
 // Go-only: panic test: PageList.AssertIntegrity: total_rows does not match the pages (@panic("PageList integrity check failed"))
 func TestPl1_panic_AssertIntegrity_total_rows_mismatch(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	s.total_rows += 1
@@ -4867,9 +4868,10 @@ func TestPl1_panic_AssertIntegrity_total_rows_mismatch(t *testing.T) {
 
 // Go-only: panic test: PageList.PauseIntegrityChecks: resume without a pause (pause_integrity_checks -= 1 underflows usize)
 func TestPl1_panic_PauseIntegrityChecks_resume_without_pause(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
-	expectEqual(t, uint(0), s.pause_integrity_checks)
+	expectEqual(t, uint64(0), s.pause_integrity_checks)
 	pl1ExpectPanic(t, func() { s.PauseIntegrityChecks(false) })
 }
 
@@ -4893,6 +4895,7 @@ func TestPl1_panic_Resize_zero_rows(t *testing.T) {
 
 // Go-only: panic test: PageList.TrackPin: pin row beyond its page (assert(self.pinIsValid(p)))
 func TestPl1_panic_TrackPin_row_out_of_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	p := PageListPin{node: s.pages.first, y: s.pages.first.data.size.rows, x: 0}
@@ -4901,6 +4904,7 @@ func TestPl1_panic_TrackPin_row_out_of_page(t *testing.T) {
 
 // Go-only: panic test: PageList.TrackPin: pin column beyond its page (assert(self.pinIsValid(p)))
 func TestPl1_panic_TrackPin_col_out_of_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	p := PageListPin{node: s.pages.first, y: 0, x: s.pages.first.data.size.cols}
@@ -4909,6 +4913,7 @@ func TestPl1_panic_TrackPin_col_out_of_page(t *testing.T) {
 
 // Go-only: panic test: PageList.TrackPin: pin on a node that is not in the list (assert(self.pinIsValid(p)))
 func TestPl1_panic_TrackPin_node_not_in_list(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	other := pl1Init(t, 80, 24, None[uint64]())
@@ -4925,6 +4930,7 @@ func TestPl1_panic_UntrackPin_viewport_pin(t *testing.T) {
 
 // Go-only: panic test: PageList.PageIterator: bottom point before the top point (assert(tl_pin.eql(bl_pin) or tl_pin.before(bl_pin)))
 func TestPl1_panic_PageIterator_bl_before_tl(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	pl1GrowRows(t, &s, 10)

@@ -179,7 +179,7 @@ type searchOp struct {
 	Write          []uint8
 	Repeat         searchOpRepeatArgs
 	Resize         replayOpResizeArgs
-	ScrollViewport int // Zig: isize
+	ScrollViewport int64 // Zig: isize (the 64-bit reference)
 	Open           searchOpen
 	Drain          uint // Zig: usize
 	Append         uint // Zig: usize
@@ -355,7 +355,7 @@ func parseSearchOp(cmd string, it *replayTokens) (searchOp, error) {
 			return searchOp{}, err
 		}
 		d, err := zigParseSigned(tok, 64)
-		return searchOp{Tag: searchOpScrollViewport, ScrollViewport: int(d)}, err
+		return searchOp{Tag: searchOpScrollViewport, ScrollViewport: d}, err
 	case "scroll_top":
 		return searchOp{Tag: searchOpScrollTop}, nil
 	case "scroll_active":
@@ -1097,7 +1097,7 @@ func (self *searchCtx) runResize(v replayOpResizeArgs) error {
 }
 
 // Mirrors harness/src/search.zig:621 Ctx.run, arm .scroll_viewport
-func (self *searchCtx) runScrollViewport(d int) error {
+func (self *searchCtx) runScrollViewport(d int64) error {
 	t, err := self.ensureTerminal()
 	if err != nil {
 		return err

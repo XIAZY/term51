@@ -4729,6 +4729,7 @@ func TestPl6_panic_Pin_downOverflow_y_beyond_rows(t *testing.T) {
 
 // Go-only: panic test: Pin.isBetween: top below bottom on the same page (assert(top.y <= bottom.y))
 func TestPl6_panic_Pin_isBetween_top_below_bottom(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
@@ -4741,6 +4742,7 @@ func TestPl6_panic_Pin_isBetween_top_below_bottom(t *testing.T) {
 
 // Go-only: panic test: Pin.isBetween: top right of bottom on the same row (assert(top.x <= bottom.x))
 func TestPl6_panic_Pin_isBetween_top_right_of_bottom(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
@@ -4753,6 +4755,7 @@ func TestPl6_panic_Pin_isBetween_top_right_of_bottom(t *testing.T) {
 
 // Go-only: panic test: Pin.isBetween: bottom page before the top page (assert(false) after the page walk)
 func TestPl6_panic_Pin_isBetween_bottom_page_before_top_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Pages(t, 10, 3, 2)
 	defer s.Deinit()
@@ -4766,6 +4769,7 @@ func TestPl6_panic_Pin_isBetween_bottom_page_before_top_page(t *testing.T) {
 
 // Go-only: panic test: Pin.pageIterator: right_down limit before the pin (assert(self.eql(l) or self.before(l)))
 func TestPl6_panic_Pin_pageIterator_right_down_limit_before_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Pages(t, 10, 3, 2)
 	defer s.Deinit()
@@ -4782,6 +4786,7 @@ func TestPl6_panic_Pin_pageIterator_right_down_limit_before_pin(t *testing.T) {
 
 // Go-only: panic test: Pin.pageIterator: left_up limit after the pin (assert(self.eql(l) or l.before(self)))
 func TestPl6_panic_Pin_pageIterator_left_up_limit_after_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Pages(t, 10, 3, 2)
 	defer s.Deinit()
@@ -4798,6 +4803,7 @@ func TestPl6_panic_Pin_pageIterator_left_up_limit_after_pin(t *testing.T) {
 
 // Go-only: panic test: Pin.rowIterator: limit before the pin (assert in Pin.pageIterator)
 func TestPl6_panic_Pin_rowIterator_limit_before_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
@@ -4813,6 +4819,7 @@ func TestPl6_panic_Pin_rowIterator_limit_before_pin(t *testing.T) {
 
 // Go-only: panic test: Pin.cellIterator: limit before the pin (assert in Pin.pageIterator)
 func TestPl6_panic_Pin_cellIterator_limit_before_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
@@ -4911,6 +4918,7 @@ func TestPl6_panic_pageIterator_bottom_left_point_outside(t *testing.T) {
 
 // Go-only: panic test: pageIterator: top-left point after the bottom-left point (assert(tl_pin.eql(bl_pin) or tl_pin.before(bl_pin)))
 func TestPl6_panic_pageIterator_top_left_after_bottom_left(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 5)
 	defer s.Deinit()

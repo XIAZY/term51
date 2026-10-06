@@ -437,12 +437,15 @@ func TestPl3_term51_reset_repeated_resets_keep_counting_serials(t *testing.T) {
 // Zig: test "term51: reset: preserves paused integrity state"
 func TestPl3_term51_reset_preserves_paused_integrity_state(t *testing.T) {
 	testStdCapacity(t)
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 	s := pl3Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
 	s.PauseIntegrityChecks(true)
 	s.Reset()
-	expectEqual(t, uint(1), s.pause_integrity_checks)
+	expectEqual(t, uint64(1), s.pause_integrity_checks)
 	s.PauseIntegrityChecks(false)
 	pl3Verify(t, s)
 }
@@ -519,7 +522,10 @@ func TestPl3_term51_clone_full_clone_copies_fields(t *testing.T) {
 // Zig: test "term51: clone: does not copy the pause counter or pins of the source"
 func TestPl3_term51_clone_does_not_copy_the_pause_counter_or_pins_of_the_source(t *testing.T) {
 	testStdCapacity(t)
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 	s := pl3Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
 	p := pl3Track(t, s, pl3Pin(t, s, pl3Active(2, 2)))
@@ -529,7 +535,7 @@ func TestPl3_term51_clone_does_not_copy_the_pause_counter_or_pins_of_the_source(
 
 	c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
 	defer c.Deinit()
-	expectEqual(t, uint(0), c.pause_integrity_checks)
+	expectEqual(t, uint64(0), c.pause_integrity_checks)
 	expectEqual(t, uint(1), c.CountTrackedPins())
 	expectEqual(t, uint(2), s.CountTrackedPins())
 }
@@ -2949,7 +2955,7 @@ func TestPl3_term51_ReflowCursor_increaseCapacity_replaces_the_node_keeping_posi
 	expectEqual(t, uint(2), s.TotalPages())
 	expect(t, rc.node == s.pages.last, "rc.node == s.pages.last.?")
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(0), s.pause_integrity_checks)
+		expectEqual(t, uint64(0), s.pause_integrity_checks)
 	}
 
 	zigTry(t, rc.increaseCapacity(s, Some(PageListIncreaseCapacityGraphemeBytes)))
@@ -2986,7 +2992,7 @@ func TestPl3_term51_ReflowCursor_increaseCapacity_reports_out_of_space_at_the_ma
 	expect(t, node == rc.node, "node == rc.node")
 	expectEqual(t, uint(3), rc.total_rows)
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(0), s.pause_integrity_checks)
+		expectEqual(t, uint64(0), s.pause_integrity_checks)
 	}
 	s.AssertIntegrity()
 }

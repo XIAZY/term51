@@ -4894,6 +4894,7 @@ func TestSc2_panic_cursorDownScroll_cursor_not_on_the_bottom_row(t *testing.T) {
 
 // Go-only: panic test: assertIntegrity: cursor.x >= cols
 func TestSc2_panic_assertIntegrity_cursor_x_beyond_the_columns(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := sc2Init(t, 10, 3, 0)
 	s.cursor.x = 10
@@ -4902,6 +4903,7 @@ func TestSc2_panic_assertIntegrity_cursor_x_beyond_the_columns(t *testing.T) {
 
 // Go-only: panic test: assertIntegrity: cursor.y >= rows
 func TestSc2_panic_assertIntegrity_cursor_y_beyond_the_rows(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := sc2Init(t, 10, 3, 0)
 	s.cursor.y = 3
@@ -4910,6 +4912,7 @@ func TestSc2_panic_assertIntegrity_cursor_y_beyond_the_rows(t *testing.T) {
 
 // Go-only: panic test: assertIntegrity: cursor.x does not match the pin
 func TestSc2_panic_assertIntegrity_cursor_x_does_not_match_the_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := sc2Init(t, 10, 3, 0)
 	s.cursor.x = 3
@@ -4918,6 +4921,7 @@ func TestSc2_panic_assertIntegrity_cursor_x_does_not_match_the_pin(t *testing.T)
 
 // Go-only: panic test: assertIntegrity: cursor.y does not match the pin
 func TestSc2_panic_assertIntegrity_cursor_y_does_not_match_the_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := sc2Init(t, 10, 3, 0)
 	s.cursor.y = 1
@@ -4926,6 +4930,7 @@ func TestSc2_panic_assertIntegrity_cursor_y_does_not_match_the_pin(t *testing.T)
 
 // Go-only: panic test: assertIntegrity: the cursor pin is outside the active area (unreachable)
 func TestSc2_panic_assertIntegrity_cursor_pin_outside_the_active_area(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := sc2Init(t, 10, 3, 100)
 	_, err := s.pages.Grow()

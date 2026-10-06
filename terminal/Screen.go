@@ -52,7 +52,8 @@
 //
 // As in page.go and PageList.go: every byte quantity is a `uint64` whatever
 // the platform word size, counts and indexes are `uint` (Zig `usize`),
-// `isize` is `int`, and fixed Zig widths stay fixed. Byte quantities, both
+// `isize` is `int64` (the reference's width: `Scroll.delta_row` and
+// `delta_prompt`), and fixed Zig widths stay fixed. Byte quantities, both
 // `uint64`: `Options.max_scrollback` (passed to `PageListInit` as
 // `max_size`) and `Options.kitty_image_storage_limit`. Counts (`uint`):
 // `Scroll.row`, `PromptClickMove.left` and `right`. `u21` is `uint32`.
@@ -129,9 +130,11 @@
 //
 // # Build options
 //
-// `build_options.slow_runtime_safety` is the constant
-// `pageSlowRuntimeSafety` (page.go); `assertIntegrity` does nothing without
-// it. The `std.valgrind.runningOnValgrind()` check has no Go counterpart.
+// `build_options.slow_runtime_safety` is the package variable
+// `pageSlowRuntimeSafety` (page.go), false by default (upstream's release
+// builds) and switched on by the test binary; `assertIntegrity` does nothing
+// without it. The `std.valgrind.runningOnValgrind()` check has no Go
+// counterpart.
 //
 // # Zig defaults a Go literal does not give
 //
@@ -1862,10 +1865,10 @@ type ScreenScroll struct {
 	Pin PageListPin
 	// Zig: usize. A count of rows.
 	Row uint
-	// Zig: isize.
-	DeltaRow int
-	// Zig: isize.
-	DeltaPrompt int
+	// Zig: isize (int64, the reference's width).
+	DeltaRow int64
+	// Zig: isize (int64, the reference's width).
+	DeltaPrompt int64
 }
 
 // ScreenScrollTag is the tag of Screen.Scroll, values numbered from zero

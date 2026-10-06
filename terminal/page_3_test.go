@@ -3960,6 +3960,7 @@ func TestPg3_panic_Page_setGraphemes_cell_content_tag_is_not_codepoint(t *testin
 
 // Go-only: panic test: Page.appendGrapheme: assert(cell.codepoint() != 0), cell with codepoint 0
 func TestPg3_panic_Page_appendGrapheme_cell_codepoint_is_zero(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	rac := page.GetRowAndCell(0, 0)
@@ -4004,6 +4005,7 @@ func TestPg3_panic_Page_moveGrapheme_src_has_no_grapheme(t *testing.T) {
 
 // Go-only: panic test: Page.moveGrapheme: assert(!dst.hasGrapheme()), destination cell with graphemes
 func TestPg3_panic_Page_moveGrapheme_dst_has_grapheme(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	pg3HGrapheme(t, page, 0, 0, 'a', []uint32{0x301})

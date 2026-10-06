@@ -88,3 +88,22 @@ touches the next row's first cell in both.
   `ColorDynamicRGBUnset` and `ColorDynamicPaletteDefault`.
 - printCell's `if (comptime std.debug.runtime_safety) cell.wide = .narrow`
   is unconditional (safe build).
+
+#### Tests
+
+Terminal_1..10_test.go: 1,313 Go tests, each run on its own (a
+not-implemented panic aborts a whole-file run), natively (arm64) and under
+32-bit ARM qemu with identical results: 867 pass (all 30 Go-only panic tests
+among them), 0 fail, 435 blocked on formatter.go (`ScreenFormatterInit`,
+reached through `plainString` / `Screen.dumpString*`), 11 blocked on
+stream_readonly.go (`StreamReadonlyHandlerInit`, through `vtHandler` /
+`vtStream`).
+
+One translated test re-evaluates a loop bound Zig evaluates once:
+`TestTm4_print_clustering_VS16_transfers_grapheme_data_across_a_page_boundary`
+(Terminal_4_test.go:1768, `i < uint(term.screens.active.pages.pages.first.data.capacity.rows)`
+in the loop condition) for Zig's
+`for (rows..t.screens.active.pages.pages.first.?.data.capacity.rows)`
+(patched Terminal.zig:15079). It passes, because the first page's capacity
+does not change while `index` runs; the Devanagari test of the same shape
+(Terminal_1_test.go:1567) hoists the bound correctly.

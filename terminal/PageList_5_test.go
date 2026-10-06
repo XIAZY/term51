@@ -4416,6 +4416,7 @@ func TestPl5_panic_viewportRowOffset_pin_row_beyond_the_page(t *testing.T) {
 
 // Go-only: panic test: viewportRowOffset: a stale cached offset fails the integrity assertion
 func TestPl5_panic_viewportRowOffset_stale_cached_offset(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	pl5LGrowRows(t, s, 10)
@@ -4436,6 +4437,7 @@ func TestPl5_panic_fixupViewport_top_with_too_few_rows(t *testing.T) {
 
 // Go-only: panic test: grow: total_rows that does not match the pages fails the integrity assertion
 func TestPl5_panic_grow_total_rows_mismatch(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	s.total_rows++
@@ -4444,6 +4446,7 @@ func TestPl5_panic_grow_total_rows_mismatch(t *testing.T) {
 
 // Go-only: panic test: increaseCapacity: total_rows that does not match the pages fails the integrity assertion
 func TestPl5_panic_increaseCapacity_total_rows_mismatch(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	s.total_rows++
@@ -4482,6 +4485,7 @@ func TestPl5_panic_eraseRow_point_out_of_range(t *testing.T) {
 
 // Go-only: panic test: eraseRow: total_rows that does not match the pages fails the integrity assertion
 func TestPl5_panic_eraseRow_total_rows_mismatch(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Mbuild(t, 6, 5, []uint{4, 3, 5})
 	s.total_rows++
@@ -4507,6 +4511,7 @@ func TestPl5_panic_eraseRowBounded_cached_offset_underflow(t *testing.T) {
 
 // Go-only: panic test: eraseRowBounded: total_rows that does not match the pages fails the integrity assertion
 func TestPl5_panic_eraseRowBounded_total_rows_mismatch(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Mbuild(t, 6, 5, []uint{4, 3, 5})
 	s.total_rows++
@@ -4522,6 +4527,7 @@ func TestPl5_panic_eraseRows_chunk_start_not_zero(t *testing.T) {
 
 // Go-only: panic test: eraseRows: total_rows that does not match the pages fails the integrity assertion
 func TestPl5_panic_eraseRows_total_rows_mismatch(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Mbuild(t, 6, 5, []uint{4, 3, 5})
 	s.total_rows++
@@ -4537,6 +4543,7 @@ func TestPl5_panic_erasePage_only_page(t *testing.T) {
 
 // Go-only: panic test: trackPin: pin on a node of another list: assert(self.pinIsValid(p))
 func TestPl5_panic_trackPin_pin_of_another_list(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	other := pl5Init(t, 80, 24, None[uint64]())
@@ -4545,6 +4552,7 @@ func TestPl5_panic_trackPin_pin_of_another_list(t *testing.T) {
 
 // Go-only: panic test: trackPin: pin row beyond the page's size: assert(self.pinIsValid(p))
 func TestPl5_panic_trackPin_pin_beyond_the_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	pl5ExpectPanic(t, func() { s.TrackPin(PageListPin{node: s.pages.first, y: 24}) })

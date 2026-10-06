@@ -22,7 +22,10 @@ package terminal
 //     build_options.slow_runtime_safety, and a port that copies the gating
 //     would make the check of the 951 transient cases a silent no-op. This is
 //     the Go counterpart of the Debug recorder's "enforce when resize()
-//     returns" (docs/replayer-design.md section 6);
+//     returns" (docs/replayer-design.md section 6). verifyIntegrity itself
+//     starts with upstream's `if (comptime !build_options.slow_runtime_safety)
+//     return;`, so the check needs pageSlowRuntimeSafety, which the test
+//     binary switches on in TestMain (main_test.go);
 //   - an error that Zig prints with @errorName (a feed or resize error, a key
 //     encoder error) is printed by zigErrorName, which accepts only the bare
 //     sentinels of the package (docs/mapping.md: the port never wraps
@@ -226,7 +229,7 @@ func runCaseScrollActive(st *runCaseState) {
 }
 
 // Mirrors harness/src/main.zig:266 runCase, arm .scroll_delta
-func runCaseScrollDelta(st *runCaseState, n int) {
+func runCaseScrollDelta(st *runCaseState, n int64) {
 	st.t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: n})
 }
 

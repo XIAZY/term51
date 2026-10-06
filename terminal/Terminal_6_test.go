@@ -123,7 +123,7 @@ func tm6AttrDirectBg(r uint8, g uint8, b uint8) SGRAttribute {
 }
 
 // tm6ScrollViewportDelta is `.{ .delta = n }`.
-func tm6ScrollViewportDelta(n int) TerminalScrollViewport {
+func tm6ScrollViewportDelta(n int64) TerminalScrollViewport {
 	return TerminalScrollViewport{Tag: TerminalScrollViewportDelta, Delta: n}
 }
 

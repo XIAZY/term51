@@ -2009,7 +2009,7 @@ func TestPg1_term51_Page_reinit_resets_the_integrity_pause_counter(t *testing.T)
 	page.PauseIntegrityChecks(true)
 	page.Reinit()
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(0), page.pause_integrity_checks)
+		expectEqual(t, uint64(0), page.pause_integrity_checks)
 	}
 	// Checks are active again.
 	page.size.rows = 0
@@ -2024,15 +2024,15 @@ func TestPg1_term51_Page_pauseIntegrityChecks_nests_as_a_counter(t *testing.T) {
 	defer page.Deinit()
 
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(0), page.pause_integrity_checks)
+		expectEqual(t, uint64(0), page.pause_integrity_checks)
 		page.PauseIntegrityChecks(true)
-		expectEqual(t, uint(1), page.pause_integrity_checks)
+		expectEqual(t, uint64(1), page.pause_integrity_checks)
 		page.PauseIntegrityChecks(true)
-		expectEqual(t, uint(2), page.pause_integrity_checks)
+		expectEqual(t, uint64(2), page.pause_integrity_checks)
 		page.PauseIntegrityChecks(false)
-		expectEqual(t, uint(1), page.pause_integrity_checks)
+		expectEqual(t, uint64(1), page.pause_integrity_checks)
 		page.PauseIntegrityChecks(false)
-		expectEqual(t, uint(0), page.pause_integrity_checks)
+		expectEqual(t, uint64(0), page.pause_integrity_checks)
 	} else {
 		// Without runtime safety the call is a no-op.
 		page.PauseIntegrityChecks(true)
@@ -2588,7 +2588,7 @@ func TestPg1_term51_Page_clone_copies_the_integrity_pause_counter(t *testing.T) 
 	cpy := pg1Clone(t, page)
 	defer cpy.Deinit()
 	if pageSlowRuntimeSafety {
-		expectEqual(t, uint(1), cpy.pause_integrity_checks)
+		expectEqual(t, uint64(1), cpy.pause_integrity_checks)
 	}
 	page.PauseIntegrityChecks(false)
 	cpy.PauseIntegrityChecks(false)
@@ -2813,6 +2813,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_start_after_end(t *testing.T) {
 
 // Go-only: panic test: Page.ClonePartialRowFrom: source row without managed memory has a grapheme cell
 func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_grapheme_cell(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1Init(t, pg1Cap(10, 10, 8))
 	defer page.Deinit()
 	page2 := pg1Init(t, pg1Cap(10, 10, 8))
@@ -2826,6 +2827,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_grapheme_c
 
 // Go-only: panic test: Page.ClonePartialRowFrom: source row without managed memory has a hyperlink cell
 func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_hyperlink_cell(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1Init(t, pg1Cap(10, 10, 8))
 	defer page.Deinit()
 	page2 := pg1Init(t, pg1Cap(10, 10, 8))
@@ -2838,6 +2840,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_hyperlink_
 
 // Go-only: panic test: Page.ClonePartialRowFrom: source row without managed memory has a styled cell
 func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_styled_cell(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1Init(t, pg1Cap(10, 10, 8))
 	defer page.Deinit()
 	page2 := pg1Init(t, pg1Cap(10, 10, 8))
@@ -2937,6 +2940,7 @@ func TestPg1_panic_Page_getCells_row_not_in_page(t *testing.T) {
 
 // Go-only: panic test: Page.GetCells: row belongs to another page
 func TestPg1_panic_Page_getCells_row_of_another_page(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
 	other := pg1HNew(t, 4, 4)
@@ -2948,6 +2952,7 @@ func TestPg1_panic_Page_getCells_row_of_another_page(t *testing.T) {
 
 // Go-only: panic test: Page.AppendGrapheme: cell with codepoint 0
 func TestPg1_panic_Page_appendGrapheme_zero_codepoint_cell(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
 	// Zig (slow_runtime_safety): assert(cell.codepoint() != 0).
@@ -3048,6 +3053,7 @@ func TestPg1_panic_Page_moveGrapheme_source_without_graphemes(t *testing.T) {
 
 // Go-only: panic test: Page.MoveGrapheme: destination cell already has graphemes
 func TestPg1_panic_Page_moveGrapheme_destination_has_graphemes(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
 	// Zig (slow_runtime_safety): assert(!dst.hasGrapheme()).
@@ -3139,6 +3145,7 @@ func TestPg1_panic_Page_insertHyperlink_empty_uri(t *testing.T) {
 
 // Go-only: panic test: Page.PauseIntegrityChecks: unpause without a pause
 func TestPg1_panic_Page_pauseIntegrityChecks_unpause_below_zero(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1HNew(t, 3, 3)
 	defer page.Deinit()
 	// Zig: `self.pause_integrity_checks -= 1` on a usize at 0 is a
@@ -3150,6 +3157,7 @@ func TestPg1_panic_Page_pauseIntegrityChecks_unpause_below_zero(t *testing.T) {
 
 // Go-only: panic test: Page.AssertIntegrity: integrity violation
 func TestPg1_panic_Page_assertIntegrity_violation(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
 	// Zig: @panic("page integrity violation").

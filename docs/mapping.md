@@ -1475,14 +1475,79 @@ File: `terminal/page.go`.
 - `build_options.kitty_graphics` blocks: not ported (wireframe), a comment
   marks each place.
 
-#### Integrity checks are always on
+#### Integrity checks follow upstream's release build (`pageSlowRuntimeSafety`)
 
-`pageSlowRuntimeSafety` is the constant `true` (wireframe), so every
-`assertIntegrity` (clearCells, clearGrapheme, clearHyperlink, setGraphemes,
-appendGrapheme, setHyperlink, moveCells, swapCells, cloneFrom,
-clonePartialRowFrom) runs a full `verifyIntegrity`, which hashes every cell
-of the page into the hyperlink map. The recorded corpus comes from a build
-where this is off. See the optimisation list.
+Project lead ruling (2026-10-05, replaces "integrity checks are always on").
+`build_options.slow_runtime_safety` is the package variable
+`pageSlowRuntimeSafety` (page.go), **false by default**. Upstream sets the
+option only for Debug (`build/Config.zig` `terminalOptions`,
+`build_config.zig`: `.Debug => true`, ReleaseSafe/ReleaseSmall/ReleaseFast
+false). The corpus recorder is ReleaseSafe (`scripts/build-recorders.sh`)
+and shipped Ghostty is a release build, so the reference runs without these
+checks and continues where a Debug build panics; with the checks on, Go
+panicked where the reference does not: a partial clone starting at an
+orphaned spacer tail (findings 14.10), `appendGrapheme` on a cell with
+codepoint 0, `clonePartialRowFrom` from a row whose flags say "no managed
+memory" while its cells have styles or links, `getCells` with another
+page's row. The four Go-only ruling tests in
+`page_slow_runtime_safety_test.go` run each with the option off (completes,
+release result) and on (panics).
+
+The test binary switches the option on in `TestMain`
+(`terminal/main_test.go`) before any test runs, as Zig's tests run in Debug,
+so every test and the corpus replay keep running with the checks (the
+transient-invariant replay calls `PageList.verifyIntegrity`, which returns at
+once without the option). `setPageSlowRuntimeSafety(t, v)` (main_test.go)
+sets it for one test and restores it at the end; it must be called before
+the test creates a Page or PageList (the pause counters count only while the
+option is on), and such a test never runs in parallel. The 53 Go-only panic
+tests whose panic comes from a gated check call
+`setPageSlowRuntimeSafety(t, true)` themselves (found by running every
+Go-only test with the option off: these and only these stop panicking). The
+15 translated PageList tests that Zig skips with `if (comptime
+!build_options.slow_runtime_safety) return error.SkipZigTest;` skip the same
+way.
+
+Only what Zig gates on the option follows the variable. `std.debug.assert`,
+`unreachable`, integer traps and `if (comptime std.debug.runtime_safety)`
+blocks are enforced by ReleaseSafe, the recorded build, and stay
+unconditional (e.g. Screen.clearCells' row/cell range asserts, PageList
+writeCell's `unreachable`s, ref_counted_set's checks). Every use site,
+checked against the Zig gating line by line (pinned v1.3.1 line numbers):
+
+| Go | Zig | Gated |
+|---|---|---|
+| `Page` field `pause_integrity_checks` (`uint64`) | page.zig:158 `if (build_options.slow_runtime_safety) usize else void` | field kept; counted only when on |
+| `Page.PauseIntegrityChecks` | page.zig:284 | gated |
+| `Page.AssertIntegrity` | page.zig:297 `comptime` | gated |
+| `Page.VerifyIntegrity`, pause test | page.zig:331 | gated (the rest of verifyIntegrity is ungated, as in Zig) |
+| `Page.ClonePartialRowFrom`, cell asserts of an unmanaged source row | page.zig:846 | gated |
+| `Page.GetCells`, row-address check (`rowIndex`) | page.zig:996 | gated |
+| `Page.AppendGrapheme`, `assert(cell.codepoint() != 0)` | page.zig:1487 | gated |
+| `Page.MoveGrapheme`, `hasGrapheme` asserts | page.zig:1560 | gated |
+| `Page.ClearGrapheme`, `assert(cell.hasGrapheme())` | page.zig:1581 | gated |
+| `PageList` field `pause_integrity_checks` (`uint64`) | PageList.zig:203 | field kept |
+| `PageList.AssertIntegrity` | PageList.zig:511 `comptime` | gated |
+| `PageList.PauseIntegrityChecks` | PageList.zig:523 `comptime` | gated |
+| `PageList.verifyIntegrity` | PageList.zig:542 `comptime` | gated (whole function) |
+| `PageList.resizeWithoutReflow`, `assert(totalRows() >= rows)` | PageList.zig:2135 | gated |
+| `PageList.Split`, `assert(pinIsValid(p))` | PageList.zig:2848 | gated |
+| `PageList.TrackPin`, `assert(pinIsValid(p))` | PageList.zig:3892 | gated |
+| `PageList.PinIsValid` | PageList.zig:3930 `comptime assert(build_options.slow_runtime_safety)` | a release build does not compile a call; Go cannot reject it at compile time, so `assert(pageSlowRuntimeSafety)` panics when it is called with the option off (every library call is itself gated) |
+| `PageList.PageIterator`, `tl <= bl` assert | PageList.zig:4897 | gated |
+| `Pin.PageIterator`, limit-order asserts | PageList.zig:5112 | gated |
+| `Pin.IsBetween`, order asserts | PageList.zig:5174 | gated |
+| `Screen.AssertIntegrity` | Screen.zig:334 | gated |
+| `Screen.cursorDownScroll`, `pointFromPin` asserts after grow | Screen.zig:856 | gated |
+
+No Go check that Zig enforces unconditionally was found behind the
+variable, and no Zig-gated check is unconditional in Go. The option must
+not change while a Page or PageList exists (a pause counted while on and
+resumed while off would unbalance the counter); the library never changes
+it.
+
+The pause counters are `uint64` (Zig `usize` on the 64-bit reference), so
+the `+= 1` overflow assert is at 2^64-1 also on 32-bit ARM.
 
 #### Tests
 
@@ -1519,6 +1584,31 @@ written; the notes below are what the implementation adds.
 | `fastmem.rotateOnce(Row, s)` | `pageListRotateOnce` (not a Zig declaration): `tmp := s[0]; copy(s, s[1:]); s[last] = tmp`; an empty slice panics on `s[0]` as Zig traps | |
 | `PinSet` (`AutoArrayHashMapUnmanaged(*Pin, void)`) | slice in insertion order; `PutNoClobber` asserts absence (std's `assert(!found_existing)`), `SwapRemove` moves the last key into the hole | linear search (see optimisations) |
 | `Clone.TrackedPinsRemap.putNoClobber` | map lookup assert, then store | |
+
+Known consequence of the Go-memory rule: destroyed nodes are never reused.
+Zig's `pool.nodes.destroy` puts a node back on the pool's free list and the
+next `pool.nodes.create` can hand the same address back; Go's
+`new(PageListNode)` never returns the address of a node something still
+points at. In the findings 14.33 scenario (a backfill that fails part-way
+during column growth leaves tracked pins pointing at the destroyed page)
+Zig's `pinIsValid` in `verifyIntegrity` can therefore pass, when the pool
+has reused that node for a later page and the pin's x/y fit it, where Go
+reports `TrackedPinInvalid`. This needs an allocation failure (unreachable
+in Go) plus that reuse, and only a build with `slow_runtime_safety` runs the
+check; very unlikely, no code change.
+
+#### Scroll deltas are 64-bit
+
+`Scroll.delta_row`/`delta_prompt` (PageList and Screen), `scrollPrompt`'s
+`delta` and `Terminal.ScrollViewport.delta` are Zig `isize`, 64-bit on the
+reference: Go `int64` on every platform (a Go `int` is 32-bit on the phone),
+the same rule as byte quantities. The negation traps are asserted against
+`math.MinInt64`. Where Zig `@intCast`s a non-negative delta to a usize row or
+prompt count, `pageListUsizeFromIsize` saturates at the largest `uint` on a
+32-bit target: such a count already exceeds every row and prompt the list
+can hold, so `upOverflow`/`downOverflow` reach the same pin (only the unused
+`remaining` of an overflow differs) and scrollPrompt walks the same prompts.
+The replay's `scroll_delta` and `scroll_viewport` ops parse 64-bit values.
 
 #### Pointers into pages
 

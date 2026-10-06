@@ -1664,7 +1664,7 @@ func TestSc3_term51_scroll_delta_row(t *testing.T) {
 	testStdCapacity(t)
 	s := sc3QHistoryScreen(t)
 	defer s.Deinit()
-	deltaRow := func(n int) ScreenScroll {
+	deltaRow := func(n int64) ScreenScroll {
 		return ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: n}
 	}
 
@@ -1781,7 +1781,7 @@ func TestSc3_term51_scroll_delta_prompt(t *testing.T) {
 	testStdCapacity(t)
 	s := sc3Init(t, 5, 3, 1000)
 	defer s.Deinit()
-	deltaPrompt := func(n int) ScreenScroll {
+	deltaPrompt := func(n int64) ScreenScroll {
 		return ScreenScroll{Tag: ScreenScrollDeltaPrompt, DeltaPrompt: n}
 	}
 

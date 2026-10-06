@@ -90,7 +90,7 @@
 //   - `pageGraphemeMapEntrySizes`, `styleSetItemSizes`,
 //     `hyperlinkSetItemSizes`: sizes and alignments Zig reads from types at
 //     compile time;
-//   - `pageSlowRuntimeSafety`: the build option of that name;
+//   - `pageSlowRuntimeSafety`: the build option of that name (a variable);
 //   - `PageCapacityInit`: a `Capacity` literal with its declared defaults;
 //   - `Page.cellIndex`, `Page.rowIndex`, `Page.cellOffset`: pointer
 //     subtraction;
@@ -112,9 +112,11 @@
 //     clonePartialRowFrom, moveCells twice, clearCells) are compiled out and
 //     are not ported. The `Row.kitty_virtual_placeholder` bit stays, as
 //     upstream says.
-//   - `build_options.slow_runtime_safety` is the constant
-//     `pageSlowRuntimeSafety`. `pause_integrity_checks` is `usize` when it
-//     is set and `void` otherwise; the field is kept as a `uint`.
+//   - `build_options.slow_runtime_safety` is the package variable
+//     `pageSlowRuntimeSafety`, false by default (upstream's release builds)
+//     and switched on by the test binary. `pause_integrity_checks` is
+//     `usize` when it is set and `void` otherwise; the field is kept as a
+//     `uint64` (the 64-bit reference's usize, also on 32-bit ARM).
 //
 // Not ported:
 //   - the `comptime` block at the start of `Page` (page-size alignment
@@ -141,9 +143,19 @@ import (
 // pageSlowRuntimeSafety is NOT a declaration of page.zig: it is Zig's build
 // option `build_options.slow_runtime_safety`, which page.zig tests in
 // pauseIntegrityChecks, assertIntegrity, verifyIntegrity, clonePartialRowFrom,
-// getCells, appendGrapheme, moveGrapheme and clearGrapheme. Integrity checks
-// are on in tests, so it is true.
-const pageSlowRuntimeSafety = true
+// getCells, appendGrapheme, moveGrapheme and clearGrapheme (PageList.zig and
+// Screen.zig test it too).
+//
+// It is a package variable, false by default: upstream's build sets the
+// option only for Debug (build/Config.zig terminalOptions, build_config.zig:
+// `.Debug => true`, every release mode false), so the reference build (the
+// ReleaseSafe recorder of the corpus) and shipped Ghostty run without these
+// checks. Only the checks Zig gates on the option test it; plain `assert`s,
+// which ReleaseSafe enforces, stay unconditional. The test binary switches
+// it on in TestMain (main_test.go), as Zig's Debug test build does. Set it
+// only before any Page or PageList exists: the pause counters are only
+// counted while it is on.
+var pageSlowRuntimeSafety = false
 
 // pageGraphemeChunkLen is page.grapheme_chunk_len.
 //
@@ -402,8 +414,8 @@ type Page struct {
 	// only present with runtime safety enabled.
 	//
 	// Zig: usize (default 0) when build_options.slow_runtime_safety, void
-	// otherwise. See the file header.
-	pause_integrity_checks uint
+	// otherwise. uint64: the reference's usize. See the file header.
+	pause_integrity_checks uint64
 }
 
 // PageInit is page.Page.init.
@@ -551,7 +563,7 @@ func (self *Page) PauseIntegrityChecks(v bool) {
 	if pageSlowRuntimeSafety {
 		if v {
 			// Zig: += traps on overflow.
-			assert(self.pause_integrity_checks < ^uint(0))
+			assert(self.pause_integrity_checks < math.MaxUint64)
 			self.pause_integrity_checks += 1
 		} else {
 			// Zig: -= traps on underflow.

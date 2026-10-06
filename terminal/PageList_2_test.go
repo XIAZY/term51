@@ -4240,7 +4240,10 @@ func TestPl2_term51_assertIntegrity_valid_lists_do_not_panic(t *testing.T) {
 func TestPl2_term51_assertIntegrity_does_nothing_while_paused(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
@@ -4258,25 +4261,28 @@ func TestPl2_term51_assertIntegrity_does_nothing_while_paused(t *testing.T) {
 func TestPl2_term51_pauseIntegrityChecks_counts_nested_pauses(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
-	expectEqual[uint](t, 0, s.pause_integrity_checks)
+	expectEqual[uint64](t, 0, s.pause_integrity_checks)
 
 	s.PauseIntegrityChecks(true)
-	expectEqual[uint](t, 1, s.pause_integrity_checks)
+	expectEqual[uint64](t, 1, s.pause_integrity_checks)
 	s.PauseIntegrityChecks(true)
-	expectEqual[uint](t, 2, s.pause_integrity_checks)
+	expectEqual[uint64](t, 2, s.pause_integrity_checks)
 
 	// Broken state is tolerated while paused at any depth.
 	s.total_rows += 1
 	zigTry(t, s.verifyIntegrity())
 	s.PauseIntegrityChecks(false)
-	expectEqual[uint](t, 1, s.pause_integrity_checks)
+	expectEqual[uint64](t, 1, s.pause_integrity_checks)
 	zigTry(t, s.verifyIntegrity())
 	s.PauseIntegrityChecks(false)
-	expectEqual[uint](t, 0, s.pause_integrity_checks)
+	expectEqual[uint64](t, 0, s.pause_integrity_checks)
 	// No longer paused: the corruption is detected again.
 	pl2ExpectError(t, ErrTotalRowsMismatch, s.verifyIntegrity())
 	s.total_rows -= 1
@@ -4287,7 +4293,10 @@ func TestPl2_term51_pauseIntegrityChecks_counts_nested_pauses(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_valid_states(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 500, 24, None[uint64]())
 	defer s.Deinit()
@@ -4311,7 +4320,10 @@ func TestPl2_term51_verifyIntegrity_valid_states(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_PageSerialInvalid(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 500, 100, None[uint64]())
 	defer s.Deinit()
@@ -4364,7 +4376,10 @@ func TestPl2_term51_verifyIntegrity_PageSerialInvalid(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_TotalRowsMismatch(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 500, 100, None[uint64]())
 	defer s.Deinit()
@@ -4402,7 +4417,10 @@ func TestPl2_term51_verifyIntegrity_TotalRowsMismatch(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_TrackedPinInvalid(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 500, 100, None[uint64]())
 	defer s.Deinit()
@@ -4470,7 +4488,10 @@ func TestPl2_term51_verifyIntegrity_TrackedPinInvalid(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_viewport_pin_insufficient_rows(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
@@ -4505,7 +4526,10 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_insufficient_rows(t *testing.T)
 func TestPl2_term51_verifyIntegrity_viewport_pin_across_pages(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 500, 24, None[uint64]())
 	defer s.Deinit()
@@ -4562,7 +4586,10 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_across_pages(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_viewport_pin_offset_mismatch_precedes_insufficient_rows(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
@@ -4587,7 +4614,10 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_offset_mismatch_precedes_insuff
 func TestPl2_term51_verifyIntegrity_viewport_pin_not_in_list(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
@@ -4624,7 +4654,10 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_not_in_list(t *testing.T) {
 func TestPl2_term51_verifyIntegrity_viewport_state_ignored_unless_pin(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
@@ -4650,7 +4683,10 @@ func TestPl2_term51_verifyIntegrity_viewport_state_ignored_unless_pin(t *testing
 func TestPl2_term51_verifyIntegrity_tracked_pin_check_precedes_viewport_checks(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
@@ -4725,7 +4761,10 @@ func TestPl2_term51_deinit_mixed_standard_and_non_standard_pages(t *testing.T) {
 func TestPl2_term51_deinit_paused_integrity_checks_tolerate_corruption(t *testing.T) {
 	testStdCapacity(t)
 
-	// Zig-only: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest; (pageSlowRuntimeSafety is true)
+	// Zig: if (comptime !build_options.slow_runtime_safety) return error.SkipZigTest;
+	if !pageSlowRuntimeSafety {
+		t.Skip("needs slow_runtime_safety")
+	}
 
 	s := pl2Init(t, 80, 24, None[uint64]())
 	// deinit asserts integrity first; with checks paused this broken
@@ -4800,6 +4839,7 @@ func TestPl2_term51_reset_clears_history_and_rebuilds_a_single_page(t *testing.T
 
 // Go-only: panic test: assertIntegrity: integrity violation panics (TotalRowsMismatch)
 func TestPl2_panic_assertIntegrity_integrity_violation(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 
 	s := pl2Init(t, 80, 24, None[uint64]())
@@ -4811,6 +4851,7 @@ func TestPl2_panic_assertIntegrity_integrity_violation(t *testing.T) {
 
 // Go-only: panic test: verifyIntegrity: assert(!self.viewport_pin.garbage)
 func TestPl2_panic_verifyIntegrity_viewport_pin_garbage(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 
 	s := pl2Init(t, 80, 24, None[uint64]())
@@ -4822,6 +4863,7 @@ func TestPl2_panic_verifyIntegrity_viewport_pin_garbage(t *testing.T) {
 
 // Go-only: panic test: deinit: assertIntegrity first, integrity violation panics
 func TestPl2_panic_deinit_integrity_violation(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 
 	s := pl2Init(t, 80, 24, None[uint64]())
@@ -4882,6 +4924,7 @@ func TestPl2_panic_compact_zero_row_page(t *testing.T) {
 
 // Go-only: panic test: split: assert(self.pinIsValid(p)) with a node that is not in the list
 func TestPl2_panic_split_invalid_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 
 	s := pl2Init(t, 10, 10, None[uint64]())
@@ -4893,6 +4936,7 @@ func TestPl2_panic_split_invalid_pin(t *testing.T) {
 
 // Go-only: panic test: split: assert(self.pinIsValid(p)) with y beyond the page rows
 func TestPl2_panic_split_pin_y_out_of_range(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 
 	s := pl2Init(t, 10, 10, None[uint64]())
@@ -4902,6 +4946,7 @@ func TestPl2_panic_split_pin_y_out_of_range(t *testing.T) {
 
 // Go-only: panic test: trackPin: assert(self.pinIsValid(p)) with a node that is not in the list
 func TestPl2_panic_trackPin_invalid_pin(t *testing.T) {
+	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 
 	s := pl2Init(t, 10, 10, None[uint64]())

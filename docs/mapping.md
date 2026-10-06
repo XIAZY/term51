@@ -2215,6 +2215,12 @@ exhaustive switches get a `default: panic("unreachable")`.
 - Screen_1..5, ScreenSet, ScreenSet_2, StringMap: all 633 pass natively and
   on ARM (the 187 that waited for formatter.go included).
 
+#### Conditions that differ only in impossible states (project lead review, 2026-10-06)
+
+Three conditions are written so they differ from Zig only in states that
+cannot occur, and are recorded here as unreachable: a blank-cell count of
+2^31 on 32-bit platforms, zero rows or columns, and `end_y` at 65535.
+
 ### `stream_readonly.zig`
 
 File: `terminal/stream_readonly.go`. The wireframe header (names, the
@@ -2346,6 +2352,13 @@ dropped) is followed as written; notes on what the implementation adds:
   is memory only. `viewport_point.y >= row_pins.len` compares as uint.
 - Deinit sets each row's cells to nil and row_data to nil (Zig's deinit
   leaves them undefined; Go zero value).
+
+#### Known difference with no observable effect (project lead review, 2026-10-06)
+
+After the column count shrinks and grows again, Zig reuses the over-allocated
+cell buffers, so the `style` and `grapheme` fields of cells where they are
+undefined keep their old values; the Go port has zeros there. Only defined
+fields are read, so the difference is not observable.
 
 ## Tests
 

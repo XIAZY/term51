@@ -179,6 +179,7 @@ package terminal
 
 import (
 	"math"
+	"reflect"
 	"unicode/utf8"
 )
 
@@ -2248,16 +2249,19 @@ func (self *Terminal) SetCursorPos(row_req uint, col_req uint) {
 		col = 1
 	}
 	// Zig: `col + params.x_offset` and `row + params.y_offset` are usize
-	// additions, which trap on overflow.
-	assert(col <= math.MaxUint-uint(params.x_offset))
-	assert(row <= math.MaxUint-uint(params.y_offset))
+	// additions, which trap on overflow. usize is 64 bits on the reference,
+	// so the sums are computed in uint64 on every platform: on 32-bit ARM a
+	// huge column clamps to the margin as on the reference instead of
+	// tripping a 32-bit overflow check.
+	assert(uint64(col) <= math.MaxUint64-uint64(params.x_offset))
+	assert(uint64(row) <= math.MaxUint64-uint64(params.y_offset))
 	// Zig: @min(CellCountInt, usize) has type CellCountInt; `-| 1`
 	// saturates at 0.
-	x := SizeCellCountInt(min(uint(params.x_max), col+uint(params.x_offset)))
+	x := SizeCellCountInt(min(uint64(params.x_max), uint64(col)+uint64(params.x_offset)))
 	if x > 0 {
 		x -= 1
 	}
-	y := SizeCellCountInt(min(uint(params.y_max), row+uint(params.y_offset)))
+	y := SizeCellCountInt(min(uint64(params.y_max), uint64(row)+uint64(params.y_offset)))
 	if y > 0 {
 		y -= 1
 	}
@@ -3810,7 +3814,20 @@ func (self *Terminal) Resize(cols SizeCellCountInt, rows SizeCellCountInt) error
 // Zig: pub fn setPwd(self: *Terminal, pwd: []const u8) !void. The error is
 // ErrOutOfMemory (dcs.go).
 func (self *Terminal) SetPwd(pwd []uint8) error {
-	self.pwd = self.pwd[:0]             // Zig: clearRetainingCapacity
+	self.pwd = self.pwd[:0] // Zig: clearRetainingCapacity
+	// Zig: appendSlice copies with @memcpy into items[0..pwd.len]; a safe
+	// build stops when the two ranges overlap ("@memcpy arguments alias"),
+	// e.g. t.setPwd(t.getPwd().?). Go's append would copy anyway, so the
+	// check is explicit. When the capacity is too small Zig grows the list
+	// first and the ranges cannot overlap.
+	if len(pwd) > 0 && cap(self.pwd) >= len(pwd) {
+		dst := reflect.ValueOf(self.pwd[:len(pwd)]).Pointer()
+		src := reflect.ValueOf(pwd).Pointer()
+		n := uintptr(len(pwd))
+		if src < dst+n && dst < src+n {
+			panic("@memcpy arguments alias")
+		}
+	}
 	self.pwd = append(self.pwd, pwd...) // Zig: appendSlice(self.gpa(), pwd)
 	return nil
 }

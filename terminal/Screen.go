@@ -2510,9 +2510,14 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 			// If we had pending wrap set and we're no longer at the end of
 			// the line, we unset the pending wrap and move the cursor to
 			// reflect the correct next position.
-			if sc.pending_wrap && sc.x != opts.cols-1 {
-				sc.pending_wrap = false
-				sc.x += 1
+			if sc.pending_wrap {
+				// Zig: `opts.cols - 1` is a u16 subtraction, evaluated
+				// only when pending_wrap is set; it traps at cols 0.
+				assert(opts.cols > 0)
+				if sc.x != opts.cols-1 {
+					sc.pending_wrap = false
+					sc.x += 1
+				}
 			}
 		} else {
 			// I think this can happen if the screen is resized to be

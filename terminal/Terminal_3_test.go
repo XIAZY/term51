@@ -3264,3 +3264,40 @@ func TestTm3_panic_resize_rows_zero(t *testing.T) {
 	defer tm.Deinit()
 	tm3ExpectPanic(t, func() { _ = tm.Resize(5, 0) })
 }
+
+// Go-only: ruling (Terminal.setCursorPos adds in 64-bit usize on every platform: a huge column clamps to the right margin, also on 32-bit ARM)
+func TestTm3_go_only_setCursorPos_huge_column_clamps_to_margin(t *testing.T) {
+	testStdCapacity(t)
+	term, err := TerminalInit(terminalOptionsDefault(20, 10))
+	zigTry(t, err)
+	defer term.Deinit()
+	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.SetLeftAndRightMargin(3, 8)
+	term.SetTopAndBottomMargin(2, 6)
+	term.modes.Set(ModesModeOrigin, true)
+	// 0xFFFFFFFF + left margin overflows a 32-bit uint but not the 64-bit
+	// usize of the reference.
+	term.SetCursorPos(1, 0xFFFFFFFF)
+	expectEqual(t, SizeCellCountInt(7), term.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(1), term.screens.active.cursor.y)
+}
+
+// Go-only: panic test: Terminal.setPwd: pwd aliases the terminal's own pwd (Zig: @memcpy arguments alias)
+func TestTm3_panic_setPwd_with_its_own_pwd(t *testing.T) {
+	testStdCapacity(t)
+	term, err := TerminalInit(terminalOptionsDefault(5, 5))
+	zigTry(t, err)
+	defer term.Deinit()
+	zigTry(t, term.SetPwd([]uint8("/home/user")))
+	tm3ExpectPanic(t, func() { _ = term.SetPwd(term.GetPwd().Value) })
+	// A copy does not alias and works as in Zig.
+	term2, err := TerminalInit(terminalOptionsDefault(5, 5))
+	zigTry(t, err)
+	defer term2.Deinit()
+	zigTry(t, term2.SetPwd([]uint8("/home/user")))
+	zigTry(t, term2.SetPwd(append([]uint8(nil), term2.GetPwd().Value...)))
+	expectEqualStrings(t, "/home/user", string(term2.GetPwd().Value))
+	// So does a shorter slice of a different buffer.
+	zigTry(t, term2.SetPwd([]uint8("/tmp")))
+	expectEqualStrings(t, "/tmp", string(term2.GetPwd().Value))
+}

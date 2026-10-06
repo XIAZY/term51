@@ -42,7 +42,8 @@ func stdMemIndexOfAnyPos[T comparable](slice []T, start_index uint, values []T) 
 
 // stdMemReverse is std.mem.reverse.
 //
-// # In-place order reversal of a slice
+// In-place order reversal of a slice
+// (upstream's doc comment).
 //
 // Zig: pub fn reverse(comptime T: type, items: []T) void. The SIMD block
 // (`use_vectors`) is not ported; see the file header.

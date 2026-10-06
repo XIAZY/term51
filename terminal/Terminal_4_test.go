@@ -1765,7 +1765,9 @@ func TestTm4_print_clustering_VS16_transfers_grapheme_data_across_a_page_boundar
 	term.modes.Set(ModesModeGraphemeCluster, true)
 
 	term.CursorDown(uint(rows - 1))
-	for i := uint(rows); i < uint(term.screens.active.pages.pages.first.data.capacity.rows); i++ {
+	// Zig: for (rows..n) evaluates n once.
+	n := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	for i := uint(rows); i < n; i++ {
 		zigTry(t, term.Index())
 	}
 	term.CursorRight(uint(cols - 1))

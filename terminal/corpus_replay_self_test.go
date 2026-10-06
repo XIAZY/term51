@@ -573,6 +573,18 @@ func TestCorpusReplaySelfSectionFiles(t *testing.T) {
 					s = corpusSectionsFile(t, area, name)
 				} else {
 					s = corpusSectionsWindow(t, area, name, 256<<10)
+					// A file whose first section is longer than the
+					// window (text/style_split: dumps of a 46,708-column
+					// screen) is read whole instead.
+					if _, _, ok, _ := s.read(false); !ok {
+						whole = true
+					}
+					s.Close()
+					if whole {
+						s = corpusSectionsFile(t, area, name)
+					} else {
+						s = corpusSectionsWindow(t, area, name, 256<<10)
+					}
 				}
 				n := 0
 				for {

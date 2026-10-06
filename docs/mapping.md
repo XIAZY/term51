@@ -2703,6 +2703,23 @@ bodies cannot compile; they have no behaviour). `Screen.clone` with the cursor
 outside the cloned region returns `ErrScreenCloneCursorOutside` instead of
 upstream's abort.
 
+`splitForCapacity` returns `ErrOutOfSpace` where upstream aborts in
+`exactRowCapacity`'s `.styles = @intCast(styles_cap)` (a row range referencing
+every id of a full style set of the maximum capacity; helper
+`exactRowCapacityOrError`, not a Zig declaration; `ExactRowCapacity` itself
+still asserts, and so does `PageList.Compact`'s call, unreachable from the
+library). When the split moves the cursor row to a new page,
+`splitForCapacity` reloads `cursor.page_row`/`page_cell` from the moved pin
+(upstream leaves them in the old page and ends in a state its integrity check
+rejects). Both are project-lead rulings; Go-only tests in
+`Screen_split_rulings_test.go`.
+
+Two translated tests follow this ruling instead of upstream's stale state:
+`TestSc3_term51_manualStyleUpdate_out_of_space_at_the_maximum_capacity_splits_the_page_and_moves_the_cursor_row`
+and `TestSc3_term51_splitForCapacity_a_cursor_on_a_moved_row_switches_pages_with_its_style_and_hyperlink`
+assert that the cursor pointers are already reloaded; upstream's stale-pointer
+lines are kept in them as Zig-only comments.
+
 ## Platform branches in the input encoders (decision: platform-neutral, final)
 
 The Go library is platform neutral (project owner, 2026-10-04): it follows

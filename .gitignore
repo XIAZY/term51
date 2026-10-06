@@ -1,4 +1,5 @@
 /build/
 *.bar
+/internal/ui/moc_bridge.cpp
 go.work
 go.work.sum

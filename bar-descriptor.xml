@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<qnx xmlns="http://www.qnx.com/schemas/application/1.0">
+    <id>io.github.xiazy.term51</id>
+    <name>term51</name>
+    <versionNumber>0.0.1</versionNumber>
+    <buildId>1</buildId>
+    <description>Terminal emulator for BlackBerry 10.</description>
+    <author>AlphaToad</author>
+
+    <icon>
+        <image>assets/icon.png</image>
+    </icon>
+
+    <initialWindow>
+        <autoOrients>true</autoOrients>
+        <systemChrome>none</systemChrome>
+    </initialWindow>
+
+    <configuration name="Device-Debug">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="build/term51" entry="true" type="Qnx/Elf">term51</asset>
+    </configuration>
+
+    <asset path="assets">assets</asset>
+
+    <permission system="true">run_native</permission>
+    <env var="LD_LIBRARY_PATH" value="/usr/lib/qt4/lib"/>
+</qnx>

@@ -38,8 +38,9 @@ as Go. Measured that way, everything below falls into two groups.
 - Zig leftovers removed: allocator parameters, `Deinit` methods that free
   nothing, errors that cannot happen (2.5, 2.6).
 - Output through `io.Writer` / `bytes.Buffer` instead of the emulated Zig
-  writer, keeping partial-write behaviour only where output depends on it
-  (3.1).
+  writer (3.1). Condition: where output depends on it, upstream's
+  fixed-buffer behaviour stays (write what fits, then fail), as pinned by the
+  partial-write tests.
 - Configuration instead of package-level switches (5.1).
 - Package layout and API: internal packages, a small exported `vt` API,
   everything else unexported (1.1 to 1.4).
@@ -58,7 +59,9 @@ as Go. Measured that way, everything below falls into two groups.
   separately).
 
 **The cost.** Reshaped code no longer lines up function by function with
-upstream, so porting future Ghostty changes takes more work. The tests and
+upstream, so porting future Ghostty changes takes more work. To keep that
+feasible, `mapping.md` keeps its Zig-to-Go correspondence up to date during
+the pass (which Go function now carries each Zig function). The tests and
 the recorded corpus remain the proof that behaviour is unchanged.
 
 **How.** After the final sign-off, one "Go-native pass", module by module in

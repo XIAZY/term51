@@ -1,11 +1,4 @@
-// WIREFRAME for src/terminal/search/active.zig (Ghostty v1.3.1). NOT YET
-// PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/terminal/search/active.zig (Ghostty v1.3.1).
 //
 // File naming: `search/active.zig` is `search_active.go`, prefix
 // `SearchActive`. The file's one declaration, `ActiveSearch`, is the type
@@ -26,6 +19,18 @@
 // # Widths
 //
 // The local `rem` in `update` is a count (`usize`), `uint`.
+//
+// # Empty needle (project lead's ruling)
+//
+// The overlap loop of `update` computes `self.window.needle.len - 1`
+// (active.zig:94), which traps in a safe build when the needle is empty and
+// a wrapped page precedes the active area; the release build wraps to
+// maxInt(usize) and appends every wrapped previous page, which is what the
+// corpus records (`empty_active_update`, case `pages3_wrap`,
+// `unchecked_only empty_needle`). The port follows the release build: the
+// uint subtraction wraps (to maxInt(uint), which no page's byte count
+// reaches on either width). `next` with an empty needle finds nothing (see
+// search_sliding_window.go).
 //
 // # Omitted
 //
@@ -63,12 +68,24 @@ type SearchActive struct {
 // Zig: pub fn init(alloc: Allocator, needle: []const u8)
 // Allocator.Error!ActiveSearch. The allocator parameter is dropped. The
 // error is ErrOutOfMemory (dcs.go).
-func SearchActiveInit(needle []uint8) (SearchActive, error) { panic(notImplemented) }
+func SearchActiveInit(needle []uint8) (SearchActive, error) {
+	// We just do a forward search since the active area is usually
+	// pretty small so search results are instant anyways. This avoids
+	// a small amount of work to reverse things.
+	window, err := SearchSlidingWindowInit(searchSlidingWindowDirectionForward, needle)
+	if err != nil {
+		return SearchActive{}, err
+	}
+	// Zig: errdefer window.deinit(); Go memory.
+	return SearchActive{window: window}, nil
+}
 
 // Deinit is ActiveSearch.deinit.
 //
 // Kept as a stub: every test calls it.
-func (self *SearchActive) Deinit() { panic(notImplemented) }
+func (self *SearchActive) Deinit() {
+	self.window.Deinit()
+}
 
 // Update is ActiveSearch.update.
 //
@@ -89,7 +106,63 @@ func (self *SearchActive) Deinit() { panic(notImplemented) }
 // Zig: pub fn update(self: *ActiveSearch, list: *const PageList)
 // Allocator.Error!?*PageList.List.Node. nil is null. The error is
 // ErrOutOfMemory (dcs.go).
-func (self *SearchActive) Update(list *PageList) (*PageListNode, error) { panic(notImplemented) }
+func (self *SearchActive) Update(list *PageList) (*PageListNode, error) {
+	// Clear our previous sliding window
+	self.window.ClearAndRetainCapacity()
+
+	// First up, add enough pages to cover the active area.
+	rem := uint(list.rows)
+	node_ := list.pages.last
+	var last_node *PageListNode = nil
+	for ; node_ != nil; node_ = node_.prev {
+		node := node_
+		if _, err := self.window.Append(node); err != nil {
+			return nil, err
+		}
+		last_node = node
+
+		// If we reached our target amount, then this is the last
+		// page that contains the active area. We go to the previous
+		// page once more since its the first page of our required
+		// overlap.
+		if rem <= uint(node.data.size.rows) {
+			node_ = node.prev
+			break
+		}
+
+		rem -= uint(node.data.size.rows)
+	}
+
+	// Next, add enough overlap to cover needle.len - 1 bytes (if it
+	// exists) so we can cover the overlap.
+	for ; node_ != nil; node_ = node_.prev {
+		node := node_
+		// If the last row of this node isn't wrapped we can't overlap.
+		assert(node.data.size.rows > 0) // Zig: u16 subtraction traps
+		row := node.data.GetRow(uint(node.data.size.rows - 1))
+		if !row.wrap {
+			break
+		}
+
+		// We could be more accurate here and count bytes since the
+		// last wrap but its complicated and unlikely multiple pages
+		// wrap so this should be fine.
+		added, err := self.window.Append(node)
+		if err != nil {
+			return nil, err
+		}
+		// Zig: `needle.len - 1` traps on an empty needle in a safe build;
+		// the release build wraps to maxInt(usize), which the corpus
+		// records (project lead's ruling, see the file header). Go's uint
+		// wraps the same way.
+		if added >= uint(len(self.window.needle))-1 {
+			break
+		}
+	}
+
+	// Return the last node we added to our window.
+	return last_node, nil
+}
 
 // Next is ActiveSearch.next.
 //
@@ -98,4 +171,6 @@ func (self *SearchActive) Update(list *PageList) (*PageListNode, error) { panic(
 //
 // Zig: ?FlattenedHighlight. The result shares the window's memory; see
 // SearchSlidingWindow.Next.
-func (self *SearchActive) Next() Optional[HighlightFlattened] { panic(notImplemented) }
+func (self *SearchActive) Next() Optional[HighlightFlattened] {
+	return self.window.Next()
+}

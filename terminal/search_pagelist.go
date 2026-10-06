@@ -1,11 +1,4 @@
-// WIREFRAME for src/terminal/search/pagelist.zig (Ghostty v1.3.1). NOT YET
-// PORTED.
-//
-// This file declares types, constants and function signatures only, so that
-// the translated Zig tests compile. Every function body is
-// panic(notImplemented). The implementation is added only after the project
-// owner and the project lead both approve it. Do not fill in bodies before
-// then. See the header of color.go for the rules.
+// Port of src/terminal/search/pagelist.zig (Ghostty v1.3.1).
 //
 // File naming: `search/pagelist.zig` is `search_pagelist.go`, prefix
 // `SearchPagelist`. The file's one declaration, `PageListSearch`, is the
@@ -94,15 +87,57 @@ func SearchPagelistInit(
 	needle []uint8,
 	list *PageList,
 	start *PageListNode,
-) (SearchPagelist, error) {
-	panic(notImplemented)
+) (_ SearchPagelist, err error) {
+	// We put a tracked pin into the node that we're starting from.
+	// By using a tracked pin, we can keep our pagelist references safe
+	// because if the pagelist prunes pages, the tracked pin will
+	// be moved somewhere safe.
+	assert(start.data.size.rows > 0) // Zig: u16 subtraction traps
+	assert(start.data.size.cols > 0) // Zig: u16 subtraction traps
+	pin, err := list.TrackPin(PageListPin{
+		node: start,
+		y:    start.data.size.rows - 1,
+		x:    start.data.size.cols - 1,
+	})
+	if err != nil {
+		return SearchPagelist{}, err
+	}
+	defer func() {
+		// errdefer
+		if err != nil {
+			list.UntrackPin(pin)
+		}
+	}()
+
+	// Create our sliding window we'll use for searching.
+	window, err := SearchSlidingWindowInit(searchSlidingWindowDirectionReverse, needle)
+	if err != nil {
+		return SearchPagelist{}, err
+	}
+	// Zig: errdefer window.deinit(); Go memory.
+
+	// We always feed our initial page data into the window, because
+	// we have the lock anyways and this lets our `pin` point to our
+	// current node and feed to work properly.
+	if _, err = window.Append(start); err != nil {
+		return SearchPagelist{}, err
+	}
+
+	return SearchPagelist{
+		list:   list,
+		window: window,
+		pin:    pin,
+	}, nil
 }
 
 // Deinit is PageListSearch.deinit.
 //
 // Modifies the PageList (to untrack a pin) so the caller must ensure
 // that it is safe to do so.
-func (self *SearchPagelist) Deinit() { panic(notImplemented) }
+func (self *SearchPagelist) Deinit() {
+	self.window.Deinit()
+	self.list.UntrackPin(self.pin)
+}
 
 // Next is PageListSearch.next.
 //
@@ -120,7 +155,9 @@ func (self *SearchPagelist) Deinit() { panic(notImplemented) }
 //
 // Zig: ?FlattenedHighlight. The result shares the window's memory; see
 // SearchSlidingWindow.Next.
-func (self *SearchPagelist) Next() Optional[HighlightFlattened] { panic(notImplemented) }
+func (self *SearchPagelist) Next() Optional[HighlightFlattened] {
+	return self.window.Next()
+}
 
 // Feed is PageListSearch.feed.
 //
@@ -135,4 +172,39 @@ func (self *SearchPagelist) Next() Optional[HighlightFlattened] { panic(notImple
 // means we've searched the entire pagelist.
 //
 // Zig: Allocator.Error!bool. The error is ErrOutOfMemory (dcs.go).
-func (self *SearchPagelist) Feed() (bool, error) { panic(notImplemented) }
+func (self *SearchPagelist) Feed() (bool, error) {
+	// If our pin becomes garbage it means wherever we were next
+	// was reused and we can't make sense of our progress anymore.
+	// It is effectively equivalent to reaching the end of the PageList.
+	if self.pin.garbage {
+		return false, nil
+	}
+
+	// Add at least enough data to find a single match.
+	rem := uint(len(self.window.needle))
+
+	// Start at our previous node and then continue adding until we
+	// get our desired amount of data.
+	for node := self.pin.node.prev; node != nil; node = node.prev {
+		added, err := self.window.Append(node)
+		if err != nil {
+			return false, err
+		}
+		// Zig: rem -|= added
+		if added >= rem {
+			rem = 0
+		} else {
+			rem -= added
+		}
+
+		// Move our tracked pin to the new node.
+		self.pin.node = node
+
+		if rem == 0 {
+			break
+		}
+	}
+
+	// True if we fed any data.
+	return rem < uint(len(self.window.needle)), nil
+}

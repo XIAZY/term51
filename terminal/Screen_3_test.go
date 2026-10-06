@@ -3910,15 +3910,17 @@ func TestSc3_term51_manualStyleUpdate_out_of_space_at_the_maximum_capacity_split
 	old_link := zigUnwrap(t, first.data.LookupHyperlink(&first.data.GetCells(first.data.GetRow(1))[0]))
 	expectEqual(t, 2, first.data.hyperlink_set.RefCount(old_link))
 
-	// The cached row and cell pointers are NOT reloaded by the split: they
-	// still point into the old page, whose row was cleared and removed.
+	// Changed by ruling (project lead, 2026-10-06; docs/mapping.md
+	// "Page-layer bookkeeping", term51 docs/upstream-crashes.md): upstream
+	// leaves the cached row and cell pointers in the old page (the Zig test
+	// asserts that); the port reloads them at the end of splitForCapacity.
+	// Zig-only lines (upstream's stale state):
+	//   try testing.expect(s.cursor.page_row != rac.row);
+	//   try testing.expect(s.cursor.page_cell != rac.cell);
+	//   (and the @intFromPtr range checks against old_page.memory)
 	rac := s.cursor.page_pin.RowAndCell()
-	expect(t, s.cursor.page_row != rac.row, "s.cursor.page_row != rac.row")
-	expect(t, s.cursor.page_cell != rac.cell, "s.cursor.page_cell != rac.cell")
-	// Zig: the @intFromPtr range checks against old_page.memory are
-	// sc3PageHasRow / sc3PageHasCell on the old page's slices.
-	expect(t, sc3PageHasRow(old_page, s.cursor.page_row), "s.cursor.page_row lies inside old_page.memory")
-	expect(t, sc3PageHasCell(old_page, s.cursor.page_cell), "s.cursor.page_cell lies inside old_page.memory")
+	expect(t, s.cursor.page_row == rac.row, "s.cursor.page_row == rac.row (ruling)")
+	expect(t, s.cursor.page_cell == rac.cell, "s.cursor.page_cell == rac.cell (ruling)")
 
 	// A reload fixes them.
 	s.CursorReload()
@@ -4108,10 +4110,14 @@ func TestSc3_term51_splitForCapacity_a_cursor_on_a_moved_row_switches_pages_with
 	expectEqual(t, 28, s.cursor.y)
 	expect(t, s.cursor.style.flags.bold, "s.cursor.style.flags.bold")
 
-	// The cached row and cell pointers are stale until a reload.
+	// Changed by ruling (project lead, 2026-10-06; see the test above):
+	// upstream's pointers are stale until a reload; the port's are already
+	// reloaded by splitForCapacity. Zig-only lines (upstream's stale state):
+	//   try testing.expect(s.cursor.page_row != rac.row);
+	//   try testing.expect(s.cursor.page_cell != rac.cell);
 	rac := s.cursor.page_pin.RowAndCell()
-	expect(t, s.cursor.page_row != rac.row, "s.cursor.page_row != rac.row")
-	expect(t, s.cursor.page_cell != rac.cell, "s.cursor.page_cell != rac.cell")
+	expect(t, s.cursor.page_row == rac.row, "s.cursor.page_row == rac.row (ruling)")
+	expect(t, s.cursor.page_cell == rac.cell, "s.cursor.page_cell == rac.cell (ruling)")
 	s.CursorReload()
 	expect(t, s.cursor.page_row == rac.row, "s.cursor.page_row == rac.row")
 	expect(t, s.cursor.page_cell == rac.cell, "s.cursor.page_cell == rac.cell")

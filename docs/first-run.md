@@ -43,6 +43,24 @@ text command to `data/term51.log`.
   `exit` from two threads (`os.Exit` is that on this system). It now ends in
   one place, on the main thread after the Cascades event loop has returned
   (`main.go`). This was not the cause of the hang above.
+- **Half of each cell was missing in the right third of the window**
+  (2026-10-07, the first GPU build, 69ed2e3). With a 60-column test table
+  every cell in columns 40 to 59 was shown without its upper-left triangle,
+  the first of the two that make a cell; columns 0 to 39 were whole. The
+  cells' corners were then computed from `gl_VertexID`, with no per-vertex
+  attribute at all. Changed: the corners come from a per-vertex attribute, a
+  fixed buffer of four corners (`internal/gpu`). With that (9b02a81) the
+  screen is whole to the right edge. The loss could not be reproduced by a
+  stand-alone program with the same drawing code that reads its pixels
+  back, so it is recorded as gone with the change, not as explained.
+- **After a resize only the old part of the picture was shown.** The window
+  system keeps the part of the buffer it shows (the source size) at the
+  first buffers' size. Changed: it is set with every new set of buffers.
+- **The page's first size is not its last.** The page reports its place for
+  the terminal in pixels, and correctly, but the first report comes before
+  the page has settled (948 high, then 804, then 828), and Cascades slides
+  the window to a new size over several frames, so the window's own size
+  lags what the page has said.
 
 ## Still to look at
 

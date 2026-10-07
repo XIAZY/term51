@@ -9,9 +9,9 @@ import (
 
 	"github.com/XIAZY/libghostty-vt-go/vt"
 
+	"term51/internal/cells"
 	"term51/internal/keys"
 	"term51/internal/session"
-	"term51/internal/textgrid"
 )
 
 // copyLimit is the most text Copy hands to the page: the text travels as
@@ -19,8 +19,8 @@ import (
 // scrollback can be megabytes. The end of the selection is kept.
 const copyLimit = 512 << 10
 
-// textFrame is how often, at most, the labels are updated: Cascades lays a
-// label out again for every change, so bursts of output are merged.
+// textFrame is how often, at most, the screen is drawn: bursts of output
+// are merged into one frame.
 const textFrame = 33 * time.Millisecond
 
 // tab is one shell.
@@ -69,21 +69,23 @@ func (t *tab) follow(out chan<- news) {
 	}
 }
 
-// Run serves the page until the last shell has exited: QML measures its
-// monospace font and says how many cells fit ("grid"); Go answers with the
-// rows that changed, as rich text for the page's labels. It holds any
-// number of tabs, one shown. It returns the reason it ended.
+// Run serves the page until the last shell has exited. The page says where
+// the terminal goes and how big it is ("window", then "size"); the loop
+// opens the screen there, makes the character sheet for the display, and
+// from then on draws the shown shell's terminal whenever it changes. It
+// holds any number of tabs, one shown. It returns the reason it ended.
 func (a *App) Run() error {
 	// The screen's OpenGL context belongs to one thread.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var scr Screen
-	var testTable []byte // FIRST MILESTONE ONLY: see testCells
+	var sheet *cells.Sheet // the character shapes, shared by all tabs
+	var table cells.Table  // the shown tab's cells
+	bg := a.cfg.SessionTheme().Background
 
 	var tabs []*tab
 	cur := -1
 	inbox := make(chan news, 16)
-	var grid textgrid.Grid
 	rs := vt.RenderStateEmpty()
 	cols, rows, cw, ch := 0, 0, 0, 0
 
@@ -129,16 +131,24 @@ func (a *App) Run() error {
 		if err := tabs[cur].sess.Snapshot(&rs); err != nil {
 			return
 		}
-		changed := grid.Update(&rs)
-		if len(changed) == 0 {
+		// Update draws the characters it meets for the first time into
+		// the sheet, so the sheet's new part is taken after it.
+		first, end := table.Update(&rs, sheet)
+		fresh := sheet.TakeDirty()
+		if !fresh.Empty() {
+			scr.Sheet(sheet.Pix, fresh.Min.X, fresh.Min.Y, fresh.Dx(), fresh.Dy())
+		}
+		if first == end && fresh.Empty() {
 			return
 		}
-		a.event(map[string]any{"rows": changed, "count": len(rs.RowData)})
+		if err := scr.Frame(table.Data, first, end); err != nil {
+			log.Printf("app: %v", err)
+		}
 	}
-	// show makes tab i the one on screen: every row is sent again.
+	// show makes tab i the one on screen: its whole table is drawn.
 	show := func(i int) {
 		cur = i
-		grid = textgrid.Grid{}
+		table = cells.Table{}
 		sticky()
 		tell()
 		post()
@@ -223,46 +233,40 @@ func (a *App) Run() error {
 					}
 					scr = s
 					defer scr.Close()
+					// The font size is in points: real ones, by the
+					// display's dots per inch.
+					sheet, err = cells.NewSheet(a.fonts, a.cfg.FontPt*float64(scr.DPI())/72)
+					if err != nil {
+						return err
+					}
+					cw, ch = sheet.CellSize()
 				} else if err := scr.Resize(w, h); err != nil {
 					log.Printf("app: %v", err)
 					break
 				}
-				// FIRST MILESTONE ONLY: a fixed cell and a test table,
-				// until the cells and the character sheet are merged.
-				gc, gr := w/testCellW, h/testCellH
-				scr.Grid(gc, gr, testCellW, testCellH, 0x10, 0x14, 0x18)
-				testTable = testCells(gc, gr)
-				if err := scr.Frame(testTable, 0, len(testTable)); err != nil {
-					log.Printf("app: %v", err)
-				}
-				c = Command{Name: "grid", Args: map[string]any{"cols": float64(gc), "rows": float64(gr), "cw": float64(testCellW), "ch": float64(testCellH)}}
-			}
-			if c.Name == "grid" {
-				nc, nr := num(c.Args["cols"]), num(c.Args["rows"])
-				if nc == cols && nr == rows && len(tabs) > 0 {
-					break
-				}
-				cols, rows, cw, ch = nc, nr, num(c.Args["cw"]), num(c.Args["ch"])
-				if len(tabs) == 0 {
+				nc, nr := sheet.Grid(w, h)
+				scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
+				table = cells.Table{} // the screen's table is new: all of it goes again
+				switch {
+				case len(tabs) == 0:
 					// The first size starts the first shell.
+					cols, rows = nc, nr
 					if t := open(); t != nil {
 						tabs = append(tabs, t)
 						show(0)
 					}
-					break
-				}
-				for _, t := range tabs {
-					if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
-						log.Printf("app: %v", err)
+				case nc != cols || nr != rows:
+					cols, rows = nc, nr
+					for _, t := range tabs {
+						if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
+							log.Printf("app: %v", err)
+						}
 					}
+					tell()
+					post() // the reflowed screen, without waiting for output
+				default:
+					post()
 				}
-				tell()
-				post() // the reflowed screen, without waiting for output
-				break
-			}
-			if c.Name == "ready" {
-				// The page is up: give it what it needs before it measures.
-				a.state(map[string]any{"fontPt": a.cfg.FontPt})
 				break
 			}
 			if c.Name == "quit" {
@@ -398,29 +402,4 @@ func (a *App) Run() error {
 			post()
 		}
 	}
-}
-
-// FIRST MILESTONE ONLY, to be removed with the merge of the cells: a fixed
-// cell size and a table that shows the screen side works without any
-// character shapes. Every cell gets its own background colour; the first
-// row and column are white so that the grid's edges can be seen; the flags
-// are cycled through so that each line and cursor shape appears, in yellow.
-const testCellW, testCellH = 24, 48
-
-func testCells(cols, rows int) []byte {
-	t := make([]byte, cols*rows*16)
-	for y := 0; y < rows; y++ {
-		for x := 0; x < cols; x++ {
-			c := t[(y*cols+x)*16:]
-			flags := []byte{0, 1, 2, 4, 8, 16}[(x+y)%6]
-			c[2] = flags
-			c[4], c[5], c[6], c[7] = 255, 255, 255, 255 // text colour
-			c[8], c[9], c[10], c[11] = byte(x*255/cols), byte(y*255/rows), byte(128), 255
-			if x == 0 || y == 0 {
-				c[8], c[9], c[10] = 255, 255, 255
-			}
-			c[12], c[13], c[14], c[15] = 255, 255, 0, 255 // line colour
-		}
-	}
-	return t
 }

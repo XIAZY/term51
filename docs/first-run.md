@@ -1,7 +1,8 @@
 # On the phone
 
-The app shows the terminal one way: a column of Cascades text labels, one
-per row (`assets/main.qml`, `internal/textgrid`). Everything below the page
+The app shows the terminal one way: drawn with OpenGL ES 3.0 in a window of
+its own that sits in the page (`internal/gpu`, `internal/cells`,
+`assets/main.qml`). Everything below the page
 is tested on the development machine with real shells; the page itself can
 only be seen on the phone.
 

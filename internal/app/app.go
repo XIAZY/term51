@@ -1,16 +1,18 @@
-// Package app is the program behind the page: it runs the shells and tells
-// the page what to show.
+// Package app is the program behind the page: it runs the shells and draws
+// the one that is shown.
 //
-// The page is a column of Cascades text labels, one per terminal row. It
-// measures its monospace font and says how many cells fit; the app answers
-// with the rows that changed, as rich text. Key presses, the key bar and the
-// menu come back as commands.
+// The page has a key bar, a menu, an input field and a place for the
+// terminal. The terminal is drawn in a window of the app's own (Screen):
+// the loop turns the shown shell's terminal into a table of cells and a
+// sheet of character shapes (internal/cells) and hands both to the screen.
+// Key presses, the key bar and the menu come from the page as commands.
 package app
 
 import (
 	"encoding/json"
 	"log"
 
+	"term51/internal/cells"
 	"term51/internal/keys"
 	"term51/internal/session"
 	"term51/internal/settings"
@@ -29,6 +31,8 @@ type Publisher interface {
 // thread.
 type Screen interface {
 	Resize(w, h int) error
+	// DPI is the display's dots per inch.
+	DPI() int
 	Grid(cols, rows, cellW, cellH int, r, g, b uint8)
 	Sheet(sheet []byte, x, y, w, h int)
 	Frame(table []byte, lo, hi int) error
@@ -47,15 +51,16 @@ type Command struct {
 
 // App is the running program.
 type App struct {
-	cfg  settings.Settings
-	cmds chan Command
-	pub  Publisher
-	open OpenScreen
+	cfg   settings.Settings
+	cmds  chan Command
+	pub   Publisher
+	open  OpenScreen
+	fonts cells.Fonts
 }
 
 // New makes the app; Run starts it.
-func New(cfg settings.Settings, pub Publisher, open OpenScreen) *App {
-	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub, open: open}
+func New(cfg settings.Settings, pub Publisher, open OpenScreen, fonts cells.Fonts) *App {
+	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub, open: open, fonts: fonts}
 }
 
 // Send queues a command from QML. It is called on the UI thread and never

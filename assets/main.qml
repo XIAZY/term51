@@ -41,7 +41,6 @@ Page {
 
     onCreationCompleted: {
         input.requestFocus()
-        page.send("ready")
         bridge.state.connect(function(json) {
             var s = JSON.parse(json)
             if (s.ctrl !== undefined) page.ctrl = s.ctrl

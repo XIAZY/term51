@@ -14,7 +14,10 @@ import (
 	"runtime/debug"
 	"time"
 
+	"golang.org/x/image/font/opentype"
+
 	"term51/internal/app"
+	"term51/internal/cells"
 	"term51/internal/gpu"
 	"term51/internal/settings"
 	"term51/internal/ui"
@@ -53,7 +56,7 @@ func main() {
 	// could not be killed (found on the phone, 2026-10-07).
 	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
 		return gpu.Open(group, id, w, h)
-	})
+	}, phoneFonts())
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
@@ -85,4 +88,37 @@ func main() {
 	case <-time.After(4 * time.Second):
 	}
 	os.Exit(rc)
+}
+
+// The phone's own font files; the app ships none.
+const fontDir = "/usr/fonts/font_repository/"
+
+// phoneFonts reads the fonts the terminal is drawn with: DejaVu Sans Mono in
+// its four styles, and for the characters it lacks MHei (Chinese, Japanese)
+// and then Malgun (Korean). The files are part of the phone, so one that
+// cannot be read ends the app, with the reason in the log.
+func phoneFonts() cells.Fonts {
+	read := func(name string) *opentype.Font {
+		data, err := os.ReadFile(fontDir + name)
+		if err != nil {
+			log.Fatalf("fonts: %v", err)
+		}
+		f, err := opentype.Parse(data)
+		if err != nil {
+			log.Fatalf("fonts: %s: %v", name, err)
+		}
+		return f
+	}
+	return cells.Fonts{
+		Faces: [4]*opentype.Font{
+			read("dejavu/DejaVuSansMono.ttf"),
+			read("dejavu/DejaVuSansMono-Bold.ttf"),
+			read("dejavu/DejaVuSansMono-Oblique.ttf"),
+			read("dejavu/DejaVuSansMono-BoldOblique.ttf"),
+		},
+		Others: []*opentype.Font{
+			read("monotype/MHeiM.GB18030_200910.ttf"),
+			read("monotype/malgun.ttf"),
+		},
+	}
 }

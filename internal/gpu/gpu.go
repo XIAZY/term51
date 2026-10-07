@@ -259,6 +259,15 @@ static int t51_gpu_resize(t51_gpu *g, int w, int h) {
 	return 0;
 }
 
+// The dots per inch of the display the window is on.
+static int t51_gpu_dpi(t51_gpu *g) {
+	screen_display_t display = NULL;
+	int dpi = 0;
+	screen_get_window_property_pv(g->win, SCREEN_PROPERTY_DISPLAY, (void **)&display);
+	screen_get_display_property_iv(display, SCREEN_PROPERTY_DPI, &dpi);
+	return dpi;
+}
+
 // The grid's shape and the colour of what lies outside it; the table's
 // storage on the GPU.
 static void t51_gpu_grid(t51_gpu *g, int cols, int rows, int cell_w, int cell_h, int r, int gr, int b) {
@@ -338,6 +347,9 @@ func (s *Screen) Resize(w, h int) error {
 	}
 	return nil
 }
+
+// DPI is the dots per inch of the display the window is on.
+func (s *Screen) DPI() int { return int(C.t51_gpu_dpi(&s.g)) }
 
 // Size is the window's size in pixels.
 func (s *Screen) Size() (w, h int) { return int(s.g.w), int(s.g.h) }

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"term51/internal/app"
+	"term51/internal/gpu"
 	"term51/internal/settings"
 	"term51/internal/ui"
 )
@@ -50,7 +51,9 @@ func main() {
 	// thread, with the UI still up or just going down, it left a thread
 	// waiting for the phone's input service for ever and a process that
 	// could not be killed (found on the phone, 2026-10-07).
-	a := app.New(cfg, ui.Publisher{})
+	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
+		return gpu.Open(group, id, w, h)
+	})
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()

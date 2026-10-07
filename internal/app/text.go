@@ -2,6 +2,7 @@ package app
 
 import (
 	"log"
+	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -73,6 +74,12 @@ func (t *tab) follow(out chan<- news) {
 // rows that changed, as rich text for the page's labels. It holds any
 // number of tabs, one shown. It returns the reason it ended.
 func (a *App) Run() error {
+	// The screen's OpenGL context belongs to one thread.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var scr Screen
+	var testTable []byte // FIRST MILESTONE ONLY: see testCells
+
 	var tabs []*tab
 	cur := -1
 	inbox := make(chan news, 16)
@@ -98,7 +105,7 @@ func (a *App) Run() error {
 		for i, t := range tabs {
 			titles[i] = t.title
 		}
-		st := map[string]any{"tabs": titles, "current": cur, "cols": cols, "rows": rows, "ctrl": stickyCtrl, "alt": stickyAlt}
+		st := map[string]any{"tabs": titles, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt}
 		if cur >= 0 {
 			st["title"] = tabs[cur].title
 		}
@@ -201,6 +208,35 @@ func (a *App) Run() error {
 	for {
 		select {
 		case c := <-a.cmds:
+			if c.Name == "window" || c.Name == "size" {
+				// The page's place for the terminal, in pixels: the first
+				// time it creates the window, afterwards it resizes it.
+				w, h := num(c.Args["w"]), num(c.Args["h"])
+				if scr == nil {
+					group, _ := c.Args["group"].(string)
+					id, _ := c.Args["id"].(string)
+					s, err := a.open(group, id, w, h)
+					if err != nil {
+						log.Printf("app: %v", err)
+						a.notice("The screen could not be opened: " + err.Error())
+						break
+					}
+					scr = s
+					defer scr.Close()
+				} else if err := scr.Resize(w, h); err != nil {
+					log.Printf("app: %v", err)
+					break
+				}
+				// FIRST MILESTONE ONLY: a fixed cell and a test table,
+				// until the cells and the character sheet are merged.
+				gc, gr := w/testCellW, h/testCellH
+				scr.Grid(gc, gr, testCellW, testCellH, 0x10, 0x14, 0x18)
+				testTable = testCells(gc, gr)
+				if err := scr.Frame(testTable, 0, len(testTable)); err != nil {
+					log.Printf("app: %v", err)
+				}
+				c = Command{Name: "grid", Args: map[string]any{"cols": float64(gc), "rows": float64(gr), "cw": float64(testCellW), "ch": float64(testCellH)}}
+			}
 			if c.Name == "grid" {
 				nc, nr := num(c.Args["cols"]), num(c.Args["rows"])
 				if nc == cols && nr == rows && len(tabs) > 0 {
@@ -362,4 +398,29 @@ func (a *App) Run() error {
 			post()
 		}
 	}
+}
+
+// FIRST MILESTONE ONLY, to be removed with the merge of the cells: a fixed
+// cell size and a table that shows the screen side works without any
+// character shapes. Every cell gets its own background colour; the first
+// row and column are white so that the grid's edges can be seen; the flags
+// are cycled through so that each line and cursor shape appears, in yellow.
+const testCellW, testCellH = 24, 48
+
+func testCells(cols, rows int) []byte {
+	t := make([]byte, cols*rows*16)
+	for y := 0; y < rows; y++ {
+		for x := 0; x < cols; x++ {
+			c := t[(y*cols+x)*16:]
+			flags := []byte{0, 1, 2, 4, 8, 16}[(x+y)%6]
+			c[2] = flags
+			c[4], c[5], c[6], c[7] = 255, 255, 255, 255 // text colour
+			c[8], c[9], c[10], c[11] = byte(x*255/cols), byte(y*255/rows), byte(128), 255
+			if x == 0 || y == 0 {
+				c[8], c[9], c[10] = 255, 255, 255
+			}
+			c[12], c[13], c[14], c[15] = 255, 255, 0, 255 // line colour
+		}
+	}
+	return t
 }

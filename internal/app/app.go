@@ -24,6 +24,21 @@ type Publisher interface {
 	Event(json string)
 }
 
+// Screen is the window the terminal is drawn in: internal/gpu on the phone.
+// It is used only from the goroutine that runs Run, which is locked to its
+// thread.
+type Screen interface {
+	Resize(w, h int) error
+	Grid(cols, rows, cellW, cellH int, r, g, b uint8)
+	Sheet(sheet []byte, x, y, w, h int)
+	Frame(table []byte, lo, hi int) error
+	Close()
+}
+
+// OpenScreen creates the window for the page's ForeignWindowControl, which
+// has the given window group and id, w by h pixels.
+type OpenScreen func(group, id string, w, h int) (Screen, error)
+
 // Command is a command from QML: a name and its arguments.
 type Command struct {
 	Name string
@@ -35,11 +50,12 @@ type App struct {
 	cfg  settings.Settings
 	cmds chan Command
 	pub  Publisher
+	open OpenScreen
 }
 
 // New makes the app; Run starts it.
-func New(cfg settings.Settings, pub Publisher) *App {
-	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub}
+func New(cfg settings.Settings, pub Publisher, open OpenScreen) *App {
+	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub, open: open}
 }
 
 // Send queues a command from QML. It is called on the UI thread and never

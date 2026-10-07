@@ -117,7 +117,7 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	debugPage = p
 	cfg := settings.Default()
 	cfg.Shell, cfg.Args = "/bin/bash", []string{"--norc", "--noprofile"}
-	a := New(cfg, p)
+	a := New(cfg, p, nil)
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0}})

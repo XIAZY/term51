@@ -364,6 +364,9 @@ func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
 
 // Frame draws the table and shows it; the bytes lo <= i < hi of table have
 // changed since the last frame. It is the one call from Go into C per frame.
+// The table is never empty: the settings limit the font size so that even
+// the largest font has a row in the phone's smallest window (the one with
+// the on-screen keyboard rows up).
 func (s *Screen) Frame(table []byte, lo, hi int) error {
 	if C.t51_frame(s.dpy, s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(s.cells)) == 0 {
 		return s.fail("eglSwapBuffers", nil)

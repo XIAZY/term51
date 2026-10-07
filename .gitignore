@@ -1,2 +1,4 @@
 /build/
 *.bar
+go.work
+go.work.sum

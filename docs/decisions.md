@@ -7,6 +7,7 @@ deleted.
 
 | Date (UTC) | Decision | By | Why |
 |---|---|---|---|
+| 2026-10-07 | The input field is hidden: it stays in the page and keeps the focus, but is not seen and takes no room; the "type here" bar is gone and the terminal reaches the bottom of the page. | AlphaToad | The field exists only because the phone shows its on-screen keyboard rows when a text field has the focus (see the input field row); a bar nobody types into by sight only took rows from the terminal. |
 | 2026-10-07 | The font size setting is in real points: pixels = points × the display's dots per inch / 72. | mitchellh | A size should look the same on any display. |
 | 2026-10-07 | The terminal's fonts are read from the phone's own files (DejaVu Sans Mono in four styles; MHei, then Malgun, for what it lacks); the app ships none. A file that cannot be read ends the app with the reason in the log. | mitchellh | The files are part of the phone, and its Chinese, Japanese and Korean fonts come for free. |
 | 2026-10-07 | The terminal is drawn with OpenGL ES 3.0 in a window of the app's own inside the Cascades page, from a table of cells and a sheet of character shapes built in Go; one call from Go into C per changed frame. It replaces the text grid: the app has one way to show the terminal and no setting to choose. | AlphaToad | His start order of 2026-10-07 (#proj-term51). |

@@ -192,10 +192,12 @@ Page {
 
         // The input field: it holds the focus, so the phone shows its
         // on-screen keyboard rows as for any text field. What is typed goes
-        // to the shell at once and the field is emptied.
+        // to the shell at once and the field is emptied. It is not seen
+        // and takes no room: the terminal reaches the bottom of the page.
         TextField {
             id: input
-            hintText: "type here"
+            opacity: 0
+            maxHeight: 0
             horizontalAlignment: HorizontalAlignment.Fill
             inputMode: TextFieldInputMode.Text
             input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff

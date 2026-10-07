@@ -35,15 +35,8 @@ func main() {
 
 	// The settings: a text file in the app's data directory. A file with a
 	// mistake in it is not used at all, and the log says what is wrong.
-	// On the first start the file is written with every setting at its
-	// default and a comment on each, so that there is something to edit.
-	const settingsFile = "data/settings.conf"
-	if _, err := os.Stat(settingsFile); os.IsNotExist(err) {
-		if err := settings.Save(settingsFile, settings.Default()); err != nil {
-			log.Printf("settings: %v", err)
-		}
-	}
-	cfg, warnings, err := settings.Load(settingsFile)
+	// The first start writes the file with the defaults (settings.Load).
+	cfg, warnings, err := settings.Load("data/settings.conf")
 	for _, w := range warnings {
 		log.Printf("settings: %s", w)
 	}

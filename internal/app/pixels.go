@@ -10,8 +10,8 @@ import (
 
 	"term51/internal/keys"
 	"term51/internal/render"
-	"term51/internal/replies"
 	"term51/internal/session"
+	"term51/internal/settings"
 	"term51/internal/ui"
 	"term51/internal/view"
 )
@@ -19,7 +19,7 @@ import (
 // Run serves the configured front end until the last shell exits. It
 // returns the reason it ended.
 func (a *App) Run() error {
-	if a.cfg.Frontend == FrontendPixels {
+	if a.cfg.Frontend == settings.FrontendPixels {
 		return a.runPixels()
 	}
 	return a.runText()
@@ -55,12 +55,7 @@ func (a *App) runPixels() error {
 	}
 	cw, ch := r.CellSize()
 	cols, rows := r.Grid(win.Width, win.Height)
-	sess, err := session.Start(session.Config{
-		Shell: a.cfg.Shell, Args: a.cfg.Args,
-		Cols: cols, Rows: rows, CellW: cw, CellH: ch,
-		MaxScrollback: a.cfg.MaxScrollback,
-		Replies:       replies.DefaultConfig(),
-	})
+	sess, err := session.Start(a.cfg.Session(cols, rows, cw, ch, nil))
 	if err != nil {
 		return err
 	}

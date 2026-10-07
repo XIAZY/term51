@@ -8,7 +8,6 @@ import (
 	"github.com/XIAZY/libghostty-vt-go/vt"
 
 	"term51/internal/keys"
-	"term51/internal/replies"
 	"term51/internal/session"
 	"term51/internal/textgrid"
 )
@@ -76,12 +75,7 @@ func (a *App) runText() error {
 	cols, rows, cw, ch := 0, 0, 0, 0
 
 	open := func() *tab {
-		sess, err := session.Start(session.Config{
-			Shell: a.cfg.Shell, Args: a.cfg.Args,
-			Cols: cols, Rows: rows, CellW: cw, CellH: ch,
-			MaxScrollback: a.cfg.MaxScrollback,
-			Replies:       replies.DefaultConfig(),
-		})
+		sess, err := session.Start(a.cfg.Session(cols, rows, cw, ch, nil))
 		if err != nil {
 			log.Printf("app: %v", err)
 			return nil

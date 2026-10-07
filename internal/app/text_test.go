@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"term51/internal/settings"
 )
 
 // page stands in for the QML page: it keeps the merged state and the text of
@@ -108,7 +110,9 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	t.Helper()
 	p := &page{state: map[string]any{}, rows: map[int]string{}}
 	debugPage = p
-	a := New(Config{Frontend: FrontendText, Shell: "/bin/bash", Args: []string{"--norc", "--noprofile"}, MaxScrollback: 1 << 20}, p)
+	cfg := settings.Default()
+	cfg.Shell, cfg.Args = "/bin/bash", []string{"--norc", "--noprofile"}
+	a := New(cfg, p)
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0, "mono": true}})

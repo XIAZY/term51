@@ -14,6 +14,7 @@ import (
 
 	"term51/internal/keys"
 	"term51/internal/session"
+	"term51/internal/settings"
 )
 
 // Publisher is the way to the page: State replaces what the page knows
@@ -30,42 +31,6 @@ type Command struct {
 	Args map[string]any
 }
 
-// The two front ends. Which one is better on the phone (an exact grid, the
-// phone's own fonts, speed) is to be found out there.
-const (
-	// FrontendText shows the terminal as a column of Cascades text labels,
-	// one per row (assets/text.qml, internal/textgrid).
-	FrontendText = "text"
-	// FrontendPixels draws the terminal into a native window inside the
-	// page (assets/pixels.qml, internal/render).
-	FrontendPixels = "pixels"
-)
-
-// Config is what the app starts with.
-type Config struct {
-	// Frontend is FrontendText or FrontendPixels.
-	Frontend string
-	// RawKeys chooses where the pixel front end takes the keyboard from:
-	// false, the page's Cascades key events; true, raw Screen key events
-	// forwarded to the native window. Only one is served, so that a press
-	// the phone delivers both ways is not typed twice. Which one the
-	// phone needs is to be found out there.
-	RawKeys bool
-	// FontPx is the font size in pixels.
-	FontPx float64
-	// Shell is the program to run, with its arguments.
-	Shell string
-	Args  []string
-	// MaxScrollback is the scrollback limit in bytes.
-	MaxScrollback uint64
-}
-
-// DefaultConfig suits the Passport: a 1440 pixel wide screen at about 450
-// pixels per inch.
-func DefaultConfig() Config {
-	return Config{Frontend: FrontendText, FontPx: 34, Shell: "/bin/sh", MaxScrollback: 8 << 20}
-}
-
 // The pixel loop's timing.
 const (
 	frameGap   = 16 * time.Millisecond  // at most one frame per gap
@@ -76,13 +41,13 @@ const (
 
 // App is the running program.
 type App struct {
-	cfg  Config
+	cfg  settings.Settings
 	cmds chan Command
 	pub  Publisher
 }
 
 // New makes the app; Run starts it.
-func New(cfg Config, pub Publisher) *App {
+func New(cfg settings.Settings, pub Publisher) *App {
 	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub}
 }
 
@@ -110,7 +75,7 @@ func (a *App) state(v map[string]any) {
 
 // Page is the QML page of the configured front end.
 func (a *App) Page() string {
-	if a.cfg.Frontend == FrontendPixels {
+	if a.cfg.Frontend == settings.FrontendPixels {
 		return "pixels"
 	}
 	return "text"

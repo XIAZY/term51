@@ -10,10 +10,12 @@ the one place that changes if the answer is not the assumed one.
 - Installing needs the project owner's go-ahead (the phone's internal
   storage). Build with `GOQNX=<go-qnx> tools/build.sh`; install with
   `tools/install.sh <ssh-host>`.
-- The front end is chosen by the file `data/frontend` in the app's sandbox
-  (`text` or `pixels`; text when absent). `data/rawkeys`, when it exists,
-  makes the pixel front end read raw key events. The log is
-  `data/term51.log`.
+- The settings are the file `data/settings.conf` in the app's sandbox
+  (`internal/settings`; one `name = value` per line): `frontend = text` or
+  `pixels`, `rawKeys = true` for the pixel front end to read raw key events,
+  the font size, the shell, the theme, the terminal identity. A missing file
+  is the defaults. The log is `data/term51.log`; it names any mistake in the
+  settings file.
 
 ## The shell
 

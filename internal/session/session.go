@@ -38,9 +38,9 @@ type Config struct {
 	Env   []string
 	Dir   string
 
-	// The terminal's size in cells and the size of one cell in pixels
-	// (zero when unknown). A size of zero columns or rows is the
-	// library's error.
+	// The terminal's size in cells and the size of one cell in pixels (the
+	// page measures both before the first shell starts). A size of zero
+	// columns or rows is the library's error.
 	Cols, Rows   int
 	CellW, CellH int
 

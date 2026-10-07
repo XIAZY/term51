@@ -9,8 +9,7 @@ only be seen on the phone.
 Build with `GOQNX=<go-qnx> tools/build.sh`; install with
 `tools/install.sh <ssh-host>` (the app must be closed: the phone does not
 replace an open app). The settings are `data/settings.conf` in the app's
-sandbox (`internal/settings`); `logInput = true` there writes every key and
-text command to `data/term51.log`.
+sandbox (`internal/settings`); the log is `data/term51.log`.
 
 ## Seen to work (2026-10-07, first run)
 
@@ -67,8 +66,8 @@ text command to `data/term51.log`.
 1. The input field: symbols, Enter, Backspace, and that no character is
    typed twice (characters come from the field, other keys from key
    events).
-2. What the keyboard delivers for Alt, Shift and the symbol key
-   (`logInput`), against what `internal/keys` assumes.
+2. What the keyboard delivers for Alt, Shift and the symbol key, against
+   what `internal/keys` assumes.
 3. The key bar: sticky Ctrl and Alt, Esc, Tab, the arrows; an Enter typed
    after tapping a button reaches the shell.
 4. Colours: a background colour inside a row, the cursor as an inverted

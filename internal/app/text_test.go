@@ -149,8 +149,6 @@ func (s *screen) Resize(w, h int) error {
 
 func (s *screen) DPI() int { return testDPI }
 
-func (s *screen) Sizes() (window, buffer, source [2]int) { return }
-
 func (s *screen) Grid(cols, rows, cellW, cellH int, r, g, b uint8) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -166,7 +164,7 @@ func (s *screen) Sheet(sheet []byte, x, y, w, h int) {
 	}
 }
 
-func (s *screen) Frame(table []byte, lo, hi int, shot []byte) error {
+func (s *screen) Frame(table []byte, lo, hi int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	copy(s.table[lo:hi], table[lo:hi])

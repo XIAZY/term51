@@ -39,18 +39,13 @@ package gpu
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
-// One frame: the bytes lo <= i < hi of the table are new. With shot not
-// NULL the picture, w by h pixels, is also read back into it before it is
-// shown: 4 bytes (R, G, B, A) per pixel, the bottom row first. Returns 0
-// when the swap failed.
-static int t51_frame(EGLDisplay dpy, EGLSurface surf, const unsigned char *table, int lo, int hi, int cells,
-	unsigned char *shot, int w, int h) {
+// One frame: the bytes lo <= i < hi of the table are new. Returns 0 when
+// the swap failed.
+static int t51_frame(EGLDisplay dpy, EGLSurface surf, const unsigned char *table, int lo, int hi, int cells) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (hi > lo)
 		glBufferSubData(GL_ARRAY_BUFFER, lo, hi - lo, table + lo);
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, cells);
-	if (shot)
-		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, shot);
 	return eglSwapBuffers(dpy, surf);
 }
 */
@@ -347,20 +342,6 @@ func (s *Screen) DPI() int {
 	return int(dpi)
 }
 
-// Sizes are the window's size, its buffers' size and the part of the buffer
-// shown (width, height each), as libscreen reports them.
-func (s *Screen) Sizes() (window, buffer, source [2]int) {
-	read := func(name C.int) [2]int {
-		var v [2]C.int
-		C.screen_get_window_property_iv(s.win, name, &v[0])
-		return [2]int{int(v[0]), int(v[1])}
-	}
-	return read(C.SCREEN_PROPERTY_SIZE), read(C.SCREEN_PROPERTY_BUFFER_SIZE), read(C.SCREEN_PROPERTY_SOURCE_SIZE)
-}
-
-// Size is the window's size in pixels.
-func (s *Screen) Size() (w, h int) { return s.w, s.h }
-
 // Grid sets the grid: cols by rows cells of cellW by cellH pixels, and the
 // colour of the window outside the grid. The next Frame must hand over the
 // whole table.
@@ -383,15 +364,8 @@ func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
 
 // Frame draws the table and shows it; the bytes lo <= i < hi of table have
 // changed since the last frame. It is the one call from Go into C per frame.
-// A shot that is not nil receives the picture as drawn: 4 bytes (R, G, B,
-// A) per pixel of the window, the bottom row first.
-func (s *Screen) Frame(table []byte, lo, hi int, shot []byte) error {
-	var out *C.uchar
-	if shot != nil {
-		out = (*C.uchar)(unsafe.Pointer(&shot[0]))
-	}
-	if C.t51_frame(s.dpy, s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(s.cells),
-		out, C.int(s.w), C.int(s.h)) == 0 {
+func (s *Screen) Frame(table []byte, lo, hi int) error {
+	if C.t51_frame(s.dpy, s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(s.cells)) == 0 {
 		return s.fail("eglSwapBuffers", nil)
 	}
 	return nil

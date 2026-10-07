@@ -149,8 +149,8 @@ func TestOpenBSDNoDevices(t *testing.T) {
 	}
 }
 
-// On a system with real BSD pseudo-terminals (BlackBerry 10), the fallback
-// opens a working pair: bytes written to the slave come out of the master.
+// On a system with real BSD pseudo-terminals (BlackBerry 10), the scan opens
+// a working pair: bytes written to the slave come out of the master.
 func TestOpenBSDRealDevices(t *testing.T) {
 	if _, err := os.Stat("/dev/ptyp0"); err != nil {
 		t.Skip("no BSD pseudo-terminals here")
@@ -165,30 +165,4 @@ func TestOpenBSDRealDevices(t *testing.T) {
 		t.Fatal(err)
 	}
 	readUntil(t, m, "ping", 10*time.Second)
-}
-
-// When the POSIX calls fail, Open falls back to the BSD scan.
-func TestOpenFallsBackToBSD(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("root ignores permission bits")
-	}
-	dir := t.TempDir()
-	for _, n := range []string{"ptyq3", "ttyq3"} {
-		if err := os.WriteFile(dir+"/"+n, nil, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	oldPOSIX, oldDir := openPOSIXFunc, bsdDevDir
-	defer func() { openPOSIXFunc, bsdDevDir = oldPOSIX, oldDir }()
-	openPOSIXFunc = func() (*os.File, *os.File, error) { return nil, nil, os.ErrNotExist }
-	bsdDevDir = dir
-	m, s, err := Open()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Close()
-	defer s.Close()
-	if m.Name() != dir+"/ptyq3" {
-		t.Fatalf("got %s, want the BSD master ptyq3", m.Name())
-	}
 }

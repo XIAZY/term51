@@ -120,7 +120,7 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	a := New(cfg, p)
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
-	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0, "mono": true}})
+	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0}})
 	wait(t, "the first prompt", func() bool { return strings.Contains(p.screen(), "$") })
 	return a, p, done
 }

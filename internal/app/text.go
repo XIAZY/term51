@@ -69,11 +69,11 @@ func (t *tab) follow(out chan<- news) {
 	}
 }
 
-// runText serves the text front end: QML measures its monospace font and
-// says how many cells fit ("grid"); Go answers with the rows that changed,
-// as rich text for the page's labels. It holds any number of tabs, one
-// shown, and ends when the last shell has exited.
-func (a *App) runText() error {
+// Run serves the page until the last shell has exited: QML measures its
+// monospace font and says how many cells fit ("grid"); Go answers with the
+// rows that changed, as rich text for the page's labels. It holds any
+// number of tabs, one shown. It returns the reason it ended.
+func (a *App) Run() error {
 	var tabs []*tab
 	cur := -1
 	inbox := make(chan news, 16)
@@ -206,9 +206,6 @@ func (a *App) runText() error {
 		select {
 		case c := <-a.cmds:
 			if c.Name == "grid" {
-				if mono, ok := c.Args["mono"].(bool); ok && !mono {
-					log.Printf("app: the page's font is not monospace: the grid will not line up")
-				}
 				nc, nr := num(c.Args["cols"]), num(c.Args["rows"])
 				if nc <= 0 || nr <= 0 || (nc == cols && nr == rows && len(tabs) > 0) {
 					break
@@ -229,6 +226,11 @@ func (a *App) runText() error {
 				}
 				tell()
 				post() // the reflowed screen, without waiting for output
+				break
+			}
+			if c.Name == "ready" {
+				// The page is up: give it what it needs before it measures.
+				a.state(map[string]any{"fontPt": a.cfg.FontPt})
 				break
 			}
 			if c.Name == "quit" {

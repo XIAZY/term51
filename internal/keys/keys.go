@@ -1,17 +1,12 @@
 // Package keys turns the phone's key events into the terminal library's key
 // events.
 //
-// BlackBerry 10 delivers a key two ways, and the app may use either:
-//
-//   - a Cascades KeyEvent: key (the character produced), keycap (the key
-//     itself, unshifted), the text, and whether Shift, Alt and Ctrl are held;
-//   - a raw Screen event: flags, a key symbol, a key cap and a modifier
-//     mask, with the values of <sys/keycodes.h>.
-//
-// Both are reduced to a Raw event (FromCascades, FromScreen) and translated
-// by one function, so the two paths cannot drift apart. The on-screen key
-// bar's Ctrl, Alt and Esc go through the same Translator: Ctrl and Alt as
-// sticky modifiers that apply to the next key, Esc as a key.
+// The page delivers a key as a Cascades KeyEvent: key (the character
+// produced), keycap (the key itself, unshifted), the text, and whether Shift,
+// Alt and Ctrl are held. It is reduced to a Raw event (FromCascades) and
+// translated by one function. The on-screen key bar's Ctrl, Alt and Esc go
+// through the same Translator: Ctrl and Alt as sticky modifiers that apply
+// to the next key, Esc as a key.
 //
 // One thing is particular to the phone's keyboard: its Alt key selects the
 // digits and symbols printed above the letters (Alt+Q is '#'). When Alt or
@@ -27,15 +22,7 @@ import (
 	"github.com/XIAZY/libghostty-vt-go/vt/input"
 )
 
-// Flags of a raw Screen key event (<sys/keycodes.h>).
-const (
-	FlagDown     = 0x00000001 // KEY_DOWN
-	FlagRepeat   = 0x00000002 // KEY_REPEAT
-	FlagSymValid = 0x00000040 // KEY_SYM_VALID
-	FlagCapValid = 0x00000080 // KEY_CAP_VALID
-)
-
-// Modifier bits of a raw Screen key event (<sys/keycodes.h>).
+// Modifier bits of a Raw event (the KEYMOD_* values of <sys/keycodes.h>).
 const (
 	ModShift    = 1 << 0  // KEYMOD_SHIFT
 	ModCtrl     = 1 << 1  // KEYMOD_CTRL
@@ -110,19 +97,6 @@ type Raw struct {
 	Cap rune
 	// Mods is the Mod* bits held.
 	Mods int
-}
-
-// FromScreen makes a Raw from a raw Screen key event: the values of
-// SCREEN_PROPERTY_KEY_FLAGS, _KEY_SYM, _KEY_CAP and _KEY_MODIFIERS.
-func FromScreen(flags, sym, cap, mods int) Raw {
-	r := Raw{Down: flags&FlagDown != 0, Repeat: flags&FlagRepeat != 0, Mods: mods}
-	if flags&FlagSymValid != 0 {
-		r.Sym = rune(sym)
-	}
-	if flags&FlagCapValid != 0 {
-		r.Cap = rune(cap)
-	}
-	return r
 }
 
 // FromCascades makes a Raw from a Cascades KeyEvent: its key, keycap and

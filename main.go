@@ -1,8 +1,8 @@
 //go:build qnx
 
 // term51 is a terminal emulator for BlackBerry 10, written in Go with a
-// Cascades UI. The terminal core is libghostty-vt-go; C++ is limited to the
-// Cascades bridge and C to the native window (internal/ui).
+// Cascades UI. The terminal core is libghostty-vt-go; the only code that is
+// not Go is the Cascades bridge (internal/ui).
 package main
 
 import (
@@ -52,7 +52,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	rc := ui.Run(a.Page(), func(name, argsJSON string) {
+	rc := ui.Run(func(name, argsJSON string) {
 		var args map[string]any
 		if argsJSON != "" {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {

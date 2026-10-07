@@ -229,6 +229,7 @@ func (a *App) Run() error {
 	}
 
 	var pending <-chan time.Time // set while an update is due
+	var settled <-chan time.Time // for now: a second look at the window's size
 	for {
 		select {
 		case c := <-a.cmds:
@@ -266,6 +267,7 @@ func (a *App) Run() error {
 				win, buf, src := scr.Sizes()
 				log.Printf("app: %s: the page says %d by %d at %d, %d; the window is %v, its buffers %v, shown %v; %d dots per inch; %d by %d cells of %d by %d",
 					c.Name, w, h, num(c.Args["x"]), num(c.Args["y"]), win, buf, src, scr.DPI(), nc, nr, cw, ch)
+				settled = time.After(time.Second)
 				table = cells.Table{} // the screen's table is new: all of it goes again
 				switch {
 				case len(tabs) == 0:
@@ -417,6 +419,10 @@ func (a *App) Run() error {
 					pending = time.After(textFrame - since)
 				}
 			}
+		case <-settled:
+			settled = nil
+			win, buf, src := scr.Sizes()
+			log.Printf("app: a second later the window is %v, its buffers %v, shown %v", win, buf, src)
 		case <-pending:
 			pending = nil
 			post()

@@ -33,7 +33,6 @@ Sheet {
         idVersion.text = v["identity.version"]
         versionNumber.text = v["identity.versionNumber"]
         answerback.text = v["identity.answerback"]
-        dark.checked = v["identity.dark"] == "true"
         deviceAttributes.checked = v["identity.deviceAttributes"] == "true"
         statusReports.checked = v["identity.statusReports"] == "true"
         colorScheme.checked = v["identity.colorScheme"] == "true"
@@ -184,11 +183,6 @@ Sheet {
                     id: answerback
                     title: "Answerback (sent for Ctrl-E; empty sends nothing)"
                     onEdited: sheet.set("identity.answerback", text)
-                }
-                SettingToggle {
-                    id: dark
-                    text: "Report a dark colour scheme"
-                    onFlipped: sheet.set("identity.dark", on)
                 }
                 SettingToggle {
                     id: deviceAttributes

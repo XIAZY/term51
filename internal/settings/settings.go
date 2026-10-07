@@ -131,9 +131,6 @@ type Identity struct {
 	VersionNumber int
 	// Answerback is sent for ENQ (Ctrl-E); empty sends nothing.
 	Answerback string
-	// Dark is the colour scheme reported when a program asks: dark or
-	// light.
-	Dark bool
 
 	// Which kinds of question are answered.
 	DeviceAttributes bool
@@ -186,7 +183,6 @@ func Default() Settings {
 			Version:          r.Version,
 			VersionNumber:    r.VersionNumber,
 			Answerback:       r.Answerback,
-			Dark:             r.Dark,
 			DeviceAttributes: r.DeviceAttributes,
 			StatusReports:    r.StatusReports,
 			ColorScheme:      r.ColorScheme,
@@ -370,8 +366,6 @@ var fields = []field{
 		func(s *Settings) []string { return []string{strconv.Itoa(s.Identity.VersionNumber)} }},
 	textField("identity.answerback", "Sent when a program sends ENQ (Ctrl-E); empty sends nothing.",
 		func(s *Settings) *string { return &s.Identity.Answerback }),
-	boolField("identity.dark", "The colour scheme reported when a program asks: true for dark, false for light.",
-		func(s *Settings) *bool { return &s.Identity.Dark }),
 	boolField("identity.deviceAttributes", "Answer \"what are you\" and the name-and-version query.",
 		func(s *Settings) *bool { return &s.Identity.DeviceAttributes }),
 	boolField("identity.statusReports", "Answer status and cursor position queries.",
@@ -594,8 +588,9 @@ func (s Settings) Replies() replies.Config {
 		ColorQueries:     id.ColorQueries,
 		SizeReports:      id.SizeReports,
 		KittyKeyboard:    id.KittyKeyboard,
-		Dark:             id.Dark,
-		Answerback:       id.Answerback,
+		// The colour scheme a program is told is the one the colours make.
+		Dark:       s.SessionTheme().Dark(),
+		Answerback: id.Answerback,
 	}
 }
 

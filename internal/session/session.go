@@ -93,6 +93,18 @@ type Theme struct {
 	Palette []RGB
 }
 
+// Dark reports whether the theme is a dark one: whether its background is
+// darker than middle grey. It is what a program asking for the colour scheme
+// is told.
+func (t Theme) Dark() bool {
+	bg := t.Background
+	if t.Foreground == (RGB{}) && bg == (RGB{}) && t.Cursor == nil && t.Palette == nil {
+		bg = DefaultTheme.Background
+	}
+	// Perceived brightness, in thousandths of full white.
+	return 299*int(bg.R)+587*int(bg.G)+114*int(bg.B) < 500*255
+}
+
 // DefaultTheme is light grey on near black.
 var DefaultTheme = Theme{
 	Foreground: RGB{0xD0, 0xD0, 0xD0},
@@ -421,11 +433,13 @@ func (s *Session) Resize(cols, rows, cellW, cellH int) error {
 
 // SetTheme changes the terminal's default colours, for what is on screen
 // too: the next frame is drawn with them. Colours a program has set since
-// the start are replaced as well.
+// the start are replaced as well, and a program asking for the colour scheme
+// is told the new theme's.
 func (s *Session) SetTheme(t Theme) {
 	s.mu.Lock()
 	if !s.closed {
 		s.term.Colors = t.colors()
+		s.cfg.Dark = t.Dark()
 	}
 	s.mu.Unlock()
 	s.signal()

@@ -38,7 +38,7 @@ func TestAnEmptyOrPartialFileKeepsTheDefaults(t *testing.T) {
 fontPt = 8
   identity.terminal=xterm
 theme.cursor = #FF8000
-IDENTITY.DARK = no
+IDENTITY.STATUSREPORTS = no
 identity.answerback = " hello "
 `))
 	if err != nil || len(warnings) != 0 {
@@ -48,7 +48,7 @@ identity.answerback = " hello "
 	want.FontPt = 8
 	want.Identity.Terminal = "xterm"
 	want.Theme.Cursor = "#FF8000"
-	want.Identity.Dark = false
+	want.Identity.StatusReports = false
 	want.Identity.Answerback = " hello "
 	if !reflect.DeepEqual(s, want) {
 		t.Errorf("a partial file:\n got %+v\nwant %+v", s, want)
@@ -129,8 +129,8 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 func TestSetAndValues(t *testing.T) {
 	s := Default()
 	v := s.Values()
-	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["identity.dark"] != "true" {
-		t.Errorf("values: fontPt %q, shell %q, identity.dark %q", v["fontPt"], v["shell"], v["identity.dark"])
+	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["identity.statusReports"] != "true" {
+		t.Errorf("values: fontPt %q, shell %q, identity.statusReports %q", v["fontPt"], v["shell"], v["identity.statusReports"])
 	}
 	if _, ok := v["arg"]; ok {
 		t.Error("the list arg is among the single values")
@@ -149,6 +149,13 @@ func TestSetAndValues(t *testing.T) {
 		}
 		if err := s.Validate(); err != nil {
 			t.Errorf("theme %s: %v", name, err)
+		}
+	}
+	// A program asking for the colour scheme is told what the colours make.
+	for name, dark := range map[string]bool{"dark": true, "black": true, "light": false, "solarized": true} {
+		s.Set("theme", name)
+		if got := s.Replies().Dark; got != dark {
+			t.Errorf("theme %s is reported as dark=%v", name, got)
 		}
 	}
 	s.Theme.Background = "#123456"

@@ -10,7 +10,8 @@ struct t51_win {
     screen_context_t ctx;
     screen_window_t win;
     screen_event_t ev;
-    screen_buffer_t cur; // the buffer handed out by t51_win_buffer
+    screen_buffer_t cur;     // the buffer handed out by t51_win_buffer
+    screen_buffer_t seen[2]; // the window's buffers in the order first seen
     int w, h;
 };
 
@@ -23,6 +24,7 @@ static int create_buffers(t51_win *win, int w, int h) {
     win->w = w;
     win->h = h;
     win->cur = NULL;
+    win->seen[0] = win->seen[1] = NULL;
     return 0;
 }
 
@@ -80,7 +82,7 @@ int t51_win_resize(t51_win *win, int w, int h) {
     return create_buffers(win, w, h);
 }
 
-void *t51_win_buffer(t51_win *win, int *stride) {
+void *t51_win_buffer(t51_win *win, int *stride, int *index) {
     screen_buffer_t bufs[2];
     if (screen_get_window_property_pv(win->win, SCREEN_PROPERTY_RENDER_BUFFERS, (void **)bufs) != 0)
         return NULL;
@@ -89,16 +91,30 @@ void *t51_win_buffer(t51_win *win, int *stride) {
         screen_get_buffer_property_iv(bufs[0], SCREEN_PROPERTY_STRIDE, stride) != 0)
         return NULL;
     win->cur = bufs[0];
+    if (win->seen[0] == NULL || win->seen[0] == bufs[0]) {
+        win->seen[0] = bufs[0];
+        *index = 0;
+    } else {
+        win->seen[1] = bufs[0];
+        *index = 1;
+    }
     return ptr;
 }
 
-int t51_win_post(t51_win *win) {
+int t51_win_post(t51_win *win, int y0, int y1) {
     if (!win->cur) {
         errno = EINVAL;
         return -1;
     }
-    int rect[4] = {0, 0, win->w, win->h};
-    int rc = screen_post_window(win->win, win->cur, 1, rect, 0);
+    if (y0 < 0)
+        y0 = 0;
+    if (y1 > win->h)
+        y1 = win->h;
+    int rc = 0;
+    if (y1 > y0) {
+        int rect[4] = {0, y0, win->w, y1};
+        rc = screen_post_window(win->win, win->cur, 1, rect, 0);
+    }
     win->cur = NULL;
     return rc;
 }

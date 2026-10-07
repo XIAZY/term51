@@ -1,15 +1,18 @@
 import bb.cascades 1.4
 
-// Milestone 0: the native window Go draws into fills the page, and key
-// presses reach Go by one of two paths, switched with the action:
-// - Cascades keys: the page's KeyListener, sent to Go as a "key" command;
-// - raw keys: the ForeignWindowControl forwards Screen keyboard events to the
-//   native window, where Go reads them.
+// The terminal page: a key bar with the keys the phone's keyboard lacks, and
+// below it the native window Go draws the terminal into.
+//
+// Go posts its state (the title, the size in cells, which sticky modifiers
+// are armed) as JSON through `bridge`; key presses and the key bar go back
+// as commands.
 Page {
     id: page
 
-    property bool rawKeys: false
     property bool created: false
+    property bool ctrl: false
+    property bool alt: false
+    property string termTitle: "term51"
 
     function send(name, args) { bridge.send(name, JSON.stringify(args || {})) }
 
@@ -24,31 +27,24 @@ Page {
         }
     }
 
-    function applyKeys() {
-        // InputType: None = 0, Keyboard = 1 (bb::cascades::InputType, 10.3.1).
-        fwc.forwardedInputTypes = rawKeys ? 1 : 0
-        fwc.requestFocus()
-        send("keys", { raw: rawKeys })
-    }
-
     function keyArgs(event, down) {
         return { down: down, key: event.key, keycap: event.keycap, unicode: event.unicode,
                  shift: event.shiftPressed, ctrl: event.ctrlPressed, alt: event.altPressed }
     }
 
-    actions: [
-        ActionItem {
-            title: page.rawKeys ? "Use Cascades keys" : "Use raw keys"
-            ActionBar.placement: ActionBarPlacement.OnBar
-            onTriggered: { page.rawKeys = !page.rawKeys; page.applyKeys() }
-        },
-        ActionItem {
-            title: "Esc"
-            ActionBar.placement: ActionBarPlacement.OnBar
-            onTriggered: page.send("button", { name: "esc" })
-        }
-    ]
+    onCreationCompleted: {
+        bridge.state.connect(function(json) {
+            var s = JSON.parse(json)
+            if (s.ctrl !== undefined) page.ctrl = s.ctrl
+            if (s.alt !== undefined) page.alt = s.alt
+            if (s.title !== undefined) page.termTitle = s.title
+        })
+        fwc.requestFocus()
+    }
 
+    titleBar: TitleBar { title: page.termTitle }
+
+    // The phone's keyboard: every key press and release goes to Go.
     keyListeners: KeyListener {
         onKeyPressed: page.send("key", page.keyArgs(event, true))
         onKeyReleased: page.send("key", page.keyArgs(event, false))
@@ -58,23 +54,50 @@ Page {
         layout: DockLayout {}
         background: Color.Black
 
-        ForeignWindowControl {
-            id: fwc
-            windowId: "term51-m0"
-            // Position, Size and Visible: Cascades keeps the native window
-            // over the control's area.
-            updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
+        Container {
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Fill
-            focusPolicy: FocusPolicy.KeyAndTouch
-            onWindowAttached: page.send("attached", {})
-            onBoundToWindowChanged: page.send("bound", { bound: boundToWindow })
-            onTouch: page.send("touch", { type: event.touchType, x: event.localX, y: event.localY })
-            attachedObjects: LayoutUpdateHandler {
-                onLayoutFrameChanged: page.sized(layoutFrame)
+            layout: StackLayout {}
+
+            // The key bar. Ctrl and Alt are sticky: they apply to the next
+            // key and show as armed until then.
+            Container {
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                horizontalAlignment: HorizontalAlignment.Fill
+                background: Color.create("#202428")
+
+                Button { text: "Esc"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "esc" }) }
+                Button { text: page.ctrl ? "[Ctrl]" : "Ctrl"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "ctrl" }) }
+                Button { text: page.alt ? "[Alt]" : "Alt"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "alt" }) }
+                Button { text: "Tab"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "tab" }) }
+                Button { text: "←"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "left" }) }
+                Button { text: "↓"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "down" }) }
+                Button { text: "↑"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "up" }) }
+                Button { text: "→"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         onClicked: page.send("bar", { name: "right" }) }
+            }
+
+            // The terminal. Position, Size and Visible: Cascades keeps the
+            // native window over this control's area. Touch on it goes to the
+            // native window (a drag scrolls the scrollback).
+            ForeignWindowControl {
+                id: fwc
+                windowId: "term51"
+                updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
+                horizontalAlignment: HorizontalAlignment.Fill
+                layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                focusPolicy: FocusPolicy.KeyAndTouch
+                attachedObjects: LayoutUpdateHandler {
+                    onLayoutFrameChanged: page.sized(layoutFrame)
+                }
             }
         }
     }
-
-    onCreationCompleted: fwc.requestFocus()
 }

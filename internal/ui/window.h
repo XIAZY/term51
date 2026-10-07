@@ -34,10 +34,12 @@ int t51_win_create(t51_win **out, const char *group, const char *id, int w, int 
 // Reallocates the buffers for a new size.
 int t51_win_resize(t51_win *win, int w, int h);
 // The buffer to draw the next frame into: 32-bit pixels 0x00RRGGBB
-// (RGBX8888, little-endian), stride in bytes.
-void *t51_win_buffer(t51_win *win, int *stride);
-// Shows the buffer returned by the last t51_win_buffer call.
-int t51_win_post(t51_win *win);
+// (RGBX8888, little-endian), stride in bytes. *index says which of the
+// window's two buffers it is (0 or 1), stable until the next resize.
+void *t51_win_buffer(t51_win *win, int *stride, int *index);
+// Shows rows y0 <= y < y1 of the buffer returned by the last t51_win_buffer
+// call (the whole width).
+int t51_win_post(t51_win *win, int y0, int y1);
 // Waits up to timeout_ns (-1: forever) for the next event.
 int t51_win_next_event(t51_win *win, long long timeout_ns, t51_event *ev);
 void t51_win_destroy(t51_win *win);

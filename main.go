@@ -1,9 +1,8 @@
+//go:build qnx
+
 // term51 is a terminal emulator for BlackBerry 10, written in Go with a
 // Cascades UI. The terminal core is libghostty-vt-go; C++ is limited to the
 // Cascades bridge and C to the native window (internal/ui).
-//
-// This is milestone 0: a proof that Go draws into a native window inside the
-// Cascades page and receives key presses (internal/m0).
 package main
 
 import (
@@ -14,7 +13,7 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	"term51/internal/m0"
+	"term51/internal/app"
 	"term51/internal/ui"
 )
 
@@ -29,12 +28,16 @@ func main() {
 	// Apps run in their sandbox, whose data directory is writable.
 	if f, err := os.OpenFile("data/term51.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644); err == nil {
 		log.SetOutput(io.MultiWriter(os.Stderr, f))
-		defer f.Close()
 	}
 	log.SetFlags(log.Lmicroseconds)
 
-	a := m0.New()
-	go a.Run()
+	a := app.New(app.DefaultConfig())
+	go func() {
+		err := a.Run()
+		log.Printf("the session ended: %v", err)
+		// The shell is gone: the app has nothing left to show.
+		os.Exit(0)
+	}()
 
 	rc := ui.Run(func(name, argsJSON string) {
 		var args map[string]any
@@ -44,7 +47,7 @@ func main() {
 				return
 			}
 		}
-		a.Send(m0.Command{Name: name, Args: args})
+		a.Send(app.Command{Name: name, Args: args})
 	})
 	os.Exit(rc)
 }

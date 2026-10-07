@@ -1,3 +1,5 @@
+//go:build qnx
+
 // Package ui runs the Cascades UI (assets/*.qml) and connects it to Go. The
 // C++ side is one QObject: Go posts JSON to it from any goroutine, queued to
 // the UI thread, and QML calls back with commands.

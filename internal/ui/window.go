@@ -1,3 +1,5 @@
+//go:build qnx
+
 package ui
 
 /*
@@ -71,17 +73,20 @@ func (w *Window) Resize(width, height int) error {
 	return nil
 }
 
-// Frame calls draw with the next buffer, as 0x00RRGGBB pixels with stride
-// pixels per row, and then shows it.
-func (w *Window) Frame(draw func(pix []uint32, stride int)) error {
-	var strideBytes C.int
-	p := C.t51_win_buffer(w.w, &strideBytes)
+// Frame calls draw with the next buffer: its id (0 or 1, which of the
+// window's two buffers it is, stable until the next Resize), its pixels as
+// 0x00RRGGBB and stride in pixels per row. draw returns the band of rows it
+// painted, y0 <= y < y1, which is then shown; with y0 == y1 nothing is shown
+// and the same buffer is handed out again next time.
+func (w *Window) Frame(draw func(id int, pix []uint32, stride int) (y0, y1 int)) error {
+	var strideBytes, index C.int
+	p := C.t51_win_buffer(w.w, &strideBytes, &index)
 	if p == nil {
 		return fmt.Errorf("window: no buffer")
 	}
 	stride := int(strideBytes) / 4
-	draw(unsafe.Slice((*uint32)(p), stride*w.Height), stride)
-	if rc, err := C.t51_win_post(w.w); rc != 0 {
+	y0, y1 := draw(int(index), unsafe.Slice((*uint32)(p), stride*w.Height), stride)
+	if rc, err := C.t51_win_post(w.w, C.int(y0), C.int(y1)); rc != 0 {
 		return fmt.Errorf("window: post: %v", err)
 	}
 	return nil

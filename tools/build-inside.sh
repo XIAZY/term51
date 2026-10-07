@@ -7,6 +7,8 @@ cd "$(dirname "$0")/.."
 
 export GOOS=qnx GOARCH=arm GOARM=7
 export CGO_ENABLED=1 CC=bb10-cc CXX=bb10-c++
+# A developer's go.work names host paths; the build uses go.mod's replace.
+export GOWORK=off GOFLAGS=-mod=mod
 
 mkdir -p build
 /opt/bb10-qt4/bin/moc -nw -o internal/ui/moc_bridge.cpp internal/ui/bridge.h

@@ -55,10 +55,12 @@ func main() {
 	go func() {
 		err := a.Run()
 		log.Printf("the app's loop ended: %v", err)
-		close(ended)
 		// The last shell is gone: the app has nothing left to show. End
-		// the UI; main does the rest.
+		// the UI; main does the rest. This comes before ended is closed,
+		// so that main cannot exit while this goroutine is still inside
+		// the C++ call.
 		ui.Quit()
+		close(ended)
 	}()
 
 	rc := ui.Run(func(name, argsJSON string) {

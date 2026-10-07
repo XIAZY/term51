@@ -61,6 +61,9 @@ static void post(const char *slot, const char *json) {
 extern "C" void ui_state(const char *json) { post("postState", json); }
 extern "C" void ui_event(const char *json) { post("postEvent", json); }
 
+// When the UI has already ended (the user closed the app), the Application
+// object is gone, instance() is null, and invokeMethod on a null object does
+// nothing and returns false (Qt 4.8).
 extern "C" void ui_quit(void) {
     QMetaObject::invokeMethod(Application::instance(), "quit", Qt::QueuedConnection);
 }

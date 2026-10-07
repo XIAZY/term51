@@ -11,14 +11,15 @@ import (
 )
 
 // The development aid: commands written to a file are run in order, the
-// page's reach the page, and the file is emptied.
+// page's reach the page, and the file is removed. Only the first picture
+// of a file is asked for.
 func TestRemoteCommands(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "remote")
 	a, p, done := startAppWith(t, func(cfg *settings.Settings, a *App) {
 		cfg.Remote = true
 		a.RemoteFile = file
 	})
-	if err := os.WriteFile(file, []byte("type echo from-afar\\n\ndrawer open\nwait 50\nshot one\n"), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte("type echo from-afar\\n\ndrawer open\nwait 50\nshot one\nshot two\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	wait(t, "the typed command's output", func() bool { return strings.Count(p.screen(), "from-afar") == 2 })
@@ -27,8 +28,8 @@ func TestRemoteCommands(t *testing.T) {
 		defer p.mu.Unlock()
 		return reflect.DeepEqual(p.remote, []string{"drawer open", "shot one"})
 	})
-	if data, err := os.ReadFile(file); err != nil || len(data) != 0 {
-		t.Errorf("the command file afterwards: %q, %v", data, err)
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		t.Errorf("the command file is still there afterwards: %v", err)
 	}
 	a.Quit()
 	if err := <-done; err != nil {

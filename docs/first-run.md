@@ -118,7 +118,8 @@ The same error text is in the system log of an installed copy that fails
 - **An app cannot quietly take a picture of the display** (2026-10-07).
   `bb::system::Screenshot::captureDisplay` puts a request on the screen for
   every picture, with no "always allow"; until it is answered the file is
-  empty. Tried as a way for the developers to see the page, and removed.
+  empty, and the log has "error 5". Tried as a way for the developers to see
+  the page, and removed, with the remote control that went with it.
 
 ## Still to look at
 

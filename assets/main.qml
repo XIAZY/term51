@@ -88,17 +88,6 @@ TabbedPane {
                     send("paste", { text: text })
             }
 
-            // A development aid (internal/app/remote.go): what a developer
-            // asks the page to do from a file, to look at it without the
-            // phone in hand.
-            function remote(line) {
-                if (line == "drawer open") pane.sidebarState = SidebarState.VisibleFull
-                else if (line == "drawer close") pane.sidebarState = SidebarState.Hidden
-                else if (line == "menu") page.openActionMenu()
-                else if (line == "settings") settingsSheet.open()
-                else if (line == "back") settingsSheet.close()
-            }
-
             function keyArgs(event, down) {
                 return { down: down, key: event.key, keycap: event.keycap, unicode: event.unicode,
                          shift: event.shiftPressed, ctrl: event.ctrlPressed, alt: event.altPressed }
@@ -136,8 +125,6 @@ TabbedPane {
                     }
                     if (e.bell !== undefined && page.bell)
                         bellSound.play()
-                    if (e.remote !== undefined)
-                        page.remote(e.remote)
                     if (e.notice !== undefined) {
                         toast.body = e.notice
                         toast.show()

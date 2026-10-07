@@ -4,8 +4,6 @@ import (
 	"log"
 	"reflect"
 	"runtime"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -88,11 +86,6 @@ func (a *App) Run() error {
 	// The screen's OpenGL context belongs to one thread.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	if a.cfg.Remote {
-		stop := make(chan struct{})
-		defer close(stop)
-		go a.remote(a.RemoteFile, stop)
-	}
 	var scr Screen
 	defer func() {
 		if scr != nil {
@@ -380,19 +373,6 @@ func (a *App) Run() error {
 				_ = sess.SelectAll()
 			case "unselect":
 				sess.ClearSelection()
-			case "remote":
-				// The development aid of remote.go.
-				line, _ := c.Args["line"].(string)
-				switch verb, rest, _ := strings.Cut(line, " "); verb {
-				case "type":
-					sess.Send([]byte(strings.ReplaceAll(rest, `\n`, "\r")))
-				case "tab":
-					if i, err := strconv.Atoi(rest); err == nil && i >= 1 && i <= len(tabs) && i-1 != cur {
-						show(i - 1)
-					}
-				default:
-					a.event(map[string]any{"remote": line})
-				}
 			case "set":
 				// One setting changed on the settings sheet. It is written
 				// to the file at once. The text size, the colours and the

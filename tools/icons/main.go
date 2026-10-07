@@ -1,12 +1,9 @@
-// Command icons draws the icons the system has none for (the tabs button,
-// new tab, close tab, paste, copy, select all, cancel, settings, and the
-// keys of the bar: Esc, Ctrl, Alt, Tab and the four arrows) into
-// assets/images: thin white line drawings on a clear background,
-// 81 by 81 pixels, the size BlackBerry 10 uses for action icons, after the
-// look of the icons in its browser. They are drawn four times as large and
-// scaled down, which smooths the slanted and round edges.
-// A key's icon is its name in letters, or its arrow. Ctrl and Alt have a
-// second icon in BlackBerry blue, shown while the key is armed.
+// Command icons draws the icons the system has none for (the tabs, new tab,
+// close tab, paste, copy, select all, cancel, settings) into assets/images:
+// thin white line drawings on a clear background, 81 by 81 pixels, the size
+// BlackBerry 10 uses for action icons, after the look of the icons in its
+// browser. They are drawn four times as large and scaled down, which smooths
+// the slanted and round edges.
 // Run from the repository's root: go run ./tools/icons
 package main
 
@@ -15,13 +12,7 @@ import (
 	"image/color"
 	"image/png"
 	"log"
-	"math"
 	"os"
-
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/gofont/gomedium"
-	"golang.org/x/image/font/opentype"
-	"golang.org/x/image/math/fixed"
 )
 
 const (
@@ -73,41 +64,6 @@ func sheets(i *icon) {
 	i.frame(10, 24, 57, 71)
 }
 
-// arrow draws an arrow from the icon's middle outwards in the direction dx,
-// dy (one of them 0, the other 1 or -1): a shaft and a head.
-func arrow(dx, dy float64) func(*icon) {
-	return func(i *icon) {
-		i.where(func(x, y float64) bool {
-			// Along the arrow (a) and across it (b), from the middle.
-			x, y = x-40.5, y-40.5
-			a, b := x*dx+y*dy, math.Abs(x*dy-y*dx)
-			shaft := a >= -24 && a <= 22 && b <= line/2.0
-			// The head: two strokes meeting at the tip.
-			d := math.Abs((24-a)-b) / math.Sqrt2
-			head := a >= 6 && a <= 24.5 && b <= 19 && d <= line/2.0
-			return shaft || head
-		})
-	}
-}
-
-// word writes a key's name in the middle of an icon, in col.
-func word(name string, col color.NRGBA) *image.NRGBA {
-	f, err := opentype.Parse(gomedium.TTF)
-	if err != nil {
-		log.Fatal(err)
-	}
-	face, err := opentype.NewFace(f, &opentype.FaceOptions{Size: 32, DPI: 72, Hinting: font.HintingFull})
-	if err != nil {
-		log.Fatal(err)
-	}
-	out := image.NewNRGBA(image.Rect(0, 0, size, size))
-	d := font.Drawer{Dst: out, Src: image.NewUniform(col), Face: face}
-	w := d.MeasureString(name)
-	d.Dot = fixed.Point26_6{X: (fixed.I(size) - w) / 2, Y: fixed.I(52)}
-	d.DrawString(name)
-	return out
-}
-
 func save(name string, img image.Image) {
 	file, err := os.Create("assets/images/" + name + ".png")
 	if err != nil {
@@ -122,20 +78,9 @@ func save(name string, img image.Image) {
 }
 
 func main() {
-	white, blue := color.NRGBA{255, 255, 255, 255}, color.NRGBA{0x00, 0xa8, 0xdf, 255}
-	for file, name := range map[string]string{"key-esc": "Esc", "key-ctrl": "Ctrl", "key-alt": "Alt", "key-tab": "Tab"} {
-		save(file, word(name, white))
-	}
-	save("key-ctrl-armed", word("Ctrl", blue))
-	save("key-alt-armed", word("Alt", blue))
-
 	draw := map[string]func(*icon){
-		"key-left":  arrow(-1, 0),
-		"key-right": arrow(1, 0),
-		"key-up":    arrow(0, -1),
-		"key-down":  arrow(0, 1),
-		"tabs":      sheets,
-		"copy":      sheets,
+		"tabs": sheets,
+		"copy": sheets,
 		// A sheet with a plus at its lower right corner: the browser's
 		// new tab icon.
 		"newtab": func(i *icon) {

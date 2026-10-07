@@ -121,6 +121,15 @@ The same error text is in the system log of an installed copy that fails
   empty, and the log has "error 5". Tried as a way for the developers to see
   the page, and removed, with the remote control that went with it.
 
+- **What the system's action bar holds** (2026-10-07, 5fb459e on the phone,
+  and the SDK's headers). Between the tabs button and the three dots it
+  shows three actions; more go into the dots' menu. Every action on the bar
+  is listed in that menu as well ("The action will also be placed in the
+  action menu"). An action's icon and its title are both shown, so an icon
+  that is a word reads twice. Besides actions the bar takes one text field
+  (`TextInputActionItem`, since 10.3: the browser's address field) and no
+  control of an app's own.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

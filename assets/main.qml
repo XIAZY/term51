@@ -4,16 +4,18 @@ import bb.multimedia 1.4
 
 // The app's one screen, made of BlackBerry 10's own pieces as its browser
 // is: a tabbed pane whose bar at the bottom is the system's action bar (the
-// tabs button on the left, the three dots on the right, between them the
-// keys the phone's keyboard lacks as the bar's own buttons) and whose tabs
-// are in the system's drawer, which slides in from the left. There is one
+// tabs button on the left, the three dots on the right) and whose tabs are
+// in the system's drawer, which slides in from the left. The keys the
+// phone's keyboard lacks are a slim strip of ours directly on top of the
+// bar, in the bar's colour: the system's bar takes three buttons at most and
+// repeats them in the menu of the three dots, where keys do not belong. There is one
 // tab per shell and a "New Tab" row above them; all tabs show the same page,
 // the terminal. The terminal itself is not drawn by Cascades: Go draws it
 // with OpenGL into a window of its own, and the ForeignWindowControl below
 // is the place in the page where that window shows.
 TabbedPane {
     id: pane
-    showTabsOnActionBar: false // the keys are on the bar; the tabs in the drawer
+    showTabsOnActionBar: false // the tabs are in the drawer
     peekEnabled: false         // a sideways drag belongs to the terminal
 
     // The tabs follow Go's list of shells: tab 0 is "New Tab", tab i + 1 is
@@ -132,64 +134,13 @@ TabbedPane {
                 })
             }
 
-            // The system's bar: the keys as its buttons, in this order as
-            // far as they fit (what does not fit, the system puts into the
-            // menu of the three dots, before the four below). Ctrl and Alt
-            // are sticky: they apply to the next key, and their icon is in
-            // the primary colour until then.
+            // The system's bar and the menu of its three dots. Paste is on
+            // the bar too.
             actions: [
-                ActionItem {
-                    title: "Esc"
-                    imageSource: "asset:///images/key-esc.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "esc" })
-                },
-                ActionItem {
-                    title: "Ctrl"
-                    imageSource: page.ctrl ? "asset:///images/key-ctrl-armed.png" : "asset:///images/key-ctrl.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "ctrl" })
-                },
-                ActionItem {
-                    title: "Tab"
-                    imageSource: "asset:///images/key-tab.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "tab" })
-                },
-                ActionItem {
-                    title: "Left"
-                    imageSource: "asset:///images/key-left.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "left" })
-                },
-                ActionItem {
-                    title: "Down"
-                    imageSource: "asset:///images/key-down.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "down" })
-                },
-                ActionItem {
-                    title: "Up"
-                    imageSource: "asset:///images/key-up.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "up" })
-                },
-                ActionItem {
-                    title: "Right"
-                    imageSource: "asset:///images/key-right.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "right" })
-                },
-                ActionItem {
-                    title: "Alt"
-                    imageSource: page.alt ? "asset:///images/key-alt-armed.png" : "asset:///images/key-alt.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "alt" })
-                },
                 ActionItem {
                     title: "Paste"
                     imageSource: "asset:///images/paste.png"
-                    ActionBar.placement: ActionBarPlacement.InOverflow
+                    ActionBar.placement: ActionBarPlacement.OnBar
                     onTriggered: page.pasteClipboard()
                 },
                 ActionItem {
@@ -275,72 +226,118 @@ TabbedPane {
                 // and opens the standard context menu (on text that is already
                 // selected it keeps the selection). A tap brings up the on-screen
                 // keyboard rows (the phone's own swipe down puts them away).
-                ForeignWindowControl {
-                    id: fwc
-                    windowId: "term51"
-                    // Under a sheet the terminal's window is taken off the screen:
-                    // otherwise the phone blends the sheet's window with it on
-                    // every frame, and the sheet scrolls slowly.
-                    visible: !page.covered
-                    updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
+                Container {
                     horizontalAlignment: HorizontalAlignment.Fill
                     verticalAlignment: VerticalAlignment.Fill
-                    property real touchX: 0 // where the finger went down,
-                    property real downY: 0  // for the press and hold
-                    property real touchY: 0 // the drag so far
-                    attachedObjects: LayoutUpdateHandler {
-                        onLayoutFrameChanged: page.sized(layoutFrame)
-                    }
-                    gestureHandlers: TapHandler {
-                        onTapped: input.requestFocus()
-                    }
-                    contextMenuHandler: ContextMenuHandler {
-                        onPopulating: {
-                            if (page.cellW > 0 && page.cellH > 0)
-                                page.send("selectword", { x: Math.floor(fwc.touchX / page.cellW), y: Math.floor(fwc.downY / page.cellH) })
+
+                    ForeignWindowControl {
+                        id: fwc
+                        windowId: "term51"
+                        // Under a sheet the terminal's window is taken off the screen:
+                        // otherwise the phone blends the sheet's window with it on
+                        // every frame, and the sheet scrolls slowly.
+                        visible: !page.covered
+                        updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                        property real touchX: 0 // where the finger went down,
+                        property real downY: 0  // for the press and hold
+                        property real touchY: 0 // the drag so far
+                        attachedObjects: LayoutUpdateHandler {
+                            onLayoutFrameChanged: page.sized(layoutFrame)
                         }
-                    }
-                    contextActions: ActionSet {
-                        title: "Selection"
-                        ActionItem {
-                            title: "Copy"
-                            imageSource: "asset:///images/copy.png"
-                            onTriggered: page.send("copy")
+                        gestureHandlers: TapHandler {
+                            onTapped: input.requestFocus()
                         }
-                        ActionItem {
-                            title: "Select All"
-                            imageSource: "asset:///images/selectall.png"
-                            onTriggered: page.send("selectall")
-                        }
-                        ActionItem {
-                            title: "Paste"
-                            imageSource: "asset:///images/paste.png"
-                            onTriggered: {
-                                page.send("unselect")
-                                page.pasteClipboard()
+                        contextMenuHandler: ContextMenuHandler {
+                            onPopulating: {
+                                if (page.cellW > 0 && page.cellH > 0)
+                                    page.send("selectword", { x: Math.floor(fwc.touchX / page.cellW), y: Math.floor(fwc.downY / page.cellH) })
                             }
                         }
-                        ActionItem {
-                            title: "Cancel Selection"
-                            imageSource: "asset:///images/cancel.png"
-                            onTriggered: page.send("unselect")
-                        }
-                    }
-                    onTouch: {
-                        if (event.isDown()) {
-                            fwc.touchX = event.localX
-                            fwc.downY = event.localY
-                            fwc.touchY = event.localY
-                        } else if (event.isMove() && page.cellH > 0) {
-                            var d = Math.floor((event.localY - fwc.touchY) / page.cellH)
-                            if (d != 0) {
-                                page.send("scroll", { rows: -d })
-                                fwc.touchY += d * page.cellH
+                        contextActions: ActionSet {
+                            title: "Selection"
+                            ActionItem {
+                                title: "Copy"
+                                imageSource: "asset:///images/copy.png"
+                                onTriggered: page.send("copy")
+                            }
+                            ActionItem {
+                                title: "Select All"
+                                imageSource: "asset:///images/selectall.png"
+                                onTriggered: page.send("selectall")
+                            }
+                            ActionItem {
+                                title: "Paste"
+                                imageSource: "asset:///images/paste.png"
+                                onTriggered: {
+                                    page.send("unselect")
+                                    page.pasteClipboard()
+                                }
+                            }
+                            ActionItem {
+                                title: "Cancel Selection"
+                                imageSource: "asset:///images/cancel.png"
+                                onTriggered: page.send("unselect")
                             }
                         }
+                        onTouch: {
+                            if (event.isDown()) {
+                                fwc.touchX = event.localX
+                                fwc.downY = event.localY
+                                fwc.touchY = event.localY
+                            } else if (event.isMove() && page.cellH > 0) {
+                                var d = Math.floor((event.localY - fwc.touchY) / page.cellH)
+                                if (d != 0) {
+                                    page.send("scroll", { rows: -d })
+                                    fwc.touchY += d * page.cellH
+                                }
+                            }
+                        }
+                    }
+
+                    // The keys the phone's keyboard lacks: a strip directly on
+                    // top of the system's bar and in its colour, with a hair-line
+                    // above. Nothing on it takes the focus. Ctrl and Alt are
+                    // sticky: they apply to the next key and stay lit until then.
+                    Container {
+                        background: Color.create("#383838")
+                        preferredHeight: 2
+                        horizontalAlignment: HorizontalAlignment.Fill
+                    }
+                    Container {
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                        background: Color.create("#262626")
+                        preferredHeight: 84
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        KeyCell { text: "Esc"
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "esc" }) }
+                        KeyCell { text: "Ctrl"; armed: page.ctrl
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "ctrl" }) }
+                        KeyCell { text: "Alt"; armed: page.alt
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "alt" }) }
+                        KeyCell { text: "Tab"
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "tab" }) }
+                        KeyCell { text: "←"
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "left" }) }
+                        KeyCell { text: "↓"
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "down" }) }
+                        KeyCell { text: "↑"
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "up" }) }
+                        KeyCell { text: "→"
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "right" }) }
                     }
                 }
             }
         }
     ]
 }
+

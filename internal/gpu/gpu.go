@@ -25,379 +25,360 @@
 // gets.
 //
 // Go crosses into C once per frame (Frame), and once more only when part of
-// the sheet is new (Sheet). Everything must be called from one goroutine
-// locked to its thread: an OpenGL context belongs to a thread.
+// the sheet is new (Sheet). The frame is the one piece written in C
+// (t51_frame below), so that it is one crossing and not four. Everything
+// else, which runs once or on a resize, is Go calling the window system's,
+// EGL's and OpenGL's functions directly. Everything must be called from one
+// goroutine locked to its thread: an OpenGL context belongs to a thread.
 package gpu
 
 /*
 #cgo LDFLAGS: -lscreen -lEGL -lGLESv2
-#include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <screen/screen.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
-#define T51_SHEET 2048
-
-typedef struct t51_gpu {
-	screen_context_t ctx;
-	screen_window_t win;
-	EGLDisplay dpy;
-	EGLConfig config;
-	EGLContext glctx;
-	EGLSurface surf;
-	GLuint prog, buf, tex, vao;
-	GLint u_grid, u_cell, u_view, u_sheet_cols, u_thick;
-	int w, h, cells;
-	char err[256];
-} t51_gpu;
-
-static const char *t51_vs =
-	"#version 300 es\n"
-	"layout(location = 0) in vec2 a_corner;\n" // of the cell: 0,0 1,0 0,1 1,1
-	"layout(location = 1) in uvec2 a_what;\n"  // slot, flags
-	"layout(location = 2) in vec4 a_fg;\n"
-	"layout(location = 3) in vec4 a_bg;\n"
-	"layout(location = 4) in vec4 a_line;\n"
-	"uniform ivec2 u_grid;\n"       // columns, rows
-	"uniform vec2 u_cell;\n"        // a cell in pixels
-	"uniform vec2 u_view;\n"        // the window in pixels
-	"uniform int u_sheet_cols;\n"   // slots per row of the sheet
-	"out vec4 v_fg;\n"
-	"out vec4 v_bg;\n"
-	"out vec4 v_line;\n"
-	"out vec2 v_local;\n"           // the pixel inside the cell
-	"flat out ivec2 v_origin;\n"    // the slot's corner in the sheet
-	"flat out uint v_slot;\n"
-	"flat out uint v_flags;\n"
-	"void main() {\n"
-	"	vec2 at = vec2(float(gl_InstanceID % u_grid.x), float(gl_InstanceID / u_grid.x));\n"
-	"	vec2 p = (at + a_corner) * u_cell / u_view * 2.0 - 1.0;\n"
-	"	gl_Position = vec4(p.x, -p.y, 0.0, 1.0);\n" // record 0 is the top left
-	"	v_fg = a_fg;\n"
-	"	v_bg = a_bg;\n"
-	"	v_line = a_line;\n"
-	"	v_local = a_corner * u_cell;\n"
-	"	int slot = int(a_what.x);\n"
-	"	v_origin = ivec2(slot % u_sheet_cols, slot / u_sheet_cols) * ivec2(u_cell);\n"
-	"	v_slot = a_what.x;\n"
-	"	v_flags = a_what.y;\n"
-	"}\n";
-
-static const char *t51_fs =
-	"#version 300 es\n"
-	"precision mediump float;\n"
-	"uniform mediump sampler2D u_sheet;\n"
-	"uniform vec2 u_cell;\n"
-	"uniform float u_thick;\n"      // the thickness of lines, in pixels
-	"in vec4 v_fg;\n"
-	"in vec4 v_bg;\n"
-	"in vec4 v_line;\n"
-	"in vec2 v_local;\n"
-	"flat in ivec2 v_origin;\n"
-	"flat in uint v_slot;\n"
-	"flat in uint v_flags;\n"
-	"out vec4 o_col;\n"
-	"void main() {\n"
-	"	float a = 0.0;\n"
-	"	if (v_slot != 0u)\n"
-	"		a = texelFetch(u_sheet, v_origin + ivec2(v_local), 0).r;\n"
-	"	float x = v_local.x, y = v_local.y, t = u_thick, line = 0.0;\n"
-	"	if ((v_flags & 2u) != 0u && y >= floor(u_cell.y * 0.55) && y < floor(u_cell.y * 0.55) + t) a = 1.0;\n" // strikethrough
-	"	if ((v_flags & 1u) != 0u && y >= u_cell.y - 2.0 * t && y < u_cell.y - t) line = 1.0;\n"          // underline
-	"	if ((v_flags & 4u) != 0u && x < 2.0 * t) line = 1.0;\n"                                           // cursor bar
-	"	if ((v_flags & 8u) != 0u && y >= u_cell.y - 2.0 * t) line = 1.0;\n"                               // cursor underline
-	"	if ((v_flags & 16u) != 0u && (x < t || y < t || x >= u_cell.x - t || y >= u_cell.y - t)) line = 1.0;\n" // hollow cursor box
-	"	o_col = vec4(mix(mix(v_bg.rgb, v_fg.rgb, a), v_line.rgb, line), 1.0);\n"
-	"}\n";
-
-static int t51_fail(t51_gpu *g, const char *what) {
-	snprintf(g->err, sizeof g->err, "%s (errno %d, EGL %#x, GL %#x)", what, errno, (unsigned)eglGetError(),
-		g->glctx != EGL_NO_CONTEXT ? (unsigned)glGetError() : 0u);
-	return -1;
-}
-
-static GLuint t51_shader(t51_gpu *g, GLenum kind, const char *src) {
-	GLuint s = glCreateShader(kind);
-	glShaderSource(s, 1, &src, NULL);
-	glCompileShader(s);
-	GLint ok = 0;
-	glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-	if (!ok) {
-		char log[200];
-		glGetShaderInfoLog(s, sizeof log, NULL, log);
-		snprintf(g->err, sizeof g->err, "compiling a shader: %s", log);
-		return 0;
-	}
-	return s;
-}
-
-// The window's buffers and the EGL surface on them, for w by h pixels.
-static int t51_surface(t51_gpu *g, int w, int h) {
-	int size[2] = {w, h};
-	if (screen_set_window_property_iv(g->win, SCREEN_PROPERTY_BUFFER_SIZE, size) != 0)
-		return t51_fail(g, "setting the window's buffer size");
-	if (screen_create_window_buffers(g->win, 2) != 0)
-		return t51_fail(g, "creating the window's buffers");
-	// The part of the buffer shown is all of it. The system sets this with
-	// a window's first buffers only: after a resize it stays the old size.
-	if (screen_set_window_property_iv(g->win, SCREEN_PROPERTY_SOURCE_SIZE, size) != 0)
-		return t51_fail(g, "setting the part of the buffer shown");
-	g->surf = eglCreateWindowSurface(g->dpy, g->config, g->win, NULL);
-	if (g->surf == EGL_NO_SURFACE)
-		return t51_fail(g, "eglCreateWindowSurface");
-	if (!eglMakeCurrent(g->dpy, g->surf, g->surf, g->glctx))
-		return t51_fail(g, "eglMakeCurrent");
-	g->w = w;
-	g->h = h;
-	return 0;
-}
-
-// Creates the window in the Cascades window's group, with the id the page's
-// ForeignWindowControl looks for, and everything OpenGL needs.
-static int t51_gpu_open(t51_gpu *g, const char *group, const char *id, int w, int h) {
-	if (screen_create_context(&g->ctx, SCREEN_APPLICATION_CONTEXT) != 0)
-		return t51_fail(g, "screen_create_context");
-	if (screen_create_window_type(&g->win, g->ctx, SCREEN_CHILD_WINDOW) != 0)
-		return t51_fail(g, "screen_create_window_type");
-	if (screen_join_window_group(g->win, group) != 0)
-		return t51_fail(g, "joining the page's window group");
-	if (screen_set_window_property_cv(g->win, SCREEN_PROPERTY_ID_STRING, strlen(id), id) != 0)
-		return t51_fail(g, "setting the window's id");
-	int format = SCREEN_FORMAT_RGBX8888;
-	int usage = SCREEN_USAGE_OPENGL_ES2 | SCREEN_USAGE_OPENGL_ES3;
-	// Below the Cascades window (Z-order 0): the ForeignWindowControl is a
-	// hole in the page through which this window shows.
-	int z = -5;
-	if (screen_set_window_property_iv(g->win, SCREEN_PROPERTY_FORMAT, &format) != 0 ||
-		screen_set_window_property_iv(g->win, SCREEN_PROPERTY_USAGE, &usage) != 0 ||
-		screen_set_window_property_iv(g->win, SCREEN_PROPERTY_ZORDER, &z) != 0)
-		return t51_fail(g, "setting the window's properties");
-
-	g->dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	if (g->dpy == EGL_NO_DISPLAY || !eglInitialize(g->dpy, NULL, NULL) || !eglBindAPI(EGL_OPENGL_ES_API))
-		return t51_fail(g, "starting EGL");
-	EGLint attribs[] = {EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8,
-		EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE, 0x0040, EGL_NONE}; // EGL_OPENGL_ES3_BIT_KHR
-	EGLint n = 0;
-	if (!eglChooseConfig(g->dpy, attribs, &g->config, 1, &n) || n == 0)
-		return t51_fail(g, "eglChooseConfig");
-	EGLint version[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
-	g->glctx = eglCreateContext(g->dpy, g->config, EGL_NO_CONTEXT, version);
-	if (g->glctx == EGL_NO_CONTEXT)
-		return t51_fail(g, "creating an OpenGL ES 3.0 context");
-	if (t51_surface(g, w, h) != 0)
-		return -1;
-
-	GLuint vs = t51_shader(g, GL_VERTEX_SHADER, t51_vs), fs = t51_shader(g, GL_FRAGMENT_SHADER, t51_fs);
-	if (!vs || !fs)
-		return -1;
-	g->prog = glCreateProgram();
-	glAttachShader(g->prog, vs);
-	glAttachShader(g->prog, fs);
-	glLinkProgram(g->prog);
-	GLint ok = 0;
-	glGetProgramiv(g->prog, GL_LINK_STATUS, &ok);
-	if (!ok) {
-		char log[200];
-		glGetProgramInfoLog(g->prog, sizeof log, NULL, log);
-		snprintf(g->err, sizeof g->err, "linking the program: %s", log);
-		return -1;
-	}
-	glUseProgram(g->prog);
-	g->u_grid = glGetUniformLocation(g->prog, "u_grid");
-	g->u_cell = glGetUniformLocation(g->prog, "u_cell");
-	g->u_view = glGetUniformLocation(g->prog, "u_view");
-	g->u_sheet_cols = glGetUniformLocation(g->prog, "u_sheet_cols");
-	g->u_thick = glGetUniformLocation(g->prog, "u_thick");
-	glUniform1i(glGetUniformLocation(g->prog, "u_sheet"), 0);
-
-	// A cell's four corners, the same for every cell.
-	glGenVertexArrays(1, &g->vao);
-	glBindVertexArray(g->vao);
-	static const GLubyte corners[] = {0, 0, 1, 0, 0, 1, 1, 1};
-	GLuint quad;
-	glGenBuffers(1, &quad);
-	glBindBuffer(GL_ARRAY_BUFFER, quad);
-	glBufferData(GL_ARRAY_BUFFER, sizeof corners, corners, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_UNSIGNED_BYTE, GL_FALSE, 2, (void *)0);
-
-	// The cell table: one record per instance. Its buffer stays bound.
-	glGenBuffers(1, &g->buf);
-	glBindBuffer(GL_ARRAY_BUFFER, g->buf);
-	glEnableVertexAttribArray(1);
-	glVertexAttribIPointer(1, 2, GL_UNSIGNED_SHORT, 16, (void *)0);
-	glVertexAttribDivisor(1, 1);
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)4);
-	glVertexAttribDivisor(2, 1);
-	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)8);
-	glVertexAttribDivisor(3, 1);
-	glEnableVertexAttribArray(4);
-	glVertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)12);
-	glVertexAttribDivisor(4, 1);
-
-	// The character sheet, empty until Sheet is called.
-	glGenTextures(1, &g->tex);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, g->tex);
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, T51_SHEET, T51_SHEET);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, T51_SHEET);
-
-	glViewport(0, 0, w, h);
-	glUniform2f(g->u_view, (float)w, (float)h);
-	int visible = 1;
-	if (screen_set_window_property_iv(g->win, SCREEN_PROPERTY_VISIBLE, &visible) != 0)
-		return t51_fail(g, "showing the window");
-	return 0;
-}
-
-// The window's buffers again, for a new size.
-static int t51_gpu_resize(t51_gpu *g, int w, int h) {
-	eglMakeCurrent(g->dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-	eglDestroySurface(g->dpy, g->surf);
-	if (screen_destroy_window_buffers(g->win) != 0)
-		return t51_fail(g, "destroying the window's buffers");
-	if (t51_surface(g, w, h) != 0)
-		return -1;
-	glViewport(0, 0, w, h);
-	glUniform2f(g->u_view, (float)w, (float)h);
-	return 0;
-}
-
-// The dots per inch of the display the window is on.
-static int t51_gpu_dpi(t51_gpu *g) {
-	screen_display_t display = NULL;
-	int dpi = 0;
-	screen_get_window_property_pv(g->win, SCREEN_PROPERTY_DISPLAY, (void **)&display);
-	screen_get_display_property_iv(display, SCREEN_PROPERTY_DPI, &dpi);
-	return dpi;
-}
-
-// The window's size, its buffers' size and the part of the buffer shown, as
-// libscreen has them: three pairs.
-static void t51_gpu_sizes(t51_gpu *g, int *out) {
-	screen_get_window_property_iv(g->win, SCREEN_PROPERTY_SIZE, out);
-	screen_get_window_property_iv(g->win, SCREEN_PROPERTY_BUFFER_SIZE, out + 2);
-	screen_get_window_property_iv(g->win, SCREEN_PROPERTY_SOURCE_SIZE, out + 4);
-}
-
-// The grid's shape and the colour of what lies outside it; the table's
-// storage on the GPU.
-static void t51_gpu_grid(t51_gpu *g, int cols, int rows, int cell_w, int cell_h, int r, int gr, int b) {
-	g->cells = cols * rows;
-	glUniform2i(g->u_grid, cols, rows);
-	glUniform2f(g->u_cell, (float)cell_w, (float)cell_h);
-	glUniform1i(g->u_sheet_cols, T51_SHEET / cell_w);
-	int thick = cell_h / 14;
-	glUniform1f(g->u_thick, (float)(thick < 1 ? 1 : thick));
-	glBufferData(GL_ARRAY_BUFFER, g->cells * 16, NULL, GL_DYNAMIC_DRAW);
-	glClearColor(r / 255.0f, gr / 255.0f, b / 255.0f, 1.0f);
-}
-
-// A new part of the character sheet: the rectangle x, y, w, h of the whole
-// picture at pix.
-static void t51_gpu_sheet(t51_gpu *g, const unsigned char *pix, int x, int y, int w, int h) {
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, GL_RED, GL_UNSIGNED_BYTE, pix + (size_t)y * T51_SHEET + x);
-}
-
 // One frame: the bytes lo <= i < hi of the table are new. With shot not
-// NULL the picture is also read back into it before it is shown: 4 bytes
-// (R, G, B, A) per pixel, the bottom row first.
-static int t51_gpu_frame(t51_gpu *g, const unsigned char *table, int lo, int hi, unsigned char *shot) {
+// NULL the picture, w by h pixels, is also read back into it before it is
+// shown: 4 bytes (R, G, B, A) per pixel, the bottom row first. Returns 0
+// when the swap failed.
+static int t51_frame(EGLDisplay dpy, EGLSurface surf, const unsigned char *table, int lo, int hi, int cells,
+	unsigned char *shot, int w, int h) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (hi > lo)
 		glBufferSubData(GL_ARRAY_BUFFER, lo, hi - lo, table + lo);
-	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g->cells);
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, cells);
 	if (shot)
-		glReadPixels(0, 0, g->w, g->h, GL_RGBA, GL_UNSIGNED_BYTE, shot);
-	if (!eglSwapBuffers(g->dpy, g->surf))
-		return t51_fail(g, "eglSwapBuffers");
-	return 0;
-}
-
-static void t51_gpu_close(t51_gpu *g) {
-	eglMakeCurrent(g->dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-	eglDestroySurface(g->dpy, g->surf);
-	eglDestroyContext(g->dpy, g->glctx);
-	eglTerminate(g->dpy);
-	screen_destroy_window(g->win);
-	screen_destroy_context(g->ctx);
+		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, shot);
+	return eglSwapBuffers(dpy, surf);
 }
 */
 import "C"
 
 import (
-	"errors"
+	"fmt"
 	"unsafe"
 )
 
 // SheetSize is the width and height of the character sheet in pixels.
-const SheetSize = C.T51_SHEET
+const SheetSize = 2048
 
 // RecordSize is the size of one cell's record in the table.
 const RecordSize = 16
 
+const vertexShader = `#version 300 es
+layout(location = 0) in vec2 a_corner; // of the cell: 0,0 1,0 0,1 1,1
+layout(location = 1) in uvec2 a_what;  // slot, flags
+layout(location = 2) in vec4 a_fg;
+layout(location = 3) in vec4 a_bg;
+layout(location = 4) in vec4 a_line;
+uniform ivec2 u_grid;      // columns, rows
+uniform vec2 u_cell;       // a cell in pixels
+uniform vec2 u_view;       // the window in pixels
+uniform int u_sheet_cols;  // slots per row of the sheet
+out vec4 v_fg;
+out vec4 v_bg;
+out vec4 v_line;
+out vec2 v_local;          // the pixel inside the cell
+flat out ivec2 v_origin;   // the slot's corner in the sheet
+flat out uint v_slot;
+flat out uint v_flags;
+void main() {
+	vec2 at = vec2(float(gl_InstanceID % u_grid.x), float(gl_InstanceID / u_grid.x));
+	vec2 p = (at + a_corner) * u_cell / u_view * 2.0 - 1.0;
+	gl_Position = vec4(p.x, -p.y, 0.0, 1.0); // record 0 is the top left
+	v_fg = a_fg;
+	v_bg = a_bg;
+	v_line = a_line;
+	v_local = a_corner * u_cell;
+	int slot = int(a_what.x);
+	v_origin = ivec2(slot % u_sheet_cols, slot / u_sheet_cols) * ivec2(u_cell);
+	v_slot = a_what.x;
+	v_flags = a_what.y;
+}
+`
+
+const fragmentShader = `#version 300 es
+precision mediump float;
+uniform mediump sampler2D u_sheet;
+uniform vec2 u_cell;
+uniform float u_thick;     // the thickness of lines, in pixels
+in vec4 v_fg;
+in vec4 v_bg;
+in vec4 v_line;
+in vec2 v_local;
+flat in ivec2 v_origin;
+flat in uint v_slot;
+flat in uint v_flags;
+out vec4 o_col;
+void main() {
+	float a = 0.0;
+	if (v_slot != 0u)
+		a = texelFetch(u_sheet, v_origin + ivec2(v_local), 0).r;
+	float x = v_local.x, y = v_local.y, t = u_thick, line = 0.0;
+	if ((v_flags & 2u) != 0u && y >= floor(u_cell.y * 0.55) && y < floor(u_cell.y * 0.55) + t) a = 1.0; // strikethrough
+	if ((v_flags & 1u) != 0u && y >= u_cell.y - 2.0 * t && y < u_cell.y - t) line = 1.0;                // underline
+	if ((v_flags & 4u) != 0u && x < 2.0 * t) line = 1.0;                                                 // cursor bar
+	if ((v_flags & 8u) != 0u && y >= u_cell.y - 2.0 * t) line = 1.0;                                     // cursor underline
+	if ((v_flags & 16u) != 0u && (x < t || y < t || x >= u_cell.x - t || y >= u_cell.y - t)) line = 1.0; // hollow cursor box
+	o_col = vec4(mix(mix(v_bg.rgb, v_fg.rgb, a), v_line.rgb, line), 1.0);
+}
+`
+
+// EGL_OPENGL_ES3_BIT_KHR, which the phone's egl.h does not name.
+const eglOpenGLES3Bit = 0x0040
+
 // Screen is the window and what OpenGL holds for it.
 type Screen struct {
-	g C.t51_gpu
+	ctx    C.screen_context_t
+	win    C.screen_window_t
+	dpy    C.EGLDisplay
+	config C.EGLConfig
+	glctx  C.EGLContext
+	surf   C.EGLSurface
+	w, h   int
+	cells  int
+
+	uGrid, uCell, uView, uSheetCols, uThick C.GLint
 }
 
-func (s *Screen) err() error { return errors.New("gpu: " + C.GoString(&s.g.err[0])) }
+// fail is an error naming the step, with what the three libraries say.
+func (s *Screen) fail(what string, errno error) error {
+	glErr := C.GLenum(0)
+	if s.glctx != nil {
+		glErr = C.glGetError()
+	}
+	return fmt.Errorf("gpu: %s (%v, EGL %#x, GL %#x)", what, errno, uint(C.eglGetError()), uint(glErr))
+}
 
 // Open creates the window, w by h pixels, for the page's ForeignWindowControl
-// with the given window group and id.
+// with the given window group and id: a child window in the Cascades
+// window's group, EGL, an OpenGL ES 3.0 context, the program and its buffers.
 func Open(group, id string, w, h int) (*Screen, error) {
 	s := new(Screen)
-	cg, ci := C.CString(group), C.CString(id)
-	defer C.free(unsafe.Pointer(cg))
-	defer C.free(unsafe.Pointer(ci))
-	if C.t51_gpu_open(&s.g, cg, ci, C.int(w), C.int(h)) != 0 {
-		return nil, s.err()
+	cgroup, cid := C.CString(group), C.CString(id)
+	defer C.free(unsafe.Pointer(cgroup))
+	defer C.free(unsafe.Pointer(cid))
+
+	if r, err := C.screen_create_context(&s.ctx, C.SCREEN_APPLICATION_CONTEXT); r != 0 {
+		return nil, s.fail("screen_create_context", err)
+	}
+	if r, err := C.screen_create_window_type(&s.win, s.ctx, C.SCREEN_CHILD_WINDOW); r != 0 {
+		return nil, s.fail("screen_create_window_type", err)
+	}
+	if r, err := C.screen_join_window_group(s.win, cgroup); r != 0 {
+		return nil, s.fail("joining the page's window group", err)
+	}
+	if r, err := C.screen_set_window_property_cv(s.win, C.SCREEN_PROPERTY_ID_STRING, C.int(len(id)), cid); r != 0 {
+		return nil, s.fail("setting the window's id", err)
+	}
+	// Below the Cascades window (Z-order 0): the ForeignWindowControl is a
+	// hole in the page through which this window shows.
+	for _, p := range []struct{ name, value C.int }{
+		{C.SCREEN_PROPERTY_FORMAT, C.SCREEN_FORMAT_RGBX8888},
+		{C.SCREEN_PROPERTY_USAGE, C.SCREEN_USAGE_OPENGL_ES2 | C.SCREEN_USAGE_OPENGL_ES3},
+		{C.SCREEN_PROPERTY_ZORDER, -5},
+	} {
+		value := p.value
+		if r, err := C.screen_set_window_property_iv(s.win, p.name, &value); r != 0 {
+			return nil, s.fail("setting the window's properties", err)
+		}
+	}
+
+	s.dpy = C.eglGetDisplay(C.EGLNativeDisplayType(0)) // EGL_DEFAULT_DISPLAY
+	if s.dpy == 0 || C.eglInitialize(s.dpy, nil, nil) == 0 || C.eglBindAPI(C.EGL_OPENGL_ES_API) == 0 {
+		return nil, s.fail("starting EGL", nil)
+	}
+	attribs := []C.EGLint{C.EGL_RED_SIZE, 8, C.EGL_GREEN_SIZE, 8, C.EGL_BLUE_SIZE, 8,
+		C.EGL_SURFACE_TYPE, C.EGL_WINDOW_BIT, C.EGL_RENDERABLE_TYPE, eglOpenGLES3Bit, C.EGL_NONE}
+	var n C.EGLint
+	if C.eglChooseConfig(s.dpy, &attribs[0], &s.config, 1, &n) == 0 || n == 0 {
+		return nil, s.fail("eglChooseConfig", nil)
+	}
+	version := []C.EGLint{C.EGL_CONTEXT_CLIENT_VERSION, 3, C.EGL_NONE}
+	s.glctx = C.eglCreateContext(s.dpy, s.config, nil, &version[0])
+	if s.glctx == nil {
+		return nil, s.fail("creating an OpenGL ES 3.0 context", nil)
+	}
+	if err := s.surface(w, h); err != nil {
+		return nil, err
+	}
+
+	prog := C.glCreateProgram()
+	for _, sh := range []struct {
+		kind C.GLenum
+		src  string
+	}{{C.GL_VERTEX_SHADER, vertexShader}, {C.GL_FRAGMENT_SHADER, fragmentShader}} {
+		id, err := compile(sh.kind, sh.src)
+		if err != nil {
+			return nil, err
+		}
+		C.glAttachShader(prog, id)
+	}
+	C.glLinkProgram(prog)
+	var ok C.GLint
+	C.glGetProgramiv(prog, C.GL_LINK_STATUS, &ok)
+	if ok == 0 {
+		var log [512]C.GLchar
+		C.glGetProgramInfoLog(prog, C.GLsizei(len(log)), nil, &log[0])
+		return nil, fmt.Errorf("gpu: linking the program: %s", C.GoString((*C.char)(&log[0])))
+	}
+	C.glUseProgram(prog)
+	uniform := func(name string) C.GLint {
+		cname := C.CString(name)
+		defer C.free(unsafe.Pointer(cname))
+		return C.glGetUniformLocation(prog, (*C.GLchar)(cname))
+	}
+	s.uGrid, s.uCell, s.uView = uniform("u_grid"), uniform("u_cell"), uniform("u_view")
+	s.uSheetCols, s.uThick = uniform("u_sheet_cols"), uniform("u_thick")
+	C.glUniform1i(uniform("u_sheet"), 0)
+
+	// A cell's four corners, the same for every cell.
+	var vao, quad, buf, tex C.GLuint
+	C.glGenVertexArrays(1, &vao)
+	C.glBindVertexArray(vao)
+	corners := [8]uint8{0, 0, 1, 0, 0, 1, 1, 1}
+	C.glGenBuffers(1, &quad)
+	C.glBindBuffer(C.GL_ARRAY_BUFFER, quad)
+	C.glBufferData(C.GL_ARRAY_BUFFER, C.GLsizeiptr(len(corners)), unsafe.Pointer(&corners[0]), C.GL_STATIC_DRAW)
+	C.glEnableVertexAttribArray(0)
+	C.glVertexAttribPointer(0, 2, C.GL_UNSIGNED_BYTE, C.GL_FALSE, 2, nil)
+
+	// The cell table: one record per instance. Its buffer stays bound.
+	C.glGenBuffers(1, &buf)
+	C.glBindBuffer(C.GL_ARRAY_BUFFER, buf)
+	C.glEnableVertexAttribArray(1)
+	C.glVertexAttribIPointer(1, 2, C.GL_UNSIGNED_SHORT, RecordSize, nil)
+	C.glVertexAttribDivisor(1, 1)
+	for i, offset := range []int{4, 8, 12} { // text, background and line colours
+		at := C.GLuint(i + 2)
+		C.glEnableVertexAttribArray(at)
+		C.glVertexAttribPointer(at, 4, C.GL_UNSIGNED_BYTE, C.GL_TRUE, RecordSize, unsafe.Add(nil, offset))
+		C.glVertexAttribDivisor(at, 1)
+	}
+
+	// The character sheet, empty until Sheet is called.
+	C.glGenTextures(1, &tex)
+	C.glActiveTexture(C.GL_TEXTURE0)
+	C.glBindTexture(C.GL_TEXTURE_2D, tex)
+	C.glTexStorage2D(C.GL_TEXTURE_2D, 1, C.GL_R8, SheetSize, SheetSize)
+	C.glTexParameteri(C.GL_TEXTURE_2D, C.GL_TEXTURE_MIN_FILTER, C.GL_NEAREST)
+	C.glTexParameteri(C.GL_TEXTURE_2D, C.GL_TEXTURE_MAG_FILTER, C.GL_NEAREST)
+	C.glPixelStorei(C.GL_UNPACK_ALIGNMENT, 1)
+	C.glPixelStorei(C.GL_UNPACK_ROW_LENGTH, SheetSize)
+
+	s.viewport()
+	visible := C.int(1)
+	if r, err := C.screen_set_window_property_iv(s.win, C.SCREEN_PROPERTY_VISIBLE, &visible); r != 0 {
+		return nil, s.fail("showing the window", err)
 	}
 	return s, nil
 }
 
-// Resize gives the window a new size in pixels.
-func (s *Screen) Resize(w, h int) error {
-	if C.t51_gpu_resize(&s.g, C.int(w), C.int(h)) != 0 {
-		return s.err()
+func compile(kind C.GLenum, src string) (C.GLuint, error) {
+	id := C.glCreateShader(kind)
+	csrc := (*C.GLchar)(C.CString(src))
+	defer C.free(unsafe.Pointer(csrc))
+	C.glShaderSource(id, 1, &csrc, nil)
+	C.glCompileShader(id)
+	var ok C.GLint
+	C.glGetShaderiv(id, C.GL_COMPILE_STATUS, &ok)
+	if ok == 0 {
+		var log [512]C.GLchar
+		C.glGetShaderInfoLog(id, C.GLsizei(len(log)), nil, &log[0])
+		return 0, fmt.Errorf("gpu: compiling a shader: %s", C.GoString((*C.char)(&log[0])))
 	}
+	return id, nil
+}
+
+// surface makes the window's buffers and the EGL surface on them, for w by h
+// pixels, and makes the context current on it.
+func (s *Screen) surface(w, h int) error {
+	size := [2]C.int{C.int(w), C.int(h)}
+	if r, err := C.screen_set_window_property_iv(s.win, C.SCREEN_PROPERTY_BUFFER_SIZE, &size[0]); r != 0 {
+		return s.fail("setting the window's buffer size", err)
+	}
+	if r, err := C.screen_create_window_buffers(s.win, 2); r != 0 {
+		return s.fail("creating the window's buffers", err)
+	}
+	// The part of the buffer shown is all of it. The system sets this with
+	// a window's first buffers only: after a resize it stays the old size.
+	if r, err := C.screen_set_window_property_iv(s.win, C.SCREEN_PROPERTY_SOURCE_SIZE, &size[0]); r != 0 {
+		return s.fail("setting the part of the buffer shown", err)
+	}
+	s.surf = C.eglCreateWindowSurface(s.dpy, s.config, C.EGLNativeWindowType(unsafe.Pointer(s.win)), nil)
+	if s.surf == nil {
+		return s.fail("eglCreateWindowSurface", nil)
+	}
+	if C.eglMakeCurrent(s.dpy, s.surf, s.surf, s.glctx) == 0 {
+		return s.fail("eglMakeCurrent", nil)
+	}
+	s.w, s.h = w, h
+	return nil
+}
+
+func (s *Screen) viewport() {
+	C.glViewport(0, 0, C.GLsizei(s.w), C.GLsizei(s.h))
+	C.glUniform2f(s.uView, C.GLfloat(s.w), C.GLfloat(s.h))
+}
+
+// Resize gives the window a new size in pixels: its buffers and the EGL
+// surface are made again.
+func (s *Screen) Resize(w, h int) error {
+	C.eglMakeCurrent(s.dpy, nil, nil, nil)
+	C.eglDestroySurface(s.dpy, s.surf)
+	if r, err := C.screen_destroy_window_buffers(s.win); r != 0 {
+		return s.fail("destroying the window's buffers", err)
+	}
+	if err := s.surface(w, h); err != nil {
+		return err
+	}
+	s.viewport()
 	return nil
 }
 
 // DPI is the dots per inch of the display the window is on.
-func (s *Screen) DPI() int { return int(C.t51_gpu_dpi(&s.g)) }
+func (s *Screen) DPI() int {
+	var display unsafe.Pointer
+	var dpi C.int
+	C.screen_get_window_property_pv(s.win, C.SCREEN_PROPERTY_DISPLAY, &display)
+	C.screen_get_display_property_iv(C.screen_display_t(display), C.SCREEN_PROPERTY_DPI, &dpi)
+	return int(dpi)
+}
 
 // Sizes are the window's size, its buffers' size and the part of the buffer
 // shown (width, height each), as libscreen reports them.
 func (s *Screen) Sizes() (window, buffer, source [2]int) {
-	var v [6]C.int
-	C.t51_gpu_sizes(&s.g, &v[0])
-	return [2]int{int(v[0]), int(v[1])}, [2]int{int(v[2]), int(v[3])}, [2]int{int(v[4]), int(v[5])}
+	read := func(name C.int) [2]int {
+		var v [2]C.int
+		C.screen_get_window_property_iv(s.win, name, &v[0])
+		return [2]int{int(v[0]), int(v[1])}
+	}
+	return read(C.SCREEN_PROPERTY_SIZE), read(C.SCREEN_PROPERTY_BUFFER_SIZE), read(C.SCREEN_PROPERTY_SOURCE_SIZE)
 }
 
 // Size is the window's size in pixels.
-func (s *Screen) Size() (w, h int) { return int(s.g.w), int(s.g.h) }
+func (s *Screen) Size() (w, h int) { return s.w, s.h }
 
 // Grid sets the grid: cols by rows cells of cellW by cellH pixels, and the
 // colour of the window outside the grid. The next Frame must hand over the
 // whole table.
 func (s *Screen) Grid(cols, rows, cellW, cellH int, r, g, b uint8) {
-	C.t51_gpu_grid(&s.g, C.int(cols), C.int(rows), C.int(cellW), C.int(cellH), C.int(r), C.int(g), C.int(b))
+	s.cells = cols * rows
+	C.glUniform2i(s.uGrid, C.GLint(cols), C.GLint(rows))
+	C.glUniform2f(s.uCell, C.GLfloat(cellW), C.GLfloat(cellH))
+	C.glUniform1i(s.uSheetCols, C.GLint(SheetSize/cellW))
+	C.glUniform1f(s.uThick, C.GLfloat(max(cellH/14, 1)))
+	C.glBufferData(C.GL_ARRAY_BUFFER, C.GLsizeiptr(s.cells*RecordSize), nil, C.GL_DYNAMIC_DRAW)
+	C.glClearColor(C.GLfloat(r)/255, C.GLfloat(g)/255, C.GLfloat(b)/255, 1)
 }
 
 // Sheet hands over the rectangle x, y, w, h of the character sheet; sheet is
 // the whole picture, SheetSize*SheetSize bytes.
 func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
-	C.t51_gpu_sheet(&s.g, (*C.uchar)(unsafe.Pointer(&sheet[0])), C.int(x), C.int(y), C.int(w), C.int(h))
+	C.glTexSubImage2D(C.GL_TEXTURE_2D, 0, C.GLint(x), C.GLint(y), C.GLsizei(w), C.GLsizei(h),
+		C.GL_RED, C.GL_UNSIGNED_BYTE, unsafe.Pointer(&sheet[y*SheetSize+x]))
 }
 
 // Frame draws the table and shows it; the bytes lo <= i < hi of table have
@@ -409,11 +390,19 @@ func (s *Screen) Frame(table []byte, lo, hi int, shot []byte) error {
 	if shot != nil {
 		out = (*C.uchar)(unsafe.Pointer(&shot[0]))
 	}
-	if C.t51_gpu_frame(&s.g, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), out) != 0 {
-		return s.err()
+	if C.t51_frame(s.dpy, s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(s.cells),
+		out, C.int(s.w), C.int(s.h)) == 0 {
+		return s.fail("eglSwapBuffers", nil)
 	}
 	return nil
 }
 
 // Close removes the window.
-func (s *Screen) Close() { C.t51_gpu_close(&s.g) }
+func (s *Screen) Close() {
+	C.eglMakeCurrent(s.dpy, nil, nil, nil)
+	C.eglDestroySurface(s.dpy, s.surf)
+	C.eglDestroyContext(s.dpy, s.glctx)
+	C.eglTerminate(s.dpy)
+	C.screen_destroy_window(s.win)
+	C.screen_destroy_context(s.ctx)
+}

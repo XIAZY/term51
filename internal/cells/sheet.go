@@ -134,7 +134,9 @@ func (s *Sheet) slot(text []rune, style uint8, wide bool) uint16 {
 	img := image.NewAlpha(image.Rect(0, 0, w, s.cellH))
 	faces := s.faces[style]
 	base := s.face(faces, text[0])
-	if base == nil {
+	if len(text) == 1 && !wide && drawn(text[0]) {
+		drawLines(img, text[0])
+	} else if base == nil {
 		// No font has the character: a hollow box, so that it is visibly
 		// there and takes its cells.
 		box := image.Rect(1, 2, w-1, s.cellH-2)

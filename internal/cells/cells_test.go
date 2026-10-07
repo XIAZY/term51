@@ -483,12 +483,13 @@ func compose(tb *Table, s *Sheet) *image.RGBA {
 
 func TestPicture(t *testing.T) {
 	s := newSheet(t, 28)
-	x := newTerm(t, 40, 6)
+	x := newTerm(t, 64, 6)
 	var tb Table
 	tb.Update(x.feed(t, "\x1b[2 q$ ls \x1b[1mbold\x1b[0m \x1b[3mitalic\x1b[0m \x1b[1;3mboth\x1b[0m\r\n"+
 		"\x1b[31mred \x1b[32mgreen \x1b[34;47mblue on white\x1b[0m \x1b[7mreverse\x1b[0m\r\n"+
 		"中文 wide 日本語 é \U000F8FF0\r\n"+
-		"prompt> "), s)
+		"prompt> \x1b[5;1H┌─┬─┐ ╔═╦═╗ ╒═╤═╕ ╓─╥─╖ ┏━┳━┓ ╭─╮ ▁▂▃▄▅▆▇█ ░▒▓\r\n"+
+		"├─┼─┤ ╠═╬═╣ ╞═╪═╡ ╟─╫─╢ ┣━╋━┫ ╰─╯ ▏▎▍▌▋▊▉█ ▖▗▘▙▚▛▜▝▞▟\x1b[4;9H"), s)
 	img := compose(&tb, s)
 
 	// The block cursor after the prompt is a cell in the text's colour.
@@ -497,7 +498,7 @@ func TestPicture(t *testing.T) {
 		t.Errorf("the cursor's cell is %v", got)
 	}
 	// A slot never used is empty, so an empty cell is pure background.
-	if got := img.RGBAAt(30*w+w/2, 5*h+h/2); got.R != bg.R || got.G != bg.G || got.B != bg.B {
+	if got := img.RGBAAt(60*w+w/2, 5*h+h/2); got.R != bg.R || got.G != bg.G || got.B != bg.B {
 		t.Errorf("an empty cell is %v", got)
 	}
 

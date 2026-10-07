@@ -85,7 +85,6 @@ func TestWhatEachKeySends(t *testing.T) {
 		// Ctrl from a keyboard that has the key.
 		{"Ctrl and c", down('c', 'c', ModCtrl), "\x03"},
 		{"Ctrl and c, already applied", down(0x03, 'c', ModCtrl), "\x03"},
-		{"Ctrl and c, as a control character alone", down(0x03, 0, 0), "\x03"},
 		{"Ctrl and ]", down(']', ']', ModCtrl), "\x1d"},
 		{"Ctrl and space", down(' ', ' ', ModCtrl), "\x00"},
 		// The library, like upstream, does not send a bare ESC for Ctrl+[:
@@ -107,20 +106,6 @@ func TestWhatEachKeySends(t *testing.T) {
 		if got := send(t, &tr, tm, c.r); got != c.want {
 			t.Errorf("%s: sent %q, want %q", c.name, got, c.want)
 		}
-	}
-}
-
-func TestARepeatSendsTheKeyAgain(t *testing.T) {
-	tm := term(t, "")
-	var tr Translator
-	r := down('a', 'a', 0)
-	r.Repeat = true
-	ev, _ := tr.Translate(r)
-	if ev.Action != input.KeyActionRepeat {
-		t.Errorf("action %v, want repeat", ev.Action)
-	}
-	if got := send(t, &tr, tm, r); got != "a" {
-		t.Errorf("sent %q, want %q", got, "a")
 	}
 }
 

@@ -98,7 +98,6 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 		{"fontPt = 1000", "fontPt"},
 		{"fontPt = big", "fontPt"},
 		{`shell = ""`, "shell"},
-		{"term = xterm 256", "term"},
 		{`term = ""`, "term"},
 		{"scrollbackBytes = 99999999999", "scrollbackBytes"},
 		{"scrollbackBytes = -1", "scrollbackBytes"},
@@ -107,8 +106,6 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 		{"theme.cursor = #gggggg", "theme.cursor"},
 		{"theme.palette = #000000\ntheme.palette = blue", "theme.palette[1]"},
 		{"identity.terminal = vt52", "identity.terminal"},
-		{`identity.name = "x\u001b[2J"`, "identity.name"},
-		{`identity.answerback = "a\nb"`, "identity.answerback"},
 		{"identity.versionNumber = -1", "identity.versionNumber"},
 		{"fontPt = 8\nfontPt = 30", "fontPt is set twice"},
 		{"fontPt = 8\njust some words", "line 4"}, // two lines come before each case

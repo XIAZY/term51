@@ -24,12 +24,9 @@ import (
 
 // Modifier bits of a Raw event (the KEYMOD_* values of <sys/keycodes.h>).
 const (
-	ModShift    = 1 << 0  // KEYMOD_SHIFT
-	ModCtrl     = 1 << 1  // KEYMOD_CTRL
-	ModAlt      = 1 << 2  // KEYMOD_ALT
-	ModAltGr    = 1 << 3  // KEYMOD_ALTGR
-	ModCapsLock = 1 << 16 // KEYMOD_CAPS_LOCK
-	ModNumLock  = 1 << 17 // KEYMOD_NUM_LOCK
+	ModShift = 1 << 0 // KEYMOD_SHIFT
+	ModCtrl  = 1 << 1 // KEYMOD_CTRL
+	ModAlt   = 1 << 2 // KEYMOD_ALT
 )
 
 // Key codes of <sys/keycodes.h>: keys that are not characters are numbered
@@ -85,8 +82,7 @@ const (
 
 // Raw is a key event from either source, in the terms of <sys/keycodes.h>.
 type Raw struct {
-	Down   bool // pressed (or repeating); false for a release
-	Repeat bool
+	Down bool // pressed; false for a release
 
 	// Sym is what the key produced with the modifiers held: a Unicode code
 	// point, or a Code* value for a key that is not a character. Zero when
@@ -296,16 +292,11 @@ func (t *Translator) Translate(r Raw) (input.KeyEvent, bool) {
 	ev := input.KeyEvent{Action: input.KeyActionRelease}
 	if r.Down {
 		ev.Action = input.KeyActionPress
-		if r.Repeat {
-			ev.Action = input.KeyActionRepeat
-		}
 	}
 	ev.Mods = input.Mods{
-		Shift:    r.Mods&ModShift != 0,
-		Ctrl:     r.Mods&ModCtrl != 0,
-		Alt:      r.Mods&(ModAlt|ModAltGr) != 0,
-		CapsLock: r.Mods&ModCapsLock != 0,
-		NumLock:  r.Mods&ModNumLock != 0,
+		Shift: r.Mods&ModShift != 0,
+		Ctrl:  r.Mods&ModCtrl != 0,
+		Alt:   r.Mods&ModAlt != 0,
 	}
 
 	// The key: from the code when the event is a key that is not a
@@ -338,12 +329,7 @@ func (t *Translator) Translate(r Raw) (input.KeyEvent, bool) {
 		// A modifier that changed which character the key produced has
 		// done its work: Shift for a capital or a shifted symbol, and on
 		// the phone's keyboard Alt for the digit or symbol above a letter.
-		// Without a key cap to compare with, Shift is taken to have
-		// produced an upper-case letter or a symbol.
 		changed := cap != 0 && !isCode(cap) && sym != cap
-		if cap == 0 && ev.Mods.Shift && !(sym >= 'a' && sym <= 'z') && !(sym >= '0' && sym <= '9') && sym != ' ' {
-			ev.ConsumedMods.Shift = true
-		}
 		if changed {
 			if ev.Mods.Shift {
 				ev.ConsumedMods.Shift = true
@@ -353,14 +339,6 @@ func (t *Translator) Translate(r Raw) (input.KeyEvent, bool) {
 				ev.Mods.Alt = false
 			}
 		}
-	} else if !known && sym >= 1 && sym <= 26 {
-		// A source that already applied Ctrl to a letter and gives no key
-		// cap (Ctrl+C arriving as 0x03 alone): it is Ctrl with that
-		// letter. The encoder applies Ctrl itself.
-		letter := 'a' + sym - 1
-		ev.Key, _ = keyOf(letter)
-		ev.Mods.Ctrl = true
-		ev.UnshiftedCodepoint = uint32(letter)
 	}
 
 	// The key bar's sticky modifiers. They are real terminal modifiers and
@@ -372,9 +350,7 @@ func (t *Translator) Translate(r Raw) (input.KeyEvent, bool) {
 		if t.stickyAlt {
 			ev.Mods.Alt = true
 		}
-		if !r.Repeat {
-			t.stickyCtrl, t.stickyAlt = false, false
-		}
+		t.stickyCtrl, t.stickyAlt = false, false
 	}
 	return ev, true
 }

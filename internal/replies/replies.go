@@ -144,7 +144,7 @@ type State interface {
 	CursorReportPos() (row, col int)
 	// Size is the text area in cells.
 	Size() (cols, rows int)
-	// CellSize is one cell in pixels (0 when unknown).
+	// CellSize is one cell in pixels.
 	CellSize() (width, height int)
 	// Mode reports the state of a mode.
 	Mode(mode int, dec bool) ModeState
@@ -255,8 +255,6 @@ func Answer(cfg Config, s State, q Query) []byte {
 			prefix = "11"
 		case Cursor:
 			prefix = "12"
-		default:
-			return nil
 		}
 		// xterm's reply format: 16 bits per channel, each 8-bit value
 		// repeated.
@@ -274,18 +272,12 @@ func Answer(cfg Config, s State, q Query) []byte {
 		}
 		cols, rows := s.Size()
 		w, h := s.CellSize()
-		if w == 0 || h == 0 {
-			return nil
-		}
 		return []byte(fmt.Sprintf("%s4;%d;%dt", csi, rows*h, cols*w))
 	case CellPixels:
 		if !cfg.SizeReports {
 			return nil
 		}
 		w, h := s.CellSize()
-		if w == 0 || h == 0 {
-			return nil
-		}
 		return []byte(fmt.Sprintf("%s6;%d;%dt", csi, h, w))
 	case KittyFlags:
 		if !cfg.KittyKeyboard {

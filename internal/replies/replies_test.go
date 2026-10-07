@@ -115,10 +115,6 @@ func TestNoAnswerWithoutData(t *testing.T) {
 	if got := Answer(cfg, s, Query{Kind: ColorQuery, Target: Foreground}); got != nil {
 		t.Errorf("unset colour answered %q", got)
 	}
-	s.cw, s.ch = 0, 0
-	if got := Answer(cfg, s, Query{Kind: CellPixels}); got != nil {
-		t.Errorf("unknown cell size answered %q", got)
-	}
 	if got := Answer(cfg, s, Query{Kind: Enquiry}); got != nil {
 		t.Errorf("empty answerback sent %q", got)
 	}

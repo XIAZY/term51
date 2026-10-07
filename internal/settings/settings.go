@@ -436,13 +436,19 @@ func (s Settings) Format() []byte {
 	return b.Bytes()
 }
 
-// Load reads the settings file. A file that does not exist is the defaults,
-// with no error. For any other failure it returns the defaults and the
-// error, so the app can start and say what is wrong.
+// Load reads the settings file. The first time, when there is no file, it
+// writes one holding the defaults, every setting with a comment saying what
+// it is, so that the user has something to edit. For a file it cannot read
+// or that has a mistake in it, it returns the defaults and the error, so the
+// app can start and say what is wrong.
 func Load(path string) (Settings, []string, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return Default(), nil, nil
+		s := Default()
+		if err := Save(path, s); err != nil {
+			return s, nil, fmt.Errorf("settings: %w", err)
+		}
+		return s, nil, nil
 	}
 	if err != nil {
 		return Default(), nil, fmt.Errorf("settings: %w", err)

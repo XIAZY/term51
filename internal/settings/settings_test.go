@@ -130,10 +130,18 @@ func TestSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.conf")
 
-	// No file: the defaults, and no error.
+	// No file: the defaults, and the file is written for the user to edit,
+	// every setting with its comment.
 	s, warnings, err := Load(path)
 	if err != nil || warnings != nil || !reflect.DeepEqual(s, Default()) {
 		t.Fatalf("Load without a file: %+v, %v", s, err)
+	}
+	first, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the first Load wrote no file: %v", err)
+	}
+	if string(first) != string(Default().Format()) {
+		t.Errorf("the file written by the first Load is not the default file:\n%s", first)
 	}
 
 	// The defaults written out and read back are the defaults.

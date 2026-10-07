@@ -616,6 +616,22 @@ func (self *Stream[H]) NextSlice(input []uint8) error {
 	// Disable SIMD optimizations if build requests it or if our
 	// manual debug mode is on.
 	for _, c := range input {
+		// Go: a printable ASCII byte (and DEL) in the ground state, with no
+		// UTF-8 sequence open, is printed directly. It is what `next` does
+		// with it, written out: nextUtf8 decodes it to itself and leaves
+		// the decoder as it was, and handleCodepoint passes anything that
+		// is neither a C0 control nor ESC to print. Zig's compiler merges
+		// those calls; Go's makes each of them, for every character
+		// (docs/post-port-optimizations.md item 34).
+		if c >= 0x20 && c < 0x80 &&
+			self.parser.state == ParserStateGround &&
+			self.utf8decoder.state == ACCEPT_STATE {
+			if err := self.Print(uint32(c)); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if err := self.Next(c); err != nil {
 			return err
 		}

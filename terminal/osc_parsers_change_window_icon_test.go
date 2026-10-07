@@ -8,8 +8,8 @@
 // oscA_...) are defined here:
 //   - oscA_term51Feed is Zig's term51Feed, which is the same function in
 //     every file under osc/parsers/;
-//   - oscA_testingAllocator stands in for std.testing.allocator: the wireframe
-//     keeps only whether OSCParser.alloc is nil (Zig: null) or not;
+//   - `.init(testing.allocator)` is OSCParserInit(true) and `.init(null)` is
+//     OSCParserInit(false): the port keeps only whether there is one;
 //   - oscA_unwrapPtr is `parse(...).?` / `p.end(...).?` (a ?*Command), and
 //     the Zig `.?.*` is `*oscA_unwrapPtr(...)`;
 //   - oscA_ptrAt is Zig's `s.ptr[i]`: it reads the byte i of the memory a
@@ -41,10 +41,6 @@ func oscA_term51Feed(p *OSCParser, input string) {
 		p.Next(input[i])
 	}
 }
-
-// oscA_testingAllocator stands in for std.testing.allocator: any non-nil
-// value is "an allocator was provided".
-var oscA_testingAllocator any = struct{}{}
 
 // oscA_unwrapPtr is `o.?` on a ?*Command: it fails the test if o is nil.
 func oscA_unwrapPtr(t *testing.T, o *OSCCommand) *OSCCommand {

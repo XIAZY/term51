@@ -20,19 +20,14 @@ package terminal
 //   - Zig's Vt receives the payload of the action (Action.Value(action)); Go's
 //     StreamHandler.Vt receives the whole StreamAction and the payload is its
 //     field named by the tag (dumpUnionPayload), nothing for a void tag;
-//   - `gpa` (the allocator) is replayAllocator: StreamInitAlloc and
-//     osc_parser.alloc only distinguish nil from non-nil.
+//   - `gpa` (the allocator) has no Go value: StreamInitAlloc and
+//     osc_parser.alloc = true stand for "an allocator was provided".
 
 import (
 	"bytes"
 	"fmt"
 	"reflect"
 )
-
-// replayAllocator stands for `gpa`, the allocator that the recorder hands to
-// StreamInitAlloc and sets as parser.osc_parser.alloc: for the port only
-// "an allocator was provided" (non-nil) matters (stream.go, osc.go).
-type replayAllocator struct{}
 
 // Mirrors harness/src/trace.zig:16 ActionHandler
 type actionHandler struct {

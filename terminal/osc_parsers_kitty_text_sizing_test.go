@@ -30,10 +30,6 @@ import (
 	"testing"
 )
 
-// oscB_kts_alloc stands for `testing.allocator`: any non-nil value for
-// OSCParserInit.
-var oscB_kts_alloc any = "testing.allocator"
-
 // oscB_kts_unwrap is Zig's `ptr.?.*` on the result of parse or end.
 func oscB_kts_unwrap(t *testing.T, c *OSCCommand) OSCCommand {
 	t.Helper()

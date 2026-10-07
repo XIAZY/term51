@@ -32,9 +32,6 @@ import (
 	"testing"
 )
 
-// oscB_sp_allocator stands in for `testing.allocator`: any non-nil value.
-var oscB_sp_allocator any = "testing.allocator"
-
 // oscB_sp_zigUnwrapPtr is Zig's `p.?.*`: the value an optional pointer points
 // at, failing if it is null.
 func oscB_sp_zigUnwrapPtr[T any](t *testing.T, p *T) T {

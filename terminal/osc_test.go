@@ -24,9 +24,6 @@ import (
 	"testing"
 )
 
-// osc0_allocator stands in for std.testing.allocator: any non-nil value.
-var osc0_allocator any = struct{}{}
-
 // osc0_feed is term51Feed of osc.zig: feed a string to an OSC parser.
 func osc0_feed(p *OSCParser, bytes string) {
 	for _, c := range []uint8(bytes) {

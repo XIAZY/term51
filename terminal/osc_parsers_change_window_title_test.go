@@ -2,7 +2,7 @@
 // (Ghostty v1.3.1 plus the term51 additional tests). Each Go test carries the
 // exact Zig title in a "// Zig: test" comment. The helpers (expect,
 // expectEqual, ...) are in Parser_test.go; oscA_term51Feed, oscA_unwrapPtr,
-// oscA_ptrAt, oscA_terms and oscA_testingAllocator are in
+// oscA_ptrAt and oscA_terms are in
 // osc_parsers_change_window_icon_test.go, where the translation notes are.
 
 package terminal

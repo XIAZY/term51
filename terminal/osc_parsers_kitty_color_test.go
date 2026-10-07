@@ -32,10 +32,6 @@ import (
 	"testing"
 )
 
-// oscB_kc_alloc stands for `testing.allocator`: any non-nil value for
-// OSCParserInit.
-var oscB_kc_alloc any = "testing.allocator"
-
 // oscB_kc_red is Zig's term51_red.
 var oscB_kc_red = ColorRGB{R: 255, G: 0, B: 0}
 

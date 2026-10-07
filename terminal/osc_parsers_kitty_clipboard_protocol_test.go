@@ -30,9 +30,6 @@ import (
 	"testing"
 )
 
-// oscB_kcp_allocator stands in for testing.allocator: any non-nil value.
-var oscB_kcp_allocator = struct{}{}
-
 // oscB_kcp_feed is term51Feed: feed every byte of input to the parser.
 func oscB_kcp_feed(p *OSCParser, input string) {
 	for i := 0; i < len(input); i++ {

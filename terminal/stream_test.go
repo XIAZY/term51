@@ -56,9 +56,6 @@ import (
 	"testing"
 )
 
-// strA_allocator stands in for std.testing.allocator: any non-nil value.
-var strA_allocator any = struct{}{}
-
 // strA_noDeinit gives a test handler the empty Deinit that Go's
 // StreamHandler requires.
 type strA_noDeinit struct{}

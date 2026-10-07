@@ -575,19 +575,15 @@ func (self *Terminal) Deinit() {
 // methods have pointer receivers, so a caller assigns it to a variable
 // (`s := t.VtStream()`) before calling `s.NextSlice(...)`.
 func (self *Terminal) VtStream() StreamReadonlyStream {
-	// Zig: `.initAlloc(self.gpa(), self.vtHandler())`. Go has no allocator
-	// (gpa returns nothing); StreamInitAlloc only tells nil from non-nil, and
-	// Zig always passes an allocator here, so a non-nil value stands for it.
+	// Zig: `.initAlloc(self.gpa(), self.vtHandler())`. Go has no allocator;
+	// StreamInitAlloc builds the stream whose OSC parser may grow its
+	// buffers, as upstream's does here.
 	// The Zig stream holds the handler by value; Go's holds a pointer, here
 	// to the stream's own copy.
 	self.gpa()
 	handler := self.VtHandler()
 	return StreamInitAlloc[*StreamReadonlyHandler](&handler)
 }
-
-// terminalGpa is NOT a Zig declaration: the non-nil value VtStream passes to
-// StreamInitAlloc where Zig passes `self.gpa()`.
-type terminalGpa struct{}
 
 // VtHandler is Terminal.vtHandler.
 //

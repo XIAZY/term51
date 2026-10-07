@@ -27,10 +27,6 @@ import (
 	"testing"
 )
 
-// oscB_osc9_allocator stands for `testing.allocator`: any non-nil value
-// (OSCParser.alloc, osc.go).
-var oscB_osc9_allocator any = struct{}{}
-
 // oscB_osc9_feed is `for (input) |ch| p.next(ch)`.
 func oscB_osc9_feed(p *OSCParser, input string) {
 	for _, ch := range []uint8(input) {

@@ -10,8 +10,8 @@
 //     *testing.T. `var s: Stream = .initAlloc(testing.allocator, .init(&t))`
 //     is `h := StreamReadonlyHandlerInit(&tm)` and
 //     `s := StreamInitAlloc[*StreamReadonlyHandler](&h)`;
-//     `s.handler` is then the pointer &h. sroAllocator stands in for
-//     testing.allocator (any non-nil value is "an allocator was provided").
+//     `s.handler` is then the pointer &h. Zig's testing.allocator argument
+//     has no Go counterpart (StreamInitAlloc is "an allocator was provided").
 //   - `h.vt(.tag, value)` is `h.Vt(tag, action)` with the whole StreamAction:
 //     sroVt builds the call and fails the test on an error (Zig `try`), and
 //     the sro<Name>Act functions build the action for each payload shape.
@@ -34,9 +34,6 @@ import (
 	"testing"
 	"unsafe"
 )
-
-// sroAllocator stands in for std.testing.allocator.
-var sroAllocator any = struct{}{}
 
 // sroMaxCols is term51D_max_cols.
 const sroMaxCols = 300

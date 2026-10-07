@@ -575,19 +575,15 @@ func (self *Terminal) Deinit() {
 // methods have pointer receivers, so a caller assigns it to a variable
 // (`s := t.VtStream()`) before calling `s.NextSlice(...)`.
 func (self *Terminal) VtStream() StreamReadonlyStream {
-	// Zig: `.initAlloc(self.gpa(), self.vtHandler())`. Go has no allocator
-	// (gpa returns nothing); StreamInitAlloc only tells nil from non-nil, and
-	// Zig always passes an allocator here, so a non-nil value stands for it.
+	// Zig: `.initAlloc(self.gpa(), self.vtHandler())`. Go has no allocator;
+	// StreamInitAlloc builds the stream whose OSC parser may grow its
+	// buffers, as upstream's does here.
 	// The Zig stream holds the handler by value; Go's holds a pointer, here
 	// to the stream's own copy.
 	self.gpa()
 	handler := self.VtHandler()
-	return StreamInitAlloc[*StreamReadonlyHandler](terminalGpa{}, &handler)
+	return StreamInitAlloc[*StreamReadonlyHandler](&handler)
 }
-
-// terminalGpa is NOT a Zig declaration: the non-nil value VtStream passes to
-// StreamInitAlloc where Zig passes `self.gpa()`.
-type terminalGpa struct{}
 
 // VtHandler is Terminal.vtHandler.
 //
@@ -3762,6 +3758,16 @@ func (self *Terminal) Deccolm(mode TerminalDeccolmMode) error {
 // parameter is dropped. The inferred error set is that of Tabstops.init and
 // Screen.resize: ErrOutOfMemory (dcs.go).
 func (self *Terminal) Resize(cols SizeCellCountInt, rows SizeCellCountInt) error {
+	// Go: a size of zero columns or rows is an error, before anything
+	// changes. Zig has no check (the caller never passes zero); a Go caller
+	// gets the error instead of a panic.
+	if cols == 0 {
+		return ErrZeroColCount
+	}
+	if rows == 0 {
+		return ErrZeroRowCount
+	}
+
 	// If our cols/rows didn't change then we're done
 	if self.Cols == cols && self.Rows == rows {
 		return nil

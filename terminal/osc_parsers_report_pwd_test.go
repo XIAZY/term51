@@ -5,7 +5,7 @@
 // defined in Parser_test.go.
 //
 // Translation notes:
-//   - `.init(null)` is OSCParserInit(nil); `p.next(ch)` is p.Next(ch);
+//   - `.init(null)` is OSCParserInit(false); `p.next(ch)` is p.Next(ch);
 //     `p.end(null)` is p.End(None[uint8]()).
 //   - `parse(&p, null).?.*` is oscB_pwd_unwrap(t, OSCParsersReportPwdParse(...)),
 //     which fails on nil and copies the command out.
@@ -46,7 +46,7 @@ func oscB_pwd_at(s []uint8, i int) uint8 {
 
 // Zig: test "OSC 7: report pwd"
 func TestOSCParsersReportPwd_OSC_7_report_pwd(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "7;file:///tmp/example"
 	for _, ch := range []uint8(input) {
@@ -60,7 +60,7 @@ func TestOSCParsersReportPwd_OSC_7_report_pwd(t *testing.T) {
 
 // Zig: test "OSC 7: report pwd empty"
 func TestOSCParsersReportPwd_OSC_7_report_pwd_empty(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "7;"
 	for _, ch := range []uint8(input) {
@@ -74,7 +74,7 @@ func TestOSCParsersReportPwd_OSC_7_report_pwd_empty(t *testing.T) {
 // Zig: test "term51: parse: basic url"
 func TestOSCParsersReportPwd_term51_parse_basic_url(t *testing.T) {
 	for _, term := range []Optional[uint8]{None[uint8](), Some[uint8](0x07), Some[uint8](0x1b)} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_pwd_term51Feed(&p, []uint8("7;file://host/home/user"))
 		cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
@@ -85,7 +85,7 @@ func TestOSCParsersReportPwd_term51_parse_basic_url(t *testing.T) {
 
 // Zig: test "term51: parse: missing separator is invalid"
 func TestOSCParsersReportPwd_term51_parse_missing_separator_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_pwd_term51Feed(&p, []uint8("7"))
 	expect(t, p.writer == nil, "p.writer == null")
 	expect(t, OSCParsersReportPwdParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -94,7 +94,7 @@ func TestOSCParsersReportPwd_term51_parse_missing_separator_is_invalid(t *testin
 
 // Zig: test "term51: parse: empty value"
 func TestOSCParsersReportPwd_term51_parse_empty_value(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_pwd_term51Feed(&p, []uint8("7;"))
 	cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, Some[uint8](0x07)))
 	expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
@@ -104,7 +104,7 @@ func TestOSCParsersReportPwd_term51_parse_empty_value(t *testing.T) {
 // Zig: test "term51: parse: the value is not validated"
 func TestOSCParsersReportPwd_term51_parse_the_value_is_not_validated(t *testing.T) {
 	// Not a URL, contains semicolons, control bytes and invalid UTF-8.
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_pwd_term51Feed(&p, []uint8("7;not a url;x\x01\xff"))
 	cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, None[uint8]()))
 	expectEqualSlices(t, []uint8("not a url;x\x01\xff"), cmd.ReportPwd.Value)
@@ -113,13 +113,13 @@ func TestOSCParsersReportPwd_term51_parse_the_value_is_not_validated(t *testing.
 // Zig: test "term51: parse: buffer limit"
 func TestOSCParsersReportPwd_term51_parse_buffer_limit(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_pwd_term51Feed(&p, []uint8("7;"+strings.Repeat("a", OSCParserMAX_BUF-1)))
 		cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, None[uint8]()))
 		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.ReportPwd.Value))
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_pwd_term51Feed(&p, []uint8("7;"+strings.Repeat("a", OSCParserMAX_BUF)))
 		expect(t, p.state == OSCParserState7, "p.state == .@\"7\"")
 		expect(t, OSCParsersReportPwdParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")

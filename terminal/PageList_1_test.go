@@ -4852,9 +4852,12 @@ func TestPl1_PageList_resize_no_reflow_less_rows_and_cols(t *testing.T) {
 // Go-only: panic test: PageListInit: rows == 0 (initPages: assert(page_list.first != null))
 func TestPl1_panic_PageListInit_zero_rows(t *testing.T) {
 	testStdCapacity(t)
-	pl1ExpectPanic(t, func() {
-		_, _ = PageListInit(80, 0, None[uint64]())
-	})
+	// Go: an error since the zero-size ruling (docs/public-api.md, "Wrong
+	// arguments"); the test keeps its name.
+	_, err := PageListInit(80, 0, None[uint64]())
+	if err := error(err); err != ErrZeroRowCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroRowCount)
+	}
 }
 
 // Go-only: panic test: PageList.AssertIntegrity: total_rows does not match the pages (@panic("PageList integrity check failed"))

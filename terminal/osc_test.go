@@ -4,8 +4,8 @@
 // expectEqualStrings and zigUnwrap are defined in Parser_test.go.
 //
 // Translation notes:
-//   - `var p: Parser = .init(null)` is OSCParserInit(nil) and
-//     `.init(testing.allocator)` is OSCParserInit(osc0_allocator), a non-nil
+//   - `var p: Parser = .init(null)` is OSCParserInit(false) and
+//     `.init(testing.allocator)` is OSCParserInit(true), a non-nil
 //     value (docs/mapping.md: the field `alloc` keeps only whether an
 //     allocator was provided). Go has no leak check; the lines that exist
 //     only for it are kept as calls and marked "Zig-only".
@@ -23,9 +23,6 @@ package terminal
 import (
 	"testing"
 )
-
-// osc0_allocator stands in for std.testing.allocator: any non-nil value.
-var osc0_allocator any = struct{}{}
 
 // osc0_feed is term51Feed of osc.zig: feed a string to an OSC parser.
 func osc0_feed(p *OSCParser, bytes string) {
@@ -97,9 +94,9 @@ func TestOSC_term51_Terminator_format_writes_the_terminator_bytes(t *testing.T) 
 // Zig: test "term51: Parser.init: starts empty, with or without an allocator"
 func TestOSC_term51_Parser_init_starts_empty_with_or_without_an_allocator(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		defer p.Deinit()
-		expect(t, p.alloc == nil, "p.alloc == null")
+		expect(t, !p.alloc, "p.alloc == null")
 		expectEqual(t, OSCParserStateStart, p.state)
 		expect(t, !p.fixed.Valid, "p.fixed == null")
 		expect(t, !p.allocating.Valid, "p.allocating == null")
@@ -107,9 +104,9 @@ func TestOSC_term51_Parser_init_starts_empty_with_or_without_an_allocator(t *tes
 		expect(t, p.command.Tag == OSCCommandKeyInvalid, "p.command == .invalid")
 	}
 	{
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
-		expect(t, p.alloc != nil, "p.alloc != null")
+		expect(t, p.alloc, "p.alloc != null")
 		expectEqual(t, OSCParserStateStart, p.state)
 		expect(t, p.writer == nil, "p.writer == null")
 	}
@@ -118,13 +115,13 @@ func TestOSC_term51_Parser_init_starts_empty_with_or_without_an_allocator(t *tes
 // Zig: test "term51: Parser.init: buffer size"
 func TestOSC_term51_Parser_init_buffer_size(t *testing.T) {
 	expectEqual(t, 2048, OSCParserMAX_BUF)
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	expectEqual(t, OSCParserMAX_BUF, len(p.buffer))
 }
 
 // Zig: test "term51: Parser.deinit: frees an allocating buffer that was never ended"
 func TestOSC_term51_Parser_deinit_frees_an_allocating_buffer_that_was_never_ended(t *testing.T) {
-	p := OSCParserInit(osc0_allocator)
+	p := OSCParserInit(true)
 	osc0_feed(&p, "52;c;")
 	for i := 0; i < 5000; i++ {
 		p.Next('A')
@@ -137,7 +134,7 @@ func TestOSC_term51_Parser_deinit_frees_an_allocating_buffer_that_was_never_ende
 
 // Zig: test "term51: Parser.deinit: safe on a fresh parser and when called twice"
 func TestOSC_term51_Parser_deinit_safe_on_a_fresh_parser_and_when_called_twice(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	p.Deinit()
 	p.Deinit()
 	expectEqual(t, OSCParserStateStart, p.state)
@@ -145,7 +142,7 @@ func TestOSC_term51_Parser_deinit_safe_on_a_fresh_parser_and_when_called_twice(t
 
 // Zig: test "term51: Parser.reset: returns to start and drops the writers and command"
 func TestOSC_term51_Parser_reset_returns_to_start_and_drops_the_writers_and_command(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	osc0_feed(&p, "2;title")
 	expect(t, p.writer != nil, "p.writer != null")
@@ -163,7 +160,7 @@ func TestOSC_term51_Parser_reset_returns_to_start_and_drops_the_writers_and_comm
 
 // Zig: test "term51: Parser.reset: leaves the invalid state"
 func TestOSC_term51_Parser_reset_leaves_the_invalid_state(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	osc0_feed(&p, "x")
 	expectEqual(t, OSCParserStateInvalid, p.state)
@@ -178,7 +175,7 @@ func TestOSC_term51_Parser_reset_leaves_the_invalid_state(t *testing.T) {
 
 // Zig: test "term51: Parser.reset: frees the allocating writer"
 func TestOSC_term51_Parser_reset_frees_the_allocating_writer(t *testing.T) {
-	p := OSCParserInit(osc0_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	osc0_feed(&p, "52;c;AAAA")
 	expect(t, p.allocating.Valid, "p.allocating != null")
@@ -189,7 +186,7 @@ func TestOSC_term51_Parser_reset_frees_the_allocating_writer(t *testing.T) {
 
 // Zig: test "term51: Parser.reset: frees a kitty colour command"
 func TestOSC_term51_Parser_reset_frees_a_kitty_colour_command(t *testing.T) {
-	p := OSCParserInit(osc0_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	osc0_feed(&p, "21;foreground=?;background=red")
 	cmd := p.End(Some[uint8](0x07))
@@ -202,7 +199,7 @@ func TestOSC_term51_Parser_reset_frees_a_kitty_colour_command(t *testing.T) {
 
 // Zig: test "term51: Parser.ensureAllocator: true with an allocator, and the state is untouched"
 func TestOSC_term51_Parser_ensureAllocator_true_with_an_allocator_and_the_state_is_untouched(t *testing.T) {
-	p := OSCParserInit(osc0_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	p.state = OSCParserState4
 	expect(t, p.ensureAllocator(), "p.ensureAllocator()")
@@ -211,7 +208,7 @@ func TestOSC_term51_Parser_ensureAllocator_true_with_an_allocator_and_the_state_
 
 // Zig: test "term51: Parser.ensureAllocator: false without one, and the parser becomes invalid"
 func TestOSC_term51_Parser_ensureAllocator_false_without_one_and_the_parser_becomes_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	p.state = OSCParserState4
 	expect(t, !p.ensureAllocator(), "!p.ensureAllocator()")
@@ -220,7 +217,7 @@ func TestOSC_term51_Parser_ensureAllocator_false_without_one_and_the_parser_beco
 
 // Zig: test "term51: Parser.writeToFixed: later bytes land in the fixed buffer"
 func TestOSC_term51_Parser_writeToFixed_later_bytes_land_in_the_fixed_buffer(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	p.writeToFixed()
 	expect(t, p.fixed.Valid, "p.fixed != null")
@@ -235,7 +232,7 @@ func TestOSC_term51_Parser_writeToFixed_later_bytes_land_in_the_fixed_buffer(t *
 
 // Zig: test "term51: Parser.writeToAllocating: uses the heap when there is an allocator"
 func TestOSC_term51_Parser_writeToAllocating_uses_the_heap_when_there_is_an_allocator(t *testing.T) {
-	p := OSCParserInit(osc0_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	p.writeToAllocating()
 	expect(t, p.allocating.Valid, "p.allocating != null")
@@ -251,7 +248,7 @@ func TestOSC_term51_Parser_writeToAllocating_uses_the_heap_when_there_is_an_allo
 
 // Zig: test "term51: Parser.writeToAllocating: falls back to the fixed buffer without an allocator"
 func TestOSC_term51_Parser_writeToAllocating_falls_back_to_the_fixed_buffer_without_an_allocator(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	p.writeToAllocating()
 	expect(t, !p.allocating.Valid, "p.allocating == null")
@@ -283,7 +280,7 @@ func TestOSC_term51_Parser_next_every_number_prefix_reaches_its_state(t *testing
 		{"1337", OSCParserState1337},
 	}
 	for _, case_ := range cases {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		defer p.Deinit()
 		osc0_feed(&p, case_.in)
 		expectEqual(t, case_.state, p.state)
@@ -303,7 +300,7 @@ func TestOSC_term51_Parser_next_numbers_upstream_does_not_know_are_invalid(t *te
 		"13370", "140", "190", "210", "220", "1x", "-1", "0x",
 	}
 	for _, input := range cases {
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, input)
 		expectEqual(t, OSCParserStateInvalid, p.state)
@@ -315,7 +312,7 @@ func TestOSC_term51_Parser_next_numbers_upstream_does_not_know_are_invalid(t *te
 func TestOSC_term51_Parser_next_a_semicolon_starts_the_payload_in_the_fixed_buffer(t *testing.T) {
 	// these need no allocator
 	for _, num := range []string{"0", "1", "2", "7", "8", "9", "22", "133", "777", "1337", "3008"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		defer p.Deinit()
 		osc0_feed(&p, num)
 		before := p.state
@@ -338,7 +335,7 @@ func TestOSC_term51_Parser_next_colour_sequences_need_an_allocator(t *testing.T)
 	}
 	for _, num := range nums {
 		{
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			defer p.Deinit()
 			osc0_feed(&p, num)
 			p.Next(';')
@@ -346,7 +343,7 @@ func TestOSC_term51_Parser_next_colour_sequences_need_an_allocator(t *testing.T)
 			expect(t, p.writer == nil, "p.writer == null")
 		}
 		{
-			p := OSCParserInit(osc0_allocator)
+			p := OSCParserInit(true)
 			defer p.Deinit()
 			osc0_feed(&p, num)
 			before := p.state
@@ -363,7 +360,7 @@ func TestOSC_term51_Parser_next_colour_sequences_need_an_allocator(t *testing.T)
 func TestOSC_term51_Parser_next_clipboard_text_sizing_and_kitty_clipboard_payloads_go_to_the_heap(t *testing.T) {
 	for _, num := range []string{"52", "66", "5522"} {
 		{
-			p := OSCParserInit(osc0_allocator)
+			p := OSCParserInit(true)
 			defer p.Deinit()
 			osc0_feed(&p, num)
 			p.Next(';')
@@ -372,7 +369,7 @@ func TestOSC_term51_Parser_next_clipboard_text_sizing_and_kitty_clipboard_payloa
 		}
 		{
 			// without an allocator they fall back to the fixed buffer
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			defer p.Deinit()
 			osc0_feed(&p, num)
 			p.Next(';')
@@ -386,7 +383,7 @@ func TestOSC_term51_Parser_next_clipboard_text_sizing_and_kitty_clipboard_payloa
 // Zig: test "term51: Parser.next: prefixes with no semicolon form are invalid at a semicolon"
 func TestOSC_term51_Parser_next_prefixes_with_no_semicolon_form_are_invalid_at_a_semicolon(t *testing.T) {
 	for _, num := range []string{"3", "30", "300", "6", "55", "552", "77"} {
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, num)
 		p.Next(';')
@@ -396,7 +393,7 @@ func TestOSC_term51_Parser_next_prefixes_with_no_semicolon_form_are_invalid_at_a
 
 // Zig: test "term51: Parser.next: once a payload has started, every byte is payload"
 func TestOSC_term51_Parser_next_once_a_payload_has_started_every_byte_is_payload(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	osc0_feed(&p, "2;")
 	// digits and semicolons no longer drive the state machine
@@ -407,7 +404,7 @@ func TestOSC_term51_Parser_next_once_a_payload_has_started_every_byte_is_payload
 
 // Zig: test "term51: Parser.next: the fixed buffer holds exactly MAX_BUF bytes"
 func TestOSC_term51_Parser_next_the_fixed_buffer_holds_exactly_MAX_BUF_bytes(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	osc0_feed(&p, "2;")
 	for i := 0; i < OSCParserMAX_BUF; i++ {
@@ -422,7 +419,7 @@ func TestOSC_term51_Parser_next_the_fixed_buffer_holds_exactly_MAX_BUF_bytes(t *
 
 // Zig: test "term51: Parser.next: input is ignored in the invalid state"
 func TestOSC_term51_Parser_next_input_is_ignored_in_the_invalid_state(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	osc0_feed(&p, "x")
 	expectEqual(t, OSCParserStateInvalid, p.state)
@@ -434,7 +431,7 @@ func TestOSC_term51_Parser_next_input_is_ignored_in_the_invalid_state(t *testing
 
 // Zig: test "term51: Parser.end: nothing to end"
 func TestOSC_term51_Parser_end_nothing_to_end(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	// start
 	expect(t, p.End(None[uint8]()) == nil, "p.end(null) == null")
@@ -444,7 +441,7 @@ func TestOSC_term51_Parser_end_nothing_to_end(t *testing.T) {
 // Zig: test "term51: Parser.end: prefixes that are not complete commands"
 func TestOSC_term51_Parser_end_prefixes_that_are_not_complete_commands(t *testing.T) {
 	for _, num := range []string{"3", "30", "300", "55", "552", "6", "77"} {
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, num)
 		expect(t, p.End(None[uint8]()) == nil, "p.end(null) == null")
@@ -480,7 +477,7 @@ func TestOSC_term51_Parser_end_each_number_dispatches_to_its_command(t *testing.
 		{"777;notify;a;b", OSCCommandKeyShowDesktopNotification},
 	}
 	for _, case_ := range cases {
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, case_.in)
 		cmd := p.End(Some[uint8](0x07))
@@ -496,7 +493,7 @@ func TestOSC_term51_Parser_end_each_number_dispatches_to_its_command(t *testing.
 // Zig: test "term51: Parser.end: a number without a payload has no writer and yields nothing"
 func TestOSC_term51_Parser_end_a_number_without_a_payload_has_no_writer_and_yields_nothing(t *testing.T) {
 	for _, num := range []string{"0", "1", "2", "7", "8", "9", "22", "133", "777", "1337"} {
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, num)
 		expect(t, p.writer == nil, "p.writer == null")
@@ -508,7 +505,7 @@ func TestOSC_term51_Parser_end_a_number_without_a_payload_has_no_writer_and_yiel
 func TestOSC_term51_Parser_end_title_length_boundary_of_the_fixed_buffer(t *testing.T) {
 	// The title parser appends a NUL, so the longest title is MAX_BUF - 1.
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		defer p.Deinit()
 		osc0_feed(&p, "2;")
 		for i := 0; i < OSCParserMAX_BUF-1; i++ {
@@ -519,7 +516,7 @@ func TestOSC_term51_Parser_end_title_length_boundary_of_the_fixed_buffer(t *test
 		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.ChangeWindowTitle))
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		defer p.Deinit()
 		osc0_feed(&p, "2;")
 		for i := 0; i < OSCParserMAX_BUF; i++ {
@@ -532,7 +529,7 @@ func TestOSC_term51_Parser_end_title_length_boundary_of_the_fixed_buffer(t *test
 
 // Zig: test "term51: Parser.end: an empty title is a command with an empty string"
 func TestOSC_term51_Parser_end_an_empty_title_is_a_command_with_an_empty_string(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 	osc0_feed(&p, "2;")
 	cmd := p.End(None[uint8]())
@@ -544,7 +541,7 @@ func TestOSC_term51_Parser_end_an_empty_title_is_a_command_with_an_empty_string(
 // Zig: test "term51: Parser.end: the terminator is recorded by commands that reply"
 func TestOSC_term51_Parser_end_the_terminator_is_recorded_by_commands_that_reply(t *testing.T) {
 	{
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, "4;1;?")
 		cmd := p.End(Some[uint8](0x07))
@@ -552,7 +549,7 @@ func TestOSC_term51_Parser_end_the_terminator_is_recorded_by_commands_that_reply
 		expectEqual(t, OSCTerminatorBel, cmd.ColorOperation.Terminator)
 	}
 	{
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, "4;1;?")
 		cmd := p.End(Some[uint8](0x1b))
@@ -560,7 +557,7 @@ func TestOSC_term51_Parser_end_the_terminator_is_recorded_by_commands_that_reply
 		expectEqual(t, OSCTerminatorSt, cmd.ColorOperation.Terminator)
 	}
 	{
-		p := OSCParserInit(osc0_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		osc0_feed(&p, "4;1;?")
 		cmd := p.End(None[uint8]())

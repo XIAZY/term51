@@ -8,8 +8,8 @@
 // oscA_...) are defined here:
 //   - oscA_term51Feed is Zig's term51Feed, which is the same function in
 //     every file under osc/parsers/;
-//   - oscA_testingAllocator stands in for std.testing.allocator: the wireframe
-//     keeps only whether OSCParser.alloc is nil (Zig: null) or not;
+//   - `.init(testing.allocator)` is OSCParserInit(true) and `.init(null)` is
+//     OSCParserInit(false): the port keeps only whether there is one;
 //   - oscA_unwrapPtr is `parse(...).?` / `p.end(...).?` (a ?*Command), and
 //     the Zig `.?.*` is `*oscA_unwrapPtr(...)`;
 //   - oscA_ptrAt is Zig's `s.ptr[i]`: it reads the byte i of the memory a
@@ -19,8 +19,8 @@
 //     with the NUL still behind them.
 //
 // Translation notes:
-//   - `.init(null)` is OSCParserInit(nil) and `.init(testing.allocator)` is
-//     OSCParserInit(oscA_testingAllocator); `defer p.deinit()` is
+//   - `.init(null)` is OSCParserInit(false) and `.init(testing.allocator)` is
+//     OSCParserInit(true); `defer p.deinit()` is
 //     `defer p.Deinit()`.
 //   - `p.next(c)` is p.Next(c), `p.end(x)` is p.End(Some(x)) or
 //     p.End(None[uint8]()), and a null ?*Command is a nil *OSCCommand.
@@ -42,10 +42,6 @@ func oscA_term51Feed(p *OSCParser, input string) {
 	}
 }
 
-// oscA_testingAllocator stands in for std.testing.allocator: any non-nil
-// value is "an allocator was provided".
-var oscA_testingAllocator any = struct{}{}
-
 // oscA_unwrapPtr is `o.?` on a ?*Command: it fails the test if o is nil.
 func oscA_unwrapPtr(t *testing.T, o *OSCCommand) *OSCCommand {
 	t.Helper()
@@ -66,7 +62,7 @@ var oscA_terms = []Optional[uint8]{None[uint8](), Some[uint8](0x07), Some[uint8]
 
 // Zig: test "OSC 1: change_window_icon"
 func TestOSCParsersChangeWindowIcon_OSC_1_change_window_icon(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	p.Next('1')
 	p.Next(';')
 	p.Next('a')
@@ -79,7 +75,7 @@ func TestOSCParsersChangeWindowIcon_OSC_1_change_window_icon(t *testing.T) {
 // Zig: test "term51: parse: basic icon name"
 func TestOSCParsersChangeWindowIcon_term51_parse_basic_icon_name(t *testing.T) {
 	for _, term := range oscA_terms {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1;icon")
 		cmd := *oscA_unwrapPtr(t, OSCParsersChangeWindowIconParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyChangeWindowIcon, "cmd == .change_window_icon")
@@ -90,7 +86,7 @@ func TestOSCParsersChangeWindowIcon_term51_parse_basic_icon_name(t *testing.T) {
 
 // Zig: test "term51: parse: missing separator is invalid"
 func TestOSCParsersChangeWindowIcon_term51_parse_missing_separator_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "1")
 	expect(t, p.writer == nil, "p.writer == null")
 	expect(t, OSCParsersChangeWindowIconParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -100,7 +96,7 @@ func TestOSCParsersChangeWindowIcon_term51_parse_missing_separator_is_invalid(t 
 
 // Zig: test "term51: parse: empty icon name"
 func TestOSCParsersChangeWindowIcon_term51_parse_empty_icon_name(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "1;")
 	cmd := *oscA_unwrapPtr(t, OSCParsersChangeWindowIconParse(&p, None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyChangeWindowIcon, "cmd == .change_window_icon")
@@ -109,7 +105,7 @@ func TestOSCParsersChangeWindowIcon_term51_parse_empty_icon_name(t *testing.T) {
 
 // Zig: test "term51: parse: semicolons and arbitrary bytes are kept"
 func TestOSCParsersChangeWindowIcon_term51_parse_semicolons_and_arbitrary_bytes_are_kept(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "1;a;b\x00\x01\xff")
 	cmd := *oscA_unwrapPtr(t, OSCParsersChangeWindowIconParse(&p, None[uint8]()))
 	expectEqualSlices(t, []uint8("a;b\x00\x01\xff"), cmd.ChangeWindowIcon)
@@ -119,13 +115,13 @@ func TestOSCParsersChangeWindowIcon_term51_parse_semicolons_and_arbitrary_bytes_
 func TestOSCParsersChangeWindowIcon_term51_parse_buffer_limit(t *testing.T) {
 	// One byte is always reserved for the NUL terminator.
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1;"+strings.Repeat("a", OSCParserMAX_BUF-1))
 		cmd := *oscA_unwrapPtr(t, OSCParsersChangeWindowIconParse(&p, None[uint8]()))
 		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.ChangeWindowIcon))
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1;"+strings.Repeat("a", OSCParserMAX_BUF))
 		expect(t, p.state == OSCParserState1, "p.state == .@\"1\"")
 		expect(t, OSCParsersChangeWindowIconParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -133,7 +129,7 @@ func TestOSCParsersChangeWindowIcon_term51_parse_buffer_limit(t *testing.T) {
 	}
 	{
 		// An allocator does not change the limit.
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "1;"+strings.Repeat("a", OSCParserMAX_BUF))
 		expect(t, OSCParsersChangeWindowIconParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")

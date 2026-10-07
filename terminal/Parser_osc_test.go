@@ -68,7 +68,7 @@ func TestParser_osc_change_window_title_end_in_esc(t *testing.T) {
 func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 	p := ParserInit()
 	defer p.Deinit()
-	p.osc_parser.alloc = struct{}{} // Zig: p.osc_parser.alloc = std.testing.allocator;
+	p.osc_parser.alloc = true // Zig: p.osc_parser.alloc = std.testing.allocator;
 
 	_ = p.Next(0x1B)
 	_ = p.Next(']')
@@ -107,7 +107,7 @@ func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 func TestParser_osc_104_empty(t *testing.T) {
 	p := ParserInit()
 	defer p.Deinit()
-	p.osc_parser.alloc = struct{}{} // Zig: p.osc_parser.alloc = std.testing.allocator;
+	p.osc_parser.alloc = true // Zig: p.osc_parser.alloc = std.testing.allocator;
 
 	_ = p.Next(0x1B)
 	_ = p.Next(']')

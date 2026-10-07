@@ -316,7 +316,7 @@ func ParserInit() Parser {
 		params_idx:        0,
 		param_acc:         0,
 		param_acc_idx:     0,
-		osc_parser:        OSCParserInit(nil),
+		osc_parser:        OSCParserInit(false),
 
 		// Zig leaves intermediates and params undefined; Go zeroes them.
 	}

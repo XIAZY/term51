@@ -3014,7 +3014,7 @@ func TestTm3_term51_vtStream_the_stream_is_given_the_terminal_allocator_for_long
 	defer s.Deinit()
 	// osc_parser.alloc is `any` in Go: nil is Zig's null, any other value is
 	// "an allocator was provided".
-	expect(t, s.parser.osc_parser.alloc != nil, "s.parser.osc_parser.alloc != null")
+	expect(t, s.parser.osc_parser.alloc, "s.parser.osc_parser.alloc != null")
 	// Zig-only: try std.testing.expect(s.parser.osc_parser.alloc.?.ptr == std.testing.allocator.ptr);
 
 	// An OSC payload far larger than the fixed OSC buffer must be accepted
@@ -3234,17 +3234,28 @@ func TestTm3_term51_printRepeat_previous_char_survives_cursor_movement_and_is_no
 
 // Go-only: panic test: Terminal.init: cols is 0 (Zig: Tabstops.reset and
 // scrolling_region.right compute `cols - 1`, an integer underflow that traps)
+//
+// Go: an error since the zero-size ruling (docs/public-api.md, "Wrong
+// arguments"); the test keeps its name.
 func TestTm3_panic_init_cols_zero(t *testing.T) {
 	testStdCapacity(t)
-	tm3ExpectPanic(t, func() { _, _ = TerminalInit(terminalOptionsDefault(0, 5)) })
+	_, err := TerminalInit(terminalOptionsDefault(0, 5))
+	if err := error(err); err != ErrZeroColCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroColCount)
+	}
 }
 
 // Go-only: panic test: Terminal.init: rows is 0 (Zig: the page list has no
 // first page, `page_list.first.?` of null, and scrolling_region.bottom computes
 // `rows - 1`)
+//
+// Go: an error since the zero-size ruling; the test keeps its name.
 func TestTm3_panic_init_rows_zero(t *testing.T) {
 	testStdCapacity(t)
-	tm3ExpectPanic(t, func() { _, _ = TerminalInit(terminalOptionsDefault(5, 0)) })
+	_, err := TerminalInit(terminalOptionsDefault(5, 0))
+	if err := error(err); err != ErrZeroRowCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroRowCount)
+	}
 }
 
 // Go-only: panic test: Terminal.resize: cols is 0 (Zig: Tabstops.reset
@@ -3253,7 +3264,10 @@ func TestTm3_panic_resize_cols_zero(t *testing.T) {
 	testStdCapacity(t)
 	tm := tm3Init(t, terminalOptionsDefault(5, 5))
 	defer tm.Deinit()
-	tm3ExpectPanic(t, func() { _ = tm.Resize(0, 5) })
+	// Go: an error since the zero-size ruling; the test keeps its name.
+	if err := error(tm.Resize(0, 5)); err != ErrZeroColCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroColCount)
+	}
 }
 
 // Go-only: panic test: Terminal.resize: rows is 0 (Zig: the scrolling region
@@ -3262,7 +3276,10 @@ func TestTm3_panic_resize_rows_zero(t *testing.T) {
 	testStdCapacity(t)
 	tm := tm3Init(t, terminalOptionsDefault(5, 5))
 	defer tm.Deinit()
-	tm3ExpectPanic(t, func() { _ = tm.Resize(5, 0) })
+	// Go: an error since the zero-size ruling; the test keeps its name.
+	if err := error(tm.Resize(5, 0)); err != ErrZeroRowCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroRowCount)
+	}
 }
 
 // Go-only: ruling (Terminal.setCursorPos adds in 64-bit usize on every platform: a huge column clamps to the right margin, also on 32-bit ARM)

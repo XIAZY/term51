@@ -54,3 +54,41 @@ padding fields, and fields whose type is internal (`ScreenSet.all`,
 `ScreenCharsetState.charsets`, `RenderState.selection_cache`,
 `DCSCommandXTGETTCAP.data`) stay unexported; the type's methods are the
 access.
+
+## 2. Wrong arguments
+
+Zig rules many wrong arguments out at compile time (an enum cannot hold an
+undeclared value, a `u21` cannot hold a number above 0x1FFFFF) and asserts
+on others; a release build of upstream does not check those assertions. In
+Go:
+
+- **An error, where the value can come from the outside world at run time.**
+  A size of zero columns or rows returns `ErrZeroColCount` or
+  `ErrZeroRowCount` from `TerminalInit`, `ScreenInit`, `PageListInit`,
+  `Terminal.Resize` and `Screen.Resize`, before anything changes (a window
+  being laid out can report a zero size).
+- **A panic, where only a programming mistake produces the value:** a nil
+  terminal, screen or writer; a value of an enumeration type that is not one
+  of its declared constants (`EraseDisplay(99)`, `Mode(60000)`); a code
+  point above 0x1FFFFF passed to `Print`; an index outside a fixed table
+  (`SwitchScreen(99)`). These are the Go counterparts of values a Zig
+  program cannot construct.
+
+Everything else a caller can pass is accepted as upstream accepts it: zero
+and very large counts, positions outside the screen, empty input.
+
+## 3. Allocators and clean-up
+
+Go allocates and frees by itself, so allocator parameters are gone. Where
+upstream's behaviour depends on whether an allocator was given (the OSC
+parser refuses commands that need a growing buffer when it has none), the
+choice is a `bool`: `OSCParserInit(false)` is upstream's `init(null)`,
+`StreamInit` builds a stream whose OSC parser cannot grow and
+`StreamInitAlloc` one that can; `Terminal.VtStream` uses the second, as
+upstream does.
+
+`Deinit` methods remain and are optional for memory. Call them where they
+do more than free: `Selection.Deinit` and `HighlightTracked.Deinit` stop
+tracking their pins in the screen, and `Stream.Deinit` calls the handler's
+`Deinit`.
+

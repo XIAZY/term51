@@ -2,7 +2,7 @@
 // (Ghostty v1.3.1 plus the term51 additional tests). Each Go test carries the
 // exact Zig title in a "// Zig: test" comment. The helpers (expect,
 // expectEqual, ...) are in Parser_test.go; oscA_term51Feed, oscA_unwrapPtr,
-// oscA_ptrAt, oscA_terms and oscA_testingAllocator are in
+// oscA_ptrAt and oscA_terms are in
 // osc_parsers_change_window_icon_test.go, where the translation notes are.
 //
 // Not translated (compile-time types, see scripts/not-translated.txt):
@@ -83,7 +83,7 @@ func oscA_csNumField(v OSCParsersContextSignalFieldValue, f OSCParsersContextSig
 
 // Zig: test "OSC 3008: basic start command"
 func TestOSCParsersContextSignal_OSC_3008_basic_start_command(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=abc123"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -98,7 +98,7 @@ func TestOSCParsersContextSignal_OSC_3008_basic_start_command(t *testing.T) {
 
 // Zig: test "OSC 3008: basic end command"
 func TestOSCParsersContextSignal_OSC_3008_basic_end_command(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;end=abc123"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -113,7 +113,7 @@ func TestOSCParsersContextSignal_OSC_3008_basic_end_command(t *testing.T) {
 
 // Zig: test "OSC 3008: start with metadata fields"
 func TestOSCParsersContextSignal_OSC_3008_start_with_metadata_fields(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=bed86fab93af4328bbed0a1224af6d40;type=container;user=lennart;hostname=zeta"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -132,7 +132,7 @@ func TestOSCParsersContextSignal_OSC_3008_start_with_metadata_fields(t *testing.
 
 // Zig: test "OSC 3008: start with all common fields"
 func TestOSCParsersContextSignal_OSC_3008_start_with_all_common_fields(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=myctx;type=shell;user=root;hostname=myhost;machineid=3deb5353d3ba43d08201c136a47ead7b;bootid=d4a3d0fdf2e24fdea6d971ce73f4fbf2;pid=1062862;pidfdid=1063162;comm=bash"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -152,7 +152,7 @@ func TestOSCParsersContextSignal_OSC_3008_start_with_all_common_fields(t *testin
 
 // Zig: test "OSC 3008: end with exit metadata"
 func TestOSCParsersContextSignal_OSC_3008_end_with_exit_metadata(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;end=myctx;exit=success;status=0"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -168,7 +168,7 @@ func TestOSCParsersContextSignal_OSC_3008_end_with_exit_metadata(t *testing.T) {
 
 // Zig: test "OSC 3008: end with failure exit"
 func TestOSCParsersContextSignal_OSC_3008_end_with_failure_exit(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;end=myctx;exit=failure;status=1;signal=SIGKILL"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -183,7 +183,7 @@ func TestOSCParsersContextSignal_OSC_3008_end_with_failure_exit(t *testing.T) {
 
 // Zig: test "OSC 3008: unknown fields are ignored"
 func TestOSCParsersContextSignal_OSC_3008_unknown_fields_are_ignored(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=myctx;type=shell;unknownfield=value;user=root"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -197,7 +197,7 @@ func TestOSCParsersContextSignal_OSC_3008_unknown_fields_are_ignored(t *testing.
 
 // Zig: test "OSC 3008: missing field returns null"
 func TestOSCParsersContextSignal_OSC_3008_missing_field_returns_null(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=myctx;user=lennart"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -212,7 +212,7 @@ func TestOSCParsersContextSignal_OSC_3008_missing_field_returns_null(t *testing.
 
 // Zig: test "OSC 3008: invalid prefix"
 func TestOSCParsersContextSignal_OSC_3008_invalid_prefix(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;bogus=abc123"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -225,7 +225,7 @@ func TestOSCParsersContextSignal_OSC_3008_empty_data(t *testing.T) {
 	// Can't really produce empty data after "3008;" because the state machine
 	// won't write a writer for that case, but we test the edge case where
 	// only "start=" is present with no ID.
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start="
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -235,7 +235,7 @@ func TestOSCParsersContextSignal_OSC_3008_empty_data(t *testing.T) {
 
 // Zig: test "OSC 3008: max length context ID"
 func TestOSCParsersContextSignal_OSC_3008_max_length_context_ID(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	id := strings.Repeat("a", 64)
 	input := "3008;start=" + id
 	for i := 0; i < len(input); i++ {
@@ -249,7 +249,7 @@ func TestOSCParsersContextSignal_OSC_3008_max_length_context_ID(t *testing.T) {
 
 // Zig: test "OSC 3008: over-length context ID"
 func TestOSCParsersContextSignal_OSC_3008_over_length_context_ID(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	id := strings.Repeat("a", 65)
 	input := "3008;start=" + id
 	for i := 0; i < len(input); i++ {
@@ -297,7 +297,7 @@ func TestOSCParsersContextSignal_OSC_3008_exit_status_enum_coverage(t *testing.T
 // Zig: test "OSC 3008: spec example - container start"
 func TestOSCParsersContextSignal_OSC_3008_spec_example_container_start(t *testing.T) {
 	// From the spec: a new container "foobar" invoked by user "lennart" on host "zeta"
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=bed86fab93af4328bbed0a1224af6d40;type=container;user=lennart;hostname=zeta;machineid=3deb5353d3ba43d08201c136a47ead7b;bootid=d4a3d0fdf2e24fdea6d971ce73f4fbf2;pid=1062862;pidfdid=1063162;comm=systemd-nspawn;container=foobar"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -318,7 +318,7 @@ func TestOSCParsersContextSignal_OSC_3008_spec_example_container_start(t *testin
 // Zig: test "OSC 3008: spec example - context end"
 func TestOSCParsersContextSignal_OSC_3008_spec_example_context_end(t *testing.T) {
 	// From the spec: context end
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;end=bed86fab93af4328bbed0a1224af6d40"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -332,7 +332,7 @@ func TestOSCParsersContextSignal_OSC_3008_spec_example_context_end(t *testing.T)
 
 // Zig: test "OSC 3008: cwd and cmdline fields"
 func TestOSCParsersContextSignal_OSC_3008_cwd_and_cmdline_fields(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=myctx;type=command;cwd=/home/user;cmdline=ls -la"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -346,7 +346,7 @@ func TestOSCParsersContextSignal_OSC_3008_cwd_and_cmdline_fields(t *testing.T) {
 
 // Zig: test "OSC 3008: start command with no fields"
 func TestOSCParsersContextSignal_OSC_3008_start_command_with_no_fields(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "3008;start=simpleid"
 	for i := 0; i < len(input); i++ {
 		p.Next(input[i])
@@ -584,7 +584,7 @@ func TestOSCParsersContextSignal_term51_Command_readOption_reads_from_the_metada
 
 // Zig: test "term51: parse: missing separator after 3008 is invalid"
 func TestOSCParsersContextSignal_term51_parse_missing_separator_after_3008_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "3008")
 	expect(t, p.state == OSCParserState3008, "p.state == .@\"3008\"")
 	expect(t, OSCParsersContextSignalParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -609,7 +609,7 @@ func TestOSCParsersContextSignal_term51_parse_invalid_prefixes(t *testing.T) {
 		// an empty id followed by metadata
 		"3008;start=;type=shell",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, input)
 		expect(t, OSCParsersContextSignalParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -636,7 +636,7 @@ func TestOSCParsersContextSignal_term51_parse_action_id_and_metadata(t *testing.
 		{"3008;end=start=x", OSCParsersContextSignalCommandActionEnd, "start=x", ""},
 	} {
 		for _, term := range oscA_terms {
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscA_term51Feed(&p, c.input)
 			cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, term))
 			expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
@@ -652,7 +652,7 @@ func TestOSCParsersContextSignal_term51_parse_id_length_limits(t *testing.T) {
 	for _, n := range []int{1, 63, 64} {
 		id := strings.Repeat("i", n)
 		for _, suffix := range []string{"", ";type=shell"} {
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscA_term51Feed(&p, "3008;end="+id+suffix)
 			cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
 			expectEqualStrings(t, id, string(cmd.ContextSignal.ID))
@@ -661,7 +661,7 @@ func TestOSCParsersContextSignal_term51_parse_id_length_limits(t *testing.T) {
 	for _, n := range []int{65, 100} {
 		id := strings.Repeat("i", n)
 		for _, suffix := range []string{"", ";type=shell"} {
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscA_term51Feed(&p, "3008;end="+id+suffix)
 			expect(t, OSCParsersContextSignalParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 			expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -673,20 +673,20 @@ func TestOSCParsersContextSignal_term51_parse_id_length_limits(t *testing.T) {
 func TestOSCParsersContextSignal_term51_parse_id_byte_range(t *testing.T) {
 	// 0x20 (space) and 0x7e ('~') are the smallest and largest valid bytes.
 	for _, id := range []string{" ", "~", " ~ ", "a b"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "3008;start="+id)
 		cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
 		expectEqualStrings(t, id, string(cmd.ContextSignal.ID))
 	}
 	for _, id := range []string{"\x1f", "\x7f", "\x00", "a\x1fb", "a\x7f", "\x80", "\xc3\xa9", "\xff"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "3008;start="+id)
 		expect(t, OSCParsersContextSignalParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
 	}
 	{
 		// The metadata is not subject to the same restriction.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "3008;start=a;user=\x1f\x7f\xff")
 		cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
 		expectEqualSlices(t, []uint8("\x1f\x7f\xff"), zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldUser).User))
@@ -699,7 +699,7 @@ func TestOSCParsersContextSignal_term51_parse_buffer_limit(t *testing.T) {
 	const prefix = "start=a;cwd="
 	{
 		value := strings.Repeat("d", OSCParserMAX_BUF-len(prefix))
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "3008;"+prefix+value)
 		expect(t, p.state == OSCParserState3008, "p.state == .@\"3008\"")
 		cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
@@ -710,7 +710,7 @@ func TestOSCParsersContextSignal_term51_parse_buffer_limit(t *testing.T) {
 	{
 		// One more byte overflows while feeding; an allocator does not help.
 		value := strings.Repeat("d", OSCParserMAX_BUF-len(prefix)+1)
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "3008;"+prefix+value)
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")

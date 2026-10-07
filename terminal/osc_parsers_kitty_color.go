@@ -27,7 +27,7 @@ func OSCParsersKittyColorParse(parser *OSCParser, terminator_ch Optional[uint8])
 
 	// Zig: `const alloc = parser.alloc orelse ...`. The allocator itself is
 	// not used in Go (list.append does not take one).
-	if parser.alloc == nil {
+	if !parser.alloc {
 		parser.state = OSCParserStateInvalid
 		return nil
 	}

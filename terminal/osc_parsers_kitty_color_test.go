@@ -5,8 +5,8 @@
 // defined in Parser_test.go.
 //
 // Translation notes:
-//   - `.init(testing.allocator)` is OSCParserInit(oscB_kc_alloc), any non-nil
-//     value; `.init(null)` is OSCParserInit(nil). The leak check of
+//   - `.init(testing.allocator)` is OSCParserInit(true), any non-nil
+//     value; `.init(null)` is OSCParserInit(false). The leak check of
 //     testing.allocator has no Go counterpart; the `defer p.deinit()` calls
 //     are kept.
 //   - `p.next(ch)` is p.Next(ch); `p.end('\x1b')` is p.End(Some[uint8](0x1b));
@@ -31,10 +31,6 @@ import (
 	"strings"
 	"testing"
 )
-
-// oscB_kc_alloc stands for `testing.allocator`: any non-nil value for
-// OSCParserInit.
-var oscB_kc_alloc any = "testing.allocator"
 
 // oscB_kc_red is Zig's term51_red.
 var oscB_kc_red = ColorRGB{R: 255, G: 0, B: 0}
@@ -112,7 +108,7 @@ const oscB_kc_longInput = "21;foreground=?;background=rgb:f0/f8/ff;cursor=aliceb
 
 // Zig: test "OSC 21: kitty color protocol"
 func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := oscB_kc_longInput
@@ -188,7 +184,7 @@ func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol(t *testing.T) {
 
 // Zig: test "OSC 21: kitty color protocol without allocator"
 func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_without_allocator(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 
 	input := "21;foreground=?"
@@ -200,7 +196,7 @@ func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_without_allocator(t *t
 
 // Zig: test "OSC 21: kitty color protocol double reset"
 func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_double_reset(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := oscB_kc_longInput
@@ -217,7 +213,7 @@ func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_double_reset(t *testin
 
 // Zig: test "OSC 21: kitty color protocol reset after invalid"
 func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_reset_after_invalid(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := oscB_kc_longInput
@@ -239,7 +235,7 @@ func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_reset_after_invalid(t 
 
 // Zig: test "OSC 21: kitty color protocol no key"
 func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_no_key(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "21;"
@@ -254,7 +250,7 @@ func TestOSCParsersKittyColor_OSC_21_kitty_color_protocol_no_key(t *testing.T) {
 
 // Zig: test "term51: parse: no allocator is invalid"
 func TestOSCParsersKittyColor_term51_parse_no_allocator_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_kc_term51Feed(&p, "21")
 	expect(t, p.state == OSCParserState21, "p.state == .@\"21\"")
 	expect(t, OSCParsersKittyColorParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -264,7 +260,7 @@ func TestOSCParsersKittyColor_term51_parse_no_allocator_is_invalid(t *testing.T)
 
 // Zig: test "term51: parse: missing separator after 21 is invalid"
 func TestOSCParsersKittyColor_term51_parse_missing_separator_after_21_is_invalid(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kc_term51Feed(&p, "21")
 	expect(t, p.state == OSCParserState21, "p.state == .@\"21\"")
@@ -276,7 +272,7 @@ func TestOSCParsersKittyColor_term51_parse_missing_separator_after_21_is_invalid
 // Zig: test "term51: parse: empty body yields an empty list"
 func TestOSCParsersKittyColor_term51_parse_empty_body_yields_an_empty_list(t *testing.T) {
 	for _, input := range []string{"21;", "21;;", "21;;;;"} {
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, input)
 		cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -298,7 +294,7 @@ func TestOSCParsersKittyColor_term51_parse_terminator_is_recorded(t *testing.T) 
 		{Some[uint8]('\\'), OSCTerminatorSt},
 		{Some[uint8](0x9c), OSCTerminatorSt},
 	} {
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;foreground=?")
 		cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, c.term))
@@ -309,7 +305,7 @@ func TestOSCParsersKittyColor_term51_parse_terminator_is_recorded(t *testing.T) 
 
 // Zig: test "term51: parse: query, set and reset"
 func TestOSCParsersKittyColor_term51_parse_query_set_and_reset(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kc_term51Feed(&p, "21;foreground=?;background=red;cursor=;cursor_text")
 	cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -329,7 +325,7 @@ func TestOSCParsersKittyColor_term51_parse_query_set_and_reset(t *testing.T) {
 
 // Zig: test "term51: parse: every special key"
 func TestOSCParsersKittyColor_term51_parse_every_special_key(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kc_term51Feed(&p, "21;foreground=?;background=?;selection_foreground=?;selection_background=?;cursor=?;cursor_text=?;visual_bell=?;second_transparent_background=?")
 	cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -347,7 +343,7 @@ func TestOSCParsersKittyColor_term51_parse_every_special_key(t *testing.T) {
 
 // Zig: test "term51: parse: palette key boundaries"
 func TestOSCParsersKittyColor_term51_parse_palette_key_boundaries(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	// 256, -1, +1 and the non-numeric keys are skipped. "1_0" is accepted
 	// as 10 and "007" as 7 because the key is parsed with
@@ -364,7 +360,7 @@ func TestOSCParsersKittyColor_term51_parse_palette_key_boundaries(t *testing.T) 
 
 // Zig: test "term51: parse: unknown, empty and differently cased keys are skipped"
 func TestOSCParsersKittyColor_term51_parse_unknown_empty_and_differently_cased_keys_are_skipped(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kc_term51Feed(&p, "21;bogus=?;=?;Foreground=?;FOREGROUND=?; foreground=?;foreground =?;;cursor=?")
 	cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -375,7 +371,7 @@ func TestOSCParsersKittyColor_term51_parse_unknown_empty_and_differently_cased_k
 
 // Zig: test "term51: parse: only spaces are trimmed from values"
 func TestOSCParsersKittyColor_term51_parse_only_spaces_are_trimmed_from_values(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kc_term51Feed(&p, "21;foreground=  ?  ;background=   ;cursor=  red  ;cursor_text=\t?;visual_bell=\t")
 	cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -394,7 +390,7 @@ func TestOSCParsersKittyColor_term51_parse_only_spaces_are_trimmed_from_values(t
 
 // Zig: test "term51: parse: invalid colors are skipped and later entries still parsed"
 func TestOSCParsersKittyColor_term51_parse_invalid_colors_are_skipped_and_later_entries_still_parsed(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	// The value is everything after the first '=', so "red=blue" and "??"
 	// are invalid colors.
@@ -410,7 +406,7 @@ func TestOSCParsersKittyColor_term51_parse_invalid_colors_are_skipped_and_later_
 
 // Zig: test "term51: parse: repeated keys are all kept in order"
 func TestOSCParsersKittyColor_term51_parse_repeated_keys_are_all_kept_in_order(t *testing.T) {
-	p := OSCParserInit(oscB_kc_alloc)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kc_term51Feed(&p, "21;1=?;1=red;1=;1=?")
 	cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -430,7 +426,7 @@ func TestOSCParsersKittyColor_term51_parse_limit_on_the_number_of_requests(t *te
 
 	{
 		// Exactly at the limit.
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;"+strings.Repeat("0;", limit-1)+"0")
 		cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -439,7 +435,7 @@ func TestOSCParsersKittyColor_term51_parse_limit_on_the_number_of_requests(t *te
 	}
 	{
 		// One more request.
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;"+strings.Repeat("0;", limit)+"0")
 		expect(t, OSCParsersKittyColorParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -448,7 +444,7 @@ func TestOSCParsersKittyColor_term51_parse_limit_on_the_number_of_requests(t *te
 	{
 		// The limit is checked before the entry is looked at, so even an
 		// empty trailing entry (a trailing ';') after a full list is fatal.
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;"+strings.Repeat("0;", limit))
 		expect(t, OSCParsersKittyColorParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -456,7 +452,7 @@ func TestOSCParsersKittyColor_term51_parse_limit_on_the_number_of_requests(t *te
 	}
 	{
 		// Skipped entries do not count towards the limit.
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;"+strings.Repeat("x;", 400)+strings.Repeat("0;", limit-1)+"0")
 		cmd := oscB_kc_unwrap(t, OSCParsersKittyColorParse(&p, None[uint8]()))
@@ -471,7 +467,7 @@ func TestOSCParsersKittyColor_term51_parse_buffer_limit(t *testing.T) {
 	body := strings.Repeat("1=?;", OSCParserMAX_BUF/4)
 	expectEqual(t, OSCParserMAX_BUF, len(body))
 	{
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;"+body)
 		expect(t, p.state == OSCParserState21, "p.state == .@\"21\"")
@@ -479,7 +475,7 @@ func TestOSCParsersKittyColor_term51_parse_buffer_limit(t *testing.T) {
 		expectEqual(t, OSCParserMAX_BUF/4, len(cmd.KittyColorProtocol.List))
 	}
 	{
-		p := OSCParserInit(oscB_kc_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kc_term51Feed(&p, "21;"+body+"1")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")

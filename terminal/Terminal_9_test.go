@@ -3501,12 +3501,18 @@ func TestTm9_panic_switchScreen_destination_screen_has_a_hyperlink(t *testing.T)
 func TestTm9_panic_resize_zero_rows(t *testing.T) {
 	testStdCapacity(t)
 	term := tm9Init(t, 5, 5)
-	tm9ExpectPanic(t, func() { _ = term.Resize(5, 0) })
+	// Go: an error since the zero-size ruling; the test keeps its name.
+	if err := error(term.Resize(5, 0)); err != ErrZeroRowCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroRowCount)
+	}
 }
 
 // Go-only: panic test: Terminal.resize: zero columns (PageList.resize asserts opts.cols > 0)
 func TestTm9_panic_resize_zero_columns(t *testing.T) {
 	testStdCapacity(t)
 	term := tm9Init(t, 5, 5)
-	tm9ExpectPanic(t, func() { _ = term.Resize(0, 5) })
+	// Go: an error since the zero-size ruling; the test keeps its name.
+	if err := error(term.Resize(0, 5)); err != ErrZeroColCount {
+		t.Fatalf("got %v, want %v", err, ErrZeroColCount)
+	}
 }

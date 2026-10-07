@@ -168,7 +168,7 @@ func TestTma_term51_gpa_is_the_allocator_of_the_streams_made_by_vtStream(t *test
 	defer st.Deinit()
 	// osc_parser.alloc is `any` in Go: nil is Zig's null, any other value is
 	// "an allocator was provided".
-	expect(t, st.parser.osc_parser.alloc != nil, "st.parser.osc_parser.alloc != null")
+	expect(t, st.parser.osc_parser.alloc, "st.parser.osc_parser.alloc != null")
 	// Zig-only: try std.testing.expect(st.parser.osc_parser.alloc.?.ptr == t.gpa().ptr);
 	// Zig-only: try std.testing.expect(st.parser.osc_parser.alloc.?.ptr == alloc.ptr);
 }

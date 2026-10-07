@@ -2,7 +2,7 @@
 // (Ghostty v1.3.1 plus the term51 additional tests). Each Go test carries the
 // exact Zig title in a "// Zig: test" comment. The helpers (expect,
 // expectEqual, ...) are in Parser_test.go; oscA_term51Feed, oscA_unwrapPtr,
-// oscA_ptrAt, oscA_terms and oscA_testingAllocator are in
+// oscA_ptrAt and oscA_terms are in
 // osc_parsers_change_window_icon_test.go, where the translation notes are.
 //
 // `cmd.report_pwd.value` is cmd.ReportPwd.value and
@@ -19,7 +19,7 @@ import (
 
 // Zig: test "OSC: 1337: test valid unimplemented key with no value"
 func TestOSCParsersIterm2_OSC_1337_test_valid_unimplemented_key_with_no_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;SetBadgeFormat"
@@ -32,7 +32,7 @@ func TestOSCParsersIterm2_OSC_1337_test_valid_unimplemented_key_with_no_value(t 
 
 // Zig: test "OSC: 1337: test valid unimplemented key with empty value"
 func TestOSCParsersIterm2_OSC_1337_test_valid_unimplemented_key_with_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;SetBadgeFormat="
@@ -45,7 +45,7 @@ func TestOSCParsersIterm2_OSC_1337_test_valid_unimplemented_key_with_empty_value
 
 // Zig: test "OSC: 1337: test valid unimplemented key with non-empty value"
 func TestOSCParsersIterm2_OSC_1337_test_valid_unimplemented_key_with_non_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;SetBadgeFormat=abc123"
@@ -58,7 +58,7 @@ func TestOSCParsersIterm2_OSC_1337_test_valid_unimplemented_key_with_non_empty_v
 
 // Zig: test "OSC: 1337: test valid key with lower case and with no value"
 func TestOSCParsersIterm2_OSC_1337_test_valid_key_with_lower_case_and_with_no_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;setbadgeformat"
@@ -71,7 +71,7 @@ func TestOSCParsersIterm2_OSC_1337_test_valid_key_with_lower_case_and_with_no_va
 
 // Zig: test "OSC: 1337: test valid key with lower case and with empty value"
 func TestOSCParsersIterm2_OSC_1337_test_valid_key_with_lower_case_and_with_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;setbadgeformat="
@@ -84,7 +84,7 @@ func TestOSCParsersIterm2_OSC_1337_test_valid_key_with_lower_case_and_with_empty
 
 // Zig: test "OSC: 1337: test valid key with lower case and with non-empty value"
 func TestOSCParsersIterm2_OSC_1337_test_valid_key_with_lower_case_and_with_non_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;setbadgeformat=abc123"
@@ -97,7 +97,7 @@ func TestOSCParsersIterm2_OSC_1337_test_valid_key_with_lower_case_and_with_non_e
 
 // Zig: test "OSC: 1337: test invalid key with no value"
 func TestOSCParsersIterm2_OSC_1337_test_invalid_key_with_no_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;BobrKurwa"
@@ -110,7 +110,7 @@ func TestOSCParsersIterm2_OSC_1337_test_invalid_key_with_no_value(t *testing.T) 
 
 // Zig: test "OSC: 1337: test invalid key with empty value"
 func TestOSCParsersIterm2_OSC_1337_test_invalid_key_with_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;BobrKurwa="
@@ -123,7 +123,7 @@ func TestOSCParsersIterm2_OSC_1337_test_invalid_key_with_empty_value(t *testing.
 
 // Zig: test "OSC: 1337: test invalid key with non-empty value"
 func TestOSCParsersIterm2_OSC_1337_test_invalid_key_with_non_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;BobrKurwa=abc123"
@@ -136,7 +136,7 @@ func TestOSCParsersIterm2_OSC_1337_test_invalid_key_with_non_empty_value(t *test
 
 // Zig: test "OSC: 1337: test Copy with no value"
 func TestOSCParsersIterm2_OSC_1337_test_Copy_with_no_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;Copy"
@@ -149,7 +149,7 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_no_value(t *testing.T) {
 
 // Zig: test "OSC: 1337: test Copy with empty value"
 func TestOSCParsersIterm2_OSC_1337_test_Copy_with_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;Copy="
@@ -162,7 +162,7 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_empty_value(t *testing.T) {
 
 // Zig: test "OSC: 1337: test Copy with only prefix colon"
 func TestOSCParsersIterm2_OSC_1337_test_Copy_with_only_prefix_colon(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;Copy=:"
@@ -175,7 +175,7 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_only_prefix_colon(t *testing.T
 
 // Zig: test "OSC: 1337: test Copy with question mark"
 func TestOSCParsersIterm2_OSC_1337_test_Copy_with_question_mark(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;Copy=:?"
@@ -197,7 +197,7 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_non_empty_value_that_is_invali
 
 // Zig: test "OSC: 1337: test Copy with non-empty value that is valid base64 but not prefixed with a colon"
 func TestOSCParsersIterm2_OSC_1337_test_Copy_with_non_empty_value_that_is_valid_base64_but_not_prefixed_with_a_colon(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;Copy=YWJjMTIz"
@@ -210,7 +210,7 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_non_empty_value_that_is_valid_
 
 // Zig: test "OSC: 1337: test Copy with non-empty value that is valid base64"
 func TestOSCParsersIterm2_OSC_1337_test_Copy_with_non_empty_value_that_is_valid_base64(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;Copy=:YWJjMTIz"
@@ -226,7 +226,7 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_non_empty_value_that_is_valid_
 
 // Zig: test "OSC: 1337: test CurrentDir with no value"
 func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_no_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;CurrentDir"
@@ -239,7 +239,7 @@ func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_no_value(t *testing.T) {
 
 // Zig: test "OSC: 1337: test CurrentDir with empty value"
 func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;CurrentDir="
@@ -252,7 +252,7 @@ func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_empty_value(t *testing.T
 
 // Zig: test "OSC: 1337: test CurrentDir with non-empty value"
 func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_non_empty_value(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "1337;CurrentDir=abc123"
@@ -267,7 +267,7 @@ func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_non_empty_value(t *testi
 
 // Zig: test "term51: parse: missing separator after 1337 is invalid"
 func TestOSCParsersIterm2_term51_parse_missing_separator_after_1337_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "1337")
 	expect(t, p.state == OSCParserState1337, "p.state == .@\"1337\"")
 	expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -289,7 +289,7 @@ func TestOSCParsersIterm2_term51_parse_empty_and_unknown_keys_are_rejected_witho
 		"1337;Copyy=:YQ==",
 		"1337;CurrentDirectory=/tmp",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, input)
 		expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.command.Tag == OSCCommandKeyInvalid, "p.command == .invalid")
@@ -305,7 +305,7 @@ func TestOSCParsersIterm2_term51_parse_every_unimplemented_key_is_rejected(t *te
 	for k := oscParsersIterm2Key(0); k < oscParsersIterm2KeyCount; k++ {
 		if k != oscParsersIterm2KeyCopy && k != oscParsersIterm2KeyCurrentDir {
 			for _, suffix := range []string{"", "=", "=value"} {
-				p := OSCParserInit(nil)
+				p := OSCParserInit(false)
 				oscA_term51Feed(&p, "1337;"+k.String()+suffix)
 				expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 				expect(t, p.command.Tag == OSCCommandKeyInvalid, "p.command == .invalid")
@@ -320,7 +320,7 @@ func TestOSCParsersIterm2_term51_parse_every_unimplemented_key_is_rejected(t *te
 // Zig: test "term51: parse: Copy"
 func TestOSCParsersIterm2_term51_parse_Copy(t *testing.T) {
 	for _, term := range oscA_terms {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1337;Copy=:YWJj")
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
@@ -333,14 +333,14 @@ func TestOSCParsersIterm2_term51_parse_Copy(t *testing.T) {
 // Zig: test "term51: parse: keys are ASCII case insensitive"
 func TestOSCParsersIterm2_term51_parse_keys_are_ASCII_case_insensitive(t *testing.T) {
 	for _, key := range []string{"Copy", "copy", "COPY", "cOPy"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1337;"+key+"=:YQ==")
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
 		expectEqualStrings(t, "YQ==", string(cmd.ClipboardContents.Data))
 	}
 	for _, key := range []string{"CurrentDir", "currentdir", "CURRENTDIR"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1337;"+key+"=/tmp")
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
@@ -358,7 +358,7 @@ func TestOSCParsersIterm2_term51_parse_Copy_rejects_missing_empty_unprefixed_and
 		"1337;Copy=YQ==",
 		"1337;Copy=?",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, input)
 		expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.command.Tag == OSCCommandKeyInvalid, "p.command == .invalid")
@@ -378,7 +378,7 @@ func TestOSCParsersIterm2_term51_parse_Copy_value_is_not_validated_beyond_the_co
 		{"1337;Copy=::", ":"},
 		{"1337;Copy=:not base64!;\x01\xff", "not base64!;\x01\xff"},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, c.input)
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
@@ -395,7 +395,7 @@ func TestOSCParsersIterm2_term51_parse_CurrentDir(t *testing.T) {
 		{"1337;CurrentDir=a=b;c\x01\xff", "a=b;c\x01\xff"},
 		{"1337;CurrentDir= ", " "},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, c.input)
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, Some[uint8](0x07)))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
@@ -403,7 +403,7 @@ func TestOSCParsersIterm2_term51_parse_CurrentDir(t *testing.T) {
 		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ReportPwd.Value, len(cmd.ReportPwd.Value)))
 	}
 	for _, input := range []string{"1337;CurrentDir", "1337;CurrentDir="} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, input)
 		expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.command.Tag == OSCCommandKeyInvalid, "p.command == .invalid")
@@ -418,7 +418,7 @@ func TestOSCParsersIterm2_term51_parse_buffer_limit(t *testing.T) {
 	const prefix = "CurrentDir="
 	{
 		value := strings.Repeat("d", OSCParserMAX_BUF-1-len(prefix))
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1337;"+prefix+value)
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
@@ -426,7 +426,7 @@ func TestOSCParsersIterm2_term51_parse_buffer_limit(t *testing.T) {
 	}
 	{
 		value := strings.Repeat("d", OSCParserMAX_BUF-len(prefix))
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "1337;"+prefix+value)
 		expect(t, p.state == OSCParserState1337, "p.state == .@\"1337\"")
 		expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -436,7 +436,7 @@ func TestOSCParsersIterm2_term51_parse_buffer_limit(t *testing.T) {
 	{
 		// An allocator does not change the limit.
 		value := strings.Repeat("d", OSCParserMAX_BUF-len(prefix))
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "1337;"+prefix+value)
 		expect(t, OSCParsersIterm2Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")

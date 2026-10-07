@@ -5,8 +5,8 @@
 // in Parser_test.go. The helpers of this file are prefixed oscB_osc9_.
 //
 // Translation notes:
-//   - `var p: Parser = .init(null)` is OSCParserInit(nil) and
-//     `.init(testing.allocator)` is OSCParserInit(oscB_osc9_allocator): the
+//   - `var p: Parser = .init(null)` is OSCParserInit(false) and
+//     `.init(testing.allocator)` is OSCParserInit(true): the
 //     port keeps only whether an allocator was given (osc.go). The leak check
 //     (`defer p.deinit()` under testing.allocator) is kept as p.Deinit().
 //   - `p.end('\x1b').?.*` is oscB_osc9_end: it fails the test when End
@@ -26,10 +26,6 @@ import (
 	"strings"
 	"testing"
 )
-
-// oscB_osc9_allocator stands for `testing.allocator`: any non-nil value
-// (OSCParser.alloc, osc.go).
-var oscB_osc9_allocator any = struct{}{}
 
 // oscB_osc9_feed is `for (input) |ch| p.next(ch)`.
 func oscB_osc9_feed(p *OSCParser, input string) {
@@ -83,7 +79,7 @@ func oscB_osc9_expectEqualCommand(t *testing.T, want OSCCommand, got OSCCommand)
 
 // Zig: test "OSC 9: show desktop notification"
 func TestOSCParsersOsc9_OSC_9_show_desktop_notification(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;Hello world"
 	oscB_osc9_feed(&p, input)
@@ -96,7 +92,7 @@ func TestOSCParsersOsc9_OSC_9_show_desktop_notification(t *testing.T) {
 
 // Zig: test "OSC 9: show single character desktop notification"
 func TestOSCParsersOsc9_OSC_9_show_single_character_desktop_notification(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;H"
 	oscB_osc9_feed(&p, input)
@@ -109,7 +105,7 @@ func TestOSCParsersOsc9_OSC_9_show_single_character_desktop_notification(t *test
 
 // Zig: test "OSC 9;1: ConEmu sleep"
 func TestOSCParsersOsc9_OSC_9_1_ConEmu_sleep(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;1;420"
 	oscB_osc9_feed(&p, input)
@@ -121,7 +117,7 @@ func TestOSCParsersOsc9_OSC_9_1_ConEmu_sleep(t *testing.T) {
 
 // Zig: test "OSC 9;1: ConEmu sleep with no value default to 100ms"
 func TestOSCParsersOsc9_OSC_9_1_ConEmu_sleep_with_no_value_default_to_100ms(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;1;"
 	oscB_osc9_feed(&p, input)
@@ -133,7 +129,7 @@ func TestOSCParsersOsc9_OSC_9_1_ConEmu_sleep_with_no_value_default_to_100ms(t *t
 
 // Zig: test "OSC 9;1: conemu sleep cannot exceed 10000ms"
 func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_cannot_exceed_10000ms(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;1;12345"
 	oscB_osc9_feed(&p, input)
@@ -145,7 +141,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_cannot_exceed_10000ms(t *testing.T)
 
 // Zig: test "OSC 9;1: conemu sleep invalid input"
 func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_invalid_input(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;1;foo"
 	oscB_osc9_feed(&p, input)
@@ -157,7 +153,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_invalid_input(t *testing.T) {
 
 // Zig: test "OSC 9;1: conemu sleep -> desktop notification 1"
 func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_desktop_notification_1(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;1"
 	oscB_osc9_feed(&p, input)
@@ -169,7 +165,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_desktop_notification_1(t *testing.T
 
 // Zig: test "OSC 9;1: conemu sleep -> desktop notification 2"
 func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_desktop_notification_2(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;1a"
 	oscB_osc9_feed(&p, input)
@@ -181,7 +177,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_desktop_notification_2(t *testing.T
 
 // Zig: test "OSC 9;2: ConEmu message box"
 func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;2;hello world"
 	oscB_osc9_feed(&p, input)
@@ -193,7 +189,7 @@ func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box(t *testing.T) {
 
 // Zig: test "OSC 9;2: ConEmu message box invalid input"
 func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_invalid_input(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;2"
 	oscB_osc9_feed(&p, input)
@@ -205,7 +201,7 @@ func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_invalid_input(t *testing.T) {
 
 // Zig: test "OSC 9;2: ConEmu message box empty message"
 func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_empty_message(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;2;"
 	oscB_osc9_feed(&p, input)
@@ -217,7 +213,7 @@ func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_empty_message(t *testing.T) {
 
 // Zig: test "OSC 9;2: ConEmu message box spaces only message"
 func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_spaces_only_message(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;2;   "
 	oscB_osc9_feed(&p, input)
@@ -229,7 +225,7 @@ func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_spaces_only_message(t *testin
 
 // Zig: test "OSC 9;2: message box -> desktop notification 1"
 func TestOSCParsersOsc9_OSC_9_2_message_box_desktop_notification_1(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;2"
 	oscB_osc9_feed(&p, input)
@@ -241,7 +237,7 @@ func TestOSCParsersOsc9_OSC_9_2_message_box_desktop_notification_1(t *testing.T)
 
 // Zig: test "OSC 9;2: message box -> desktop notification 2"
 func TestOSCParsersOsc9_OSC_9_2_message_box_desktop_notification_2(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;2a"
 	oscB_osc9_feed(&p, input)
@@ -253,7 +249,7 @@ func TestOSCParsersOsc9_OSC_9_2_message_box_desktop_notification_2(t *testing.T)
 
 // Zig: test "OSC 9;3: ConEmu change tab title"
 func TestOSCParsersOsc9_OSC_9_3_ConEmu_change_tab_title(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;3;foo bar"
 	oscB_osc9_feed(&p, input)
@@ -265,7 +261,7 @@ func TestOSCParsersOsc9_OSC_9_3_ConEmu_change_tab_title(t *testing.T) {
 
 // Zig: test "OSC 9;3: ConEmu change tab title reset"
 func TestOSCParsersOsc9_OSC_9_3_ConEmu_change_tab_title_reset(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;3;"
 	oscB_osc9_feed(&p, input)
@@ -277,7 +273,7 @@ func TestOSCParsersOsc9_OSC_9_3_ConEmu_change_tab_title_reset(t *testing.T) {
 
 // Zig: test "OSC 9;3: ConEmu change tab title spaces only"
 func TestOSCParsersOsc9_OSC_9_3_ConEmu_change_tab_title_spaces_only(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;3;   "
 	oscB_osc9_feed(&p, input)
@@ -289,7 +285,7 @@ func TestOSCParsersOsc9_OSC_9_3_ConEmu_change_tab_title_spaces_only(t *testing.T
 
 // Zig: test "OSC 9;3: change tab title -> desktop notification 1"
 func TestOSCParsersOsc9_OSC_9_3_change_tab_title_desktop_notification_1(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;3"
 	oscB_osc9_feed(&p, input)
@@ -301,7 +297,7 @@ func TestOSCParsersOsc9_OSC_9_3_change_tab_title_desktop_notification_1(t *testi
 
 // Zig: test "OSC 9;3: message box -> desktop notification 2"
 func TestOSCParsersOsc9_OSC_9_3_message_box_desktop_notification_2(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;3a"
 	oscB_osc9_feed(&p, input)
@@ -313,7 +309,7 @@ func TestOSCParsersOsc9_OSC_9_3_message_box_desktop_notification_2(t *testing.T)
 
 // Zig: test "OSC 9;4: ConEmu progress set"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;1;100"
 	oscB_osc9_feed(&p, input)
@@ -326,7 +322,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set(t *testing.T) {
 
 // Zig: test "OSC 9;4: ConEmu progress set overflow"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_overflow(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;1;900"
 	oscB_osc9_feed(&p, input)
@@ -339,7 +335,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_overflow(t *testing.T) {
 
 // Zig: test "OSC 9;4: ConEmu progress set single digit"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_single_digit(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;1;9"
 	oscB_osc9_feed(&p, input)
@@ -352,7 +348,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_single_digit(t *testing.T) {
 
 // Zig: test "OSC 9;4: ConEmu progress set double digit"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_double_digit(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;1;94"
 	oscB_osc9_feed(&p, input)
@@ -365,7 +361,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_double_digit(t *testing.T) {
 
 // Zig: test "OSC 9;4: ConEmu progress set extra semicolon ignored"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_extra_semicolon_ignored(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;1;100"
 	oscB_osc9_feed(&p, input)
@@ -378,7 +374,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_extra_semicolon_ignored(t *t
 
 // Zig: test "OSC 9;4: ConEmu progress remove with no progress"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_with_no_progress(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;0;"
 	oscB_osc9_feed(&p, input)
@@ -391,7 +387,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_with_no_progress(t *testi
 
 // Zig: test "OSC 9;4: ConEmu progress remove with double semicolon"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_with_double_semicolon(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;0;;"
 	oscB_osc9_feed(&p, input)
@@ -404,7 +400,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_with_double_semicolon(t *
 
 // Zig: test "OSC 9;4: ConEmu progress remove ignores progress"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_ignores_progress(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;0;100"
 	oscB_osc9_feed(&p, input)
@@ -417,7 +413,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_ignores_progress(t *testi
 
 // Zig: test "OSC 9;4: ConEmu progress remove extra semicolon"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_extra_semicolon(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;0;100;"
 	oscB_osc9_feed(&p, input)
@@ -429,7 +425,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_extra_semicolon(t *testin
 
 // Zig: test "OSC 9;4: ConEmu progress error"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_error(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;2"
 	oscB_osc9_feed(&p, input)
@@ -442,7 +438,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_error(t *testing.T) {
 
 // Zig: test "OSC 9;4: ConEmu progress error with progress"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_error_with_progress(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;2;100"
 	oscB_osc9_feed(&p, input)
@@ -455,7 +451,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_error_with_progress(t *testing.T
 
 // Zig: test "OSC 9;4: progress pause"
 func TestOSCParsersOsc9_OSC_9_4_progress_pause(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;4"
 	oscB_osc9_feed(&p, input)
@@ -468,7 +464,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_pause(t *testing.T) {
 
 // Zig: test "OSC 9;4: ConEmu progress pause with progress"
 func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_pause_with_progress(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;4;100"
 	oscB_osc9_feed(&p, input)
@@ -481,7 +477,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_pause_with_progress(t *testing.T
 
 // Zig: test "OSC 9;4: progress -> desktop notification 1"
 func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_1(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4"
 	oscB_osc9_feed(&p, input)
@@ -493,7 +489,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_1(t *testing.T) {
 
 // Zig: test "OSC 9;4: progress -> desktop notification 2"
 func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_2(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;"
 	oscB_osc9_feed(&p, input)
@@ -505,7 +501,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_2(t *testing.T) {
 
 // Zig: test "OSC 9;4: progress -> desktop notification 3"
 func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_3(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;5"
 	oscB_osc9_feed(&p, input)
@@ -517,7 +513,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_3(t *testing.T) {
 
 // Zig: test "OSC 9;4: progress -> desktop notification 4"
 func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_4(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;4;5a"
 	oscB_osc9_feed(&p, input)
@@ -529,7 +525,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_4(t *testing.T) {
 
 // Zig: test "OSC 9;5: ConEmu wait input"
 func TestOSCParsersOsc9_OSC_9_5_ConEmu_wait_input(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;5"
 	oscB_osc9_feed(&p, input)
@@ -540,7 +536,7 @@ func TestOSCParsersOsc9_OSC_9_5_ConEmu_wait_input(t *testing.T) {
 
 // Zig: test "OSC 9;5: ConEmu wait ignores trailing characters"
 func TestOSCParsersOsc9_OSC_9_5_ConEmu_wait_ignores_trailing_characters(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "9;5;foo"
 	oscB_osc9_feed(&p, input)
@@ -551,7 +547,7 @@ func TestOSCParsersOsc9_OSC_9_5_ConEmu_wait_ignores_trailing_characters(t *testi
 
 // Zig: test "OSC 9;6: ConEmu guimacro 1"
 func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_1(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;6;a"
@@ -564,7 +560,7 @@ func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_1(t *testing.T) {
 
 // Zig: test "OSC: 9;6: ConEmu guimacro 2"
 func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_2(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;6;ab"
@@ -577,7 +573,7 @@ func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_2(t *testing.T) {
 
 // Zig: test "OSC: 9;6: ConEmu guimacro 3 incomplete -> desktop notification"
 func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_3_incomplete_desktop_notification(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;6"
@@ -590,7 +586,7 @@ func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_3_incomplete_desktop_notificatio
 
 // Zig: test "OSC: 9;7: ConEmu run process 1"
 func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_1(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;7;ab"
@@ -603,7 +599,7 @@ func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_1(t *testing.T) {
 
 // Zig: test "OSC: 9;7: ConEmu run process 2"
 func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_2(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;7;"
@@ -616,7 +612,7 @@ func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_2(t *testing.T) {
 
 // Zig: test "OSC: 9;7: ConEmu run process incomplete -> desktop notification"
 func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_incomplete_desktop_notification(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;7"
@@ -629,7 +625,7 @@ func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_incomplete_desktop_notificati
 
 // Zig: test "OSC: 9;8: ConEmu output environment variable 1"
 func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_1(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;8;ab"
@@ -642,7 +638,7 @@ func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_1(t *testing.
 
 // Zig: test "OSC: 9;8: ConEmu output environment variable 2"
 func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_2(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;8;"
@@ -655,7 +651,7 @@ func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_2(t *testing.
 
 // Zig: test "OSC: 9;8: ConEmu output environment variable incomplete -> desktop notification"
 func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_incomplete_desktop_notification(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;8"
@@ -668,7 +664,7 @@ func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_incomplete_de
 
 // Zig: test "OSC: 9;9: ConEmu set current working directory"
 func TestOSCParsersOsc9_OSC_9_9_ConEmu_set_current_working_directory(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;9;ab"
@@ -681,7 +677,7 @@ func TestOSCParsersOsc9_OSC_9_9_ConEmu_set_current_working_directory(t *testing.
 
 // Zig: test "OSC: 9;9: ConEmu set current working directory incomplete -> desktop notification"
 func TestOSCParsersOsc9_OSC_9_9_ConEmu_set_current_working_directory_incomplete_desktop_notification(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;9"
@@ -694,7 +690,7 @@ func TestOSCParsersOsc9_OSC_9_9_ConEmu_set_current_working_directory_incomplete_
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 1"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_1(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10"
@@ -710,7 +706,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_1(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 2"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_2(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;0"
@@ -726,7 +722,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_2(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 3"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_3(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;1"
@@ -742,7 +738,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_3(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 4"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_4(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;2"
@@ -757,7 +753,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_4(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 5"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_5(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;3"
@@ -772,7 +768,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_5(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 6"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_6(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;4"
@@ -785,7 +781,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_6(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 7"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_7(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;"
@@ -798,7 +794,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_7(t 
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 8"
 func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_8(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;10;abc"
@@ -811,7 +807,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_8(t 
 
 // Zig: test "OSC: 9;11: ConEmu comment"
 func TestOSCParsersOsc9_OSC_9_11_ConEmu_comment(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;11;ab"
@@ -824,7 +820,7 @@ func TestOSCParsersOsc9_OSC_9_11_ConEmu_comment(t *testing.T) {
 
 // Zig: test "OSC: 9;11: ConEmu comment incomplete -> desktop notification"
 func TestOSCParsersOsc9_OSC_9_11_ConEmu_comment_incomplete_desktop_notification(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;11"
@@ -837,7 +833,7 @@ func TestOSCParsersOsc9_OSC_9_11_ConEmu_comment_incomplete_desktop_notification(
 
 // Zig: test "OSC: 9;12: ConEmu mark prompt start 1"
 func TestOSCParsersOsc9_OSC_9_12_ConEmu_mark_prompt_start_1(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;12"
@@ -849,7 +845,7 @@ func TestOSCParsersOsc9_OSC_9_12_ConEmu_mark_prompt_start_1(t *testing.T) {
 
 // Zig: test "OSC: 9;12: ConEmu mark prompt start 2"
 func TestOSCParsersOsc9_OSC_9_12_ConEmu_mark_prompt_start_2(t *testing.T) {
-	p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+	p := OSCParserInit(true) // testing.allocator
 	defer p.Deinit()
 
 	input := "9;12;abc"
@@ -873,7 +869,7 @@ func oscB_osc9_term51Feed(p *OSCParser, input string) {
 // iTerm2 desktop notification with the given body.
 func oscB_osc9_term51ExpectNotification(t *testing.T, input string, body string) {
 	t.Helper()
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_osc9_term51Feed(&p, input)
 	cmd := oscB_osc9_parse(t, &p)
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
@@ -884,7 +880,7 @@ func oscB_osc9_term51ExpectNotification(t *testing.T, input string, body string)
 
 // Zig: test "term51: parse: missing separator after 9 is invalid"
 func TestOSCParsersOsc9_term51_parse_missing_separator_after_9_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_osc9_term51Feed(&p, "9")
 	expect(t, p.writer == nil, "p.writer == null")
 	expect(t, OSCParsersOsc9Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -908,7 +904,7 @@ func TestOSCParsersOsc9_term51_parse_notification_body(t *testing.T) {
 // Zig: test "term51: parse: terminator is ignored"
 func TestOSCParsersOsc9_term51_parse_terminator_is_ignored(t *testing.T) {
 	for _, term := range []Optional[uint8]{None[uint8](), Some[uint8](0x07), Some[uint8](0x1b)} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;Hello")
 		cmd := oscB_osc9_deref(t, OSCParsersOsc9Parse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
@@ -947,7 +943,7 @@ func TestOSCParsersOsc9_term51_parse_sleep_duration(t *testing.T) {
 		{"9;1;0005", 5},
 		{"9;1;1_0", 10},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuSleep, "cmd == .conemu_sleep")
@@ -981,7 +977,7 @@ func TestOSCParsersOsc9_term51_parse_xterm_emulation(t *testing.T) {
 		{"9;10;3;x", None[bool](), Some(true)},
 		{"9;10;25", None[bool](), Some(false)},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
@@ -1008,7 +1004,7 @@ func TestOSCParsersOsc9_term51_parse_comment(t *testing.T) {
 		{"9;11;hello", "hello"},
 		{"9;11;a;b\x01\xff", "a;b\x01\xff"},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuComment, "cmd == .conemu_comment")
@@ -1026,7 +1022,7 @@ func TestOSCParsersOsc9_term51_parse_12_followed_by_anything_is_a_prompt_mark(t 
 	// Nothing after the "12" is checked, so notifications that happen to
 	// start with "12" are swallowed.
 	for _, input := range []string{"9;12", "9;12;", "9;12;x", "9;12x", "9;123", "9;12 files copied"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
@@ -1046,7 +1042,7 @@ func TestOSCParsersOsc9_term51_parse_message_box_guimacro_run_process_environmen
 		{"9;2;a;b\x01\xff", "a;b\x01\xff"},
 	} {
 		{
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscB_osc9_term51Feed(&p, c.input)
 			cmd := oscB_osc9_parse(t, &p)
 			expect(t, cmd.Tag == OSCCommandKeyConemuShowMessageBox, "cmd == .conemu_show_message_box")
@@ -1054,21 +1050,21 @@ func TestOSCParsersOsc9_term51_parse_message_box_guimacro_run_process_environmen
 			expectEqual(t, uint8(0), oscB_osc9_sentinel(t, cmd.ConemuShowMessageBox))
 		}
 		{
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscB_osc9_term51Feed(&p, "9;6"+c.input[3:])
 			cmd := oscB_osc9_parse(t, &p)
 			expect(t, cmd.Tag == OSCCommandKeyConemuGuimacro, "cmd == .conemu_guimacro")
 			expectEqualSlices(t, []uint8(c.want), cmd.ConemuGuimacro)
 		}
 		{
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscB_osc9_term51Feed(&p, "9;7"+c.input[3:])
 			cmd := oscB_osc9_parse(t, &p)
 			expect(t, cmd.Tag == OSCCommandKeyConemuRunProcess, "cmd == .conemu_run_process")
 			expectEqualSlices(t, []uint8(c.want), cmd.ConemuRunProcess)
 		}
 		{
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscB_osc9_term51Feed(&p, "9;8"+c.input[3:])
 			cmd := oscB_osc9_parse(t, &p)
 			expect(t, cmd.Tag == OSCCommandKeyConemuOutputEnvironmentVariable, "cmd == .conemu_output_environment_variable")
@@ -1076,7 +1072,7 @@ func TestOSCParsersOsc9_term51_parse_message_box_guimacro_run_process_environmen
 		}
 		{
 			// 9;9 reports the working directory; an empty value is accepted.
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscB_osc9_term51Feed(&p, "9;9"+c.input[3:])
 			cmd := oscB_osc9_parse(t, &p)
 			expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
@@ -1100,7 +1096,7 @@ func TestOSCParsersOsc9_term51_parse_message_box_guimacro_run_process_environmen
 // Zig: test "term51: parse: change tab title"
 func TestOSCParsersOsc9_term51_parse_change_tab_title(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;3;")
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuChangeTabTitle, "cmd == .conemu_change_tab_title")
@@ -1115,7 +1111,7 @@ func TestOSCParsersOsc9_term51_parse_change_tab_title(t *testing.T) {
 		{"9;3;;", ";"},
 		{"9;3;a;b\x01\xff", "a;b\x01\xff"},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuChangeTabTitle, "cmd == .conemu_change_tab_title")
@@ -1152,7 +1148,7 @@ func TestOSCParsersOsc9_term51_parse_progress_state(t *testing.T) {
 		{"9;4;2x50", OSCCommandProgressReportStateError, None[uint8]()},
 		{"9;4;0x", OSCCommandProgressReportStateRemove, None[uint8]()},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
@@ -1202,7 +1198,7 @@ func TestOSCParsersOsc9_term51_parse_progress_value(t *testing.T) {
 		// one past the largest usize is a parse error, not clamped
 		{"9;4;1;18446744073709551616", None[uint8]()},
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
@@ -1216,7 +1212,7 @@ func TestOSCParsersOsc9_term51_parse_5_followed_by_anything_is_wait_input(t *tes
 	// Nothing after the "5" is checked, so notifications that happen to
 	// start with "5" are swallowed.
 	for _, input := range []string{"9;5", "9;5;", "9;5;x", "9;5x", "9;50", "9;5 minutes left"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuWaitInput, "cmd == .conemu_wait_input")
@@ -1228,21 +1224,21 @@ func TestOSCParsersOsc9_term51_parse_buffer_limit(t *testing.T) {
 	// Commands that return a string need one byte for the NUL terminator.
 	oscB_osc9_term51ExpectNotification(t, "9;"+strings.Repeat("a", OSCParserMAX_BUF-1), strings.Repeat("a", OSCParserMAX_BUF-1))
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;"+strings.Repeat("a", OSCParserMAX_BUF))
 		expect(t, p.state == OSCParserState9, "p.state == .@\"9\"")
 		expect(t, OSCParsersOsc9Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;2;"+strings.Repeat("a", OSCParserMAX_BUF-3))
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuShowMessageBox, "cmd == .conemu_show_message_box")
 		expectEqual(t, OSCParserMAX_BUF-3, len(cmd.ConemuShowMessageBox))
 	}
 	for _, prefix := range []string{"2;", "3;", "6;", "7;", "8;", "9;", "11;"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;"+prefix+strings.Repeat("a", OSCParserMAX_BUF-len(prefix)))
 		expect(t, p.state == OSCParserState9, "p.state == .@\"9\"")
 		expect(t, OSCParsersOsc9Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -1250,7 +1246,7 @@ func TestOSCParsersOsc9_term51_parse_buffer_limit(t *testing.T) {
 	}
 	{
 		// An allocator does not change the limit.
-		p := OSCParserInit(oscB_osc9_allocator) // testing.allocator
+		p := OSCParserInit(true) // testing.allocator
 		defer p.Deinit()
 		oscB_osc9_term51Feed(&p, "9;"+strings.Repeat("a", OSCParserMAX_BUF))
 		expect(t, OSCParsersOsc9Parse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -1258,14 +1254,14 @@ func TestOSCParsersOsc9_term51_parse_buffer_limit(t *testing.T) {
 
 	// Commands that do not return a string can use the whole buffer.
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;5"+strings.Repeat("a", OSCParserMAX_BUF-1))
 		expect(t, p.state == OSCParserState9, "p.state == .@\"9\"")
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuWaitInput, "cmd == .conemu_wait_input")
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;4;1;"+strings.Repeat("0", OSCParserMAX_BUF-6)+"42")
 		expect(t, p.state == OSCParserState9, "p.state == .@\"9\"")
 		cmd := oscB_osc9_parse(t, &p)
@@ -1274,7 +1270,7 @@ func TestOSCParsersOsc9_term51_parse_buffer_limit(t *testing.T) {
 	}
 	{
 		// One byte more overflows while feeding.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_osc9_term51Feed(&p, "9;5"+strings.Repeat("a", OSCParserMAX_BUF))
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
 		expect(t, p.End(None[uint8]()) == nil, "p.end(null) == null")

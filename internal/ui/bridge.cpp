@@ -6,7 +6,10 @@
 #include <bb/cascades/QmlDocument>
 #include <bb/system/Clipboard>
 
+#include <QDeclarativeError>
 #include <QTextCodec>
+
+#include <cstdio>
 
 extern "C" void goCommand(char *name, char *argsJson); // exported by Go
 
@@ -43,12 +46,21 @@ extern "C" int ui_run(void) {
     Application app(argc, argv);
     bridge = new Bridge;
     QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(&app);
-    if (qml->hasErrors())
+    // A page that does not load says why, on stderr (the app's logs/log):
+    // the page can only be checked by the phone.
+    if (qml->hasErrors()) {
+        foreach (const QDeclarativeError &e, qml->errors())
+            fprintf(stderr, "ui: the page does not load: %s\n", e.toString().toUtf8().constData());
         return 1;
+    }
     qml->setContextProperty("bridge", bridge);
     AbstractPane *root = qml->createRootObject<AbstractPane>();
-    if (!root)
+    if (!root) {
+        foreach (const QDeclarativeError &e, qml->errors())
+            fprintf(stderr, "ui: the page's root object cannot be made: %s\n", e.toString().toUtf8().constData());
+        fprintf(stderr, "ui: the page has no root object\n");
         return 2;
+    }
     app.setScene(root);
     return Application::exec();
 }

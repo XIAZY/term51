@@ -34,6 +34,7 @@ type tab struct {
 	sess  *session.Session
 	tr    keys.Translator
 	title string
+	rang  bool          // its bell rang while another tab was shown
 	stop  chan struct{} // closed when the tab is closed
 }
 
@@ -115,11 +116,11 @@ func (a *App) Run() error {
 	// tell publishes what the page shows about the tabs and the key bar.
 	stickyCtrl, stickyAlt := false, false
 	tell := func() {
-		titles := make([]string, len(tabs))
+		titles, rang := make([]string, len(tabs)), make([]bool, len(tabs))
 		for i, t := range tabs {
-			titles[i] = t.title
+			titles[i], rang[i] = t.title, t.rang
 		}
-		st := map[string]any{"tabs": titles, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt}
+		st := map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt}
 		if cur >= 0 {
 			st["title"] = tabs[cur].title
 		}
@@ -160,6 +161,7 @@ func (a *App) Run() error {
 	// show makes tab i the one on screen: its whole table is drawn.
 	show := func(i int) {
 		cur = i
+		tabs[i].rang = false
 		table = cells.Table{}
 		sticky()
 		tell()
@@ -405,11 +407,15 @@ func (a *App) Run() error {
 					n.t.title = n.ev.Text
 					tell()
 				case session.EventBell:
-					// With the tab, so that the page can mark a tab that
-					// is not shown instead of beeping for it.
+					// A tab that is not shown is marked in the list of
+					// tabs until it is looked at.
 					for i, t := range tabs {
 						if t == n.t {
 							a.event(map[string]any{"bell": true, "tab": i, "shown": i == cur})
+							if i != cur {
+								t.rang = true
+								tell()
+							}
 						}
 					}
 				}

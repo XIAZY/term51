@@ -293,6 +293,14 @@ func TestTabs(t *testing.T) {
 	typeLine(a, "echo in-second-tab")
 	wait(t, "the second tab's output", func() bool { return strings.Contains(p.screen(), "in-second-tab") })
 
+	// The second tab will ring its bell in a moment, when it is no longer
+	// the one shown.
+	typeLine(a, "sleep 1; printf '\\a'")
+	rang := func(i int) bool {
+		r, _ := p.get("rang").([]any)
+		return len(r) > i && r[i] == true
+	}
+
 	// Output in a tab that is not shown does not reach the page; switching
 	// back shows that tab as it is now.
 	a.Send(Command{Name: "tab", Args: map[string]any{"index": 0.0}})
@@ -300,6 +308,13 @@ func TestTabs(t *testing.T) {
 		s := p.screen()
 		return strings.Contains(s, "in-first-tab") && !strings.Contains(s, "in-second-tab")
 	})
+
+	// The bell of the tab that is not shown marks it, until it is shown.
+	wait(t, "the second tab marked as having rung", func() bool { return rang(1) && !rang(0) })
+	a.Send(Command{Name: "tab", Args: map[string]any{"index": 1.0}})
+	wait(t, "the mark gone", func() bool { return p.get("current") == 1.0 && !rang(1) })
+	a.Send(Command{Name: "tab", Args: map[string]any{"index": 0.0}})
+	wait(t, "the first tab once more", func() bool { return p.get("current") == 0.0 })
 
 	// Closing the shown tab shows the other one.
 	a.Send(Command{Name: "closetab"})

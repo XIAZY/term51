@@ -49,7 +49,16 @@ Page {
             if (s.title !== undefined) page.termTitle = s.title
             if (s.cw !== undefined) page.cellW = s.cw
             if (s.ch !== undefined) page.cellH = s.ch
-            if (s.tabs !== undefined) page.tabCount = s.tabs.length
+            if (s.tabs !== undefined) {
+                page.tabCount = s.tabs.length
+                // The list of tabs, for the tabs sheet.
+                var rows = []
+                for (var i = 0; i < s.tabs.length; i++)
+                    rows.push({ title: (i + 1) + "   " + s.tabs[i],
+                                status: s.rang[i] ? "bell" : (i == s.current ? "shown" : "") })
+                tabsModel.clear()
+                tabsModel.append(rows)
+            }
             if (s.current !== undefined) page.tabIndex = s.current
         })
         bridge.event.connect(function(json) {
@@ -108,11 +117,9 @@ Page {
                 onTriggered: page.send("closetab")
             },
             ActionItem {
-                // Until the tabs sheet is built: the next tab.
                 title: "Tabs"
                 imageSource: "asset:///images/tabs.png"
-                enabled: page.tabCount > 1
-                onTriggered: page.send("tab", { index: (page.tabIndex + 1) % page.tabCount })
+                onTriggered: tabsSheet.open()
             },
             ActionItem {
                 title: "Paste"
@@ -152,7 +159,64 @@ Page {
                 page.send("key", page.keyArgs(event, false))
         }
     }
-    attachedObjects: SystemToast { id: toast }
+    attachedObjects: [
+        SystemToast { id: toast },
+        ArrayDataModel { id: tabsModel },
+
+        // The tabs: a tap shows one, a press and hold offers to close it.
+        // The one on screen says "shown"; one whose bell rang while another
+        // was shown says "bell".
+        Sheet {
+            id: tabsSheet
+            Page {
+                titleBar: TitleBar {
+                    title: "Tabs"
+                    dismissAction: ActionItem {
+                        title: "Close"
+                        onTriggered: tabsSheet.close()
+                    }
+                    acceptAction: ActionItem {
+                        title: "New"
+                        onTriggered: {
+                            page.send("newtab")
+                            tabsSheet.close()
+                        }
+                    }
+                }
+                Container {
+                    ListView {
+                        dataModel: tabsModel
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                        function closeTab(index) { page.send("closetab", { index: index }) }
+                        listItemComponents: ListItemComponent {
+                            StandardListItem {
+                                id: row
+                                title: ListItemData.title
+                                status: ListItemData.status
+                                contextActions: ActionSet {
+                                    title: ListItemData.title
+                                    DeleteActionItem {
+                                        title: "Close"
+                                        onTriggered: row.ListItem.view.closeTab(row.ListItem.indexPath[0])
+                                    }
+                                }
+                            }
+                        }
+                        onTriggered: {
+                            page.send("tab", { index: indexPath[0] })
+                            tabsSheet.close()
+                        }
+                    }
+                    Label {
+                        text: "Tap a tab to show it. Press and hold for Close."
+                        textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                        textStyle.color: Color.Gray
+                        horizontalAlignment: HorizontalAlignment.Center
+                    }
+                }
+            }
+        }
+    ]
 
     Container {
         layout: StackLayout {}

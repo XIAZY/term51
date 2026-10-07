@@ -30,13 +30,13 @@ import "bytes"
 type OSCParsersKittyClipboardProtocolOSC struct {
 	// The raw metadata that was received. It can be parsed by using the
 	// `readOption` method.
-	metadata []uint8
+	Metadata []uint8
 	// The raw payload. It may be Base64 encoded, check the `e` option.
 	//
 	// Zig: ?[]const u8.
-	payload Optional[[]uint8]
+	Payload Optional[[]uint8]
 	// The terminator that was used in case we need to send a response.
-	terminator OSCTerminator
+	Terminator OSCTerminator
 }
 
 // ReadOption is osc.parsers.kitty_clipboard_protocol.OSC.readOption: decode
@@ -48,7 +48,7 @@ type OSCParsersKittyClipboardProtocolOSC struct {
 func (self OSCParsersKittyClipboardProtocolOSC) ReadOption(
 	key OSCParsersKittyClipboardProtocolOption,
 ) OSCParsersKittyClipboardProtocolOptionValue {
-	return key.Read(self.metadata)
+	return key.Read(self.Metadata)
 }
 
 // OSCParsersKittyClipboardProtocolLocation is
@@ -391,9 +391,9 @@ func OSCParsersKittyClipboardProtocolParse(parser *OSCParser, terminator_ch Opti
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyKittyClipboardProtocol,
 		KittyClipboardProtocol: OSCParsersKittyClipboardProtocolOSC{
-			metadata:   metadata,
-			payload:    payload,
-			terminator: OSCTerminatorInit(terminator_ch),
+			Metadata:   metadata,
+			Payload:    payload,
+			Terminator: OSCTerminatorInit(terminator_ch),
 		},
 	}
 

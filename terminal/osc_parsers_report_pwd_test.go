@@ -55,7 +55,7 @@ func TestOSCParsersReportPwd_OSC_7_report_pwd(t *testing.T) {
 
 	cmd := oscB_pwd_unwrap(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-	expectEqualStrings(t, "file:///tmp/example", string(cmd.ReportPwd.value))
+	expectEqualStrings(t, "file:///tmp/example", string(cmd.ReportPwd.Value))
 }
 
 // Zig: test "OSC 7: report pwd empty"
@@ -68,7 +68,7 @@ func TestOSCParsersReportPwd_OSC_7_report_pwd_empty(t *testing.T) {
 	}
 	cmd := oscB_pwd_unwrap(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-	expectEqualStrings(t, "", string(cmd.ReportPwd.value))
+	expectEqualStrings(t, "", string(cmd.ReportPwd.Value))
 }
 
 // Zig: test "term51: parse: basic url"
@@ -78,8 +78,8 @@ func TestOSCParsersReportPwd_term51_parse_basic_url(t *testing.T) {
 		oscB_pwd_term51Feed(&p, []uint8("7;file://host/home/user"))
 		cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-		expectEqualStrings(t, "file://host/home/user", string(cmd.ReportPwd.value))
-		expectEqual(t, uint8(0), oscB_pwd_at(cmd.ReportPwd.value, len(cmd.ReportPwd.value)))
+		expectEqualStrings(t, "file://host/home/user", string(cmd.ReportPwd.Value))
+		expectEqual(t, uint8(0), oscB_pwd_at(cmd.ReportPwd.Value, len(cmd.ReportPwd.Value)))
 	}
 }
 
@@ -98,7 +98,7 @@ func TestOSCParsersReportPwd_term51_parse_empty_value(t *testing.T) {
 	oscB_pwd_term51Feed(&p, []uint8("7;"))
 	cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, Some[uint8](0x07)))
 	expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-	expectEqual(t, 0, len(cmd.ReportPwd.value))
+	expectEqual(t, 0, len(cmd.ReportPwd.Value))
 }
 
 // Zig: test "term51: parse: the value is not validated"
@@ -107,7 +107,7 @@ func TestOSCParsersReportPwd_term51_parse_the_value_is_not_validated(t *testing.
 	p := OSCParserInit(nil)
 	oscB_pwd_term51Feed(&p, []uint8("7;not a url;x\x01\xff"))
 	cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, None[uint8]()))
-	expectEqualSlices(t, []uint8("not a url;x\x01\xff"), cmd.ReportPwd.value)
+	expectEqualSlices(t, []uint8("not a url;x\x01\xff"), cmd.ReportPwd.Value)
 }
 
 // Zig: test "term51: parse: buffer limit"
@@ -116,7 +116,7 @@ func TestOSCParsersReportPwd_term51_parse_buffer_limit(t *testing.T) {
 		p := OSCParserInit(nil)
 		oscB_pwd_term51Feed(&p, []uint8("7;"+strings.Repeat("a", OSCParserMAX_BUF-1)))
 		cmd := oscB_pwd_unwrap(t, OSCParsersReportPwdParse(&p, None[uint8]()))
-		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.ReportPwd.value))
+		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.ReportPwd.Value))
 	}
 	{
 		p := OSCParserInit(nil)

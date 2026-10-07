@@ -61,11 +61,11 @@ func ke1Seq(t *testing.T, seq inputKeyEncodeKittySequence) string {
 // .report_all = true, .report_associated = true }`.
 func ke1FlagsAll() KittyKeyFlags {
 	return KittyKeyFlags{
-		disambiguate:      true,
-		report_events:     true,
-		report_alternates: true,
-		report_all:        true,
-		report_associated: true,
+		Disambiguate:     true,
+		ReportEvents:     true,
+		ReportAlternates: true,
+		ReportAll:        true,
+		ReportAssociated: true,
 	}
 }
 
@@ -185,12 +185,12 @@ func TestKe1_KittySequence_special_mods_and_event(t *testing.T) {
 func TestKe1_kitty_plain_text(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyA,
-		mods:   InputKeyMods{},
-		utf8:   []uint8("abcd"),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyA,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8("abcd"),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "abcd", got)
 }
@@ -199,12 +199,12 @@ func TestKe1_kitty_plain_text(t *testing.T) {
 func TestKe1_kitty_repeat_with_just_disambiguate(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		key:    InputKeyKeyKeyA,
-		action: InputKeyActionRepeat,
-		mods:   InputKeyMods{},
-		utf8:   []uint8("a"),
+		Key:    InputKeyKeyKeyA,
+		Action: InputKeyActionRepeat,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8("a"),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "a", got)
 }
@@ -213,71 +213,71 @@ func TestKe1_kitty_repeat_with_just_disambiguate(t *testing.T) {
 func TestKe1_kitty_enter_backspace_tab(t *testing.T) {
 	testPlatform(t, "linux")
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true},
 		})
 		expectEqualStrings(t, "\r", got)
 	}
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true},
 		})
 		expectEqualStrings(t, "\x7f", got)
 	}
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true},
 		})
 		expectEqualStrings(t, "\t", got)
 	}
 
 	// No release events if "report_all" is not set
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true, report_events: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true, ReportEvents: true},
 		})
 		expectEqualStrings(t, "", got)
 	}
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyBackspace, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true, report_events: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyBackspace, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true, ReportEvents: true},
 		})
 		expectEqualStrings(t, "", got)
 	}
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyTab, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true, report_events: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyTab, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true, ReportEvents: true},
 		})
 		expectEqualStrings(t, "", got)
 	}
 
 	// Release events if "report_all" is set
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{
-				disambiguate:  true,
-				report_events: true,
-				report_all:    true,
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{
+				Disambiguate: true,
+				ReportEvents: true,
+				ReportAll:    true,
 			},
 		})
 		expectEqualStrings(t, "\x1b[13;1:3u", got)
 	}
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyBackspace, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{
-				disambiguate:  true,
-				report_events: true,
-				report_all:    true,
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyBackspace, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{
+				Disambiguate: true,
+				ReportEvents: true,
+				ReportAll:    true,
 			},
 		})
 		expectEqualStrings(t, "\x1b[127;1:3u", got)
 	}
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyTab, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{
-				disambiguate:  true,
-				report_events: true,
-				report_all:    true,
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyTab, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{
+				Disambiguate: true,
+				ReportEvents: true,
+				ReportAll:    true,
 			},
 		})
 		expectEqualStrings(t, "\x1b[9;1:3u", got)
@@ -290,12 +290,12 @@ func TestKe1_kitty_shift_backspace_emits_CSI_u(t *testing.T) {
 	// Backspace with shift modifier should emit CSI u sequence, not raw 0x7F.
 	// This is important for programs that want to distinguish shift+backspace.
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyBackspace,
-		mods:   InputKeyMods{shift: true},
-		utf8:   []uint8(""),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyBackspace,
+		Mods:   InputKeyMods{Shift: true},
+		UTF8:   []uint8(""),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "\x1b[127;2u", got)
 }
@@ -304,12 +304,12 @@ func TestKe1_kitty_shift_backspace_emits_CSI_u(t *testing.T) {
 func TestKe1_kitty_shift_enter_emits_CSI_u(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyEnter,
-		mods:   InputKeyMods{shift: true},
-		utf8:   []uint8(""),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyEnter,
+		Mods:   InputKeyMods{Shift: true},
+		UTF8:   []uint8(""),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "\x1b[13;2u", got)
 }
@@ -318,12 +318,12 @@ func TestKe1_kitty_shift_enter_emits_CSI_u(t *testing.T) {
 func TestKe1_kitty_shift_tab_emits_CSI_u(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyTab,
-		mods:   InputKeyMods{shift: true},
-		utf8:   []uint8(""),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyTab,
+		Mods:   InputKeyMods{Shift: true},
+		UTF8:   []uint8(""),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "\x1b[9;2u", got)
 }
@@ -331,8 +331,8 @@ func TestKe1_kitty_shift_tab_emits_CSI_u(t *testing.T) {
 // Zig: test "kitty: enter with all flags"
 func TestKe1_kitty_enter_with_all_flags(t *testing.T) {
 	testPlatform(t, "linux")
-	actual := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{}, utf8: []uint8("")}, InputKeyEncodeOptions{
-		kitty_flags: ke1FlagsAll(),
+	actual := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+		KittyFlags: ke1FlagsAll(),
 	})
 	expectEqualStrings(t, "[13u", actual[1:])
 }
@@ -340,8 +340,8 @@ func TestKe1_kitty_enter_with_all_flags(t *testing.T) {
 // Zig: test "kitty: ctrl with all flags"
 func TestKe1_kitty_ctrl_with_all_flags(t *testing.T) {
 	testPlatform(t, "linux")
-	actual := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyControlLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("")}, InputKeyEncodeOptions{
-		kitty_flags: ke1FlagsAll(),
+	actual := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyControlLeft, Mods: InputKeyMods{Ctrl: true}, UTF8: []uint8("")}, InputKeyEncodeOptions{
+		KittyFlags: ke1FlagsAll(),
 	})
 	expectEqualStrings(t, "[57442;5u", actual[1:])
 }
@@ -350,12 +350,12 @@ func TestKe1_kitty_ctrl_with_all_flags(t *testing.T) {
 func TestKe1_kitty_ctrl_release_with_ctrl_mod_set(t *testing.T) {
 	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionRelease,
-		key:    InputKeyKeyControlLeft,
-		mods:   InputKeyMods{ctrl: true},
-		utf8:   []uint8(""),
+		Action: InputKeyActionRelease,
+		Key:    InputKeyKeyControlLeft,
+		Mods:   InputKeyMods{Ctrl: true},
+		UTF8:   []uint8(""),
 	}, InputKeyEncodeOptions{
-		kitty_flags: ke1FlagsAll(),
+		KittyFlags: ke1FlagsAll(),
 	})
 	expectEqualStrings(t, "[57442;5:3u", actual[1:])
 }
@@ -364,8 +364,8 @@ func TestKe1_kitty_ctrl_release_with_ctrl_mod_set(t *testing.T) {
 func TestKe1_kitty_delete(t *testing.T) {
 	testPlatform(t, "linux")
 	{
-		got := ke1Kitty(t, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDelete, mods: InputKeyMods{}, utf8: []uint8("\x7F")}, InputKeyEncodeOptions{
-			kitty_flags: KittyKeyFlags{disambiguate: true},
+		got := ke1Kitty(t, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyDelete, Mods: InputKeyMods{}, UTF8: []uint8("\x7F")}, InputKeyEncodeOptions{
+			KittyFlags: KittyKeyFlags{Disambiguate: true},
 		})
 		expectEqualStrings(t, "\x1b[3~", got)
 	}
@@ -375,12 +375,12 @@ func TestKe1_kitty_delete(t *testing.T) {
 func TestKe1_kitty_composing_with_no_modifier(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:    InputKeyActionPress,
-		key:       InputKeyKeyKeyA,
-		mods:      InputKeyMods{shift: true},
-		composing: true,
+		Action:    InputKeyActionPress,
+		Key:       InputKeyKeyKeyA,
+		Mods:      InputKeyMods{Shift: true},
+		Composing: true,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "", got)
 }
@@ -389,12 +389,12 @@ func TestKe1_kitty_composing_with_no_modifier(t *testing.T) {
 func TestKe1_kitty_composing_with_modifier(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:    InputKeyActionPress,
-		key:       InputKeyKeyShiftLeft,
-		mods:      InputKeyMods{shift: true},
-		composing: true,
+		Action:    InputKeyActionPress,
+		Key:       InputKeyKeyShiftLeft,
+		Mods:      InputKeyMods{Shift: true},
+		Composing: true,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true, report_all: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAll: true},
 	})
 	expectEqualStrings(t, "\x1b[57441;2u", got)
 }
@@ -403,12 +403,12 @@ func TestKe1_kitty_composing_with_modifier(t *testing.T) {
 func TestKe1_kitty_composed_text_with_report_all(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyUnidentified,
-		mods:   InputKeyMods{},
-		utf8:   []uint8("\xc3\xbb"), // û
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyUnidentified,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8("\xc3\xbb"), // û
 	}, InputKeyEncodeOptions{
-		kitty_flags: ke1FlagsAll(),
+		KittyFlags: ke1FlagsAll(),
 	})
 	expectEqualStrings(t, "\xc3\xbb", got)
 }
@@ -417,15 +417,15 @@ func TestKe1_kitty_composed_text_with_report_all(t *testing.T) {
 func TestKe1_kitty_shift_a_on_US_keyboard(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyA,
-		mods:                InputKeyMods{shift: true},
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 97, // lowercase A
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyA,
+		Mods:               InputKeyMods{Shift: true},
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 97, // lowercase A
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_alternates: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAlternates: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[97:65;2u", got)
@@ -435,15 +435,15 @@ func TestKe1_kitty_shift_a_on_US_keyboard(t *testing.T) {
 func TestKe1_kitty_matching_unshifted_codepoint(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyA,
-		mods:                InputKeyMods{shift: true},
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 65,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyA,
+		Mods:               InputKeyMods{Shift: true},
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 65,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_alternates: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAlternates: true,
 		},
 	})
 	// WARNING: This is not a valid encoding. This is a hypothetical encoding
@@ -457,17 +457,17 @@ func TestKe1_kitty_matching_unshifted_codepoint(t *testing.T) {
 func TestKe1_kitty_report_alternates_with_caps(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyJ,
-		mods:                InputKeyMods{caps_lock: true},
-		utf8:                []uint8("J"),
-		unshifted_codepoint: 106,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyJ,
+		Mods:               InputKeyMods{CapsLock: true},
+		UTF8:               []uint8("J"),
+		UnshiftedCodepoint: 106,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[106;65;74u", got)
@@ -477,17 +477,17 @@ func TestKe1_kitty_report_alternates_with_caps(t *testing.T) {
 func TestKe1_kitty_report_alternates_colon_shift_semicolon(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeySemicolon,
-		mods:                InputKeyMods{shift: true},
-		utf8:                []uint8(":"),
-		unshifted_codepoint: ';',
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeySemicolon,
+		Mods:               InputKeyMods{Shift: true},
+		UTF8:               []uint8(":"),
+		UnshiftedCodepoint: ';',
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[59:58;2;58u", got)
@@ -497,17 +497,17 @@ func TestKe1_kitty_report_alternates_colon_shift_semicolon(t *testing.T) {
 func TestKe1_kitty_report_alternates_with_ru_layout(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeySemicolon,
-		mods:                InputKeyMods{},
-		utf8:                []uint8("ч"),
-		unshifted_codepoint: 1095,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeySemicolon,
+		Mods:               InputKeyMods{},
+		UTF8:               []uint8("ч"),
+		UnshiftedCodepoint: 1095,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[1095::59;;1095u", got)
@@ -517,17 +517,17 @@ func TestKe1_kitty_report_alternates_with_ru_layout(t *testing.T) {
 func TestKe1_kitty_report_alternates_with_ru_layout_shifted(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeySemicolon,
-		mods:                InputKeyMods{shift: true},
-		utf8:                []uint8("Ч"),
-		unshifted_codepoint: 1095,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeySemicolon,
+		Mods:               InputKeyMods{Shift: true},
+		UTF8:               []uint8("Ч"),
+		UnshiftedCodepoint: 1095,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[1095:1063:59;2;1063u", got)
@@ -537,17 +537,17 @@ func TestKe1_kitty_report_alternates_with_ru_layout_shifted(t *testing.T) {
 func TestKe1_kitty_report_alternates_with_ru_layout_caps_lock(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeySemicolon,
-		mods:                InputKeyMods{caps_lock: true},
-		utf8:                []uint8("Ч"),
-		unshifted_codepoint: 1095,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeySemicolon,
+		Mods:               InputKeyMods{CapsLock: true},
+		UTF8:               []uint8("Ч"),
+		UnshiftedCodepoint: 1095,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[1095::59;65;1063u", got)
@@ -557,18 +557,18 @@ func TestKe1_kitty_report_alternates_with_ru_layout_caps_lock(t *testing.T) {
 func TestKe1_kitty_report_alternates_with_hu_layout_release(t *testing.T) {
 	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionRelease,
-		key:                 InputKeyKeyBracketLeft,
-		mods:                InputKeyMods{ctrl: true},
-		utf8:                []uint8(""),
-		unshifted_codepoint: 337,
+		Action:             InputKeyActionRelease,
+		Key:                InputKeyKeyBracketLeft,
+		Mods:               InputKeyMods{Ctrl: true},
+		UTF8:               []uint8(""),
+		UnshiftedCodepoint: 337,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
-			report_events:     true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
+			ReportEvents:     true,
 		},
 	})
 	expectEqualStrings(t, "[337::91;5:3u", actual[1:])
@@ -580,12 +580,12 @@ func TestKe1_kitty_report_alternates_with_hu_layout_release(t *testing.T) {
 func TestKe1_kitty_up_arrow_with_utf8(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyArrowUp,
-		mods:   InputKeyMods{},
-		utf8:   []uint8{30},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyArrowUp,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8{30},
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true},
 	})
 	expectEqualStrings(t, "\x1b[A", got)
 }
@@ -594,12 +594,12 @@ func TestKe1_kitty_up_arrow_with_utf8(t *testing.T) {
 func TestKe1_kitty_shift_tab(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyTab,
-		mods:   InputKeyMods{shift: true},
-		utf8:   []uint8(""), // tab
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyTab,
+		Mods:   InputKeyMods{Shift: true},
+		UTF8:   []uint8(""), // tab
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true, report_alternates: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAlternates: true},
 	})
 	expectEqualStrings(t, "\x1b[9;2u", got)
 }
@@ -608,12 +608,12 @@ func TestKe1_kitty_shift_tab(t *testing.T) {
 func TestKe1_kitty_left_shift(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyShiftLeft,
-		mods:   InputKeyMods{},
-		utf8:   []uint8(""),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyShiftLeft,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8(""),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true, report_alternates: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAlternates: true},
 	})
 	expectEqualStrings(t, "", got)
 }
@@ -622,12 +622,12 @@ func TestKe1_kitty_left_shift(t *testing.T) {
 func TestKe1_kitty_left_shift_with_report_all(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyShiftLeft,
-		mods:   InputKeyMods{},
-		utf8:   []uint8(""),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyShiftLeft,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8(""),
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{disambiguate: true, report_all: true},
+		KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAll: true},
 	})
 	expectEqualStrings(t, "\x1b[57441u", got)
 }
@@ -637,19 +637,19 @@ func TestKe1_kitty_left_shift_with_report_all(t *testing.T) {
 func TestKe1_kitty_report_associated_with_alt_text_on_macOS_with_option(t *testing.T) {
 	testPlatform(t, "darwin")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyW,
-		mods:                InputKeyMods{alt: true},
-		utf8:                []uint8("∑"),
-		unshifted_codepoint: 119,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyW,
+		Mods:               InputKeyMods{Alt: true},
+		UTF8:               []uint8("∑"),
+		UnshiftedCodepoint: 119,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
-		macos_option_as_alt: InputConfigOptionAsAltFalse,
+		MacosOptionAsAlt: InputConfigOptionAsAltFalse,
 	})
 	expectEqualStrings(t, "\x1b[119;3;8721u", got)
 }
@@ -663,36 +663,36 @@ func TestKe1_kitty_report_associated_with_alt_text_on_macOS_with_alt(t *testing.
 		t.Run(goos, func(t *testing.T) {
 			testPlatform(t, goos)
 			flags := KittyKeyFlags{
-				disambiguate:      true,
-				report_all:        true,
-				report_alternates: true,
-				report_associated: true,
+				Disambiguate:     true,
+				ReportAll:        true,
+				ReportAlternates: true,
+				ReportAssociated: true,
 			}
 			{
 				// With Alt modifier
 				got := ke1Kitty(t, InputKeyKeyEvent{
-					action:              InputKeyActionPress,
-					key:                 InputKeyKeyKeyW,
-					mods:                InputKeyMods{alt: true},
-					utf8:                []uint8("∑"),
-					unshifted_codepoint: 119,
+					Action:             InputKeyActionPress,
+					Key:                InputKeyKeyKeyW,
+					Mods:               InputKeyMods{Alt: true},
+					UTF8:               []uint8("∑"),
+					UnshiftedCodepoint: 119,
 				}, InputKeyEncodeOptions{
-					kitty_flags:         flags,
-					macos_option_as_alt: InputConfigOptionAsAltTrue,
+					KittyFlags:       flags,
+					MacosOptionAsAlt: InputConfigOptionAsAltTrue,
 				})
 				expectEqualStrings(t, "\x1b[119;3u", got)
 			}
 			{
 				// Without Alt modifier
 				got := ke1Kitty(t, InputKeyKeyEvent{
-					action:              InputKeyActionPress,
-					key:                 InputKeyKeyKeyW,
-					mods:                InputKeyMods{},
-					utf8:                []uint8("∑"),
-					unshifted_codepoint: 119,
+					Action:             InputKeyActionPress,
+					Key:                InputKeyKeyKeyW,
+					Mods:               InputKeyMods{},
+					UTF8:               []uint8("∑"),
+					UnshiftedCodepoint: 119,
 				}, InputKeyEncodeOptions{
-					kitty_flags:         flags,
-					macos_option_as_alt: InputConfigOptionAsAltTrue,
+					KittyFlags:       flags,
+					MacosOptionAsAlt: InputConfigOptionAsAltTrue,
 				})
 				expectEqualStrings(t, "\x1b[119;;8721u", got)
 			}
@@ -704,17 +704,17 @@ func TestKe1_kitty_report_associated_with_alt_text_on_macOS_with_alt(t *testing.
 func TestKe1_kitty_report_associated_with_modifiers(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyJ,
-		mods:                InputKeyMods{ctrl: true},
-		utf8:                []uint8("j"),
-		unshifted_codepoint: 106,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyJ,
+		Mods:               InputKeyMods{Ctrl: true},
+		UTF8:               []uint8("j"),
+		UnshiftedCodepoint: 106,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[106;5u", got)
@@ -724,17 +724,17 @@ func TestKe1_kitty_report_associated_with_modifiers(t *testing.T) {
 func TestKe1_kitty_report_associated(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyJ,
-		mods:                InputKeyMods{shift: true},
-		utf8:                []uint8("J"),
-		unshifted_codepoint: 106,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyJ,
+		Mods:               InputKeyMods{Shift: true},
+		UTF8:               []uint8("J"),
+		UnshiftedCodepoint: 106,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[106:74;2;74u", got)
@@ -744,18 +744,18 @@ func TestKe1_kitty_report_associated(t *testing.T) {
 func TestKe1_kitty_report_associated_on_release(t *testing.T) {
 	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionRelease,
-		key:                 InputKeyKeyKeyJ,
-		mods:                InputKeyMods{shift: true},
-		utf8:                []uint8("J"),
-		unshifted_codepoint: 106,
+		Action:             InputKeyActionRelease,
+		Key:                InputKeyKeyKeyJ,
+		Mods:               InputKeyMods{Shift: true},
+		UTF8:               []uint8("J"),
+		UnshiftedCodepoint: 106,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_all:        true,
-			report_alternates: true,
-			report_associated: true,
-			report_events:     true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAll:        true,
+			ReportAlternates: true,
+			ReportAssociated: true,
+			ReportEvents:     true,
 		},
 	})
 	expectEqualStrings(t, "[106:74;2:3u", actual[1:])
@@ -765,15 +765,15 @@ func TestKe1_kitty_report_associated_on_release(t *testing.T) {
 func TestKe1_kitty_alternates_omit_control_characters(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyDelete,
-		mods:   InputKeyMods{},
-		utf8:   []uint8{0x7F},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyDelete,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8{0x7F},
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_alternates: true,
-			report_all:        true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAlternates: true,
+			ReportAll:        true,
 		},
 	})
 	expectEqualStrings(t, "\x1b[3~", got)
@@ -783,15 +783,15 @@ func TestKe1_kitty_alternates_omit_control_characters(t *testing.T) {
 func TestKe1_kitty_enter_with_utf8_dead_key_state(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyEnter,
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 0x0D,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyEnter,
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 0x0D,
 	}, InputKeyEncodeOptions{
-		kitty_flags: KittyKeyFlags{
-			disambiguate:      true,
-			report_alternates: true,
-			report_all:        true,
+		KittyFlags: KittyKeyFlags{
+			Disambiguate:     true,
+			ReportAlternates: true,
+			ReportAll:        true,
 		},
 	})
 	expectEqualStrings(t, "A", got)
@@ -801,12 +801,12 @@ func TestKe1_kitty_enter_with_utf8_dead_key_state(t *testing.T) {
 func TestKe1_kitty_keypad_number(t *testing.T) {
 	testPlatform(t, "linux")
 	actual := ke1Kitty(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyNumpad1,
-		mods:   InputKeyMods{},
-		utf8:   []uint8("1"),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyNumpad1,
+		Mods:   InputKeyMods{},
+		UTF8:   []uint8("1"),
 	}, InputKeyEncodeOptions{
-		kitty_flags: ke1FlagsAll(),
+		KittyFlags: ke1FlagsAll(),
 	})
 	expectEqualStrings(t, "[57400;;49u", actual[1:])
 }
@@ -815,12 +815,12 @@ func TestKe1_kitty_keypad_number(t *testing.T) {
 func TestKe1_kitty_backspace_with_utf8_dead_key_state(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Kitty(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyBackspace,
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 0x0D,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyBackspace,
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 0x0D,
 	}, InputKeyEncodeOptions{
-		kitty_flags: ke1FlagsAll(),
+		KittyFlags: ke1FlagsAll(),
 	})
 	expectEqualStrings(t, "", got)
 }
@@ -829,10 +829,10 @@ func TestKe1_kitty_backspace_with_utf8_dead_key_state(t *testing.T) {
 func TestKe1_legacy_backspace_with_utf8_dead_key_state(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyBackspace,
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 0x0D,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyBackspace,
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 0x0D,
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "", got)
 }
@@ -841,10 +841,10 @@ func TestKe1_legacy_backspace_with_utf8_dead_key_state(t *testing.T) {
 func TestKe1_legacy_enter_with_utf8_dead_key_state(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyEnter,
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 0x0D,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyEnter,
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 0x0D,
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "A", got)
 }
@@ -853,10 +853,10 @@ func TestKe1_legacy_enter_with_utf8_dead_key_state(t *testing.T) {
 func TestKe1_legacy_esc_with_utf8_dead_key_state(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyEscape,
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 0x0D,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyEscape,
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 0x0D,
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "A", got)
 }
@@ -865,10 +865,10 @@ func TestKe1_legacy_esc_with_utf8_dead_key_state(t *testing.T) {
 func TestKe1_legacy_ctrl_shift_minus_underscore_on_US(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyMinus,
-		mods:   InputKeyMods{ctrl: true, shift: true},
-		utf8:   []uint8("_"),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyMinus,
+		Mods:   InputKeyMods{Ctrl: true, Shift: true},
+		UTF8:   []uint8("_"),
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x1F", got)
 }
@@ -877,10 +877,10 @@ func TestKe1_legacy_ctrl_shift_minus_underscore_on_US(t *testing.T) {
 func TestKe1_legacy_ctrl_alt_c(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyC,
-		mods:   InputKeyMods{ctrl: true, alt: true},
-		utf8:   []uint8("c"),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyC,
+		Mods:   InputKeyMods{Ctrl: true, Alt: true},
+		UTF8:   []uint8("c"),
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x1b\x03", got)
 }
@@ -889,13 +889,13 @@ func TestKe1_legacy_ctrl_alt_c(t *testing.T) {
 func TestKe1_legacy_alt_c(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyC,
-		utf8:   []uint8("c"),
-		mods:   InputKeyMods{alt: true},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyC,
+		UTF8:   []uint8("c"),
+		Mods:   InputKeyMods{Alt: true},
 	}, InputKeyEncodeOptions{
-		alt_esc_prefix:      true,
-		macos_option_as_alt: InputConfigOptionAsAltTrue,
+		AltEscPrefix:     true,
+		MacosOptionAsAlt: InputConfigOptionAsAltTrue,
 	})
 	expectEqualStrings(t, "\x1Bc", got)
 }
@@ -904,13 +904,13 @@ func TestKe1_legacy_alt_c(t *testing.T) {
 func TestKe1_legacy_alt_e_only_unshifted(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyE,
-		unshifted_codepoint: 'e',
-		mods:                InputKeyMods{alt: true},
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyE,
+		UnshiftedCodepoint: 'e',
+		Mods:               InputKeyMods{Alt: true},
 	}, InputKeyEncodeOptions{
-		alt_esc_prefix:      true,
-		macos_option_as_alt: InputConfigOptionAsAltTrue,
+		AltEscPrefix:     true,
+		MacosOptionAsAlt: InputConfigOptionAsAltTrue,
 	})
 	expectEqualStrings(t, "\x1Be", got)
 }
@@ -924,14 +924,14 @@ func TestKe1_legacy_alt_x_macos(t *testing.T) {
 		t.Run(goos, func(t *testing.T) {
 			testPlatform(t, goos)
 			got := ke1Legacy(t, InputKeyKeyEvent{
-				action:              InputKeyActionPress,
-				key:                 InputKeyKeyKeyC,
-				utf8:                []uint8("≈"),
-				unshifted_codepoint: 'c',
-				mods:                InputKeyMods{alt: true},
+				Action:             InputKeyActionPress,
+				Key:                InputKeyKeyKeyC,
+				UTF8:               []uint8("≈"),
+				UnshiftedCodepoint: 'c',
+				Mods:               InputKeyMods{Alt: true},
 			}, InputKeyEncodeOptions{
-				alt_esc_prefix:      true,
-				macos_option_as_alt: InputConfigOptionAsAltTrue,
+				AltEscPrefix:     true,
+				MacosOptionAsAlt: InputConfigOptionAsAltTrue,
 			})
 			expectEqualStrings(t, "\x1Bc", got)
 		})
@@ -947,14 +947,14 @@ func TestKe1_legacy_shift_alt_period_macos(t *testing.T) {
 		t.Run(goos, func(t *testing.T) {
 			testPlatform(t, goos)
 			got := ke1Legacy(t, InputKeyKeyEvent{
-				action:              InputKeyActionPress,
-				key:                 InputKeyKeyPeriod,
-				utf8:                []uint8(">"),
-				unshifted_codepoint: '.',
-				mods:                InputKeyMods{alt: true, shift: true},
+				Action:             InputKeyActionPress,
+				Key:                InputKeyKeyPeriod,
+				UTF8:               []uint8(">"),
+				UnshiftedCodepoint: '.',
+				Mods:               InputKeyMods{Alt: true, Shift: true},
 			}, InputKeyEncodeOptions{
-				alt_esc_prefix:      true,
-				macos_option_as_alt: InputConfigOptionAsAltTrue,
+				AltEscPrefix:     true,
+				MacosOptionAsAlt: InputConfigOptionAsAltTrue,
 			})
 			expectEqualStrings(t, "\x1B>", got)
 		})
@@ -965,12 +965,12 @@ func TestKe1_legacy_shift_alt_period_macos(t *testing.T) {
 func TestKe1_legacy_alt_ф(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyF,
-		utf8:   []uint8("ф"),
-		mods:   InputKeyMods{alt: true},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyF,
+		UTF8:   []uint8("ф"),
+		Mods:   InputKeyMods{Alt: true},
 	}, InputKeyEncodeOptions{
-		alt_esc_prefix: true,
+		AltEscPrefix: true,
 	})
 	expectEqualStrings(t, "ф", got)
 }
@@ -979,10 +979,10 @@ func TestKe1_legacy_alt_ф(t *testing.T) {
 func TestKe1_legacy_ctrl_c(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyC,
-		mods:   InputKeyMods{ctrl: true},
-		utf8:   []uint8("c"),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyC,
+		Mods:   InputKeyMods{Ctrl: true},
+		UTF8:   []uint8("c"),
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x03", got)
 }
@@ -991,10 +991,10 @@ func TestKe1_legacy_ctrl_c(t *testing.T) {
 func TestKe1_legacy_ctrl_space(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeySpace,
-		mods:   InputKeyMods{ctrl: true},
-		utf8:   []uint8(" "),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeySpace,
+		Mods:   InputKeyMods{Ctrl: true},
+		UTF8:   []uint8(" "),
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x00", got)
 }
@@ -1003,9 +1003,9 @@ func TestKe1_legacy_ctrl_space(t *testing.T) {
 func TestKe1_legacy_ctrl_shift_backspace(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyBackspace,
-		mods:   InputKeyMods{ctrl: true, shift: true},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyBackspace,
+		Mods:   InputKeyMods{Ctrl: true, Shift: true},
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x08", got)
 }
@@ -1014,12 +1014,12 @@ func TestKe1_legacy_ctrl_shift_backspace(t *testing.T) {
 func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyH,
-		mods:   InputKeyMods{ctrl: true, shift: true},
-		utf8:   []uint8("H"),
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyH,
+		Mods:   InputKeyMods{Ctrl: true, Shift: true},
+		UTF8:   []uint8("H"),
 	}, InputKeyEncodeOptions{
-		modify_other_keys_state_2: true,
+		ModifyOtherKeysState2: true,
 	})
 	expectEqualStrings(t, "\x1b[27;6;72~", got)
 }
@@ -1028,13 +1028,13 @@ func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2(t *testing.T) {
 func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2_and_consumed_mods(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyKeyH,
-		mods:          InputKeyMods{ctrl: true, shift: true},
-		consumed_mods: InputKeyMods{shift: true},
-		utf8:          []uint8("H"),
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyKeyH,
+		Mods:         InputKeyMods{Ctrl: true, Shift: true},
+		ConsumedMods: InputKeyMods{Shift: true},
+		UTF8:         []uint8("H"),
 	}, InputKeyEncodeOptions{
-		modify_other_keys_state_2: true,
+		ModifyOtherKeysState2: true,
 	})
 	expectEqualStrings(t, "\x1b[27;6;72~", got)
 }
@@ -1043,14 +1043,14 @@ func TestKe1_legacy_ctrl_shift_char_with_modify_other_state_2_and_consumed_mods(
 func TestKe1_legacy_alt_digit_with_modify_other_state_2(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyDigit8,
-		mods:          InputKeyMods{alt: true},
-		consumed_mods: InputKeyMods{},
-		utf8:          []uint8("8"),
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyDigit8,
+		Mods:         InputKeyMods{Alt: true},
+		ConsumedMods: InputKeyMods{},
+		UTF8:         []uint8("8"),
 	}, InputKeyEncodeOptions{
-		modify_other_keys_state_2: true,
-		macos_option_as_alt:       InputConfigOptionAsAltTrue,
+		ModifyOtherKeysState2: true,
+		MacosOptionAsAlt:      InputConfigOptionAsAltTrue,
 	})
 	expectEqualStrings(t, "\x1b[27;3;56~", got)
 }
@@ -1060,14 +1060,14 @@ func TestKe1_legacy_alt_digit_with_modify_other_state_2(t *testing.T) {
 func TestKe1_legacy_alt_digit_with_modify_other_state_2_and_macos_option_as_alt_false(t *testing.T) {
 	testPlatform(t, "darwin")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyDigit8,
-		mods:          InputKeyMods{alt: true},
-		consumed_mods: InputKeyMods{alt: true},
-		utf8:          []uint8("["), // common translation of option+8 with European keyboard layouts
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyDigit8,
+		Mods:         InputKeyMods{Alt: true},
+		ConsumedMods: InputKeyMods{Alt: true},
+		UTF8:         []uint8("["), // common translation of option+8 with European keyboard layouts
 	}, InputKeyEncodeOptions{
-		modify_other_keys_state_2: true,
-		macos_option_as_alt:       InputConfigOptionAsAltFalse,
+		ModifyOtherKeysState2: true,
+		MacosOptionAsAlt:      InputConfigOptionAsAltFalse,
 	})
 	expectEqualStrings(t, "[", got)
 }
@@ -1077,38 +1077,38 @@ func TestKe1_legacy_fixterm_awkward_letters(t *testing.T) {
 	testPlatform(t, "linux")
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action: InputKeyActionPress,
-			key:    InputKeyKeyKeyI,
-			mods:   InputKeyMods{ctrl: true},
-			utf8:   []uint8("i"),
+			Action: InputKeyActionPress,
+			Key:    InputKeyKeyKeyI,
+			Mods:   InputKeyMods{Ctrl: true},
+			UTF8:   []uint8("i"),
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[105;5u", got)
 	}
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action: InputKeyActionPress,
-			key:    InputKeyKeyKeyM,
-			mods:   InputKeyMods{ctrl: true},
-			utf8:   []uint8("m"),
+			Action: InputKeyActionPress,
+			Key:    InputKeyKeyKeyM,
+			Mods:   InputKeyMods{Ctrl: true},
+			UTF8:   []uint8("m"),
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[109;5u", got)
 	}
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action: InputKeyActionPress,
-			key:    InputKeyKeyBracketLeft,
-			mods:   InputKeyMods{ctrl: true},
-			utf8:   []uint8("["),
+			Action: InputKeyActionPress,
+			Key:    InputKeyKeyBracketLeft,
+			Mods:   InputKeyMods{Ctrl: true},
+			UTF8:   []uint8("["),
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[91;5u", got)
 	}
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:              InputKeyActionPress,
-			key:                 InputKeyKeyDigit2,
-			mods:                InputKeyMods{ctrl: true, shift: true},
-			utf8:                []uint8("@"),
-			unshifted_codepoint: '2',
+			Action:             InputKeyActionPress,
+			Key:                InputKeyKeyDigit2,
+			Mods:               InputKeyMods{Ctrl: true, Shift: true},
+			UTF8:               []uint8("@"),
+			UnshiftedCodepoint: '2',
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[64;5u", got)
 	}
@@ -1122,11 +1122,11 @@ func TestKe1_legacy_ctrl_shift_letter_ascii(t *testing.T) {
 	testPlatform(t, "linux")
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:              InputKeyActionPress,
-			key:                 InputKeyKeyKeyM,
-			mods:                InputKeyMods{ctrl: true, shift: true},
-			utf8:                []uint8("M"),
-			unshifted_codepoint: 'm',
+			Action:             InputKeyActionPress,
+			Key:                InputKeyKeyKeyM,
+			Mods:               InputKeyMods{Ctrl: true, Shift: true},
+			UTF8:               []uint8("M"),
+			UnshiftedCodepoint: 'm',
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[109;6u", got)
 	}
@@ -1136,10 +1136,10 @@ func TestKe1_legacy_ctrl_shift_letter_ascii(t *testing.T) {
 func TestKe1_legacy_shift_function_key_should_use_all_mods(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyArrowUp,
-		mods:          InputKeyMods{shift: true},
-		consumed_mods: InputKeyMods{shift: true},
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyArrowUp,
+		Mods:         InputKeyMods{Shift: true},
+		ConsumedMods: InputKeyMods{Shift: true},
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x1b[1;2A", got)
 }
@@ -1148,10 +1148,10 @@ func TestKe1_legacy_shift_function_key_should_use_all_mods(t *testing.T) {
 func TestKe1_legacy_keypad_enter(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyNumpadEnter,
-		mods:          InputKeyMods{},
-		consumed_mods: InputKeyMods{},
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyNumpadEnter,
+		Mods:         InputKeyMods{},
+		ConsumedMods: InputKeyMods{},
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\r", got)
 }
@@ -1160,11 +1160,11 @@ func TestKe1_legacy_keypad_enter(t *testing.T) {
 func TestKe1_legacy_keypad_1(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyNumpad1,
-		mods:          InputKeyMods{},
-		consumed_mods: InputKeyMods{},
-		utf8:          []uint8("1"),
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyNumpad1,
+		Mods:         InputKeyMods{},
+		ConsumedMods: InputKeyMods{},
+		UTF8:         []uint8("1"),
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "1", got)
 }
@@ -1173,13 +1173,13 @@ func TestKe1_legacy_keypad_1(t *testing.T) {
 func TestKe1_legacy_keypad_1_with_application_keypad(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyNumpad1,
-		mods:          InputKeyMods{},
-		consumed_mods: InputKeyMods{},
-		utf8:          []uint8("1"),
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyNumpad1,
+		Mods:         InputKeyMods{},
+		ConsumedMods: InputKeyMods{},
+		UTF8:         []uint8("1"),
 	}, InputKeyEncodeOptions{
-		keypad_key_application: true,
+		KeypadKeyApplication: true,
 	})
 	expectEqualStrings(t, "\x1bOq", got)
 }
@@ -1188,13 +1188,13 @@ func TestKe1_legacy_keypad_1_with_application_keypad(t *testing.T) {
 func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyNumpad1,
-		mods:          InputKeyMods{num_lock: true},
-		consumed_mods: InputKeyMods{},
-		utf8:          []uint8("1"),
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyNumpad1,
+		Mods:         InputKeyMods{NumLock: true},
+		ConsumedMods: InputKeyMods{},
+		UTF8:         []uint8("1"),
 	}, InputKeyEncodeOptions{
-		keypad_key_application: true,
+		KeypadKeyApplication: true,
 	})
 	expectEqualStrings(t, "\x1bOq", got)
 }
@@ -1203,14 +1203,14 @@ func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock(t *testing.T) {
 func TestKe1_legacy_keypad_1_with_application_keypad_and_numlock_ignore(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action:        InputKeyActionPress,
-		key:           InputKeyKeyNumpad1,
-		mods:          InputKeyMods{num_lock: false},
-		consumed_mods: InputKeyMods{},
-		utf8:          []uint8("1"),
+		Action:       InputKeyActionPress,
+		Key:          InputKeyKeyNumpad1,
+		Mods:         InputKeyMods{NumLock: false},
+		ConsumedMods: InputKeyMods{},
+		UTF8:         []uint8("1"),
 	}, InputKeyEncodeOptions{
-		keypad_key_application:     true,
-		ignore_keypad_with_numlock: true,
+		KeypadKeyApplication:    true,
+		IgnoreKeypadWithNumlock: true,
 	})
 	expectEqualStrings(t, "1", got)
 }
@@ -1221,10 +1221,10 @@ func TestKe1_legacy_f1(t *testing.T) {
 	// F1
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:        InputKeyActionPress,
-			key:           InputKeyKeyF1,
-			mods:          InputKeyMods{ctrl: true},
-			consumed_mods: InputKeyMods{},
+			Action:       InputKeyActionPress,
+			Key:          InputKeyKeyF1,
+			Mods:         InputKeyMods{Ctrl: true},
+			ConsumedMods: InputKeyMods{},
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[1;5P", got)
 	}
@@ -1232,10 +1232,10 @@ func TestKe1_legacy_f1(t *testing.T) {
 	// F2
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:        InputKeyActionPress,
-			key:           InputKeyKeyF2,
-			mods:          InputKeyMods{ctrl: true},
-			consumed_mods: InputKeyMods{},
+			Action:       InputKeyActionPress,
+			Key:          InputKeyKeyF2,
+			Mods:         InputKeyMods{Ctrl: true},
+			ConsumedMods: InputKeyMods{},
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[1;5Q", got)
 	}
@@ -1243,10 +1243,10 @@ func TestKe1_legacy_f1(t *testing.T) {
 	// F3
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:        InputKeyActionPress,
-			key:           InputKeyKeyF3,
-			mods:          InputKeyMods{ctrl: true},
-			consumed_mods: InputKeyMods{},
+			Action:       InputKeyActionPress,
+			Key:          InputKeyKeyF3,
+			Mods:         InputKeyMods{Ctrl: true},
+			ConsumedMods: InputKeyMods{},
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[13;5~", got)
 	}
@@ -1254,10 +1254,10 @@ func TestKe1_legacy_f1(t *testing.T) {
 	// F4
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:        InputKeyActionPress,
-			key:           InputKeyKeyF4,
-			mods:          InputKeyMods{ctrl: true},
-			consumed_mods: InputKeyMods{},
+			Action:       InputKeyActionPress,
+			Key:          InputKeyKeyF4,
+			Mods:         InputKeyMods{Ctrl: true},
+			ConsumedMods: InputKeyMods{},
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[1;5S", got)
 	}
@@ -1265,10 +1265,10 @@ func TestKe1_legacy_f1(t *testing.T) {
 	// F5 uses new encoding
 	{
 		got := ke1Legacy(t, InputKeyKeyEvent{
-			action:        InputKeyActionPress,
-			key:           InputKeyKeyF5,
-			mods:          InputKeyMods{ctrl: true},
-			consumed_mods: InputKeyMods{},
+			Action:       InputKeyActionPress,
+			Key:          InputKeyKeyF5,
+			Mods:         InputKeyMods{Ctrl: true},
+			ConsumedMods: InputKeyMods{},
 		}, InputKeyEncodeOptions{})
 		expectEqualStrings(t, "\x1b[15;5~", got)
 	}
@@ -1278,11 +1278,11 @@ func TestKe1_legacy_f1(t *testing.T) {
 func TestKe1_legacy_left_shift_tab(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyTab,
-		mods: InputKeyMods{
-			shift: true,
-			sides: InputKeyModsModsSide{shift: InputKeyModsModSideLeft},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyTab,
+		Mods: InputKeyMods{
+			Shift: true,
+			Sides: InputKeyModsModsSide{Shift: InputKeyModsModSideLeft},
 		},
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x1b[Z", got)
@@ -1292,11 +1292,11 @@ func TestKe1_legacy_left_shift_tab(t *testing.T) {
 func TestKe1_legacy_right_shift_tab(t *testing.T) {
 	testPlatform(t, "linux")
 	got := ke1Legacy(t, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyTab,
-		mods: InputKeyMods{
-			shift: true,
-			sides: InputKeyModsModsSide{shift: InputKeyModsModSideRight},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyTab,
+		Mods: InputKeyMods{
+			Shift: true,
+			Sides: InputKeyModsModsSide{Shift: InputKeyModsModSideRight},
 		},
 	}, InputKeyEncodeOptions{})
 	expectEqualStrings(t, "\x1b[Z", got)

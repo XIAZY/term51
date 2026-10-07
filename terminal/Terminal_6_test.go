@@ -72,7 +72,7 @@ func tm6InitOpts(t *testing.T, opts TerminalOptions) *Terminal {
 
 // tm6Active is the Zig literal `.{ .active = .{ .x = x, .y = y } }`.
 func tm6Active(x uint, y uint) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // tm6Print is `try t.print(c)`.
@@ -119,7 +119,7 @@ func tm6Attr256Bg(n uint8) SGRAttribute {
 
 // tm6AttrDirectBg is `.{ .direct_color_bg = .{ .r = r, .g = g, .b = b } }`.
 func tm6AttrDirectBg(r uint8, g uint8, b uint8) SGRAttribute {
-	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: r, g: g, b: b}}
+	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: r, G: g, B: b}}
 }
 
 // tm6ScrollViewportDelta is `.{ .delta = n }`.
@@ -128,7 +128,7 @@ func tm6ScrollViewportDelta(n int64) TerminalScrollViewport {
 }
 
 // tm6StyleRefCount is `page.styles.refCount(page.memory, id)`.
-func tm6StyleRefCount(page *Page, id StyleId) uint {
+func tm6StyleRefCount(page *Page, id StyleID) uint {
 	return uint(page.styles.RefCount(id))
 }
 
@@ -155,10 +155,10 @@ func tm6TLabel(cols uint, x uint, y uint) uint32 {
 // leave the cursor at the home position with no pending wrap.
 func tm6TFill(t *testing.T, tm *Terminal) {
 	t.Helper()
-	for y := uint(0); y < uint(tm.rows); y++ {
-		for x := uint(0); x < uint(tm.cols); x++ {
+	for y := uint(0); y < uint(tm.Rows); y++ {
+		for x := uint(0); x < uint(tm.Cols); x++ {
 			tm.SetCursorPos(y+1, x+1)
-			tm6Print(t, tm, tm6TLabel(uint(tm.cols), x, y))
+			tm6Print(t, tm, tm6TLabel(uint(tm.Cols), x, y))
 		}
 	}
 	tm.SetCursorPos(1, 1)
@@ -167,24 +167,24 @@ func tm6TFill(t *testing.T, tm *Terminal) {
 // tm6TRegion is term51TRegion: set the scrolling region directly (all values
 // 0-indexed, inclusive).
 func tm6TRegion(tm *Terminal, top uint, bottom uint, left uint, right uint) {
-	tm.scrolling_region = TerminalScrollingRegion{
-		top:    SizeCellCountInt(top),
-		bottom: SizeCellCountInt(bottom),
-		left:   SizeCellCountInt(left),
-		right:  SizeCellCountInt(right),
+	tm.ScrollingRegion = TerminalScrollingRegion{
+		Top:    SizeCellCountInt(top),
+		Bottom: SizeCellCountInt(bottom),
+		Left:   SizeCellCountInt(left),
+		Right:  SizeCellCountInt(right),
 	}
 }
 
 // tm6TCellAt is term51TCellAt: a copy of the cell.
 func tm6TCellAt(t *testing.T, tm *Terminal, x uint, y uint) PageCell {
 	t.Helper()
-	return *zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(x, y))).cell
+	return *zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(x, y))).Cell
 }
 
 // tm6TRowAt is term51TRowAt.
 func tm6TRowAt(t *testing.T, tm *Terminal, y uint) *PageRow {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, y))).row
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, y))).Row
 }
 
 // tm6TGridRow is term51TGridRow: one character per cell: '.' for an empty
@@ -194,8 +194,8 @@ func tm6TRowAt(t *testing.T, tm *Terminal, y uint) *PageRow {
 // spacer tail, '>' for a spacer head.
 func tm6TGridRow(t *testing.T, tm *Terminal, y uint) string {
 	t.Helper()
-	buf := make([]uint8, tm.cols)
-	for x := uint(0); x < uint(tm.cols); x++ {
+	buf := make([]uint8, tm.Cols)
+	for x := uint(0); x < uint(tm.Cols); x++ {
 		c := tm6TCellAt(t, tm, x, y)
 		switch c.wide {
 		case PageCellWideSpacerTail:
@@ -230,7 +230,7 @@ func tm6TGridRow(t *testing.T, tm *Terminal, y uint) string {
 // `expected`, one string per row.
 func tm6TExpectGrid(t *testing.T, tm *Terminal, expected ...string) {
 	t.Helper()
-	expectEqual(t, uint(tm.rows), uint(len(expected)))
+	expectEqual(t, uint(tm.Rows), uint(len(expected)))
 	for y, row := range expected {
 		expectEqualStrings(t, row, tm6TGridRow(t, tm, uint(y)))
 	}
@@ -239,25 +239,25 @@ func tm6TExpectGrid(t *testing.T, tm *Terminal, expected ...string) {
 // tm6TExpectCursor is term51TExpectCursor.
 func tm6TExpectCursor(t *testing.T, tm *Terminal, x uint, y uint) {
 	t.Helper()
-	expectEqual(t, x, uint(tm.screens.active.cursor.x))
-	expectEqual(t, y, uint(tm.screens.active.cursor.y))
+	expectEqual(t, x, uint(tm.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(tm.Screens.Active.Cursor.Y))
 }
 
 // tm6TScrollbackRows is term51TScrollbackRows: the number of rows above the
 // active area.
 func tm6TScrollbackRows(tm *Terminal) uint {
-	return tm.screens.active.pages.total_rows - uint(tm.rows)
+	return tm.Screens.Active.Pages.total_rows - uint(tm.Rows)
 }
 
 // tm6TExpectCursorConsistent is term51TExpectCursorConsistent: the cursor's
 // cached row and cell pointers and its pin match its x/y.
 func tm6TExpectCursorConsistent(t *testing.T, tm *Terminal) {
 	t.Helper()
-	s := tm.screens.active
-	lc := zigUnwrap(t, s.pages.GetCell(tm6Active(uint(s.cursor.x), uint(s.cursor.y))))
-	expect(t, s.cursor.page_cell == lc.cell, "s.cursor.page_cell == lc.cell")
-	expect(t, s.cursor.page_row == lc.row, "s.cursor.page_row == lc.row")
-	expectEqual(t, s.cursor.x, s.cursor.page_pin.x)
+	s := tm.Screens.Active
+	lc := zigUnwrap(t, s.Pages.GetCell(tm6Active(uint(s.Cursor.X), uint(s.Cursor.Y))))
+	expect(t, s.Cursor.PageCell == lc.Cell, "s.cursor.page_cell == lc.cell")
+	expect(t, s.Cursor.PageRow == lc.Row, "s.cursor.page_row == lc.row")
+	expectEqual(t, s.Cursor.X, s.Cursor.PagePin.X)
 }
 
 // tm6TBg is term51TBg.
@@ -283,8 +283,8 @@ func tm6TScrollbackTerminal(t *testing.T) *Terminal {
 // the scrollback) shown at the top of the viewport.
 func tm6TViewportTop(t *testing.T, tm *Terminal) uint {
 	t.Helper()
-	pages := &tm.screens.active.pages
-	return uint(zigUnwrap(t, pages.PointFromPin(PointTagScreen, pages.GetTopLeft(PointTagViewport))).Screen.y)
+	pages := &tm.Screens.Active.Pages
+	return uint(zigUnwrap(t, pages.PointFromPin(PointTagScreen, pages.GetTopLeft(PointTagViewport))).Screen.Y)
 }
 
 // tm6TExpectViewport is term51TExpectViewport.
@@ -306,19 +306,19 @@ func tm6TPutRow(t *testing.T, tm *Terminal, y uint, str string) {
 // region's columns set to left..right (rows are the full screen).
 func tm6TShiftRow(t *testing.T, tm *Terminal, y uint, left uint, right uint) {
 	t.Helper()
-	tm6TRegion(tm, 0, uint(tm.rows)-1, left, right)
-	lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, y)))
-	tm.rowWillBeShifted(&lc.node.data, lc.row)
-	lc.node.data.AssertIntegrity()
+	tm6TRegion(tm, 0, uint(tm.Rows)-1, left, right)
+	lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, y)))
+	tm.rowWillBeShifted(&lc.Node.data, lc.Row)
+	lc.Node.data.AssertIntegrity()
 }
 
 // tm6TRawRow is term51TRawRow.
 func tm6TRawRow(t *testing.T, tm *Terminal, y uint, out []uint64) []uint64 {
 	t.Helper()
-	for x := uint(0); x < uint(tm.cols); x++ {
+	for x := uint(0); x < uint(tm.Cols); x++ {
 		out[x] = tm6TCellAt(t, tm, x, y).bitCast()
 	}
-	return out[:tm.cols]
+	return out[:tm.Cols]
 }
 
 // tm6TSpacerHeadTerminal is term51TSpacerHeadTerminal: row 0 is "abcdefghi"
@@ -362,13 +362,13 @@ func tm6UFill(t *testing.T, tm *Terminal, rows []string) {
 // tm6UCellAt is term51UCellAt.
 func tm6UCellAt(t *testing.T, tm *Terminal, x uint, y uint) *PageCell {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(x, y))).cell
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(x, y))).Cell
 }
 
 // tm6URowAt is term51URowAt.
 func tm6URowAt(t *testing.T, tm *Terminal, y uint) *PageRow {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, y))).row
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, y))).Row
 }
 
 // tm6UCellChar is term51UCellChar: one character per cell: '.' empty, the
@@ -407,10 +407,10 @@ func tm6UCellChar(cell PageCell) uint8 {
 // the expected rows.
 func tm6UExpectGrid(t *testing.T, tm *Terminal, expected ...string) {
 	t.Helper()
-	expectEqual(t, uint(tm.rows), uint(len(expected)))
-	buf := make([]uint8, tm.cols)
+	expectEqual(t, uint(tm.Rows), uint(len(expected)))
+	buf := make([]uint8, tm.Cols)
 	for y, exp := range expected {
-		for x := uint(0); x < uint(tm.cols); x++ {
+		for x := uint(0); x < uint(tm.Cols); x++ {
 			buf[x] = tm6UCellChar(*tm6UCellAt(t, tm, x, uint(y)))
 		}
 		expectEqualStrings(t, exp, string(buf))
@@ -421,9 +421,9 @@ func tm6UExpectGrid(t *testing.T, tm *Terminal, expected ...string) {
 // active row: 'D' dirty, '.' clean.
 func tm6UExpectDirty(t *testing.T, tm *Terminal, expected string) {
 	t.Helper()
-	expectEqual(t, uint(tm.rows), uint(len(expected)))
-	buf := make([]uint8, tm.rows)
-	for y := uint(0); y < uint(tm.rows); y++ {
+	expectEqual(t, uint(tm.Rows), uint(len(expected)))
+	buf := make([]uint8, tm.Rows)
+	for y := uint(0); y < uint(tm.Rows); y++ {
 		if tm6URowAt(t, tm, y).dirty {
 			buf[y] = 'D'
 		} else {
@@ -437,9 +437,9 @@ func tm6UExpectDirty(t *testing.T, tm *Terminal, expected string) {
 // wrap_continuation (c), both (b) or neither (.) of every active row.
 func tm6UExpectWrap(t *testing.T, tm *Terminal, expected string) {
 	t.Helper()
-	expectEqual(t, uint(tm.rows), uint(len(expected)))
-	buf := make([]uint8, tm.rows)
-	for y := uint(0); y < uint(tm.rows); y++ {
+	expectEqual(t, uint(tm.Rows), uint(len(expected)))
+	buf := make([]uint8, tm.Rows)
+	for y := uint(0); y < uint(tm.Rows); y++ {
 		row := tm6URowAt(t, tm, y)
 		if row.wrap && row.wrap_continuation {
 			buf[y] = 'b'
@@ -479,15 +479,15 @@ func tm6USetWrap(t *testing.T, tm *Terminal, flags string) {
 // tm6UExpectCursor is term51UExpectCursor.
 func tm6UExpectCursor(t *testing.T, tm *Terminal, x uint, y uint, pending_wrap bool) {
 	t.Helper()
-	expectEqual(t, x, uint(tm.screens.active.cursor.x))
-	expectEqual(t, y, uint(tm.screens.active.cursor.y))
-	expectEqual(t, pending_wrap, tm.screens.active.cursor.pending_wrap)
+	expectEqual(t, x, uint(tm.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(tm.Screens.Active.Cursor.Y))
+	expectEqual(t, pending_wrap, tm.Screens.Active.Cursor.PendingWrap)
 }
 
 // tm6UPage is term51UPage: the page that holds the cursor; fine for
 // terminals that fit one page.
 func tm6UPage(tm *Terminal) *Page {
-	return &tm.screens.active.cursor.page_pin.node.data
+	return &tm.Screens.Active.Cursor.PagePin.Node.data
 }
 
 // tm6UAlphaAt is term51UAlphaAt: prepare the standard fixture with the
@@ -520,7 +520,7 @@ func tm6UPutWide(t *testing.T, tm *Terminal, x uint, y uint) {
 // sequence, which is one wide cell with a grapheme.
 func tm6UPutWideGrapheme(t *testing.T, tm *Terminal, x uint, y uint) {
 	t.Helper()
-	tm.modes.Set(ModesModeGraphemeCluster, true)
+	tm.Modes.Set(ModesModeGraphemeCluster, true)
 	tm.SetCursorPos(y+1, x+1)
 	tm6Print(t, tm, 0x1F468)
 	tm6Print(t, tm, 0x200D)
@@ -548,7 +548,7 @@ func tm6UPutGrapheme(t *testing.T, tm *Terminal, x uint, y uint) {
 // rows.
 func tm6UCrossPage(t *testing.T, tm *Terminal, tail_rows uint) {
 	t.Helper()
-	first := tm.screens.active.pages.pages.first
+	first := tm.Screens.Active.Pages.pages.first
 	expect(t, first != nil, "pages.pages.first != null")
 	n := uint(first.data.capacity.rows)
 	for i := uint(0); i < n+tail_rows-1; i++ {
@@ -556,9 +556,9 @@ func tm6UCrossPage(t *testing.T, tm *Terminal, tail_rows uint) {
 	}
 	tm.SetCursorPos(1, 1)
 	expect(t, first.next != nil, "first.next != null")
-	for y := uint(0); y < uint(tm.rows); y++ {
-		node := zigUnwrap(t, tm.screens.active.pages.Pin(tm6Active(0, y))).node
-		if y+tail_rows < uint(tm.rows) {
+	for y := uint(0); y < uint(tm.Rows); y++ {
+		node := zigUnwrap(t, tm.Screens.Active.Pages.Pin(tm6Active(0, y))).Node
+		if y+tail_rows < uint(tm.Rows) {
 			expect(t, node == first, "node == first")
 		} else {
 			expect(t, node == first.next, "node == first.next.?")
@@ -569,7 +569,7 @@ func tm6UCrossPage(t *testing.T, tm *Terminal, tail_rows uint) {
 // tm6UNodeAt is term51UNodeAt.
 func tm6UNodeAt(t *testing.T, tm *Terminal, y uint) *Page {
 	t.Helper()
-	return &zigUnwrap(t, tm.screens.active.pages.Pin(tm6Active(0, y))).node.data
+	return &zigUnwrap(t, tm.Screens.Active.Pages.Pin(tm6Active(0, y))).Node.data
 }
 
 // ---------------------------------------------------------------------------
@@ -600,11 +600,11 @@ func TestTm6_term51_scrollUp_full_screen_counts_scrollback_and_clamping(t *testi
 			defer tm.Deinit()
 			tm6TFill(t, tm)
 			tm.SetCursorPos(3, 4)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			tm6ScrollUp(t, tm, c.count)
 			tm6TExpectGrid(t, tm, c.rows[:]...)
 			tm6TExpectCursor(t, tm, 3, 2)
-			expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+			expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 			expectEqual(t, c.scrollback, tm6TScrollbackRows(tm))
 		}()
 	}
@@ -666,7 +666,7 @@ func TestTm6_term51_scrollUp_region_below_the_top_row_or_with_margins_creates_no
 	expectEqual(t, uint(0), tm6TScrollbackRows(tm))
 
 	tm.SetTopAndBottomMargin(0, 0)
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(2, 4)
 	tm6ScrollUp(t, tm, 1)
 	tm6TExpectGrid(t, tm, "ALMNE", "KQRSO", "P...T", ".VWX.", "U...Y")
@@ -680,16 +680,16 @@ func TestTm6_term51_scrollUp_cursor_outside_the_region_is_restored(t *testing.T)
 	tm6TFill(t, tm)
 
 	tm.SetTopAndBottomMargin(2, 3)
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(2, 4)
 	cursors := [][2]uint{{4, 4}, {0, 0}, {0, 2}, {4, 2}}
 	for _, c := range cursors {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(c[0]), SizeCellCountInt(c[1]))
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(c[0]), SizeCellCountInt(c[1]))
+		tm.Screens.Active.Cursor.PendingWrap = true
 		tm6ScrollUp(t, tm, 1)
 		tm6TExpectCursor(t, tm, c[0], c[1])
 		tm6TExpectCursorConsistent(t, tm)
-		expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+		expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	}
 	// Four scrolls of a two-row region: rows 1..2, columns 1..3 are blank.
 	tm6TExpectGrid(t, tm, "ABCDE", "F...J", "K...O", "PQRST", "UVWXY")
@@ -707,7 +707,7 @@ func TestTm6_term51_scrollUp_background_colour_fills_the_new_rows(t *testing.T) 
 	tm6TExpectGrid(t, tm, "KLMNO", "PQRST", "UVWXY", "#####", "#####")
 	cell := tm6TCellAt(t, tm, 2, 4)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 1, g: 2, b: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
 }
 
 // Zig: test "term51: scrollUp: alternate screen has no scrollback"
@@ -727,7 +727,7 @@ func TestTm6_term51_scrollUp_alternate_screen_has_no_scrollback(t *testing.T) {
 func TestTm6_term51_scrollUp_no_scrollback_configured(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(5, 5)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	tm := tm6InitOpts(t, opts)
 	defer tm.Deinit()
 	tm6TFill(t, tm)
@@ -762,11 +762,11 @@ func TestTm6_term51_scrollDown_counts_and_clamping(t *testing.T) {
 			defer tm.Deinit()
 			tm6TFill(t, tm)
 			tm.SetCursorPos(3, 4)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			tm.ScrollDown(c.count)
 			tm6TExpectGrid(t, tm, c.rows[:]...)
 			tm6TExpectCursor(t, tm, 3, 2)
-			expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+			expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 			expectEqual(t, uint(0), tm6TScrollbackRows(tm))
 		}()
 	}
@@ -780,16 +780,16 @@ func TestTm6_term51_scrollDown_works_with_the_cursor_anywhere_and_restores_it(t 
 	tm6TFill(t, tm)
 
 	tm.SetTopAndBottomMargin(2, 3)
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(2, 4)
 	cursors := [][2]uint{{4, 4}, {0, 0}, {0, 2}, {4, 2}, {2, 1}}
 	for _, c := range cursors {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(c[0]), SizeCellCountInt(c[1]))
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(c[0]), SizeCellCountInt(c[1]))
+		tm.Screens.Active.Cursor.PendingWrap = true
 		tm.ScrollDown(1)
 		tm6TExpectCursor(t, tm, c[0], c[1])
 		tm6TExpectCursorConsistent(t, tm)
-		expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+		expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	}
 	tm6TExpectGrid(t, tm, "ABCDE", "F...J", "K...O", "PQRST", "UVWXY")
 }
@@ -832,14 +832,14 @@ func TestTm6_term51_scrollViewport_top_and_bottom(t *testing.T) {
 	defer tm.Deinit()
 
 	expectEqual(t, uint(7), tm6TScrollbackRows(tm))
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 	expectEqual(t, uint(7), tm6TViewportTop(t, tm))
 	tm6TExpectViewport(t, tm, "H\nI\nJ")
 
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
-	expectEqual(t, PageListViewportTop, tm.screens.active.pages.viewport.Tag)
+	expectEqual(t, PageListViewportTop, tm.Screens.Active.Pages.viewport.Tag)
 	expectEqual(t, uint(0), tm6TViewportTop(t, tm))
-	expect(t, !tm.screens.active.ViewportIsBottom(), "!t.screens.active.viewportIsBottom()")
+	expect(t, !tm.Screens.Active.ViewportIsBottom(), "!t.screens.active.viewportIsBottom()")
 	tm6TExpectViewport(t, tm, "A\nB\nC")
 
 	// Top again is a no-op.
@@ -847,13 +847,13 @@ func TestTm6_term51_scrollViewport_top_and_bottom(t *testing.T) {
 	expectEqual(t, uint(0), tm6TViewportTop(t, tm))
 
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
-	expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 	tm6TExpectViewport(t, tm, "H\nI\nJ")
 
 	// Bottom again is a no-op.
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 }
 
 // Zig: test "term51: scrollViewport: delta from the bottom"
@@ -864,14 +864,14 @@ func TestTm6_term51_scrollViewport_delta_from_the_bottom(t *testing.T) {
 
 	// Zero and positive deltas at the bottom stay at the bottom.
 	tm.ScrollViewport(tm6ScrollViewportDelta(0))
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 	tm.ScrollViewport(tm6ScrollViewportDelta(3))
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 
 	tm.ScrollViewport(tm6ScrollViewportDelta(-1))
 	expectEqual(t, uint(6), tm6TViewportTop(t, tm))
 	tm6TExpectViewport(t, tm, "G\nH\nI")
-	expect(t, !tm.screens.active.ViewportIsBottom(), "!t.screens.active.viewportIsBottom()")
+	expect(t, !tm.Screens.Active.ViewportIsBottom(), "!t.screens.active.viewportIsBottom()")
 
 	tm.ScrollViewport(tm6ScrollViewportDelta(-2))
 	expectEqual(t, uint(4), tm6TViewportTop(t, tm))
@@ -887,8 +887,8 @@ func TestTm6_term51_scrollViewport_delta_from_the_bottom(t *testing.T) {
 
 	// Forwards to exactly the active area snaps to the bottom.
 	tm.ScrollViewport(tm6ScrollViewportDelta(2))
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
-	expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
 }
 
 // Zig: test "term51: scrollViewport: delta clamps at both ends"
@@ -900,11 +900,11 @@ func TestTm6_term51_scrollViewport_delta_clamps_at_both_ends(t *testing.T) {
 	// From the bottom, one past the top and far past it.
 	tm.ScrollViewport(tm6ScrollViewportDelta(-8))
 	expectEqual(t, uint(0), tm6TViewportTop(t, tm))
-	expectEqual(t, PageListViewportTop, tm.screens.active.pages.viewport.Tag)
+	expectEqual(t, PageListViewportTop, tm.Screens.Active.Pages.viewport.Tag)
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
 	tm.ScrollViewport(tm6ScrollViewportDelta(-1_000_000_000))
 	expectEqual(t, uint(0), tm6TViewportTop(t, tm))
-	expectEqual(t, PageListViewportTop, tm.screens.active.pages.viewport.Tag)
+	expectEqual(t, PageListViewportTop, tm.Screens.Active.Pages.viewport.Tag)
 
 	// At the top, backwards stays and forwards moves.
 	tm.ScrollViewport(tm6ScrollViewportDelta(-1))
@@ -917,18 +917,18 @@ func TestTm6_term51_scrollViewport_delta_clamps_at_both_ends(t *testing.T) {
 
 	// Far past the bottom from the middle.
 	tm.ScrollViewport(tm6ScrollViewportDelta(1_000_000_000))
-	expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 
 	// Far past the top from the middle.
 	tm.ScrollViewport(tm6ScrollViewportDelta(-3))
 	tm.ScrollViewport(tm6ScrollViewportDelta(-1_000_000_000))
 	expectEqual(t, uint(0), tm6TViewportTop(t, tm))
-	expectEqual(t, PageListViewportTop, tm.screens.active.pages.viewport.Tag)
+	expectEqual(t, PageListViewportTop, tm.Screens.Active.Pages.viewport.Tag)
 
 	// Exactly to the bottom from the top.
 	tm.ScrollViewport(tm6ScrollViewportDelta(7))
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 }
 
 // Zig: test "term51: scrollViewport: nothing to scroll back to"
@@ -944,7 +944,7 @@ func TestTm6_term51_scrollViewport_nothing_to_scroll_back_to(t *testing.T) {
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	expectEqual(t, uint(0), tm6TViewportTop(t, tm))
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
-	expect(t, tm.screens.active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
+	expect(t, tm.Screens.Active.ViewportIsBottom(), "t.screens.active.viewportIsBottom()")
 	tm6TExpectViewport(t, tm, "ab")
 }
 
@@ -957,25 +957,25 @@ func TestTm6_term51_scrollViewport_screens_without_scrollback_never_scroll(t *te
 		defer tm.Deinit()
 		tm6SwitchScreen(t, tm, ScreenSetKeyAlternate)
 		tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
-		expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
+		expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
 		tm.ScrollViewport(tm6ScrollViewportDelta(-3))
-		expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
+		expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
 	}()
 	// max_scrollback = 0.
 	func() {
 		opts := terminalOptionsDefault(4, 3)
-		opts.max_scrollback = 0
+		opts.MaxScrollback = 0
 		tm := tm6InitOpts(t, opts)
 		defer tm.Deinit()
 		for i := 0; i < 8; i++ {
 			tm6Linefeed(t, tm)
 		}
 		tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
-		expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
+		expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
 		tm.ScrollViewport(tm6ScrollViewportDelta(-3))
-		expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
+		expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
 		tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
-		expectEqual(t, PageListViewportActive, tm.screens.active.pages.viewport.Tag)
+		expectEqual(t, PageListViewportActive, tm.Screens.Active.Pages.viewport.Tag)
 	}()
 }
 
@@ -985,8 +985,8 @@ func TestTm6_term51_scrollViewport_does_not_move_the_cursor_or_the_active_area(t
 	tm := tm6TScrollbackTerminal(t)
 	defer tm.Deinit()
 
-	x := uint(tm.screens.active.cursor.x)
-	y := uint(tm.screens.active.cursor.y)
+	x := uint(tm.Screens.Active.Cursor.X)
+	y := uint(tm.Screens.Active.Cursor.Y)
 	tm.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	tm.ScrollViewport(tm6ScrollViewportDelta(3))
 	tm6TExpectCursor(t, tm, x, y)
@@ -1177,10 +1177,10 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		tm := tm6Init(t, 10, 2)
 		defer tm.Deinit()
 		tm6TPutRow(t, tm, 0, "a中́bcdefgh")
-		lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(1, 0)))
-		expect(t, lc.cell.HasGrapheme(), "lc.cell.hasGrapheme()")
-		expectEqual(t, uint(1), lc.node.data.GraphemeCount())
-		expect(t, lc.row.grapheme, "lc.row.grapheme")
+		lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(1, 0)))
+		expect(t, lc.Cell.HasGrapheme(), "lc.cell.hasGrapheme()")
+		expectEqual(t, uint(1), lc.Node.data.GraphemeCount())
+		expect(t, lc.Row.grapheme, "lc.row.grapheme")
 
 		tm6TShiftRow(t, tm, 0, 2, 6)
 		expectEqualStrings(t, "a..bcdefgh", tm6TGridRow(t, tm, 0))
@@ -1188,7 +1188,7 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
 		expectEqual(t, uint32(0), cell.content.codepoint)
-		expectEqual(t, uint(0), lc.node.data.GraphemeCount())
+		expectEqual(t, uint(0), lc.Node.data.GraphemeCount())
 		expect(t, !tm6TRowAt(t, tm, 0).grapheme, "!term51TRowAt(&t, 0).grapheme")
 	}()
 
@@ -1197,15 +1197,15 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		tm := tm6Init(t, 10, 2)
 		defer tm.Deinit()
 		tm6TPutRow(t, tm, 0, "abcdefg中́h")
-		lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(7, 0)))
-		expect(t, lc.cell.HasGrapheme(), "lc.cell.hasGrapheme()")
+		lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(7, 0)))
+		expect(t, lc.Cell.HasGrapheme(), "lc.cell.hasGrapheme()")
 
 		tm6TShiftRow(t, tm, 0, 0, 7)
 		expectEqualStrings(t, "abcdefg..h", tm6TGridRow(t, tm, 0))
 		cell := tm6TCellAt(t, tm, 7, 0)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, uint32(0), cell.content.codepoint)
-		expectEqual(t, uint(0), lc.node.data.GraphemeCount())
+		expectEqual(t, uint(0), lc.Node.data.GraphemeCount())
 		expect(t, !tm6TRowAt(t, tm, 0).grapheme, "!term51TRowAt(&t, 0).grapheme")
 	}()
 
@@ -1214,12 +1214,12 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		tm := tm6Init(t, 10, 2)
 		defer tm.Deinit()
 		tm6TPutRow(t, tm, 0, "a中́bcd中́ef")
-		lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, 0)))
-		expectEqual(t, uint(2), lc.node.data.GraphemeCount())
+		lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, 0)))
+		expectEqual(t, uint(2), lc.Node.data.GraphemeCount())
 
 		tm6TShiftRow(t, tm, 0, 2, 6)
 		expectEqualStrings(t, "a..bcd..ef", tm6TGridRow(t, tm, 0))
-		expectEqual(t, uint(0), lc.node.data.GraphemeCount())
+		expectEqual(t, uint(0), lc.Node.data.GraphemeCount())
 		expect(t, !tm6TRowAt(t, tm, 0).grapheme, "!term51TRowAt(&t, 0).grapheme")
 	}()
 
@@ -1228,12 +1228,12 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		tm := tm6Init(t, 10, 2)
 		defer tm.Deinit()
 		tm6TPutRow(t, tm, 0, "a中́bcd́efgh")
-		lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, 0)))
-		expectEqual(t, uint(2), lc.node.data.GraphemeCount())
+		lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, 0)))
+		expectEqual(t, uint(2), lc.Node.data.GraphemeCount())
 
 		tm6TShiftRow(t, tm, 0, 2, 6)
 		expectEqualStrings(t, "a..bcdefgh", tm6TGridRow(t, tm, 0))
-		expectEqual(t, uint(1), lc.node.data.GraphemeCount())
+		expectEqual(t, uint(1), lc.Node.data.GraphemeCount())
 		expect(t, tm6TRowAt(t, tm, 0).grapheme, "term51TRowAt(&t, 0).grapheme")
 		cell := tm6TCellAt(t, tm, 5, 0)
 		expect(t, cell.HasGrapheme(), "term51TCellAt(&t, 5, 0).hasGrapheme()")
@@ -1244,11 +1244,11 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		tm := tm6Init(t, 10, 2)
 		defer tm.Deinit()
 		tm6TPutRow(t, tm, 0, "abcd́efghi")
-		lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, 0)))
+		lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, 0)))
 		tm6TShiftRow(t, tm, 0, 3, 3+3)
 		cell := tm6TCellAt(t, tm, 3, 0)
 		expect(t, cell.HasGrapheme(), "term51TCellAt(&t, 3, 0).hasGrapheme()")
-		expectEqual(t, uint(1), lc.node.data.GraphemeCount())
+		expectEqual(t, uint(1), lc.Node.data.GraphemeCount())
 		expect(t, tm6TRowAt(t, tm, 0).grapheme, "term51TRowAt(&t, 0).grapheme")
 	}()
 }
@@ -1259,13 +1259,13 @@ func TestTm6_term51_rowWillBeShifted_grapheme_on_a_wide_cell_that_is_not_split_i
 	tm := tm6Init(t, 10, 2)
 	defer tm.Deinit()
 	tm6TPutRow(t, tm, 0, "a中́bcdefgh")
-	lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(1, 0)))
+	lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(1, 0)))
 
 	// Margins that start on the wide cell and end past the tail.
 	tm6TShiftRow(t, tm, 0, 1, 6)
 	cell := tm6TCellAt(t, tm, 1, 0)
 	expect(t, cell.HasGrapheme(), "term51TCellAt(&t, 1, 0).hasGrapheme()")
-	expectEqual(t, uint(1), lc.node.data.GraphemeCount())
+	expectEqual(t, uint(1), lc.Node.data.GraphemeCount())
 	expect(t, tm6TRowAt(t, tm, 0).grapheme, "term51TRowAt(&t, 0).grapheme")
 	expectEqualStrings(t, "aW_bcdefgh", tm6TGridRow(t, tm, 0))
 }
@@ -1279,7 +1279,7 @@ func TestTm6_term51_rowWillBeShifted_the_cleared_wide_cell_keeps_its_style(t *te
 	tm6SetAttribute(t, tm, tm6AttrBold)
 	tm6TPutRow(t, tm, 0, "a中bcdefgh")
 	before := tm6TCellAt(t, tm, 1, 0)
-	expect(t, before.style_id != StyleDefaultId, "before.style_id != style.default_id")
+	expect(t, before.style_id != StyleDefaultID, "before.style_id != style.default_id")
 
 	tm6TShiftRow(t, tm, 0, 2, 6)
 	after := tm6TCellAt(t, tm, 1, 0)
@@ -1650,8 +1650,8 @@ func TestTm6_term51_insertLines_cursor_left_of_the_left_margin_does_nothing(t *t
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 0, 2)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, tm6UAlpha6...)
@@ -1668,8 +1668,8 @@ func TestTm6_term51_insertLines_cursor_right_of_the_right_margin_does_nothing_an
 
 	tm6UAlphaAt(t, tm, 5, 2)
 	tm6Print(t, tm, 'Z')
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.clearDirty()
 	tm.InsertLines(1)
 
@@ -1687,8 +1687,8 @@ func TestTm6_term51_insertLines_cursor_on_the_margin_columns_is_inside_the_regio
 
 	// x == left and x == right are both inside the scroll region.
 	tm6UAlphaAt(t, tm, 1, 1)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.InsertLines(1)
 	tm6UExpectGrid(t, tm, "abcdef", "g...kl", "mhijqr", "snopwx", "ytuvCD", "EzABIJ")
 	tm6UExpectCursor(t, tm, 1, 1, false)
@@ -1707,8 +1707,8 @@ func TestTm6_term51_insertLines_left_and_right_margins_shift_only_the_margin_col
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 1)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "g...kl", "mhijqr", "snopwx", "ytuvCD", "EzABIJ")
@@ -1723,7 +1723,7 @@ func TestTm6_term51_insertLines_only_a_left_margin_shifts_the_columns_from_the_m
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 3, 2)
-	tm.scrolling_region.left = 2
+	tm.ScrollingRegion.Left = 2
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mn....", "stopqr", "yzuvwx", "EFABCD")
@@ -1737,7 +1737,7 @@ func TestTm6_term51_insertLines_only_a_right_margin_shifts_the_columns_from_the_
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 1)
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Right = 3
 	tm.InsertLines(2)
 
 	tm6UExpectGrid(t, tm, "abcdef", "....kl", "....qr", "ghijwx", "mnopCD", "stuvIJ")
@@ -1751,8 +1751,8 @@ func TestTm6_term51_insertLines_left_and_right_margins_with_a_count_past_the_bot
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 4)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.InsertLines(100)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mnopqr", "stuvwx", "y...CD", "E...IJ")
@@ -1766,10 +1766,10 @@ func TestTm6_term51_insertLines_margins_in_both_directions_with_a_top_and_bottom
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 2)
-	tm.scrolling_region.top = 1
-	tm.scrolling_region.bottom = 4
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 4
+	tm.ScrollingRegion.Top = 1
+	tm.ScrollingRegion.Bottom = 4
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 4
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mn...r", "stopqx", "yzuvwD", "EFGHIJ")
@@ -1784,7 +1784,7 @@ func TestTm6_term51_insertLines_margins_set_through_the_setters_behave_like_dire
 	defer tm.Deinit()
 
 	tm6UFill(t, tm, tm6UAlpha6)
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(2, 4)
 	tm.SetTopAndBottomMargin(2, 5)
 	// The margin setters home the cursor; origin mode is off.
@@ -1832,7 +1832,7 @@ func TestTm6_term51_insertLines_wrap_flags_are_kept_when_only_a_left_margin_is_s
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 1)
-	tm.scrolling_region.left = 2
+	tm.ScrollingRegion.Left = 2
 	tm6USetWrap(t, tm, "bbbbbb")
 	tm.InsertLines(1)
 
@@ -1846,7 +1846,7 @@ func TestTm6_term51_insertLines_wrap_flags_are_kept_when_only_a_right_margin_is_
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 0, 1)
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Right = 3
 	tm6USetWrap(t, tm, "wcwcwc")
 	tm.InsertLines(1)
 
@@ -1912,8 +1912,8 @@ func TestTm6_term51_insertLines_row_semantic_prompt_stays_in_place_with_left_and
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 0)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm6URowAt(t, tm, 2).semantic_prompt = PageRowSemanticPromptPrompt
 	tm6URowAt(t, tm, 5).semantic_prompt = PageRowSemanticPromptPromptContinuation
 	tm.InsertLines(1)
@@ -1981,7 +1981,7 @@ func TestTm6_term51_insertLines_cleared_rows_take_the_background_of_the_cursor_s
 		cell := *tm6UCellAt(t, tm, x, 2)
 		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
 		expectEqual(t, uint8(7), cell.content.color_palette)
-		expectEqual(t, StyleDefaultId, cell.style_id)
+		expectEqual(t, StyleDefaultID, cell.style_id)
 	}
 }
 
@@ -1992,15 +1992,15 @@ func TestTm6_term51_insertLines_left_and_right_margins_color_only_the_margin_col
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 1)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm6SetAttribute(t, tm, tm6AttrDirectBg(1, 2, 3))
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "grrrkl", "mhijqr", "snopwx", "ytuvCD", "EzABIJ")
 	cell := *tm6UCellAt(t, tm, 2, 1)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 1, g: 2, b: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
 }
 
 // Zig: test "term51: insertLines: a cursor style without a background leaves blanks empty"
@@ -2015,9 +2015,9 @@ func TestTm6_term51_insertLines_a_cursor_style_without_a_background_leaves_blank
 
 	tm6UExpectGrid(t, tm, "abcdef", "......", "ghijkl", "mnopqr", "stuvwx", "yzABCD")
 	// The blank cells carry no style; only the cursor holds the bold style.
-	expectEqual(t, StyleDefaultId, tm6UCellAt(t, tm, 0, 1).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 0, 1).style_id)
 	expectEqual(t, uint(1), tm6UPage(tm).styles.Count())
-	expectEqual(t, uint(1), tm6StyleRefCount(tm6UPage(tm), tm.screens.active.cursor.style_id))
+	expectEqual(t, uint(1), tm6StyleRefCount(tm6UPage(tm), tm.Screens.Active.Cursor.StyleID))
 }
 
 // ---- insertLines: wide characters ----
@@ -2048,8 +2048,8 @@ func TestTm6_term51_insertLines_spacer_head_outside_the_margins_is_kept_when_the
 
 	tm6UPutStr(t, tm, 0, 0, "abcdefg")
 	tm6Print(t, tm, 0x4E2D)
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 3)
 	tm.InsertLines(1)
 
@@ -2066,8 +2066,8 @@ func TestTm6_term51_insertLines_spacer_head_outside_the_margins_is_turned_narrow
 
 	tm6UPutStr(t, tm, 0, 0, "abcdefg")
 	tm6Print(t, tm, 0x4E2D)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 2)
 	tm.InsertLines(1)
 
@@ -2085,7 +2085,7 @@ func TestTm6_term51_insertLines_left_margin_zero_turns_the_spacer_head_narrow_an
 
 	tm6UPutStr(t, tm, 0, 0, "abcdefg")
 	tm6Print(t, tm, 0x4E2D)
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 1)
 	tm.InsertLines(1)
 
@@ -2103,7 +2103,7 @@ func TestTm6_term51_insertLines_a_wide_character_split_by_the_left_margin_is_cle
 	tm6UPutStr(t, tm, 4, 1, "efgh")
 	tm6UExpectGrid(t, tm, "........", "ab#>efgh", "........", "........")
 
-	tm.scrolling_region.left = 3
+	tm.ScrollingRegion.Left = 3
 	tm.SetCursorPos(1, 4)
 	tm.InsertLines(1)
 
@@ -2121,7 +2121,7 @@ func TestTm6_term51_insertLines_a_wide_character_split_by_the_right_margin_is_cl
 	tm6UPutStr(t, tm, 7, 1, "h")
 	tm6UExpectGrid(t, tm, "........", "abcde#>h", "........", "........")
 
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 1)
 	tm.InsertLines(1)
 
@@ -2138,7 +2138,7 @@ func TestTm6_term51_insertLines_a_wide_character_on_the_right_margin_is_cleared_
 	tm6UPutWide(t, tm, 5, 1)
 	tm6UPutStr(t, tm, 7, 1, "h")
 
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(2, 1)
 	tm.InsertLines(^uint(0))
 
@@ -2158,7 +2158,7 @@ func TestTm6_term51_insertLines_a_wide_character_with_a_grapheme_split_by_the_le
 	expectEqual(t, uint(1), tm6UPage(tm).GraphemeCount())
 	expect(t, tm6URowAt(t, tm, 1).grapheme, "term51URowAt(&t, 1).grapheme")
 
-	tm.scrolling_region.left = 3
+	tm.ScrollingRegion.Left = 3
 	tm.SetCursorPos(1, 4)
 	tm.InsertLines(1)
 
@@ -2179,7 +2179,7 @@ func TestTm6_term51_insertLines_a_wide_character_with_a_grapheme_split_by_the_ri
 	tm6UPutStr(t, tm, 7, 1, "h")
 	expectEqual(t, uint(1), tm6UPage(tm).GraphemeCount())
 
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 1)
 	tm.InsertLines(1)
 
@@ -2195,8 +2195,8 @@ func TestTm6_term51_insertLines_wide_characters_inside_the_margins_move_whole(t 
 
 	tm6UPutWide(t, tm, 2, 0)
 	tm6UPutWide(t, tm, 4, 0)
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 3)
 	tm.InsertLines(1)
 
@@ -2284,8 +2284,8 @@ func TestTm6_term51_insertLines_style_reference_counts_with_left_and_right_margi
 	bold := tm6UCellAt(t, tm, 0, 1).style_id
 	italic := tm6UCellAt(t, tm, 0, 2).style_id
 
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.SetCursorPos(2, 2)
 	tm.InsertLines(1)
 
@@ -2297,7 +2297,7 @@ func TestTm6_term51_insertLines_style_reference_counts_with_left_and_right_margi
 	expect(t, tm6URowAt(t, tm, 1).styled, "term51URowAt(&t, 1).styled")
 	expect(t, tm6URowAt(t, tm, 2).styled, "term51URowAt(&t, 2).styled")
 	expect(t, tm6URowAt(t, tm, 3).styled, "term51URowAt(&t, 3).styled")
-	expectEqual(t, StyleDefaultId, tm6UCellAt(t, tm, 1, 1).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 1, 1).style_id)
 	expectEqual(t, bold, tm6UCellAt(t, tm, 0, 1).style_id)
 	expectEqual(t, bold, tm6UCellAt(t, tm, 2, 2).style_id)
 	expectEqual(t, italic, tm6UCellAt(t, tm, 0, 2).style_id)
@@ -2315,7 +2315,7 @@ func TestTm6_term51_insertLines_style_reference_counts_with_left_and_right_margi
 	// blanks the cells, so a partial-width clear leaves the flag set even
 	// though no styled cell remains in the row.
 	expect(t, tm6URowAt(t, tm, 3).styled, "term51URowAt(&t, 3).styled")
-	expectEqual(t, StyleDefaultId, tm6UCellAt(t, tm, 2, 3).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 2, 3).style_id)
 }
 
 // Zig: test "term51: insertLines: the cursor style reference is untouched"
@@ -2328,18 +2328,18 @@ func TestTm6_term51_insertLines_the_cursor_style_reference_is_untouched(t *testi
 	tm6SetAttribute(t, tm, tm6AttrDirectBg(9, 8, 7))
 	tm6UPutStr(t, tm, 0, 1, "XXXXXX")
 	page := tm6UPage(tm)
-	cursor_style := tm.screens.active.cursor.style_id
+	cursor_style := tm.Screens.Active.Cursor.StyleID
 	expectEqual(t, uint(7), tm6StyleRefCount(page, cursor_style))
 
 	tm.SetCursorPos(2, 1)
 	tm.InsertLines(1)
 	tm6UExpectGrid(t, tm, "......", "rrrrrr", "XXXXXX", "......")
-	expectEqual(t, cursor_style, tm.screens.active.cursor.style_id)
+	expectEqual(t, cursor_style, tm.Screens.Active.Cursor.StyleID)
 	expectEqual(t, uint(1), page.styles.Count())
 	expectEqual(t, uint(7), tm6StyleRefCount(page, cursor_style))
 
 	tm.InsertLines(^uint(0))
-	expectEqual(t, cursor_style, tm.screens.active.cursor.style_id)
+	expectEqual(t, cursor_style, tm.Screens.Active.Cursor.StyleID)
 	expectEqual(t, uint(1), page.styles.Count())
 	expectEqual(t, uint(1), tm6StyleRefCount(page, cursor_style))
 }
@@ -2350,11 +2350,11 @@ func TestTm6_term51_insertLines_hyperlinks_move_with_their_rows_and_are_released
 	tm := tm6Init(t, 6, 4)
 	defer tm.Deinit()
 
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm6UPutStr(t, tm, 0, 1, "XXXXXX")
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://b.test"), None[[]uint8]()))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://b.test"), None[[]uint8]()))
 	tm6UPutStr(t, tm, 0, 2, "YYYYYY")
-	tm.screens.active.EndHyperlink()
+	tm.Screens.Active.EndHyperlink()
 	page := tm6UPage(tm)
 	expectEqual(t, uint(12), page.HyperlinkCount())
 	expectEqual(t, uint(2), page.hyperlink_set.Count())
@@ -2400,13 +2400,13 @@ func TestTm6_term51_insertLines_hyperlinks_with_left_and_right_margins(t *testin
 	tm := tm6Init(t, 6, 4)
 	defer tm.Deinit()
 
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm6UPutStr(t, tm, 0, 1, "XXXXXX")
-	tm.screens.active.EndHyperlink()
+	tm.Screens.Active.EndHyperlink()
 	page := tm6UPage(tm)
 
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.SetCursorPos(2, 2)
 	tm.InsertLines(1)
 
@@ -2469,8 +2469,8 @@ func TestTm6_term51_insertLines_graphemes_with_left_and_right_margins(t *testing
 	page := tm6UPage(tm)
 	expectEqual(t, uint(2), page.GraphemeCount())
 
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.SetCursorPos(2, 2)
 	tm.InsertLines(1)
 	tm6UExpectGrid(t, tm, "......", "*.....", "..*...", "......")
@@ -2513,23 +2513,23 @@ func TestTm6_term51_insertLines_multi_codepoint_graphemes_survive_the_shift(t *t
 func TestTm6_term51_insertLines_rows_crossing_a_page_boundary_keep_styles_hyperlinks_and_graphemes(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	tm := tm6InitOpts(t, opts)
 	defer tm.Deinit()
 
 	tm6UCrossPage(t, tm, 2)
-	first := tm.screens.active.pages.pages.first
+	first := tm.Screens.Active.Pages.pages.first
 	second := first.next
 
 	tm6UFill(t, tm, []string{"AAAAAAAAAA", "BBBBBBBBBB", "..........", "DDDDDDDDDD", "EEEEEEEEEE"})
 	// Row 2 is the last row of the first page and has all three kinds of
 	// managed memory.
 	tm6SetAttribute(t, tm, tm6AttrBold)
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
 	tm6UPutGrapheme(t, tm, 0, 2)
 	tm6UPutStr(t, tm, 1, 2, "XXXXXXXXX")
 	tm6SetAttribute(t, tm, tm6AttrUnset)
-	tm.screens.active.EndHyperlink()
+	tm.Screens.Active.EndHyperlink()
 	expectEqual(t, uint(1), first.data.GraphemeCount())
 	expectEqual(t, uint(10), first.data.HyperlinkCount())
 	expectEqual(t, uint(1), first.data.styles.Count())
@@ -2541,7 +2541,7 @@ func TestTm6_term51_insertLines_rows_crossing_a_page_boundary_keep_styles_hyperl
 	tm6UExpectGrid(t, tm, "..........", "AAAAAAAAAA", "BBBBBBBBBB", "*XXXXXXXXX", "DDDDDDDDDD")
 	tm6UExpectDirty(t, tm, "DDDDD")
 	// The pages did not change, and the rows moved over to the second page.
-	expect(t, tm.screens.active.pages.pages.first == first, "t.screens.active.pages.pages.first.? == first")
+	expect(t, tm.Screens.Active.Pages.pages.first == first, "t.screens.active.pages.pages.first.? == first")
 	expect(t, first.next == second, "first.next.? == second")
 	expectEqual(t, uint(0), first.data.GraphemeCount())
 	expectEqual(t, uint(0), first.data.HyperlinkCount())
@@ -2568,24 +2568,24 @@ func TestTm6_term51_insertLines_rows_crossing_a_page_boundary_keep_styles_hyperl
 func TestTm6_term51_insertLines_left_and_right_margins_across_a_page_boundary_copy_only_the_margin_columns(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	tm := tm6InitOpts(t, opts)
 	defer tm.Deinit()
 
 	tm6UCrossPage(t, tm, 2)
-	first := tm.screens.active.pages.pages.first
+	first := tm.Screens.Active.Pages.pages.first
 	second := first.next
 
 	tm6UFill(t, tm, []string{"AAAAAAAAAA", "BBBBBBBBBB", "..........", "DDDDDDDDDD", "EEEEEEEEEE"})
 	tm6SetAttribute(t, tm, tm6AttrBold)
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
 	tm6UPutGrapheme(t, tm, 0, 2)
 	tm6UPutStr(t, tm, 1, 2, "XXXXXXXXX")
 	tm6SetAttribute(t, tm, tm6AttrUnset)
-	tm.screens.active.EndHyperlink()
+	tm.Screens.Active.EndHyperlink()
 
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 8
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 8
 	tm.SetCursorPos(1, 2)
 	tm.InsertLines(1)
 
@@ -2854,8 +2854,8 @@ func TestTm6_term51_deleteLines_cursor_left_of_the_left_margin_does_nothing(t *t
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 0, 2)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, tm6UAlpha6...)
@@ -2872,8 +2872,8 @@ func TestTm6_term51_deleteLines_cursor_right_of_the_right_margin_does_nothing_an
 
 	tm6UAlphaAt(t, tm, 5, 2)
 	tm6Print(t, tm, 'Z')
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.clearDirty()
 	tm.DeleteLines(1)
 
@@ -2890,8 +2890,8 @@ func TestTm6_term51_deleteLines_cursor_on_the_margin_columns_is_inside_the_regio
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 1)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.DeleteLines(1)
 	tm6UExpectGrid(t, tm, "abcdef", "gnopkl", "mtuvqr", "szABwx", "yFGHCD", "E...IJ")
 	tm6UExpectCursor(t, tm, 1, 1, false)
@@ -2910,8 +2910,8 @@ func TestTm6_term51_deleteLines_left_and_right_margins_shift_only_the_margin_col
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 1)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "gnopkl", "mtuvqr", "szABwx", "yFGHCD", "E...IJ")
@@ -2926,7 +2926,7 @@ func TestTm6_term51_deleteLines_only_a_left_margin_shifts_the_columns_from_the_m
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 3, 2)
-	tm.scrolling_region.left = 2
+	tm.ScrollingRegion.Left = 2
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mnuvwx", "stABCD", "yzGHIJ", "EF....")
@@ -2940,7 +2940,7 @@ func TestTm6_term51_deleteLines_only_a_right_margin_shifts_the_columns_from_the_
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 1)
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Right = 3
 	tm.DeleteLines(2)
 
 	tm6UExpectGrid(t, tm, "abcdef", "stuvkl", "yzABqr", "EFGHwx", "....CD", "....IJ")
@@ -2954,8 +2954,8 @@ func TestTm6_term51_deleteLines_left_and_right_margins_with_a_count_past_the_bot
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 4)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm.DeleteLines(100)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mnopqr", "stuvwx", "y...CD", "E...IJ")
@@ -2969,10 +2969,10 @@ func TestTm6_term51_deleteLines_margins_in_both_directions_with_a_top_and_bottom
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 2)
-	tm.scrolling_region.top = 1
-	tm.scrolling_region.bottom = 4
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 4
+	tm.ScrollingRegion.Top = 1
+	tm.ScrollingRegion.Bottom = 4
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 4
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mnuvwr", "stABCx", "yz...D", "EFGHIJ")
@@ -2987,7 +2987,7 @@ func TestTm6_term51_deleteLines_margins_set_through_the_setters_behave_like_dire
 	defer tm.Deinit()
 
 	tm6UFill(t, tm, tm6UAlpha6)
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(2, 4)
 	tm.SetTopAndBottomMargin(2, 5)
 	tm6UExpectCursor(t, tm, 0, 0, false)
@@ -3033,7 +3033,7 @@ func TestTm6_term51_deleteLines_wrap_flags_are_kept_when_only_a_left_margin_is_s
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 2, 1)
-	tm.scrolling_region.left = 2
+	tm.ScrollingRegion.Left = 2
 	tm6USetWrap(t, tm, "bbbbbb")
 	tm.DeleteLines(1)
 
@@ -3047,7 +3047,7 @@ func TestTm6_term51_deleteLines_wrap_flags_are_kept_when_only_a_right_margin_is_
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 0, 1)
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Right = 3
 	tm6USetWrap(t, tm, "wcwcwc")
 	tm.DeleteLines(1)
 
@@ -3111,8 +3111,8 @@ func TestTm6_term51_deleteLines_row_semantic_prompt_stays_in_place_with_left_and
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 0)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm6URowAt(t, tm, 0).semantic_prompt = PageRowSemanticPromptPromptContinuation
 	tm6URowAt(t, tm, 3).semantic_prompt = PageRowSemanticPromptPrompt
 	tm.DeleteLines(1)
@@ -3185,7 +3185,7 @@ func TestTm6_term51_deleteLines_cleared_rows_take_the_background_of_the_cursor_s
 		cell := *tm6UCellAt(t, tm, x, 4)
 		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
 		expectEqual(t, uint8(7), cell.content.color_palette)
-		expectEqual(t, StyleDefaultId, cell.style_id)
+		expectEqual(t, StyleDefaultID, cell.style_id)
 	}
 }
 
@@ -3196,15 +3196,15 @@ func TestTm6_term51_deleteLines_left_and_right_margins_color_only_the_margin_col
 	defer tm.Deinit()
 
 	tm6UAlphaAt(t, tm, 1, 1)
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
 	tm6SetAttribute(t, tm, tm6AttrDirectBg(1, 2, 3))
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "gnopkl", "mtuvqr", "szABwx", "yFGHCD", "ErrrIJ")
 	cell := *tm6UCellAt(t, tm, 2, 5)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 1, g: 2, b: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
 }
 
 // Zig: test "term51: deleteLines: a cursor style without a background leaves blanks empty"
@@ -3218,7 +3218,7 @@ func TestTm6_term51_deleteLines_a_cursor_style_without_a_background_leaves_blank
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "mnopqr", "stuvwx", "yzABCD", "EFGHIJ", "......")
-	expectEqual(t, StyleDefaultId, tm6UCellAt(t, tm, 0, 5).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 0, 5).style_id)
 	expectEqual(t, uint(1), tm6UPage(tm).styles.Count())
 }
 
@@ -3250,8 +3250,8 @@ func TestTm6_term51_deleteLines_spacer_head_outside_the_margins_is_kept_when_the
 
 	tm6UPutStr(t, tm, 0, 1, "abcdefg")
 	tm6Print(t, tm, 0x4E2D)
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 3)
 	tm.DeleteLines(1)
 
@@ -3267,7 +3267,7 @@ func TestTm6_term51_deleteLines_left_margin_zero_turns_the_spacer_head_narrow(t 
 
 	tm6UPutStr(t, tm, 0, 1, "abcdefg")
 	tm6Print(t, tm, 0x4E2D)
-	tm.scrolling_region.right = 5
+	tm.ScrollingRegion.Right = 5
 	tm.SetCursorPos(1, 1)
 	tm.DeleteLines(1)
 
@@ -3284,7 +3284,7 @@ func TestTm6_term51_deleteLines_a_wide_character_split_by_the_left_margin_is_cle
 	tm6UPutWide(t, tm, 2, 1)
 	tm6UPutStr(t, tm, 4, 1, "efgh")
 
-	tm.scrolling_region.left = 3
+	tm.ScrollingRegion.Left = 3
 	tm.SetCursorPos(1, 4)
 	tm.DeleteLines(1)
 
@@ -3304,9 +3304,9 @@ func TestTm6_panic_rowWillBeShifted_spacer_tail_at_left_margin_zero(t *testing.T
 	tm6TPutRow(t, tm, 0, "abcdefghij")
 	tm6UCellAt(t, tm, 0, 0).wide = PageCellWideSpacerTail
 	tm6TRegion(tm, 0, 1, 0, 9)
-	lc := zigUnwrap(t, tm.screens.active.pages.GetCell(tm6Active(0, 0)))
+	lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, 0)))
 	tm6ExpectPanic(t, func() {
-		tm.rowWillBeShifted(&lc.node.data, lc.row)
+		tm.rowWillBeShifted(&lc.Node.data, lc.Row)
 	})
 }
 
@@ -3316,7 +3316,7 @@ func TestTm6_panic_insertLines_region_bottom_beyond_the_active_area(t *testing.T
 	tm := tm6Init(t, 5, 5)
 	defer tm.Deinit()
 
-	tm.scrolling_region.bottom = 9
+	tm.ScrollingRegion.Bottom = 9
 	tm6ExpectPanic(t, func() {
 		tm.InsertLines(1)
 	})
@@ -3328,7 +3328,7 @@ func TestTm6_panic_deleteLines_region_bottom_beyond_the_active_area(t *testing.T
 	tm := tm6Init(t, 5, 5)
 	defer tm.Deinit()
 
-	tm.scrolling_region.bottom = 9
+	tm.ScrollingRegion.Bottom = 9
 	tm6ExpectPanic(t, func() {
 		tm.DeleteLines(1)
 	})

@@ -71,19 +71,19 @@ func tm5SwitchScreen(t *testing.T, tm *Terminal, key ScreenSetKey) {
 // tm5Attr is `try t.screens.active.setAttribute(attr)`.
 func tm5Attr(t *testing.T, tm *Terminal, attr SGRAttribute) {
 	t.Helper()
-	zigTry(t, tm.screens.active.SetAttribute(attr))
+	zigTry(t, tm.Screens.Active.SetAttribute(attr))
 }
 
 // tm5ActivePoint is `.{ .active = .{ .x = x, .y = y } }`.
 func tm5ActivePoint(x uint, y uint) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // tm5SAt is term51SAt: the page list cell at the given active-area
 // position.
 func tm5SAt(t *testing.T, tm *Terminal, x uint, y uint) PageListCell {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(tm5ActivePoint(x, y)))
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm5ActivePoint(x, y)))
 }
 
 // tm5SExpectCell is term51SExpectCell: expect the cell at (x, y) to hold
@@ -91,8 +91,8 @@ func tm5SAt(t *testing.T, tm *Terminal, x uint, y uint) PageListCell {
 func tm5SExpectCell(t *testing.T, tm *Terminal, x uint, y uint, cp uint32, wide PageCellWide) {
 	t.Helper()
 	lc := tm5SAt(t, tm, x, y)
-	expectEqual(t, cp, lc.cell.Codepoint())
-	expectEqual(t, wide, lc.cell.wide)
+	expectEqual(t, cp, lc.Cell.Codepoint())
+	expectEqual(t, wide, lc.Cell.wide)
 }
 
 // tm5SExpectGrapheme is term51SExpectGrapheme: expect the cell at (x, y) to
@@ -100,9 +100,9 @@ func tm5SExpectCell(t *testing.T, tm *Terminal, x uint, y uint, cp uint32, wide 
 func tm5SExpectGrapheme(t *testing.T, tm *Terminal, x uint, y uint, expected []uint32) {
 	t.Helper()
 	lc := tm5SAt(t, tm, x, y)
-	expect(t, lc.cell.HasGrapheme(), "lc.cell.hasGrapheme()")
-	expect(t, lc.row.grapheme, "lc.row.grapheme")
-	expectEqualSlices(t, expected, zigUnwrap(t, lc.node.data.LookupGrapheme(lc.cell)))
+	expect(t, lc.Cell.HasGrapheme(), "lc.cell.hasGrapheme()")
+	expect(t, lc.Row.grapheme, "lc.row.grapheme")
+	expectEqualSlices(t, expected, zigUnwrap(t, lc.Node.data.LookupGrapheme(lc.Cell)))
 }
 
 // tm5SExpectNoGrapheme is term51SExpectNoGrapheme: expect the cell at (x, y)
@@ -110,17 +110,17 @@ func tm5SExpectGrapheme(t *testing.T, tm *Terminal, x uint, y uint, expected []u
 func tm5SExpectNoGrapheme(t *testing.T, tm *Terminal, x uint, y uint) {
 	t.Helper()
 	lc := tm5SAt(t, tm, x, y)
-	expect(t, !lc.cell.HasGrapheme(), "!lc.cell.hasGrapheme()")
-	expect(t, !lc.node.data.LookupGrapheme(lc.cell).Valid, "lc.node.data.lookupGrapheme(lc.cell) == null")
+	expect(t, !lc.Cell.HasGrapheme(), "!lc.cell.hasGrapheme()")
+	expect(t, !lc.Node.data.LookupGrapheme(lc.Cell).Valid, "lc.node.data.lookupGrapheme(lc.cell) == null")
 }
 
 // tm5SExpectCursor is term51SExpectCursor: expect the cursor position and
 // pending wrap state.
 func tm5SExpectCursor(t *testing.T, tm *Terminal, x uint, y uint, pending_wrap bool) {
 	t.Helper()
-	expectEqual(t, x, uint(tm.screens.active.cursor.x))
-	expectEqual(t, y, uint(tm.screens.active.cursor.y))
-	expectEqual(t, pending_wrap, tm.screens.active.cursor.pending_wrap)
+	expectEqual(t, x, uint(tm.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(tm.Screens.Active.Cursor.Y))
+	expectEqual(t, pending_wrap, tm.Screens.Active.Cursor.PendingWrap)
 }
 
 // tm5TLabel is term51TLabel: the label for the cell at (x, y) of a grid
@@ -139,10 +139,10 @@ func tm5TLabel(cols uint, x uint, y uint) uint32 {
 // wrap. The terminal must not be in origin mode.
 func tm5TFill(t *testing.T, tm *Terminal) {
 	t.Helper()
-	for y := uint(0); y < uint(tm.rows); y++ {
-		for x := uint(0); x < uint(tm.cols); x++ {
+	for y := uint(0); y < uint(tm.Rows); y++ {
+		for x := uint(0); x < uint(tm.Cols); x++ {
 			tm.SetCursorPos(y+1, x+1)
-			zigTry(t, tm.Print(tm5TLabel(uint(tm.cols), x, y)))
+			zigTry(t, tm.Print(tm5TLabel(uint(tm.Cols), x, y)))
 		}
 	}
 	tm.SetCursorPos(1, 1)
@@ -151,24 +151,24 @@ func tm5TFill(t *testing.T, tm *Terminal) {
 // tm5TRegion is term51TRegion: set the scrolling region directly (all
 // values 0-indexed, inclusive).
 func tm5TRegion(tm *Terminal, top uint, bottom uint, left uint, right uint) {
-	tm.scrolling_region = TerminalScrollingRegion{
-		top:    SizeCellCountInt(top),
-		bottom: SizeCellCountInt(bottom),
-		left:   SizeCellCountInt(left),
-		right:  SizeCellCountInt(right),
+	tm.ScrollingRegion = TerminalScrollingRegion{
+		Top:    SizeCellCountInt(top),
+		Bottom: SizeCellCountInt(bottom),
+		Left:   SizeCellCountInt(left),
+		Right:  SizeCellCountInt(right),
 	}
 }
 
 // tm5TCellAt is term51TCellAt.
 func tm5TCellAt(t *testing.T, tm *Terminal, x uint, y uint) PageCell {
 	t.Helper()
-	return *zigUnwrap(t, tm.screens.active.pages.GetCell(tm5ActivePoint(x, y))).cell
+	return *zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm5ActivePoint(x, y))).Cell
 }
 
 // tm5TRowAt is term51TRowAt.
 func tm5TRowAt(t *testing.T, tm *Terminal, y uint) *PageRow {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(tm5ActivePoint(0, y))).row
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm5ActivePoint(0, y))).Row
 }
 
 // tm5TGridRow is term51TGridRow: one character per cell: '.' for an empty
@@ -178,8 +178,8 @@ func tm5TRowAt(t *testing.T, tm *Terminal, y uint) *PageRow {
 // spacer tail, '>' for a spacer head.
 func tm5TGridRow(t *testing.T, tm *Terminal, y uint) []uint8 {
 	t.Helper()
-	buf := make([]uint8, tm.cols)
-	for x := uint(0); x < uint(tm.cols); x++ {
+	buf := make([]uint8, tm.Cols)
+	for x := uint(0); x < uint(tm.Cols); x++ {
 		c := tm5TCellAt(t, tm, x, y)
 		switch c.wide {
 		case PageCellWideSpacerTail:
@@ -214,7 +214,7 @@ func tm5TGridRow(t *testing.T, tm *Terminal, y uint) []uint8 {
 // against `expected`, one string per row.
 func tm5TExpectGrid(t *testing.T, tm *Terminal, expected []string) {
 	t.Helper()
-	expectEqual(t, uint(tm.rows), uint(len(expected)))
+	expectEqual(t, uint(tm.Rows), uint(len(expected)))
 	for y, row := range expected {
 		expectEqualStrings(t, row, string(tm5TGridRow(t, tm, uint(y))))
 	}
@@ -223,31 +223,31 @@ func tm5TExpectGrid(t *testing.T, tm *Terminal, expected []string) {
 // tm5TExpectCursor is term51TExpectCursor.
 func tm5TExpectCursor(t *testing.T, tm *Terminal, x uint, y uint) {
 	t.Helper()
-	expectEqual(t, x, uint(tm.screens.active.cursor.x))
-	expectEqual(t, y, uint(tm.screens.active.cursor.y))
+	expectEqual(t, x, uint(tm.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(tm.Screens.Active.Cursor.Y))
 }
 
 // tm5TExpectRegion is term51TExpectRegion.
 func tm5TExpectRegion(t *testing.T, tm *Terminal, top uint, bottom uint, left uint, right uint) {
 	t.Helper()
-	expectEqual(t, top, uint(tm.scrolling_region.top))
-	expectEqual(t, bottom, uint(tm.scrolling_region.bottom))
-	expectEqual(t, left, uint(tm.scrolling_region.left))
-	expectEqual(t, right, uint(tm.scrolling_region.right))
+	expectEqual(t, top, uint(tm.ScrollingRegion.Top))
+	expectEqual(t, bottom, uint(tm.ScrollingRegion.Bottom))
+	expectEqual(t, left, uint(tm.ScrollingRegion.Left))
+	expectEqual(t, right, uint(tm.ScrollingRegion.Right))
 }
 
 // tm5TScrollbackRows is term51TScrollbackRows: the number of rows above the
 // active area.
 func tm5TScrollbackRows(tm *Terminal) uint {
-	return tm.screens.active.pages.total_rows - uint(tm.rows)
+	return tm.Screens.Active.Pages.total_rows - uint(tm.Rows)
 }
 
 // tm5TTabString is term51TTabString: the set tabstops of the terminal as a
 // string of '^' (set) and '.'.
 func tm5TTabString(tm *Terminal) string {
-	buf := make([]uint8, tm.cols)
-	for x := uint(0); x < uint(tm.cols); x++ {
-		if tm.tabstops.Get(x) {
+	buf := make([]uint8, tm.Cols)
+	for x := uint(0); x < uint(tm.Cols); x++ {
+		if tm.Tabstops.Get(x) {
 			buf[x] = '^'
 		} else {
 			buf[x] = '.'
@@ -258,7 +258,7 @@ func tm5TTabString(tm *Terminal) string {
 
 // tm5TPrompt is term51TPrompt.
 func tm5TPrompt(action OSCParsersSemanticPromptCommandAction, opts string) OSCCommandSemanticPrompt {
-	return OSCCommandSemanticPrompt{action: action, options_unvalidated: []uint8(opts)}
+	return OSCCommandSemanticPrompt{Action: action, OptionsUnvalidated: []uint8(opts)}
 }
 
 // tm5ClickNone, tm5ClickEvents and tm5ClickCl build Screen.SemanticPrompt.
@@ -307,10 +307,10 @@ func tm5ExpectOptSome[T comparable](t *testing.T, want T, got Optional[T]) {
 func TestTm5_term51_cursorRight_right_of_the_right_margin_goes_to_the_last_column(t *testing.T) {
 	tm := tm5Init(t, 10, 3)
 	defer tm.Deinit()
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 6
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 6
 
-	tm.screens.active.CursorAbsolute(7, 1)
+	tm.Screens.Active.CursorAbsolute(7, 1)
 	tm.CursorRight(1)
 	tm5SExpectCursor(t, tm, 8, 1, false)
 	tm.CursorRight(100)
@@ -329,11 +329,11 @@ func TestTm5_term51_cursorRight_always_clears_pending_wrap_and_ignores_origin_mo
 	tm.CursorRight(1)
 	tm5SExpectCursor(t, tm, 4, 0, false)
 
-	tm.scrolling_region.left = 1
-	tm.scrolling_region.right = 3
-	tm.modes.Set(ModesModeOrigin, true)
-	tm.screens.active.CursorAbsolute(1, 0)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.ScrollingRegion.Left = 1
+	tm.ScrollingRegion.Right = 3
+	tm.Modes.Set(ModesModeOrigin, true)
+	tm.Screens.Active.CursorAbsolute(1, 0)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorRight(1)
 	tm5SExpectCursor(t, tm, 2, 0, false)
 }
@@ -342,9 +342,9 @@ func TestTm5_term51_cursorRight_always_clears_pending_wrap_and_ignores_origin_mo
 func TestTm5_term51_cursorLeft_without_wraparound_moves_left_and_stops_at_column_zero(t *testing.T) {
 	tm := tm5Init(t, 10, 3)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeWraparound, false)
+	tm.Modes.Set(ModesModeWraparound, false)
 
-	tm.screens.active.CursorAbsolute(8, 1)
+	tm.Screens.Active.CursorAbsolute(8, 1)
 	tm.CursorLeft(2)
 	tm5SExpectCursor(t, tm, 6, 1, false)
 	tm.CursorLeft(0)
@@ -355,13 +355,13 @@ func TestTm5_term51_cursorLeft_without_wraparound_moves_left_and_stops_at_column
 	tm5SExpectCursor(t, tm, 0, 1, false)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 0, 1, false)
-	tm.screens.active.CursorAbsolute(9, 1)
+	tm.Screens.Active.CursorAbsolute(9, 1)
 	tm.CursorLeft(math.MaxUint)
 	tm5SExpectCursor(t, tm, 0, 1, false)
-	tm.screens.active.CursorAbsolute(9, 1)
+	tm.Screens.Active.CursorAbsolute(9, 1)
 	tm.CursorLeft(9)
 	tm5SExpectCursor(t, tm, 0, 1, false)
-	tm.screens.active.CursorAbsolute(9, 1)
+	tm.Screens.Active.CursorAbsolute(9, 1)
 	tm.CursorLeft(10)
 	tm5SExpectCursor(t, tm, 0, 1, false)
 }
@@ -370,11 +370,11 @@ func TestTm5_term51_cursorLeft_without_wraparound_moves_left_and_stops_at_column
 func TestTm5_term51_cursorLeft_reverse_wrap_flags_are_ignored_without_wraparound(t *testing.T) {
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeWraparound, false)
-	tm.modes.Set(ModesModeReverseWrap, true)
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
+	tm.Modes.Set(ModesModeWraparound, false)
+	tm.Modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
 
-	tm.screens.active.CursorAbsolute(1, 1)
+	tm.Screens.Active.CursorAbsolute(1, 1)
 	tm.CursorLeft(5)
 	tm5SExpectCursor(t, tm, 0, 1, false)
 }
@@ -391,7 +391,7 @@ func TestTm5_term51_cursorLeft_with_wraparound_but_no_reverse_wrap_behaves_as_pl
 	tm5SExpectCursor(t, tm, 3, 0, false)
 
 	// No wrap to the previous line.
-	tm.screens.active.CursorAbsolute(1, 1)
+	tm.Screens.Active.CursorAbsolute(1, 1)
 	tm.CursorLeft(5)
 	tm5SExpectCursor(t, tm, 0, 1, false)
 }
@@ -400,10 +400,10 @@ func TestTm5_term51_cursorLeft_with_wraparound_but_no_reverse_wrap_behaves_as_pl
 func TestTm5_term51_cursorLeft_plain_left_ignores_the_left_margin(t *testing.T) {
 	tm := tm5Init(t, 10, 3)
 	defer tm.Deinit()
-	tm.scrolling_region.left = 4
-	tm.scrolling_region.right = 8
+	tm.ScrollingRegion.Left = 4
+	tm.ScrollingRegion.Right = 8
 
-	tm.screens.active.CursorAbsolute(6, 1)
+	tm.Screens.Active.CursorAbsolute(6, 1)
 	tm.CursorLeft(5)
 	tm5SExpectCursor(t, tm, 1, 1, false)
 }
@@ -412,20 +412,20 @@ func TestTm5_term51_cursorLeft_plain_left_ignores_the_left_margin(t *testing.T) 
 func TestTm5_term51_cursorLeft_reverse_wrap_within_a_line_and_pending_wrap(t *testing.T) {
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrap, true)
 
-	tm.screens.active.CursorAbsolute(4, 0)
+	tm.Screens.Active.CursorAbsolute(4, 0)
 	tm.CursorLeft(2)
 	tm5SExpectCursor(t, tm, 2, 0, false)
 	tm.CursorLeft(0)
 	tm5SExpectCursor(t, tm, 1, 0, false)
 
 	// A pending wrap uses up one unit of the count.
-	tm.screens.active.CursorAbsolute(4, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(4, 1)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 4, 1, false)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(3)
 	tm5SExpectCursor(t, tm, 2, 1, false)
 }
@@ -434,7 +434,7 @@ func TestTm5_term51_cursorLeft_reverse_wrap_within_a_line_and_pending_wrap(t *te
 func TestTm5_term51_cursorLeft_reverse_wrap_goes_up_to_the_end_of_a_soft_wrapped_line(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrap, true)
 
 	zigTry(t, tm.PrintString([]uint8("abcdefgh")))
 	tm5SExpectCursor(t, tm, 3, 1, false)
@@ -443,7 +443,7 @@ func TestTm5_term51_cursorLeft_reverse_wrap_goes_up_to_the_end_of_a_soft_wrapped
 	tm5SExpectCursor(t, tm, 4, 0, false)
 
 	// 3 to column 0, 1 for the wrap, 2 more along the previous line.
-	tm.screens.active.CursorAbsolute(3, 1)
+	tm.Screens.Active.CursorAbsolute(3, 1)
 	tm.CursorLeft(6)
 	tm5SExpectCursor(t, tm, 2, 0, false)
 }
@@ -452,7 +452,7 @@ func TestTm5_term51_cursorLeft_reverse_wrap_goes_up_to_the_end_of_a_soft_wrapped
 func TestTm5_term51_cursorLeft_reverse_wrap_stops_at_column_zero_when_the_line_above_is_not_wrapped(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrap, true)
 
 	zigTry(t, tm.PrintString([]uint8("abc\ndef")))
 	tm5SExpectCursor(t, tm, 3, 1, false)
@@ -464,12 +464,12 @@ func TestTm5_term51_cursorLeft_reverse_wrap_stops_at_column_zero_when_the_line_a
 func TestTm5_term51_cursorLeft_reverse_wrap_at_the_top_left_goes_nowhere(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrap, true)
 
-	tm.screens.active.CursorAbsolute(0, 0)
+	tm.Screens.Active.CursorAbsolute(0, 0)
 	tm.CursorLeft(3)
 	tm5SExpectCursor(t, tm, 0, 0, false)
-	tm.screens.active.CursorAbsolute(2, 0)
+	tm.Screens.Active.CursorAbsolute(2, 0)
 	tm.CursorLeft(10)
 	tm5SExpectCursor(t, tm, 0, 0, false)
 }
@@ -478,25 +478,25 @@ func TestTm5_term51_cursorLeft_reverse_wrap_at_the_top_left_goes_nowhere(t *test
 func TestTm5_term51_cursorLeft_reverse_wrap_respects_left_and_right_margins(t *testing.T) {
 	tm := tm5Init(t, 10, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 7
+	tm.Modes.Set(ModesModeReverseWrap, true)
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 7
 
 	// Stop at the left margin when the line above is not wrapped.
-	tm.screens.active.CursorAbsolute(4, 2)
+	tm.Screens.Active.CursorAbsolute(4, 2)
 	tm.CursorLeft(10)
 	tm5SExpectCursor(t, tm, 2, 2, false)
 
 	// With the line above soft wrapped we continue from the RIGHT margin.
-	tm5SAt(t, tm, 0, 1).row.wrap = true
-	tm.screens.active.CursorAbsolute(3, 2)
+	tm5SAt(t, tm, 0, 1).Row.wrap = true
+	tm.Screens.Active.CursorAbsolute(3, 2)
 	tm.CursorLeft(3)
 	// 1 to the margin, 1 for the wrap, 1 more on the line above.
 	tm5SExpectCursor(t, tm, 6, 1, false)
 
 	// Cursor left of the left margin uses column zero as its edge.
-	tm5SAt(t, tm, 0, 1).row.wrap = false
-	tm.screens.active.CursorAbsolute(1, 2)
+	tm5SAt(t, tm, 0, 1).Row.wrap = false
+	tm.Screens.Active.CursorAbsolute(1, 2)
 	tm.CursorLeft(10)
 	tm5SExpectCursor(t, tm, 0, 2, false)
 }
@@ -507,23 +507,23 @@ func TestTm5_term51_cursorLeft_reverse_wrap_at_the_left_margin_above_the_top_mar
 	// margin row even if that means moving DOWN, regardless of the count.
 	tm := tm5Init(t, 10, 6)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
-	tm.scrolling_region.top = 2
-	tm.scrolling_region.bottom = 4
+	tm.Modes.Set(ModesModeReverseWrap, true)
+	tm.ScrollingRegion.Top = 2
+	tm.ScrollingRegion.Bottom = 4
 
-	tm.screens.active.CursorAbsolute(0, 1)
+	tm.Screens.Active.CursorAbsolute(0, 1)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 0, 2, false)
 
 	// At the top margin row already.
-	tm.screens.active.CursorAbsolute(0, 2)
+	tm.Screens.Active.CursorAbsolute(0, 2)
 	tm.CursorLeft(3)
 	tm5SExpectCursor(t, tm, 0, 2, false)
 
 	// With a left margin the target column is the left margin.
-	tm.scrolling_region.left = 3
-	tm.scrolling_region.right = 8
-	tm.screens.active.CursorAbsolute(3, 0)
+	tm.ScrollingRegion.Left = 3
+	tm.ScrollingRegion.Right = 8
+	tm.Screens.Active.CursorAbsolute(3, 0)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 3, 2, false)
 }
@@ -534,28 +534,28 @@ func TestTm5_term51_cursorLeft_reverse_wrap_with_pending_wrap_in_a_one_column_te
 	// cursor is always at the left margin.
 	tm := tm5Init(t, 1, 3)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrap, true)
 
-	tm.screens.active.CursorAbsolute(0, 2)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(0, 2)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 0, 2, false)
 
 	// Count 2: one for the pending wrap, one left but the line above is not
 	// wrapped so the cursor stays.
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(2)
 	tm5SExpectCursor(t, tm, 0, 2, false)
 
 	// With a wrapped line above the second unit is the wrap itself.
-	tm5SAt(t, tm, 0, 1).row.wrap = true
-	tm.screens.active.cursor.pending_wrap = true
+	tm5SAt(t, tm, 0, 1).Row.wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(2)
 	tm5SExpectCursor(t, tm, 0, 1, false)
 
 	// At the top-left it is the shortcut: y <= top.
-	tm.screens.active.CursorAbsolute(0, 0)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(0, 0)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 0, 0, false)
 }
@@ -564,12 +564,12 @@ func TestTm5_term51_cursorLeft_reverse_wrap_with_pending_wrap_in_a_one_column_te
 func TestTm5_term51_cursorLeft_reverse_wrap_does_not_wrap_above_the_top_margin_when_inside_the_region(t *testing.T) {
 	tm := tm5Init(t, 10, 6)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
-	tm.scrolling_region.top = 2
-	tm.scrolling_region.bottom = 4
+	tm.Modes.Set(ModesModeReverseWrap, true)
+	tm.ScrollingRegion.Top = 2
+	tm.ScrollingRegion.Bottom = 4
 
 	// Not at the left margin: moves to it and stops at the top margin row.
-	tm.screens.active.CursorAbsolute(3, 2)
+	tm.Screens.Active.CursorAbsolute(3, 2)
 	tm.CursorLeft(100)
 	tm5SExpectCursor(t, tm, 0, 2, false)
 }
@@ -578,27 +578,27 @@ func TestTm5_term51_cursorLeft_reverse_wrap_does_not_wrap_above_the_top_margin_w
 func TestTm5_term51_cursorLeft_extended_reverse_wrap_crosses_lines_without_a_soft_wrap(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
 
-	tm.screens.active.CursorAbsolute(1, 2)
+	tm.Screens.Active.CursorAbsolute(1, 2)
 	// 1 to column 0, 1 for the wrap, 1 more on the previous line.
 	tm.CursorLeft(3)
 	tm5SExpectCursor(t, tm, 3, 1, false)
 	// The line above is not wrapped (no wrap flag) yet we crossed it.
-	expect(t, !tm5SAt(t, tm, 0, 1).row.wrap, "!term51SAt(&t, 0, 1).row.wrap")
+	expect(t, !tm5SAt(t, tm, 0, 1).Row.wrap, "!term51SAt(&t, 0, 1).row.wrap")
 }
 
 // Zig: test "term51: cursorLeft: extended reverse wrap from the top wraps to the bottom right"
 func TestTm5_term51_cursorLeft_extended_reverse_wrap_from_the_top_wraps_to_the_bottom_right(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
 
-	tm.screens.active.CursorAbsolute(0, 0)
+	tm.Screens.Active.CursorAbsolute(0, 0)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 4, 3, false)
 
-	tm.screens.active.CursorAbsolute(1, 0)
+	tm.Screens.Active.CursorAbsolute(1, 0)
 	tm.CursorLeft(3)
 	// 1 to column 0, 1 to wrap, 1 more leftwards on the bottom row.
 	tm5SExpectCursor(t, tm, 3, 3, false)
@@ -607,7 +607,7 @@ func TestTm5_term51_cursorLeft_extended_reverse_wrap_from_the_top_wraps_to_the_b
 	// bottom once: 2 to column 0, then each wrap costs 1 and each full row
 	// 4 more: (4,0) at 24 left, (0,0) 4 later... then (4,3), (4,2), (4,1),
 	// (4,0) again and the final 4 steps end at (0,0).
-	tm.screens.active.CursorAbsolute(2, 1)
+	tm.Screens.Active.CursorAbsolute(2, 1)
 	tm.CursorLeft(27)
 	tm5SExpectCursor(t, tm, 0, 0, false)
 }
@@ -616,19 +616,19 @@ func TestTm5_term51_cursorLeft_extended_reverse_wrap_from_the_top_wraps_to_the_b
 func TestTm5_term51_cursorLeft_extended_reverse_wrap_uses_the_margins(t *testing.T) {
 	tm := tm5Init(t, 10, 6)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
-	tm.scrolling_region.top = 1
-	tm.scrolling_region.bottom = 3
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 6
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
+	tm.ScrollingRegion.Top = 1
+	tm.ScrollingRegion.Bottom = 3
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 6
 
 	// From the top-left corner of the region to the bottom-right.
-	tm.screens.active.CursorAbsolute(2, 1)
+	tm.Screens.Active.CursorAbsolute(2, 1)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 6, 3, false)
 
 	// From the left margin of a middle row to the right margin above.
-	tm.screens.active.CursorAbsolute(2, 3)
+	tm.Screens.Active.CursorAbsolute(2, 3)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 6, 2, false)
 }
@@ -637,17 +637,17 @@ func TestTm5_term51_cursorLeft_extended_reverse_wrap_uses_the_margins(t *testing
 func TestTm5_term51_cursorLeft_extended_reverse_wrap_above_the_region_stops_at_the_origin(t *testing.T) {
 	tm := tm5Init(t, 5, 6)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
-	tm.scrolling_region.top = 3
-	tm.scrolling_region.bottom = 4
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
+	tm.ScrollingRegion.Top = 3
+	tm.ScrollingRegion.Bottom = 4
 
 	// Row 0 is above the region: the cursor walks left and stops at (0, 0).
-	tm.screens.active.CursorAbsolute(3, 0)
+	tm.Screens.Active.CursorAbsolute(3, 0)
 	tm.CursorLeft(100)
 	tm5SExpectCursor(t, tm, 0, 0, false)
 
 	// From row 1, it wraps up to row 0 and keeps going.
-	tm.screens.active.CursorAbsolute(1, 1)
+	tm.Screens.Active.CursorAbsolute(1, 1)
 	tm.CursorLeft(100)
 	tm5SExpectCursor(t, tm, 0, 0, false)
 }
@@ -656,20 +656,20 @@ func TestTm5_term51_cursorLeft_extended_reverse_wrap_above_the_region_stops_at_t
 func TestTm5_term51_cursorLeft_extended_reverse_wrap_takes_precedence_and_consumes_pending_wrap(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrap, true)
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
+	tm.Modes.Set(ModesModeReverseWrap, true)
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
 
-	tm.screens.active.CursorAbsolute(4, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(4, 1)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 4, 1, false)
 
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.CursorLeft(2)
 	tm5SExpectCursor(t, tm, 3, 1, false)
 
 	// No wrap flag needed on the line above.
-	tm.screens.active.CursorAbsolute(0, 2)
+	tm.Screens.Active.CursorAbsolute(0, 2)
 	tm.CursorLeft(1)
 	tm5SExpectCursor(t, tm, 4, 1, false)
 }
@@ -678,11 +678,11 @@ func TestTm5_term51_cursorLeft_extended_reverse_wrap_takes_precedence_and_consum
 func TestTm5_term51_cursorLeft_cursor_right_of_the_right_margin_moves_left_normally(t *testing.T) {
 	tm := tm5Init(t, 10, 3)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeReverseWrapExtended, true)
-	tm.scrolling_region.left = 2
-	tm.scrolling_region.right = 6
+	tm.Modes.Set(ModesModeReverseWrapExtended, true)
+	tm.ScrollingRegion.Left = 2
+	tm.ScrollingRegion.Right = 6
 
-	tm.screens.active.CursorAbsolute(9, 1)
+	tm.Screens.Active.CursorAbsolute(9, 1)
 	tm.CursorLeft(3)
 	tm5SExpectCursor(t, tm, 6, 1, false)
 	// Continuing over the left margin edge wraps to the right margin above.
@@ -696,30 +696,30 @@ func TestTm5_term51_saveCursor_stores_position_pen_state_modes_and_charset(t *te
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	expect(t, !tm.screens.active.saved_cursor.Valid, "t.screens.active.saved_cursor == null")
+	expect(t, !tm.Screens.Active.SavedCursor.Valid, "t.screens.active.saved_cursor == null")
 
-	tm.screens.active.CursorAbsolute(9, 3)
-	tm.screens.active.cursor.pending_wrap = true
-	tm.screens.active.cursor.protected = true
+	tm.Screens.Active.CursorAbsolute(9, 3)
+	tm.Screens.Active.Cursor.PendingWrap = true
+	tm.Screens.Active.Cursor.Protected = true
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagBold})
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.ConfigureCharset(CharsetsSlotsG1, CharsetsCharsetDecSpecial)
 	tm.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG1, false)
 	tm.InvokeCharset(CharsetsActiveSlotGR, CharsetsSlotsG3, false)
 	tm.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG2, true)
 	tm.SaveCursor()
 
-	saved := zigUnwrap(t, tm.screens.active.saved_cursor)
-	expectEqual(t, SizeCellCountInt(9), saved.x)
-	expectEqual(t, SizeCellCountInt(3), saved.y)
-	expect(t, saved.pending_wrap, "saved.pending_wrap")
-	expect(t, saved.protected, "saved.protected")
-	expect(t, saved.origin, "saved.origin")
-	expect(t, saved.style.flags.bold, "saved.style.flags.bold")
-	expectEqual(t, CharsetsCharsetDecSpecial, saved.charset.charsets.Get(CharsetsSlotsG1))
-	expectEqual(t, CharsetsSlotsG1, saved.charset.gl)
-	expectEqual(t, CharsetsSlotsG3, saved.charset.gr)
-	tm5ExpectOptSome(t, CharsetsSlotsG2, saved.charset.single_shift)
+	saved := zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	expectEqual(t, SizeCellCountInt(9), saved.X)
+	expectEqual(t, SizeCellCountInt(3), saved.Y)
+	expect(t, saved.PendingWrap, "saved.pending_wrap")
+	expect(t, saved.Protected, "saved.protected")
+	expect(t, saved.Origin, "saved.origin")
+	expect(t, saved.Style.Flags.Bold, "saved.style.flags.bold")
+	expectEqual(t, CharsetsCharsetDecSpecial, saved.Charset.charsets.Get(CharsetsSlotsG1))
+	expectEqual(t, CharsetsSlotsG1, saved.Charset.Gl)
+	expectEqual(t, CharsetsSlotsG3, saved.Charset.Gr)
+	tm5ExpectOptSome(t, CharsetsSlotsG2, saved.Charset.SingleShift)
 }
 
 // Zig: test "term51: saveCursor: overwrites a previous save"
@@ -727,17 +727,17 @@ func TestTm5_term51_saveCursor_overwrites_a_previous_save(t *testing.T) {
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(1, 1)
+	tm.Screens.Active.CursorAbsolute(1, 1)
 	tm.SaveCursor()
-	tm.screens.active.CursorAbsolute(5, 2)
+	tm.Screens.Active.CursorAbsolute(5, 2)
 	tm.SaveCursor()
-	saved := zigUnwrap(t, tm.screens.active.saved_cursor)
-	expectEqual(t, SizeCellCountInt(5), saved.x)
-	expectEqual(t, SizeCellCountInt(2), saved.y)
-	expect(t, !saved.pending_wrap, "!saved.pending_wrap")
-	expect(t, !saved.protected, "!saved.protected")
-	expect(t, !saved.origin, "!saved.origin")
-	expect(t, saved.style.Default(), "saved.style.default()")
+	saved := zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	expectEqual(t, SizeCellCountInt(5), saved.X)
+	expectEqual(t, SizeCellCountInt(2), saved.Y)
+	expect(t, !saved.PendingWrap, "!saved.pending_wrap")
+	expect(t, !saved.Protected, "!saved.protected")
+	expect(t, !saved.Origin, "!saved.origin")
+	expect(t, saved.Style.Default(), "saved.style.default()")
 }
 
 // Zig: test "term51: restoreCursor: restores everything that was saved"
@@ -745,47 +745,47 @@ func TestTm5_term51_restoreCursor_restores_everything_that_was_saved(t *testing.
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(9, 3)
-	tm.screens.active.cursor.pending_wrap = true
-	tm.screens.active.cursor.protected = true
+	tm.Screens.Active.CursorAbsolute(9, 3)
+	tm.Screens.Active.Cursor.PendingWrap = true
+	tm.Screens.Active.Cursor.Protected = true
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagBold})
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.ConfigureCharset(CharsetsSlotsG1, CharsetsCharsetDecSpecial)
 	tm.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG1, false)
 	tm.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG2, true)
 	tm.SaveCursor()
 
 	// Change everything.
-	tm.screens.active.CursorAbsolute(2, 0)
-	tm.screens.active.cursor.pending_wrap = false
-	tm.screens.active.cursor.protected = false
+	tm.Screens.Active.CursorAbsolute(2, 0)
+	tm.Screens.Active.Cursor.PendingWrap = false
+	tm.Screens.Active.Cursor.Protected = false
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagUnset})
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagItalic})
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	tm.ConfigureCharset(CharsetsSlotsG1, CharsetsCharsetBritish)
 	tm.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG0, false)
-	tm.screens.active.charset.single_shift = Optional[CharsetsSlots]{}
+	tm.Screens.Active.Charset.SingleShift = Optional[CharsetsSlots]{}
 
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 9, 3, true)
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	expect(t, !tm.screens.active.cursor.style.flags.italic, "!t.screens.active.cursor.style.flags.italic")
-	expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
-	expectEqual(t, CharsetsCharsetDecSpecial, tm.screens.active.charset.charsets.Get(CharsetsSlotsG1))
-	expectEqual(t, CharsetsSlotsG1, tm.screens.active.charset.gl)
-	tm5ExpectOptSome(t, CharsetsSlotsG2, tm.screens.active.charset.single_shift)
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Italic, "!t.screens.active.cursor.style.flags.italic")
+	expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
+	expectEqual(t, CharsetsCharsetDecSpecial, tm.Screens.Active.Charset.charsets.Get(CharsetsSlotsG1))
+	expectEqual(t, CharsetsSlotsG1, tm.Screens.Active.Charset.Gl)
+	tm5ExpectOptSome(t, CharsetsSlotsG2, tm.Screens.Active.Charset.SingleShift)
 
 	// The restored style is real: printing uses it.
-	tm.screens.active.cursor.pending_wrap = false
-	tm.screens.active.CursorAbsolute(0, 0)
+	tm.Screens.Active.Cursor.PendingWrap = false
+	tm.Screens.Active.CursorAbsolute(0, 0)
 	zigTry(t, tm.Print('a'))
 	lc := tm5SAt(t, tm, 0, 0)
-	expect(t, lc.node.data.styles.Get(lc.cell.style_id).flags.bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
+	expect(t, lc.Node.data.styles.Get(lc.Cell.style_id).Flags.Bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
 
 	// The save is not consumed: restoring again gives the same state.
-	tm.screens.active.CursorAbsolute(0, 0)
+	tm.Screens.Active.CursorAbsolute(0, 0)
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 9, 3, true)
 }
@@ -795,11 +795,11 @@ func TestTm5_term51_restoreCursor_without_a_previous_save_resets_to_defaults(t *
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(5, 3)
-	tm.screens.active.cursor.pending_wrap = true
-	tm.screens.active.cursor.protected = true
+	tm.Screens.Active.CursorAbsolute(5, 3)
+	tm.Screens.Active.Cursor.PendingWrap = true
+	tm.Screens.Active.Cursor.Protected = true
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagBold})
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.ConfigureCharset(CharsetsSlotsG0, CharsetsCharsetDecSpecial)
 	tm.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG3, false)
 	tm.InvokeCharset(CharsetsActiveSlotGR, CharsetsSlotsG1, false)
@@ -807,16 +807,16 @@ func TestTm5_term51_restoreCursor_without_a_previous_save_resets_to_defaults(t *
 
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 0, 0, false)
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
-	expect(t, tm.screens.active.cursor.style.Default(), "t.screens.active.cursor.style.default()")
-	expectEqual(t, StyleDefaultId, tm.screens.active.cursor.style_id)
-	expectEqual(t, CharsetsCharsetUtf8, tm.screens.active.charset.charsets.Get(CharsetsSlotsG0))
-	expectEqual(t, CharsetsSlotsG0, tm.screens.active.charset.gl)
-	expectEqual(t, CharsetsSlotsG2, tm.screens.active.charset.gr)
-	tm5ExpectOptNull(t, tm.screens.active.charset.single_shift)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expect(t, tm.Screens.Active.Cursor.Style.Default(), "t.screens.active.cursor.style.default()")
+	expectEqual(t, StyleDefaultID, tm.Screens.Active.Cursor.StyleID)
+	expectEqual(t, CharsetsCharsetUtf8, tm.Screens.Active.Charset.charsets.Get(CharsetsSlotsG0))
+	expectEqual(t, CharsetsSlotsG0, tm.Screens.Active.Charset.Gl)
+	expectEqual(t, CharsetsSlotsG2, tm.Screens.Active.Charset.Gr)
+	tm5ExpectOptNull(t, tm.Screens.Active.Charset.SingleShift)
 	// Restoring without a save does not create a save.
-	expect(t, !tm.screens.active.saved_cursor.Valid, "t.screens.active.saved_cursor == null")
+	expect(t, !tm.Screens.Active.SavedCursor.Valid, "t.screens.active.saved_cursor == null")
 }
 
 // Zig: test "term51: restoreCursor: releases the style it replaces"
@@ -828,24 +828,24 @@ func TestTm5_term51_restoreCursor_releases_the_style_it_replaces(t *testing.T) {
 	tm.SaveCursor()
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagUnset})
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagItalic})
-	page := &tm.screens.active.cursor.page_pin.node.data
+	page := &tm.Screens.Active.Cursor.PagePin.Node.data
 	// Only the italic style is live (the cursor holds it).
 	expectEqual(t, uint(1), page.styles.Count())
-	expect(t, page.styles.Get(tm.screens.active.cursor.style_id).flags.italic, "page.styles.get(page.memory, t.screens.active.cursor.style_id).flags.italic")
+	expect(t, page.styles.Get(tm.Screens.Active.Cursor.StyleID).Flags.Italic, "page.styles.get(page.memory, t.screens.active.cursor.style_id).flags.italic")
 
 	tm.RestoreCursor()
 	// The italic style was released and bold took its place.
 	expectEqual(t, uint(1), page.styles.Count())
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	expect(t, !tm.screens.active.cursor.style.flags.italic, "!t.screens.active.cursor.style.flags.italic")
-	bold_id := tm.screens.active.cursor.style_id
-	expect(t, page.styles.Get(bold_id).flags.bold, "page.styles.get(page.memory, bold_id).flags.bold")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Italic, "!t.screens.active.cursor.style.flags.italic")
+	bold_id := tm.Screens.Active.Cursor.StyleID
+	expect(t, page.styles.Get(bold_id).Flags.Bold, "page.styles.get(page.memory, bold_id).flags.bold")
 	expectEqual(t, SizeCellCountInt(1), page.styles.RefCount(bold_id))
 
 	// Restoring a saved default style while styled releases the style.
-	tm.screens.active.saved_cursor.Value.style = Style{}
+	tm.Screens.Active.SavedCursor.Value.Style = Style{}
 	tm.RestoreCursor()
-	expectEqual(t, StyleDefaultId, tm.screens.active.cursor.style_id)
+	expectEqual(t, StyleDefaultID, tm.Screens.Active.Cursor.StyleID)
 	expectEqual(t, uint(0), page.styles.Count())
 }
 
@@ -855,26 +855,26 @@ func TestTm5_term51_restoreCursor_clamps_a_saved_position_that_no_longer_fits(t 
 	defer tm.Deinit()
 
 	tm.SaveCursor()
-	zigUnwrap(t, tm.screens.active.saved_cursor)
-	saved := &tm.screens.active.saved_cursor.Value
+	zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	saved := &tm.Screens.Active.SavedCursor.Value
 
 	// Exactly the last cell: unchanged.
-	saved.x = 9
-	saved.y = 4
+	saved.X = 9
+	saved.Y = 4
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 9, 4, false)
 
 	// One beyond each edge, and far beyond.
-	saved.x = 10
-	saved.y = 5
+	saved.X = 10
+	saved.Y = 5
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 9, 4, false)
-	saved.x = 1000
-	saved.y = 0
+	saved.X = 1000
+	saved.Y = 0
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 9, 0, false)
-	saved.x = 0
-	saved.y = 1000
+	saved.X = 0
+	saved.Y = 1000
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 0, 4, false)
 }
@@ -885,16 +885,16 @@ func TestTm5_term51_restoreCursor_does_not_change_the_protected_mode_or_hyperlin
 	defer tm.Deinit()
 
 	tm.SetProtectedMode(ANSIProtectedModeDec)
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://example.com"), Optional[[]uint8]{}))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://example.com"), Optional[[]uint8]{}))
 	tm.SaveCursor()
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	tm.screens.active.EndHyperlink()
+	tm.Screens.Active.EndHyperlink()
 	tm.RestoreCursor()
 	// The pen protection flag comes from the save (set by DEC mode), the
 	// screen's most recent protected mode is untouched.
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, tm.screens.active.protected_mode)
-	expectEqual(t, HyperlinkId(0), tm.screens.active.cursor.hyperlink_id)
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, tm.Screens.Active.ProtectedMode)
+	expectEqual(t, HyperlinkID(0), tm.Screens.Active.Cursor.HyperlinkID)
 }
 
 // Zig: test "term51: restoreCursor: origin mode from the save affects cursor positioning"
@@ -902,11 +902,11 @@ func TestTm5_term51_restoreCursor_origin_mode_from_the_save_affects_cursor_posit
 	tm := tm5Init(t, 10, 6)
 	defer tm.Deinit()
 
-	tm.scrolling_region.top = 2
-	tm.scrolling_region.bottom = 4
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.ScrollingRegion.Top = 2
+	tm.ScrollingRegion.Bottom = 4
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.SaveCursor()
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	tm.RestoreCursor()
 	tm.SetCursorPos(1, 1)
 	// Relative to the top margin again.
@@ -918,30 +918,30 @@ func TestTm5_term51_saveCursor_each_screen_keeps_its_own_save(t *testing.T) {
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(4, 2)
+	tm.Screens.Active.CursorAbsolute(4, 2)
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagBold})
 	tm.SaveCursor()
 
 	tm5SwitchScreen(t, tm, ScreenSetKeyAlternate)
 	// The alternate screen has no save: restore gives defaults.
-	expect(t, !tm.screens.active.saved_cursor.Valid, "t.screens.active.saved_cursor == null")
-	tm.screens.active.CursorAbsolute(7, 1)
+	expect(t, !tm.Screens.Active.SavedCursor.Valid, "t.screens.active.saved_cursor == null")
+	tm.Screens.Active.CursorAbsolute(7, 1)
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 0, 0, false)
-	expect(t, tm.screens.active.cursor.style.Default(), "t.screens.active.cursor.style.default()")
+	expect(t, tm.Screens.Active.Cursor.Style.Default(), "t.screens.active.cursor.style.default()")
 
 	// Save on the alternate screen, which does not disturb the primary.
-	tm.screens.active.CursorAbsolute(2, 2)
+	tm.Screens.Active.CursorAbsolute(2, 2)
 	tm.SaveCursor()
 	tm5SwitchScreen(t, tm, ScreenSetKeyPrimary)
-	primary_saved := zigUnwrap(t, tm.screens.active.saved_cursor)
-	expectEqual(t, SizeCellCountInt(4), primary_saved.x)
-	expectEqual(t, SizeCellCountInt(2), primary_saved.y)
-	expect(t, primary_saved.style.flags.bold, "primary_saved.style.flags.bold")
-	tm.screens.active.CursorAbsolute(0, 0)
+	primary_saved := zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	expectEqual(t, SizeCellCountInt(4), primary_saved.X)
+	expectEqual(t, SizeCellCountInt(2), primary_saved.Y)
+	expect(t, primary_saved.Style.Flags.Bold, "primary_saved.style.flags.bold")
+	tm.Screens.Active.CursorAbsolute(0, 0)
 	tm.RestoreCursor()
 	tm5SExpectCursor(t, tm, 4, 2, false)
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
 
 	tm5SwitchScreen(t, tm, ScreenSetKeyAlternate)
 	tm.RestoreCursor()
@@ -952,7 +952,7 @@ func TestTm5_term51_saveCursor_each_screen_keeps_its_own_save(t *testing.T) {
 func TestTm5_term51_print_clustering_a_width_contributing_character_after_an_empty_cell_prints_normally(t *testing.T) {
 	tm := tm5Init(t, 8, 2)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeGraphemeCluster, true)
+	tm.Modes.Set(ModesModeGraphemeCluster, true)
 
 	tm.SetCursorPos(1, 4)
 	zigTry(t, tm.Print(0x100))
@@ -967,8 +967,8 @@ func TestTm5_term51_print_clustering_a_width_contributing_character_after_an_emp
 func TestTm5_term51_print_clustering_VS16_with_grapheme_data_at_a_right_margin_moves_the_data(t *testing.T) {
 	tm := tm5Init(t, 10, 3)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeGraphemeCluster, true)
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeGraphemeCluster, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(3, 5)
 
 	tm.SetCursorPos(1, 5)
@@ -979,8 +979,8 @@ func TestTm5_term51_print_clustering_VS16_with_grapheme_data_at_a_right_margin_m
 
 	tm5SExpectCell(t, tm, 4, 0, 0, PageCellWideNarrow)
 	tm5SExpectNoGrapheme(t, tm, 4, 0)
-	expect(t, !tm5SAt(t, tm, 0, 0).row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
-	expect(t, !tm5SAt(t, tm, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm5SAt(t, tm, 0, 0).Row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
+	expect(t, !tm5SAt(t, tm, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 	tm5SExpectCell(t, tm, 2, 1, '#', PageCellWideWide)
 	tm5SExpectGrapheme(t, tm, 2, 1, []uint32{0x301, 0xFE0F})
 	tm5SExpectCell(t, tm, 3, 1, 0, PageCellWideSpacerTail)
@@ -992,56 +992,56 @@ func TestTm5_term51_setProtectedMode_initial_state_is_unprotected_with_mode_off(
 	tm := tm5Init(t, 3, 3)
 	defer tm.Deinit()
 
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeOff, tm.screens.active.protected_mode)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeOff, tm.Screens.Active.ProtectedMode)
 }
 
 // Zig: test "term51: setProtectedMode: every transition between the three modes"
 func TestTm5_term51_setProtectedMode_every_transition_between_the_three_modes(t *testing.T) {
 	tm := tm5Init(t, 3, 3)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	// off from the initial state changes nothing
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !s.cursor.protected, "!s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeOff, s.protected_mode)
+	expect(t, !s.Cursor.Protected, "!s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeOff, s.ProtectedMode)
 
 	// iso
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	expect(t, s.cursor.protected, "s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, s.protected_mode)
+	expect(t, s.Cursor.Protected, "s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, s.ProtectedMode)
 
 	// iso -> iso is idempotent
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	expect(t, s.cursor.protected, "s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, s.protected_mode)
+	expect(t, s.Cursor.Protected, "s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, s.ProtectedMode)
 
 	// off clears the cursor flag but keeps the remembered mode
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !s.cursor.protected, "!s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, s.protected_mode)
+	expect(t, !s.Cursor.Protected, "!s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, s.ProtectedMode)
 
 	// dec replaces the remembered mode
 	tm.SetProtectedMode(ANSIProtectedModeDec)
-	expect(t, s.cursor.protected, "s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeDec, s.protected_mode)
+	expect(t, s.Cursor.Protected, "s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeDec, s.ProtectedMode)
 
 	// iso directly from dec (cursor stays protected)
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	expect(t, s.cursor.protected, "s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, s.protected_mode)
+	expect(t, s.Cursor.Protected, "s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, s.ProtectedMode)
 
 	// dec, then off: the mode stays dec
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !s.cursor.protected, "!s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeDec, s.protected_mode)
+	expect(t, !s.Cursor.Protected, "!s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeDec, s.ProtectedMode)
 
 	// off twice is still off
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !s.cursor.protected, "!s.cursor.protected")
-	expectEqual(t, ANSIProtectedModeDec, s.protected_mode)
+	expect(t, !s.Cursor.Protected, "!s.cursor.protected")
+	expectEqual(t, ANSIProtectedModeDec, s.ProtectedMode)
 }
 
 // Zig: test "term51: setProtectedMode: printed cells carry the protected flag of the moment"
@@ -1070,18 +1070,18 @@ func TestTm5_term51_setProtectedMode_applies_to_the_active_screen_only(t *testin
 
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm5SwitchScreen(t, tm, ScreenSetKeyAlternate)
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeOff, tm.screens.active.protected_mode)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeOff, tm.Screens.Active.ProtectedMode)
 
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, tm.screens.active.protected_mode)
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, tm.Screens.Active.ProtectedMode)
 
 	// The primary screen kept its own state.
-	primary := tm.screens.Get(ScreenSetKeyPrimary)
+	primary := tm.Screens.Get(ScreenSetKeyPrimary)
 	expect(t, primary != nil, "t.screens.get(.primary) != null")
-	expect(t, primary.cursor.protected, "primary.cursor.protected")
-	expectEqual(t, ANSIProtectedModeDec, primary.protected_mode)
+	expect(t, primary.Cursor.Protected, "primary.cursor.protected")
+	expectEqual(t, ANSIProtectedModeDec, primary.ProtectedMode)
 }
 
 // Zig: test "term51: tabSet: sets the stop at the cursor column and is idempotent"
@@ -1120,12 +1120,12 @@ func TestTm5_term51_tabSet_stop_in_the_dynamically_allocated_range(t *testing.T)
 	tm := tm5Init(t, 600, 2)
 	defer tm.Deinit()
 
-	expect(t, !tm.tabstops.Get(515), "!t.tabstops.get(515)")
+	expect(t, !tm.Tabstops.Get(515), "!t.tabstops.get(515)")
 	tm.SetCursorPos(1, 516)
 	tm.TabSet()
-	expect(t, tm.tabstops.Get(515), "t.tabstops.get(515)")
-	expect(t, !tm.tabstops.Get(514), "!t.tabstops.get(514)")
-	expect(t, !tm.tabstops.Get(516), "!t.tabstops.get(516)")
+	expect(t, tm.Tabstops.Get(515), "t.tabstops.get(515)")
+	expect(t, !tm.Tabstops.Get(514), "!t.tabstops.get(514)")
+	expect(t, !tm.Tabstops.Get(516), "!t.tabstops.get(516)")
 
 	// And it is honoured by horizontalTab.
 	tm.SetCursorPos(1, 513)
@@ -1138,17 +1138,17 @@ func TestTm5_term51_tabSet_independent_of_margins_and_origin_mode(t *testing.T) 
 	tm := tm5Init(t, 20, 5)
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(5, 10)
 	tm.SetCursorPos(3, 2)
 	tm.TabSet()
-	expect(t, tm.tabstops.Get(1), "t.tabstops.get(1)")
-	tm.modes.Set(ModesModeOrigin, true)
+	expect(t, tm.Tabstops.Get(1), "t.tabstops.get(1)")
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.SetCursorPos(1, 1)
 	// origin mode: column 1 is the left margin, absolute column 4
 	tm5TExpectCursor(t, tm, 4, 0)
 	tm.TabSet()
-	expect(t, tm.tabstops.Get(4), "t.tabstops.get(4)")
+	expect(t, tm.Tabstops.Get(4), "t.tabstops.get(4)")
 }
 
 // Zig: test "term51: tabReset: restores the default stops every 8 columns"
@@ -1229,23 +1229,23 @@ func TestTm5_term51_tabReset_covers_the_dynamically_allocated_range(t *testing.T
 
 	tm.TabClear(CSITabClearAll)
 	for x := uint(0); x < 600; x++ {
-		expect(t, !tm.tabstops.Get(x), "!t.tabstops.get(x)")
+		expect(t, !tm.Tabstops.Get(x), "!t.tabstops.get(x)")
 	}
 	tm.SetCursorPos(1, 601)
 	tm.TabSet()
 	tm.SetCursorPos(1, 531)
 	tm.TabSet()
-	expect(t, tm.tabstops.Get(599), "t.tabstops.get(599)")
-	expect(t, tm.tabstops.Get(530), "t.tabstops.get(530)")
+	expect(t, tm.Tabstops.Get(599), "t.tabstops.get(599)")
+	expect(t, tm.Tabstops.Get(530), "t.tabstops.get(530)")
 
 	tm.TabReset()
 	for x := uint(0); x < 600; x++ {
 		expected := x%8 == 0 && x != 0 && x < 599
-		expectEqual(t, expected, tm.tabstops.Get(x))
+		expectEqual(t, expected, tm.Tabstops.Get(x))
 	}
 	// 592 is the last multiple of 8 below 599.
-	expect(t, tm.tabstops.Get(592), "t.tabstops.get(592)")
-	expect(t, !tm.tabstops.Get(600-1), "!t.tabstops.get(600 - 1)")
+	expect(t, tm.Tabstops.Get(592), "t.tabstops.get(592)")
+	expect(t, !tm.Tabstops.Get(600-1), "!t.tabstops.get(600 - 1)")
 }
 
 // Zig: test "term51: tabClear: current clears a set stop and leaves the others"
@@ -1270,21 +1270,21 @@ func TestTm5_term51_tabClear_current_on_a_column_without_a_stop_sets_one_xor_tog
 	tm := tm5Init(t, 30, 3)
 	defer tm.Deinit()
 
-	expect(t, !tm.tabstops.Get(3), "!t.tabstops.get(3)")
+	expect(t, !tm.Tabstops.Get(3), "!t.tabstops.get(3)")
 	tm.SetCursorPos(1, 4)
 	tm.TabClear(CSITabClearCurrent)
-	expect(t, tm.tabstops.Get(3), "t.tabstops.get(3)")
+	expect(t, tm.Tabstops.Get(3), "t.tabstops.get(3)")
 	tm.TabClear(CSITabClearCurrent)
-	expect(t, !tm.tabstops.Get(3), "!t.tabstops.get(3)")
+	expect(t, !tm.Tabstops.Get(3), "!t.tabstops.get(3)")
 
 	// Same at column 0 and at the last column.
 	tm.TabClear(CSITabClearCurrent)
 	tm.SetCursorPos(1, 1)
 	tm.TabClear(CSITabClearCurrent)
-	expect(t, tm.tabstops.Get(0), "t.tabstops.get(0)")
+	expect(t, tm.Tabstops.Get(0), "t.tabstops.get(0)")
 	tm.SetCursorPos(1, 30)
 	tm.TabClear(CSITabClearCurrent)
-	expect(t, tm.tabstops.Get(29), "t.tabstops.get(29)")
+	expect(t, tm.Tabstops.Get(29), "t.tabstops.get(29)")
 }
 
 // Zig: test "term51: tabClear: current in the dynamically allocated range"
@@ -1293,12 +1293,12 @@ func TestTm5_term51_tabClear_current_in_the_dynamically_allocated_range(t *testi
 	defer tm.Deinit()
 
 	// 520 = 65 * 8 is a default stop in the dynamic range.
-	expect(t, tm.tabstops.Get(520), "t.tabstops.get(520)")
+	expect(t, tm.Tabstops.Get(520), "t.tabstops.get(520)")
 	tm.SetCursorPos(1, 521)
 	tm.TabClear(CSITabClearCurrent)
-	expect(t, !tm.tabstops.Get(520), "!t.tabstops.get(520)")
-	expect(t, tm.tabstops.Get(512), "t.tabstops.get(512)")
-	expect(t, tm.tabstops.Get(528), "t.tabstops.get(528)")
+	expect(t, !tm.Tabstops.Get(520), "!t.tabstops.get(520)")
+	expect(t, tm.Tabstops.Get(512), "t.tabstops.get(512)")
+	expect(t, tm.Tabstops.Get(528), "t.tabstops.get(528)")
 }
 
 // Zig: test "term51: tabClear: all clears every stop including the dynamic range"
@@ -1309,7 +1309,7 @@ func TestTm5_term51_tabClear_all_clears_every_stop_including_the_dynamic_range(t
 	tm.SetCursorPos(2, 300)
 	tm.TabClear(CSITabClearAll)
 	for x := uint(0); x < 600; x++ {
-		expect(t, !tm.tabstops.Get(x), "!t.tabstops.get(x)")
+		expect(t, !tm.Tabstops.Get(x), "!t.tabstops.get(x)")
 	}
 	tm5TExpectCursor(t, tm, 299, 1)
 
@@ -1321,7 +1321,7 @@ func TestTm5_term51_tabClear_all_clears_every_stop_including_the_dynamic_range(t
 	// Clearing again changes nothing.
 	tm.TabClear(CSITabClearAll)
 	for x := uint(0); x < 600; x++ {
-		expect(t, !tm.tabstops.Get(x), "!t.tabstops.get(x)")
+		expect(t, !tm.Tabstops.Get(x), "!t.tabstops.get(x)")
 	}
 }
 
@@ -1345,7 +1345,7 @@ func TestTm5_term51_horizontalTab_from_every_column_with_default_stops(t *testin
 	defer tm.Deinit()
 
 	for x := uint(0); x < 80; x++ {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 0)
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 0)
 		tm.HorizontalTab()
 		// stops at 8, 16, ..., 72; past 72 the right edge (79) is the target
 		var expected uint
@@ -1362,10 +1362,10 @@ func TestTm5_term51_horizontalTab_from_every_column_with_default_stops(t *testin
 func TestTm5_term51_horizontalTab_right_margin_limits_the_move(t *testing.T) {
 	tm := tm5Init(t, 80, 2)
 	defer tm.Deinit()
-	tm.scrolling_region.right = 20
+	tm.ScrollingRegion.Right = 20
 
 	for x := uint(0); x < 80; x++ {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 0)
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 0)
 		tm.HorizontalTab()
 		var next_stop uint
 		if x >= 72 {
@@ -1387,11 +1387,11 @@ func TestTm5_term51_horizontalTab_right_margin_limits_the_move(t *testing.T) {
 func TestTm5_term51_horizontalTab_left_margin_is_ignored(t *testing.T) {
 	tm := tm5Init(t, 80, 2)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(21, 60)
 	tm5TExpectRegion(t, tm, 0, 1, 20, 59)
 
-	tm.screens.active.CursorAbsolute(2, 0)
+	tm.Screens.Active.CursorAbsolute(2, 0)
 	tm.HorizontalTab()
 	tm5TExpectCursor(t, tm, 8, 0)
 	tm.HorizontalTab()
@@ -1400,10 +1400,10 @@ func TestTm5_term51_horizontalTab_left_margin_is_ignored(t *testing.T) {
 	tm5TExpectCursor(t, tm, 24, 0)
 
 	// Past the right margin nothing moves.
-	tm.screens.active.CursorAbsolute(60, 0)
+	tm.Screens.Active.CursorAbsolute(60, 0)
 	tm.HorizontalTab()
 	tm5TExpectCursor(t, tm, 60, 0)
-	tm.screens.active.CursorAbsolute(59, 0)
+	tm.Screens.Active.CursorAbsolute(59, 0)
 	tm.HorizontalTab()
 	tm5TExpectCursor(t, tm, 59, 0)
 }
@@ -1444,18 +1444,18 @@ func TestTm5_term51_horizontalTab_does_not_reset_pending_wrap(t *testing.T) {
 	tm := tm5Init(t, 20, 2)
 	defer tm.Deinit()
 
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.HorizontalTab()
 	tm5TExpectCursor(t, tm, 8, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	// At the right edge nothing moves and pending wrap is kept.
 	zigTry(t, tm.PrintString([]uint8("12345678901")))
-	tm.screens.active.CursorAbsolute(19, 0)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(19, 0)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.HorizontalTab()
 	tm5TExpectCursor(t, tm, 19, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 }
 
 // Zig: test "term51: horizontalTab: narrow screens"
@@ -1516,7 +1516,7 @@ func TestTm5_term51_horizontalTabBack_from_every_column_with_default_stops(t *te
 	defer tm.Deinit()
 
 	for x := uint(0); x < 80; x++ {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 0)
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 0)
 		tm.HorizontalTabBack()
 		var expected uint
 		if x == 0 {
@@ -1532,13 +1532,13 @@ func TestTm5_term51_horizontalTabBack_from_every_column_with_default_stops(t *te
 func TestTm5_term51_horizontalTabBack_origin_mode_stops_at_the_left_margin(t *testing.T) {
 	tm := tm5Init(t, 80, 2)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(11, 60)
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm5TExpectRegion(t, tm, 0, 1, 10, 59)
 
 	for x := uint(0); x < 80; x++ {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 0)
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 0)
 		tm.HorizontalTabBack()
 		var prev_stop uint
 		if x == 0 {
@@ -1560,10 +1560,10 @@ func TestTm5_term51_horizontalTabBack_origin_mode_stops_at_the_left_margin(t *te
 func TestTm5_term51_horizontalTabBack_without_origin_mode_the_left_margin_is_ignored(t *testing.T) {
 	tm := tm5Init(t, 80, 2)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(11, 60)
 
-	tm.screens.active.CursorAbsolute(12, 0)
+	tm.Screens.Active.CursorAbsolute(12, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 8, 0)
 	tm.HorizontalTabBack()
@@ -1572,7 +1572,7 @@ func TestTm5_term51_horizontalTabBack_without_origin_mode_the_left_margin_is_ign
 	tm5TExpectCursor(t, tm, 0, 0)
 
 	// A cursor left of the margin moves normally too.
-	tm.screens.active.CursorAbsolute(5, 0)
+	tm.Screens.Active.CursorAbsolute(5, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 0, 0)
 }
@@ -1585,15 +1585,15 @@ func TestTm5_term51_horizontalTabBack_stop_at_the_left_limit_itself_and_at_colum
 	// A stop at column 0 is honoured (loop returns anyway).
 	tm.SetCursorPos(1, 1)
 	tm.TabSet()
-	tm.screens.active.CursorAbsolute(5, 0)
+	tm.Screens.Active.CursorAbsolute(5, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 0, 0)
 
 	// Left margin exactly on a stop: origin mode, from beyond it.
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(9, 30)
-	tm.modes.Set(ModesModeOrigin, true)
-	tm.screens.active.CursorAbsolute(20, 0)
+	tm.Modes.Set(ModesModeOrigin, true)
+	tm.Screens.Active.CursorAbsolute(20, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 16, 0)
 	tm.HorizontalTabBack()
@@ -1613,7 +1613,7 @@ func TestTm5_term51_horizontalTabBack_custom_and_cleared_stops(t *testing.T) {
 	tm.SetCursorPos(1, 21)
 	tm.TabSet()
 
-	tm.screens.active.CursorAbsolute(29, 0)
+	tm.Screens.Active.CursorAbsolute(29, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 20, 0)
 	tm.HorizontalTabBack()
@@ -1622,7 +1622,7 @@ func TestTm5_term51_horizontalTabBack_custom_and_cleared_stops(t *testing.T) {
 	tm5TExpectCursor(t, tm, 0, 0)
 
 	// The stop under the cursor does not count.
-	tm.screens.active.CursorAbsolute(5, 0)
+	tm.Screens.Active.CursorAbsolute(5, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 0, 0)
 }
@@ -1633,17 +1633,17 @@ func TestTm5_term51_horizontalTabBack_does_not_reset_pending_wrap_and_does_not_t
 	defer tm.Deinit()
 
 	zigTry(t, tm.PrintString([]uint8("12345678901234567890")))
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 16, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm5TExpectGrid(t, tm, []string{"12345678901234567890", "...................."})
 
 	// At column 0 nothing moves and pending wrap stays.
-	tm.screens.active.CursorAbsolute(0, 0)
+	tm.Screens.Active.CursorAbsolute(0, 0)
 	tm.HorizontalTabBack()
 	tm5TExpectCursor(t, tm, 0, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 }
 
 // Zig: test "term51: horizontalTabBack: dynamic range and narrow screens"
@@ -1651,12 +1651,12 @@ func TestTm5_term51_horizontalTabBack_dynamic_range_and_narrow_screens(t *testin
 	func() {
 		tm := tm5Init(t, 600, 1)
 		defer tm.Deinit()
-		tm.screens.active.CursorAbsolute(599, 0)
+		tm.Screens.Active.CursorAbsolute(599, 0)
 		tm.HorizontalTabBack()
 		tm5TExpectCursor(t, tm, 592, 0)
 		tm.HorizontalTabBack()
 		tm5TExpectCursor(t, tm, 584, 0)
-		tm.screens.active.CursorAbsolute(513, 0)
+		tm.Screens.Active.CursorAbsolute(513, 0)
 		tm.HorizontalTabBack()
 		tm5TExpectCursor(t, tm, 512, 0)
 		tm.HorizontalTabBack()
@@ -1671,7 +1671,7 @@ func TestTm5_term51_horizontalTabBack_dynamic_range_and_narrow_screens(t *testin
 	func() {
 		tm := tm5Init(t, 10, 1)
 		defer tm.Deinit()
-		tm.screens.active.CursorAbsolute(9, 0)
+		tm.Screens.Active.CursorAbsolute(9, 0)
 		tm.HorizontalTabBack()
 		tm5TExpectCursor(t, tm, 8, 0)
 		tm.HorizontalTabBack()
@@ -1690,7 +1690,7 @@ func TestTm5_term51_cursorIsAtPrompt_fresh_terminal_is_not_at_a_prompt(t *testin
 func TestTm5_term51_cursorIsAtPrompt_every_row_mark_and_every_cursor_content_state(t *testing.T) {
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	contents := []PageCellSemanticContent{
 		PageCellSemanticContentOutput,
@@ -1704,8 +1704,8 @@ func TestTm5_term51_cursorIsAtPrompt_every_row_mark_and_every_cursor_content_sta
 	}
 	for _, mark := range marks {
 		for _, content := range contents {
-			s.cursor.page_row.semantic_prompt = mark
-			s.cursor.semantic_content = content
+			s.Cursor.PageRow.semantic_prompt = mark
+			s.Cursor.SemanticContent = content
 			expected := mark != PageRowSemanticPromptNone || content != PageCellSemanticContentOutput
 			expectEqual(t, expected, tm.CursorIsAtPrompt())
 		}
@@ -1738,9 +1738,9 @@ func TestTm5_term51_cursorIsAtPrompt_alternate_screen_is_never_at_a_prompt(t *te
 	tm5SwitchScreen(t, tm, ScreenSetKeyAlternate)
 	// Mark the alternate screen the same way, it still reports false.
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionPromptStart, "")))
-	expectEqual(t, PageRowSemanticPromptPrompt, tm.screens.active.cursor.page_row.semantic_prompt)
+	expectEqual(t, PageRowSemanticPromptPrompt, tm.Screens.Active.Cursor.PageRow.semantic_prompt)
 	expect(t, !tm.CursorIsAtPrompt(), "!t.cursorIsAtPrompt()")
-	tm.screens.active.cursor.semantic_content = PageCellSemanticContentInput
+	tm.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
 	expect(t, !tm.CursorIsAtPrompt(), "!t.cursorIsAtPrompt()")
 
 	tm5SwitchScreen(t, tm, ScreenSetKeyPrimary)
@@ -1756,8 +1756,8 @@ func TestTm5_term51_semanticPrompt_fresh_line_at_column_0_does_nothing(t *testin
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLine, "")))
 	tm5TExpectCursor(t, tm, 0, 1)
 	expectEqual(t, PageRowSemanticPromptNone, tm5TRowAt(t, tm, 1).semantic_prompt)
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
-	expect(t, !tm.screens.active.semantic_prompt.seen, "!t.screens.active.semantic_prompt.seen")
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
+	expect(t, !tm.Screens.Active.SemanticPrompt.Seen, "!t.screens.active.semantic_prompt.seen")
 }
 
 // Zig: test "term51: semanticPrompt: fresh_line away from column 0 moves to the next line start"
@@ -1770,9 +1770,9 @@ func TestTm5_term51_semanticPrompt_fresh_line_away_from_column_0_moves_to_the_ne
 	tm5TExpectCursor(t, tm, 0, 1)
 	tm5TExpectGrid(t, tm, []string{"ab...", ".....", ".....", "....."})
 	// Options are ignored for L.
-	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.flags.shell_redraws_prompt)
-	tm5ExpectClick(t, tm5ClickNone(), tm.screens.active.semantic_prompt.click)
-	expect(t, !tm.screens.active.semantic_prompt.seen, "!t.screens.active.semantic_prompt.seen")
+	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.Flags.ShellRedrawsPrompt)
+	tm5ExpectClick(t, tm5ClickNone(), tm.Screens.Active.SemanticPrompt.Click)
+	expect(t, !tm.Screens.Active.SemanticPrompt.Seen, "!t.screens.active.semantic_prompt.seen")
 }
 
 // Zig: test "term51: semanticPrompt: fresh_line on the last row scrolls"
@@ -1794,18 +1794,18 @@ func TestTm5_term51_semanticPrompt_fresh_line_on_the_last_row_scrolls(t *testing
 func TestTm5_term51_semanticPrompt_fresh_line_new_prompt_marks_the_row_and_content(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
-	expect(t, !s.semantic_prompt.seen, "!s.semantic_prompt.seen")
+	expect(t, !s.SemanticPrompt.Seen, "!s.semantic_prompt.seen")
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "")))
 	tm5TExpectCursor(t, tm, 0, 0)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
-	expectEqual(t, PageCellSemanticContentPrompt, s.cursor.semantic_content)
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
-	expect(t, s.semantic_prompt.seen, "s.semantic_prompt.seen")
+	expectEqual(t, PageCellSemanticContentPrompt, s.Cursor.SemanticContent)
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
+	expect(t, s.SemanticPrompt.Seen, "s.semantic_prompt.seen")
 	// Defaults of the options remain.
-	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.flags.shell_redraws_prompt)
-	tm5ExpectClick(t, tm5ClickNone(), s.semantic_prompt.click)
+	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.Flags.ShellRedrawsPrompt)
+	tm5ExpectClick(t, tm5ClickNone(), s.SemanticPrompt.Click)
 }
 
 // Zig: test "term51: semanticPrompt: fresh_line_new_prompt does a fresh line first"
@@ -1824,7 +1824,7 @@ func TestTm5_term51_semanticPrompt_fresh_line_new_prompt_does_a_fresh_line_first
 func TestTm5_term51_semanticPrompt_fresh_line_new_prompt_overrides_the_continuation_mark_index_would_add(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	// In input state at column > 0 the fresh line's index marks the new
 	// row as a continuation, then the new prompt marks it as a prompt.
@@ -1836,19 +1836,19 @@ func TestTm5_term51_semanticPrompt_fresh_line_new_prompt_overrides_the_continuat
 	tm5TExpectCursor(t, tm, 0, 1)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 1).semantic_prompt)
-	expectEqual(t, PageCellSemanticContentPrompt, s.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, s.Cursor.SemanticContent)
 
 	// With the eol flag set, index drops back to output without marking and
 	// the prompt then sets prompt state with the flag clear.
 	zigTry(t, tm.Print('$'))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "")))
-	expect(t, s.cursor.semantic_content_clear_eol, "s.cursor.semantic_content_clear_eol")
+	expect(t, s.Cursor.SemanticContentClearEol, "s.cursor.semantic_content_clear_eol")
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "")))
 	tm5TExpectCursor(t, tm, 0, 2)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 1).semantic_prompt)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 2).semantic_prompt)
-	expectEqual(t, PageCellSemanticContentPrompt, s.cursor.semantic_content)
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentPrompt, s.Cursor.SemanticContent)
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 }
 
 // Zig: test "term51: semanticPrompt: fresh_line_new_prompt at column 0 re-marks the current row"
@@ -1896,8 +1896,8 @@ func TestTm5_term51_semanticPrompt_prompt_kind_option_selects_the_row_mark(t *te
 				defer tm.Deinit()
 				zigTry(t, tm.SemanticPrompt(tm5TPrompt(action, c.opts)))
 				expectEqual(t, c.expected, tm5TRowAt(t, tm, 0).semantic_prompt)
-				expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
-				expect(t, tm.screens.active.semantic_prompt.seen, "t.screens.active.semantic_prompt.seen")
+				expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
+				expect(t, tm.Screens.Active.SemanticPrompt.Seen, "t.screens.active.semantic_prompt.seen")
 			}()
 		}
 	}
@@ -1926,17 +1926,17 @@ func TestTm5_term51_semanticPrompt_redraw_option(t *testing.T) {
 	}
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	tm.flags.shell_redraws_prompt = OSCParsersSemanticPromptRedrawLast
+	tm.Flags.ShellRedrawsPrompt = OSCParsersSemanticPromptRedrawLast
 	for _, c := range cases {
 		// Re-seed with a value different from the expectation of invalid inputs.
 		if c.opts == "redraw=2" {
-			tm.flags.shell_redraws_prompt = OSCParsersSemanticPromptRedrawLast
+			tm.Flags.ShellRedrawsPrompt = OSCParsersSemanticPromptRedrawLast
 		}
 		if c.opts == "redraw" {
-			tm.flags.shell_redraws_prompt = OSCParsersSemanticPromptRedrawFalse
+			tm.Flags.ShellRedrawsPrompt = OSCParsersSemanticPromptRedrawFalse
 		}
 		zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, c.opts)))
-		expectEqual(t, c.expected, tm.flags.shell_redraws_prompt)
+		expectEqual(t, c.expected, tm.Flags.ShellRedrawsPrompt)
 	}
 }
 
@@ -1946,8 +1946,8 @@ func TestTm5_term51_semanticPrompt_redraw_option_is_not_applied_by_prompt_start(
 	defer tm.Deinit()
 
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionPromptStart, "redraw=0;click_events=1;cl=line")))
-	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.flags.shell_redraws_prompt)
-	tm5ExpectClick(t, tm5ClickNone(), tm.screens.active.semantic_prompt.click)
+	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.Flags.ShellRedrawsPrompt)
+	tm5ExpectClick(t, tm5ClickNone(), tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "term51: semanticPrompt: click_events and cl options"
@@ -1977,9 +1977,9 @@ func TestTm5_term51_semanticPrompt_click_events_and_cl_options(t *testing.T) {
 		func() {
 			tm := tm5Init(t, 5, 3)
 			defer tm.Deinit()
-			tm5ExpectClick(t, none, tm.screens.active.semantic_prompt.click)
+			tm5ExpectClick(t, none, tm.Screens.Active.SemanticPrompt.Click)
 			zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, c.opts)))
-			tm5ExpectClick(t, c.expected, tm.screens.active.semantic_prompt.click)
+			tm5ExpectClick(t, c.expected, tm.Screens.Active.SemanticPrompt.Click)
 		}()
 	}
 
@@ -2001,9 +2001,9 @@ func TestTm5_term51_semanticPrompt_click_events_and_cl_options(t *testing.T) {
 			tm := tm5Init(t, 5, 3)
 			defer tm.Deinit()
 			zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cl=w")))
-			tm5ExpectClick(t, tm5ClickCl(OSCParsersSemanticPromptClickSmartVertical), tm.screens.active.semantic_prompt.click)
+			tm5ExpectClick(t, tm5ClickCl(OSCParsersSemanticPromptClickSmartVertical), tm.Screens.Active.SemanticPrompt.Click)
 			zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, opts)))
-			tm5ExpectClick(t, tm5ClickCl(OSCParsersSemanticPromptClickSmartVertical), tm.screens.active.semantic_prompt.click)
+			tm5ExpectClick(t, tm5ClickCl(OSCParsersSemanticPromptClickSmartVertical), tm.Screens.Active.SemanticPrompt.Click)
 		}()
 	}
 
@@ -2012,11 +2012,11 @@ func TestTm5_term51_semanticPrompt_click_events_and_cl_options(t *testing.T) {
 	defer tm.Deinit()
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "click_events=1")))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "")))
-	tm5ExpectClick(t, tm5ClickEvents(), tm.screens.active.semantic_prompt.click)
+	tm5ExpectClick(t, tm5ClickEvents(), tm.Screens.Active.SemanticPrompt.Click)
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "click_events=0")))
-	tm5ExpectClick(t, tm5ClickEvents(), tm.screens.active.semantic_prompt.click)
+	tm5ExpectClick(t, tm5ClickEvents(), tm.Screens.Active.SemanticPrompt.Click)
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cl=m")))
-	tm5ExpectClick(t, tm5ClickCl(OSCParsersSemanticPromptClickMultiple), tm.screens.active.semantic_prompt.click)
+	tm5ExpectClick(t, tm5ClickCl(OSCParsersSemanticPromptClickMultiple), tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "term51: semanticPrompt: new_command behaves as fresh_line_new_prompt"
@@ -2041,13 +2041,13 @@ func TestTm5_term51_semanticPrompt_new_command_behaves_as_fresh_line_new_prompt(
 			zigTry(t, b.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionNewCommand, opts)))
 
 			tm5TExpectCursor(t, b, 0, 1)
-			expectEqual(t, a.screens.active.cursor.x, b.screens.active.cursor.x)
-			expectEqual(t, a.screens.active.cursor.y, b.screens.active.cursor.y)
-			expectEqual(t, a.screens.active.cursor.semantic_content, b.screens.active.cursor.semantic_content)
+			expectEqual(t, a.Screens.Active.Cursor.X, b.Screens.Active.Cursor.X)
+			expectEqual(t, a.Screens.Active.Cursor.Y, b.Screens.Active.Cursor.Y)
+			expectEqual(t, a.Screens.Active.Cursor.SemanticContent, b.Screens.Active.Cursor.SemanticContent)
 			expectEqual(t, tm5TRowAt(t, a, 1).semantic_prompt, tm5TRowAt(t, b, 1).semantic_prompt)
-			expectEqual(t, a.flags.shell_redraws_prompt, b.flags.shell_redraws_prompt)
-			tm5ExpectClick(t, a.screens.active.semantic_prompt.click, b.screens.active.semantic_prompt.click)
-			expectEqual(t, a.screens.active.semantic_prompt.seen, b.screens.active.semantic_prompt.seen)
+			expectEqual(t, a.Flags.ShellRedrawsPrompt, b.Flags.ShellRedrawsPrompt)
+			tm5ExpectClick(t, a.Screens.Active.SemanticPrompt.Click, b.Screens.Active.SemanticPrompt.Click)
+			expectEqual(t, a.Screens.Active.SemanticPrompt.Seen, b.Screens.Active.SemanticPrompt.Seen)
 		}()
 	}
 }
@@ -2061,52 +2061,52 @@ func TestTm5_term51_semanticPrompt_prompt_start_does_not_move_the_cursor(t *test
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionPromptStart, "")))
 	tm5TExpectCursor(t, tm, 2, 0)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
-	expect(t, tm.screens.active.semantic_prompt.seen, "t.screens.active.semantic_prompt.seen")
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
+	expect(t, tm.Screens.Active.SemanticPrompt.Seen, "t.screens.active.semantic_prompt.seen")
 }
 
 // Zig: test "term51: semanticPrompt: end_prompt_start_input switches to explicit input"
 func TestTm5_term51_semanticPrompt_end_prompt_start_input_switches_to_explicit_input(t *testing.T) {
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionPromptStart, "")))
 	zigTry(t, tm.Print('$'))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInput, "k=c;aid=1")))
-	expectEqual(t, PageCellSemanticContentInput, s.cursor.semantic_content)
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentInput, s.Cursor.SemanticContent)
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 	// Row mark and cursor untouched.
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
 	tm5TExpectCursor(t, tm, 1, 0)
 
 	// From the eol flavour the flag is cleared again.
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "")))
-	expect(t, s.cursor.semantic_content_clear_eol, "s.cursor.semantic_content_clear_eol")
+	expect(t, s.Cursor.SemanticContentClearEol, "s.cursor.semantic_content_clear_eol")
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInput, "")))
-	expectEqual(t, PageCellSemanticContentInput, s.cursor.semantic_content)
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentInput, s.Cursor.SemanticContent)
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 }
 
 // Zig: test "term51: semanticPrompt: end_prompt_start_input_terminate_eol sets the eol flag"
 func TestTm5_term51_semanticPrompt_end_prompt_start_input_terminate_eol_sets_the_eol_flag(t *testing.T) {
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionPromptStart, "")))
 	zigTry(t, tm.Print('$'))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "")))
-	expectEqual(t, PageCellSemanticContentInput, s.cursor.semantic_content)
-	expect(t, s.cursor.semantic_content_clear_eol, "s.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentInput, s.Cursor.SemanticContent)
+	expect(t, s.Cursor.SemanticContentClearEol, "s.cursor.semantic_content_clear_eol")
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
 	tm5TExpectCursor(t, tm, 1, 0)
 
 	// The next index ends the input state without marking the new row.
 	tm.CarriageReturn()
 	zigTry(t, tm.Linefeed())
-	expectEqual(t, PageCellSemanticContentOutput, s.cursor.semantic_content)
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentOutput, s.Cursor.SemanticContent)
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 	expectEqual(t, PageRowSemanticPromptNone, tm5TRowAt(t, tm, 1).semantic_prompt)
 }
 
@@ -2122,16 +2122,16 @@ func TestTm5_term51_semanticPrompt_end_input_start_output_clears_a_prompt_row_at
 			func() {
 				tm := tm5Init(t, 5, 3)
 				defer tm.Deinit()
-				s := tm.screens.active
+				s := tm.Screens.Active
 
-				s.cursor.semantic_content = PageCellSemanticContentInput
-				s.cursor.semantic_content_clear_eol = true
-				s.cursor.page_row.semantic_prompt = mark
-				tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 0)
+				s.Cursor.SemanticContent = PageCellSemanticContentInput
+				s.Cursor.SemanticContentClearEol = true
+				s.Cursor.PageRow.semantic_prompt = mark
+				tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 0)
 				zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndInputStartOutput, "")))
 
-				expectEqual(t, PageCellSemanticContentOutput, s.cursor.semantic_content)
-				expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+				expectEqual(t, PageCellSemanticContentOutput, s.Cursor.SemanticContent)
+				expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 				// The mark is dropped only when we are at column 0.
 				expected := mark
 				if x == 0 {
@@ -2163,19 +2163,19 @@ func TestTm5_term51_semanticPrompt_end_input_start_output_only_touches_the_curso
 func TestTm5_term51_semanticPrompt_end_command_resets_to_output_and_leaves_row_marks(t *testing.T) {
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionPromptStart, "")))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "")))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndCommand, "0")))
-	expectEqual(t, PageCellSemanticContentOutput, s.cursor.semantic_content)
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentOutput, s.Cursor.SemanticContent)
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 	// Column 0 on a prompt row: unlike C, D keeps the mark.
 	tm5TExpectCursor(t, tm, 0, 0)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
 
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndCommand, "err=1;137")))
-	expectEqual(t, PageCellSemanticContentOutput, s.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, s.Cursor.SemanticContent)
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
 	tm5TExpectCursor(t, tm, 0, 0)
 }
@@ -2184,14 +2184,14 @@ func TestTm5_term51_semanticPrompt_end_command_resets_to_output_and_leaves_row_m
 func TestTm5_term51_semanticPrompt_complete_prompt_cycle(t *testing.T) {
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
-	s := tm.screens.active
+	s := tm.Screens.Active
 
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "")))
 	zigTry(t, tm.PrintString([]uint8("$ ")))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndPromptStartInput, "")))
 	zigTry(t, tm.PrintString([]uint8("ls")))
 	zigTry(t, tm.SemanticPrompt(tm5TPrompt(OSCParsersSemanticPromptCommandActionEndInputStartOutput, "")))
-	expectEqual(t, PageCellSemanticContentOutput, s.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, s.Cursor.SemanticContent)
 	// Row 0 keeps its mark since the cursor is not at column 0.
 	expectEqual(t, PageRowSemanticPromptPrompt, tm5TRowAt(t, tm, 0).semantic_prompt)
 	tm.CarriageReturn()
@@ -2213,16 +2213,16 @@ func TestTm5_term51_semanticPromptFreshLine_column_0_and_the_left_margin_are_no_
 	defer tm.Deinit()
 
 	// No margins: only column 0.
-	tm.screens.active.CursorAbsolute(0, 2)
+	tm.Screens.Active.CursorAbsolute(0, 2)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 2)
 
 	// Left margin 3: the margin column itself and column 0 do nothing.
 	tm5TRegion(tm, 0, 4, 3, 7)
-	tm.screens.active.CursorAbsolute(3, 2)
+	tm.Screens.Active.CursorAbsolute(3, 2)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 3, 2)
-	tm.screens.active.CursorAbsolute(0, 2)
+	tm.Screens.Active.CursorAbsolute(0, 2)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 2)
 }
@@ -2232,14 +2232,14 @@ func TestTm5_term51_semanticPromptFreshLine_moves_to_the_next_line_start_without
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(4, 2)
+	tm.Screens.Active.CursorAbsolute(4, 2)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 3)
-	tm.screens.active.CursorAbsolute(9, 3)
+	tm.Screens.Active.CursorAbsolute(9, 3)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 4)
 	// On the last row it scrolls instead.
-	tm.screens.active.CursorAbsolute(1, 4)
+	tm.Screens.Active.CursorAbsolute(1, 4)
 	zigTry(t, tm.PrintString([]uint8("")))
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 4)
@@ -2265,7 +2265,7 @@ func TestTm5_term51_semanticPromptFreshLine_cursor_left_of_at_inside_and_right_o
 			tm := tm5Init(t, 10, 5)
 			defer tm.Deinit()
 			tm5TRegion(tm, 0, 4, 3, 7)
-			tm.screens.active.CursorAbsolute(SizeCellCountInt(c.x), 1)
+			tm.Screens.Active.CursorAbsolute(SizeCellCountInt(c.x), 1)
 			zigTry(t, tm.semanticPromptFreshLine())
 			tm5TExpectCursor(t, tm, c.expect_x, c.expect_y)
 		}()
@@ -2278,8 +2278,8 @@ func TestTm5_term51_semanticPromptFreshLine_origin_mode_sends_the_carriage_retur
 	defer tm.Deinit()
 
 	tm5TRegion(tm, 0, 4, 3, 7)
-	tm.modes.Set(ModesModeOrigin, true)
-	tm.screens.active.CursorAbsolute(1, 1)
+	tm.Modes.Set(ModesModeOrigin, true)
+	tm.Screens.Active.CursorAbsolute(1, 1)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 3, 2)
 }
@@ -2291,7 +2291,7 @@ func TestTm5_term51_semanticPromptFreshLine_scrolls_the_region_at_the_bottom_mar
 	tm5TFill(t, tm)
 
 	tm5TRegion(tm, 1, 3, 1, 3)
-	tm.screens.active.CursorAbsolute(2, 3)
+	tm.Screens.Active.CursorAbsolute(2, 3)
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 1, 3)
 	tm5TExpectGrid(t, tm, []string{
@@ -2308,17 +2308,17 @@ func TestTm5_term51_semanticPromptFreshLine_pending_wrap_kept_by_the_no_op_clear
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(0, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(0, 1)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 1)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
-	tm.screens.active.CursorAbsolute(5, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(5, 1)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, tm.semanticPromptFreshLine())
 	tm5TExpectCursor(t, tm, 0, 2)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 }
 
 // tm5TGrid is term51TGrid.
@@ -2380,15 +2380,15 @@ func tm5TModelScrollDown(g *tm5TGrid, top uint, bottom uint, left uint, right ui
 // cached row and cell pointers and its pin match its x/y.
 func tm5TExpectCursorConsistent(t *testing.T, tm *Terminal) {
 	t.Helper()
-	s := tm.screens.active
-	lc := zigUnwrap(t, s.pages.GetCell(tm5ActivePoint(uint(s.cursor.x), uint(s.cursor.y))))
-	expect(t, s.cursor.page_cell == lc.cell, "s.cursor.page_cell == lc.cell")
-	expect(t, s.cursor.page_row == lc.row, "s.cursor.page_row == lc.row")
-	expectEqual(t, s.cursor.x, s.cursor.page_pin.x)
+	s := tm.Screens.Active
+	lc := zigUnwrap(t, s.Pages.GetCell(tm5ActivePoint(uint(s.Cursor.X), uint(s.Cursor.Y))))
+	expect(t, s.Cursor.PageCell == lc.Cell, "s.cursor.page_cell == lc.cell")
+	expect(t, s.Cursor.PageRow == lc.Row, "s.cursor.page_row == lc.row")
+	expectEqual(t, s.Cursor.X, s.Cursor.PagePin.X)
 }
 
 // tm5TBg is term51TBg.
-var tm5TBg = SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 1, g: 2, b: 3}}
+var tm5TBg = SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 1, G: 2, B: 3}}
 
 // tm5TPairs is term51TPairs: (top, bottom) / (left, right) pairs used by the
 // sweeps: full, two rows at the top, top three, bottom four, two rows near
@@ -2422,7 +2422,7 @@ func tm5TIndexCase(t *testing.T, top uint, bottom uint, left uint, right uint, c
 	if bg {
 		tm5Attr(t, tm, tm5TBg)
 	}
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	// Zig-only: if (comptime build_options.kitty_graphics) t.screens.active.kitty_images.dirty = false;
 
 	zigTry(t, tm.Index())
@@ -2443,7 +2443,7 @@ func tm5TIndexCase(t *testing.T, top uint, bottom uint, left uint, right uint, c
 	tm5TExpectModel(t, tm, &g)
 	tm5TExpectCursor(t, tm, cx, ey)
 	tm5TExpectCursorConsistent(t, tm)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	full := top == 0 && left == 0 && right == 4
 	var want uint
 	if scrolled && full {
@@ -2477,22 +2477,22 @@ func TestTm5_term51_index_outside_the_region_moves_down_one_row_and_never_scroll
 
 	tm.SetTopAndBottomMargin(2, 3) // rows 1..2
 	tm.SetCursorPos(1, 3)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 2, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
-	tm.screens.active.CursorAbsolute(4, 3)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(4, 3)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 4, 4)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// On the last row of the screen it stays and still resets pending wrap.
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 4, 4)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	tm5TExpectGrid(t, tm, original)
 	expectEqual(t, uint(0), tm5TScrollbackRows(tm))
@@ -2506,13 +2506,13 @@ func TestTm5_term51_index_inside_the_region_above_the_bottom_margin_moves_down(t
 
 	tm5TRegion(tm, 1, 3, 1, 3)
 	// Even when the cursor column is outside the left/right margins.
-	tm.screens.active.CursorAbsolute(0, 1)
+	tm.Screens.Active.CursorAbsolute(0, 1)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 0, 2)
-	tm.screens.active.CursorAbsolute(4, 2)
+	tm.Screens.Active.CursorAbsolute(4, 2)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 4, 3)
-	tm.screens.active.CursorAbsolute(2, 1)
+	tm.Screens.Active.CursorAbsolute(2, 1)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 2, 2)
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "FGHIJ", "KLMNO", "PQRST", "UVWXY"})
@@ -2526,12 +2526,12 @@ func TestTm5_term51_index_on_the_bottom_margin_outside_the_column_margins_does_n
 
 	tm5TRegion(tm, 1, 3, 1, 3)
 	for _, x := range []uint{0, 4} {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 3)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 3)
+		tm.Screens.Active.Cursor.PendingWrap = true
 		// Zig-only: if (comptime build_options.kitty_graphics) t.screens.active.kitty_images.dirty = false;
 		zigTry(t, tm.Index())
 		tm5TExpectCursor(t, tm, x, 3)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		tm5TExpectGrid(t, tm, []string{"ABCDE", "FGHIJ", "KLMNO", "PQRST", "UVWXY"})
 		// Zig-only: if (comptime build_options.kitty_graphics) { try term51TTesting.expect(!t.screens.active.kitty_images.dirty); }
 	}
@@ -2543,7 +2543,7 @@ func TestTm5_term51_index_full_screen_scrolls_into_scrollback(t *testing.T) {
 	defer tm.Deinit()
 	tm5TFill(t, tm)
 
-	tm.screens.active.CursorAbsolute(2, 4)
+	tm.Screens.Active.CursorAbsolute(2, 4)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 2, 4)
 	tm5TExpectGrid(t, tm, []string{"FGHIJ", "KLMNO", "PQRST", "UVWXY", "....."})
@@ -2565,7 +2565,7 @@ func TestTm5_term51_index_region_at_the_top_with_a_bottom_margin_keeps_rows_belo
 	tm5TFill(t, tm)
 
 	tm.SetTopAndBottomMargin(1, 3)
-	tm.screens.active.CursorAbsolute(3, 2)
+	tm.Screens.Active.CursorAbsolute(3, 2)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 3, 2)
 	tm5TExpectGrid(t, tm, []string{"FGHIJ", "KLMNO", ".....", "PQRST", "UVWXY"})
@@ -2587,7 +2587,7 @@ func TestTm5_term51_index_fast_path_for_a_region_below_the_top_row(t *testing.T)
 	tm5TFill(t, tm)
 
 	tm.SetTopAndBottomMargin(2, 4)
-	tm.screens.active.CursorAbsolute(2, 3)
+	tm.Screens.Active.CursorAbsolute(2, 3)
 	tm.clearDirty()
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 2, 3)
@@ -2600,7 +2600,7 @@ func TestTm5_term51_index_fast_path_for_a_region_below_the_top_row(t *testing.T)
 
 	// Region reaching the bottom of the screen.
 	tm.SetTopAndBottomMargin(3, 5)
-	tm.screens.active.CursorAbsolute(0, 4)
+	tm.Screens.Active.CursorAbsolute(0, 4)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 0, 4)
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "KLMNO", ".....", "UVWXY", "....."})
@@ -2608,7 +2608,7 @@ func TestTm5_term51_index_fast_path_for_a_region_below_the_top_row(t *testing.T)
 
 	// Two-row region.
 	tm.SetTopAndBottomMargin(1, 2)
-	tm.screens.active.CursorAbsolute(4, 1)
+	tm.Screens.Active.CursorAbsolute(4, 1)
 	zigTry(t, tm.Index())
 	tm5TExpectCursor(t, tm, 4, 1)
 	tm5TExpectGrid(t, tm, []string{"KLMNO", ".....", ".....", "UVWXY", "....."})
@@ -2622,24 +2622,24 @@ func TestTm5_term51_index_fast_path_keeps_a_non_background_cursor_style(t *testi
 
 	tm.SetTopAndBottomMargin(2, 4)
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagBold})
-	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{r: 9, g: 9, b: 9}})
+	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{R: 9, G: 9, B: 9}})
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagInverse})
-	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagUnderlineColor, UnderlineColor: ColorRGB{r: 1, g: 1, b: 1}})
-	tm.screens.active.CursorAbsolute(2, 3)
-	style_id := tm.screens.active.cursor.style_id
-	expect(t, style_id != StyleDefaultId, "style_id != style.default_id")
+	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagUnderlineColor, UnderlineColor: ColorRGB{R: 1, G: 1, B: 1}})
+	tm.Screens.Active.CursorAbsolute(2, 3)
+	style_id := tm.Screens.Active.Cursor.StyleID
+	expect(t, style_id != StyleDefaultID, "style_id != style.default_id")
 
 	zigTry(t, tm.Index())
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "KLMNO", "PQRST", ".....", "UVWXY"})
-	expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	expect(t, tm.screens.active.cursor.style.flags.inverse, "t.screens.active.cursor.style.flags.inverse")
+	expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Inverse, "t.screens.active.cursor.style.flags.inverse")
 
 	// Printing afterwards uses the style.
 	zigTry(t, tm.Print('z'))
 	c := tm5TCellAt(t, tm, 2, 3)
 	expectEqual(t, uint32('z'), c.content.codepoint)
-	expectEqual(t, tm.screens.active.cursor.style_id, c.style_id)
+	expectEqual(t, tm.Screens.Active.Cursor.StyleID, c.style_id)
 }
 
 // Zig: test "term51: index: background colour forces the slow path and fills the blank row"
@@ -2648,7 +2648,7 @@ func TestTm5_term51_index_background_colour_forces_the_slow_path_and_fills_the_b
 		top, bottom, left, right uint
 		attr                     SGRAttribute
 	}
-	rgb0 := SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0, g: 0, b: 0}}
+	rgb0 := SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0, G: 0, B: 0}}
 	pal0 := SGRAttribute{Tag: SGRAttributeTag256Bg, X256Bg: 0}
 	pal200 := SGRAttribute{Tag: SGRAttributeTag256Bg, X256Bg: 200}
 	cases := []Case{
@@ -2668,7 +2668,7 @@ func TestTm5_term51_index_background_colour_forces_the_slow_path_and_fills_the_b
 			tm5TFill(t, tm)
 			tm5TRegion(tm, c.top, c.bottom, c.left, c.right)
 			tm5Attr(t, tm, c.attr)
-			tm.screens.active.CursorAbsolute(SizeCellCountInt(c.left), SizeCellCountInt(c.bottom))
+			tm.Screens.Active.CursorAbsolute(SizeCellCountInt(c.left), SizeCellCountInt(c.bottom))
 			zigTry(t, tm.Index())
 
 			g := tm5TLabels()
@@ -2683,7 +2683,7 @@ func TestTm5_term51_index_background_colour_forces_the_slow_path_and_fills_the_b
 				case SGRAttributeTagDirectColorBg:
 					v := c.attr.DirectColorBg
 					expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-					expectEqual(t, PageCellRGB{r: v.r, g: v.g, b: v.b}, cell.content.color_rgb)
+					expectEqual(t, PageCellRGB{R: v.R, G: v.G, B: v.B}, cell.content.color_rgb)
 				case SGRAttributeTag256Bg:
 					v := c.attr.X256Bg
 					expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
@@ -2709,7 +2709,7 @@ func TestTm5_term51_index_reset_background_returns_to_plain_blank_cells(t *testi
 	tm.SetTopAndBottomMargin(2, 4)
 	tm5Attr(t, tm, tm5TBg)
 	tm5Attr(t, tm, SGRAttribute{Tag: SGRAttributeTagResetBg})
-	tm.screens.active.CursorAbsolute(0, 3)
+	tm.Screens.Active.CursorAbsolute(0, 3)
 	zigTry(t, tm.Index())
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "KLMNO", "PQRST", ".....", "UVWXY"})
 	expectEqual(t, PageCellContentTagCodepoint, tm5TCellAt(t, tm, 0, 3).content_tag)
@@ -2721,9 +2721,9 @@ func TestTm5_term51_index_attributes_without_a_background_colour_leave_blank_cel
 		{Tag: SGRAttributeTagBold},
 		{Tag: SGRAttributeTagInverse},
 		{Tag: SGRAttributeTagItalic},
-		{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{r: 1, g: 2, b: 3}},
+		{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{R: 1, G: 2, B: 3}},
 		{Tag: SGRAttributeTag256Fg, X256Fg: 7},
-		{Tag: SGRAttributeTagUnderlineColor, UnderlineColor: ColorRGB{r: 1, g: 1, b: 1}},
+		{Tag: SGRAttributeTagUnderlineColor, UnderlineColor: ColorRGB{R: 1, G: 1, B: 1}},
 		{Tag: SGRAttributeTagUnderline, Underline: SGRAttributeUnderlineSingle},
 	}
 	for _, attr := range attrs {
@@ -2733,7 +2733,7 @@ func TestTm5_term51_index_attributes_without_a_background_colour_leave_blank_cel
 			tm5TFill(t, tm)
 			tm.SetTopAndBottomMargin(2, 4)
 			tm5Attr(t, tm, attr)
-			tm.screens.active.CursorAbsolute(1, 3)
+			tm.Screens.Active.CursorAbsolute(1, 3)
 			zigTry(t, tm.Index())
 			tm5TExpectGrid(t, tm, []string{"ABCDE", "KLMNO", "PQRST", ".....", "UVWXY"})
 			cell := tm5TCellAt(t, tm, 1, 3)
@@ -2750,7 +2750,7 @@ func TestTm5_term51_index_full_width_region_with_a_background_fills_the_whole_ne
 	tm5TFill(t, tm)
 
 	tm5Attr(t, tm, tm5TBg)
-	tm.screens.active.CursorAbsolute(2, 4)
+	tm.Screens.Active.CursorAbsolute(2, 4)
 	zigTry(t, tm.Index())
 	tm5TExpectGrid(t, tm, []string{"FGHIJ", "KLMNO", "PQRST", "UVWXY", "#####"})
 	expectEqual(t, uint(1), tm5TScrollbackRows(tm))
@@ -2776,7 +2776,7 @@ func TestTm5_term51_index_fast_path_and_slow_path_treat_row_wrap_flags_different
 			if bg {
 				tm5Attr(t, tm, tm5TBg)
 			}
-			tm.screens.active.CursorAbsolute(0, 3)
+			tm.Screens.Active.CursorAbsolute(0, 3)
 			zigTry(t, tm.Index())
 			for y := uint(0); y < 5; y++ {
 				results[i][y] = [2]bool{tm5TRowAt(t, tm, y).wrap, tm5TRowAt(t, tm, y).wrap_continuation}
@@ -2831,7 +2831,7 @@ func tm5TSemanticSetup(t *testing.T, sc tm5TSemanticScenario) *Terminal {
 	if sc.bg {
 		tm5Attr(t, tm, tm5TBg)
 	}
-	tm.screens.active.CursorAbsolute(SizeCellCountInt(sc.cx), SizeCellCountInt(sc.cy))
+	tm.Screens.Active.CursorAbsolute(SizeCellCountInt(sc.cx), SizeCellCountInt(sc.cy))
 	return tm
 }
 
@@ -2848,7 +2848,7 @@ func TestTm5_term51_index_prompt_and_input_content_mark_the_cursor_row_as_a_cont
 				}()
 				tm := tm5TSemanticSetup(t, sc)
 				defer tm.Deinit()
-				tm.screens.active.cursor.semantic_content = content
+				tm.Screens.Active.Cursor.SemanticContent = content
 				zigTry(t, tm.Index())
 
 				// Exactly one row is marked and it is the cursor row.
@@ -2856,13 +2856,13 @@ func TestTm5_term51_index_prompt_and_input_content_mark_the_cursor_row_as_a_cont
 				for y := uint(0); y < 5; y++ {
 					if tm5TRowAt(t, tm, y).semantic_prompt != PageRowSemanticPromptNone {
 						marked += 1
-						expectEqual(t, uint(tm.screens.active.cursor.y), y)
+						expectEqual(t, uint(tm.Screens.Active.Cursor.Y), y)
 						expectEqual(t, PageRowSemanticPromptPromptContinuation, tm5TRowAt(t, tm, y).semantic_prompt)
 					}
 				}
 				expectEqual(t, uint(1), marked)
-				expectEqual(t, content, tm.screens.active.cursor.semantic_content)
-				expect(t, !tm.screens.active.cursor.semantic_content_clear_eol, "!t.screens.active.cursor.semantic_content_clear_eol")
+				expectEqual(t, content, tm.Screens.Active.Cursor.SemanticContent)
+				expect(t, !tm.Screens.Active.Cursor.SemanticContentClearEol, "!t.screens.active.cursor.semantic_content_clear_eol")
 			}()
 		}
 	}
@@ -2879,15 +2879,15 @@ func TestTm5_term51_index_input_with_the_end_of_line_flag_returns_to_output_with
 			}()
 			tm := tm5TSemanticSetup(t, sc)
 			defer tm.Deinit()
-			tm.screens.active.cursor.semantic_content = PageCellSemanticContentInput
-			tm.screens.active.cursor.semantic_content_clear_eol = true
+			tm.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
+			tm.Screens.Active.Cursor.SemanticContentClearEol = true
 			zigTry(t, tm.Index())
 
 			for y := uint(0); y < 5; y++ {
 				expectEqual(t, PageRowSemanticPromptNone, tm5TRowAt(t, tm, y).semantic_prompt)
 			}
-			expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
-			expect(t, !tm.screens.active.cursor.semantic_content_clear_eol, "!t.screens.active.cursor.semantic_content_clear_eol")
+			expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
+			expect(t, !tm.Screens.Active.Cursor.SemanticContentClearEol, "!t.screens.active.cursor.semantic_content_clear_eol")
 		}()
 	}
 }
@@ -2907,7 +2907,7 @@ func TestTm5_term51_index_output_content_never_marks_rows(t *testing.T) {
 			for y := uint(0); y < 5; y++ {
 				expectEqual(t, PageRowSemanticPromptNone, tm5TRowAt(t, tm, y).semantic_prompt)
 			}
-			expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+			expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 		}()
 	}
 }
@@ -2929,7 +2929,7 @@ func tm5TReverseIndexCase(t *testing.T, top uint, bottom uint, left uint, right 
 	if bg {
 		tm5Attr(t, tm, tm5TBg)
 	}
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	// Zig-only: if (comptime build_options.kitty_graphics) t.screens.active.kitty_images.dirty = false;
 
 	tm.ReverseIndex()
@@ -2956,7 +2956,7 @@ func tm5TReverseIndexCase(t *testing.T, top uint, bottom uint, left uint, right 
 	tm5TExpectCursor(t, tm, cx, ey)
 	tm5TExpectCursorConsistent(t, tm)
 	// Scrolling restores the pending wrap state, moving clears it.
-	expectEqual(t, scrolled, tm.screens.active.cursor.pending_wrap)
+	expectEqual(t, scrolled, tm.Screens.Active.Cursor.PendingWrap)
 	expectEqual(t, uint(0), tm5TScrollbackRows(tm))
 	// Zig-only: if (comptime build_options.kitty_graphics) { try term51TTesting.expectEqual(scrolled, t.screens.active.kitty_images.dirty); }
 	tm5TExpectRegion(t, tm, top, bottom, left, right)
@@ -2983,7 +2983,7 @@ func TestTm5_term51_reverseIndex_top_of_the_region_scrolls_down(t *testing.T) {
 	tm5TFill(t, tm)
 
 	tm.SetTopAndBottomMargin(2, 4)
-	tm.screens.active.CursorAbsolute(2, 1)
+	tm.Screens.Active.CursorAbsolute(2, 1)
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 2, 1)
 	tm5TExpectGrid(t, tm, []string{"ABCDE", ".....", "FGHIJ", "KLMNO", "UVWXY"})
@@ -3012,20 +3012,20 @@ func TestTm5_term51_reverseIndex_moves_up_by_one_in_every_other_position(t *test
 	tm.SetTopAndBottomMargin(2, 4)
 
 	// Below the top margin inside the region.
-	tm.screens.active.CursorAbsolute(3, 3)
+	tm.Screens.Active.CursorAbsolute(3, 3)
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 3, 2)
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 3, 1)
 
 	// Below the bottom margin.
-	tm.screens.active.CursorAbsolute(3, 4)
+	tm.Screens.Active.CursorAbsolute(3, 4)
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 3, 3)
 
 	// Above the top margin: moves up, but not off the screen.
-	tm.screens.active.CursorAbsolute(3, 1)
-	tm.screens.active.CursorAbsolute(3, 0)
+	tm.Screens.Active.CursorAbsolute(3, 1)
+	tm.Screens.Active.CursorAbsolute(3, 0)
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 3, 0)
 
@@ -3039,11 +3039,11 @@ func TestTm5_term51_reverseIndex_above_the_top_margin_moves_up(t *testing.T) {
 	tm5TFill(t, tm)
 
 	tm5TRegion(tm, 3, 4, 0, 4)
-	tm.screens.active.CursorAbsolute(1, 2)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(1, 2)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 1, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 1, 0)
 	tm.ReverseIndex()
@@ -3059,11 +3059,11 @@ func TestTm5_term51_reverseIndex_on_the_top_margin_outside_the_column_margins_do
 
 	tm5TRegion(tm, 1, 3, 1, 3)
 	for _, x := range []uint{0, 4} {
-		tm.screens.active.CursorAbsolute(SizeCellCountInt(x), 1)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 1)
+		tm.Screens.Active.Cursor.PendingWrap = true
 		tm.ReverseIndex()
 		tm5TExpectCursor(t, tm, x, 1)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		tm5TExpectGrid(t, tm, []string{"ABCDE", "FGHIJ", "KLMNO", "PQRST", "UVWXY"})
 	}
 }
@@ -3074,10 +3074,10 @@ func TestTm5_term51_reverseIndex_left_and_right_margins_scroll_only_their_column
 	defer tm.Deinit()
 	tm5TFill(t, tm)
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetTopAndBottomMargin(2, 4)
 	tm.SetLeftAndRightMargin(2, 4)
-	tm.screens.active.CursorAbsolute(1, 1)
+	tm.Screens.Active.CursorAbsolute(1, 1)
 	tm.ReverseIndex()
 	tm5TExpectCursor(t, tm, 1, 1)
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "F...J", "KGHIO", "PLMNT", "UVWXY"})
@@ -3091,14 +3091,14 @@ func TestTm5_term51_reverseIndex_scrolling_keeps_pending_wrap_background_fills_t
 
 	tm.SetTopAndBottomMargin(2, 4)
 	tm5Attr(t, tm, tm5TBg)
-	tm.screens.active.CursorAbsolute(4, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(4, 1)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.ReverseIndex()
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "#####", "FGHIJ", "KLMNO", "UVWXY"})
 	cell := tm5TCellAt(t, tm, 0, 1)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 1, g: 2, b: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
 }
 
 // Zig: test "term51: setCursorPos: zero means one and the limits clamp"
@@ -3136,27 +3136,27 @@ func TestTm5_term51_setCursorPos_resets_pending_wrap_on_every_path(t *testing.T)
 
 	// same position
 	tm.SetCursorPos(2, 3)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.SetCursorPos(2, 3)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	// same row, moves right
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.SetCursorPos(2, 6)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	// same row, moves left
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.SetCursorPos(2, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	// different row
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	tm.SetCursorPos(4, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	// printing in the last cell sets it, a move clears it
 	tm.SetCursorPos(4, 6)
 	zigTry(t, tm.Print('x'))
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm.SetCursorPos(4, 6)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	tm5TExpectCursor(t, tm, 5, 3)
 }
 
@@ -3183,10 +3183,10 @@ func TestTm5_term51_setCursorPos_origin_mode_is_relative_to_the_margins_and_clam
 	tm := tm5Init(t, 8, 6)
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetTopAndBottomMargin(2, 5) // rows 1..4
 	tm.SetLeftAndRightMargin(3, 6) // columns 2..5
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 
 	type Case struct{ row, col, x, y uint }
 	cases := []Case{
@@ -3208,7 +3208,7 @@ func TestTm5_term51_setCursorPos_origin_mode_is_relative_to_the_margins_and_clam
 	}
 
 	// Origin mode off: absolute again, margins ignored.
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	tm.SetCursorPos(1, 1)
 	tm5TExpectCursor(t, tm, 0, 0)
 	tm.SetCursorPos(6, 8)
@@ -3221,7 +3221,7 @@ func TestTm5_term51_setCursorPos_origin_mode_with_only_top_and_bottom_margins(t 
 	defer tm.Deinit()
 
 	tm.SetTopAndBottomMargin(3, 4) // rows 2..3
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.SetCursorPos(1, 4)
 	tm5TExpectCursor(t, tm, 3, 2)
 	tm.SetCursorPos(2, 9)
@@ -3234,8 +3234,8 @@ func TestTm5_term51_setCursorPos_origin_mode_with_only_top_and_bottom_margins(t 
 func TestTm5_term51_setCursorPos_minimal_two_cell_regions_and_regions_touching_the_edges(t *testing.T) {
 	tm := tm5Init(t, 5, 5)
 	defer tm.Deinit()
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 
 	// Region in the bottom-right corner, 2x2.
 	tm.SetTopAndBottomMargin(4, 5)
@@ -3269,7 +3269,7 @@ func TestTm5_term51_setCursorPos_sweep_of_requests_starts_origin_mode_and_margin
 	for _, reg := range regions {
 		tm5TRegion(tm, reg[0], reg[1], reg[2], reg[3])
 		for _, origin := range []bool{false, true} {
-			tm.modes.Set(ModesModeOrigin, origin)
+			tm.Modes.Set(ModesModeOrigin, origin)
 			var x_off, y_off uint
 			x_max, y_max := uint(5), uint(5)
 			if origin {
@@ -3282,8 +3282,8 @@ func TestTm5_term51_setCursorPos_sweep_of_requests_starts_origin_mode_and_margin
 				for sx := uint(0); sx < 5; sx++ {
 					for _, row := range reqs {
 						for _, col := range reqs {
-							tm.screens.active.CursorAbsolute(SizeCellCountInt(sx), SizeCellCountInt(sy))
-							tm.screens.active.cursor.pending_wrap = true
+							tm.Screens.Active.CursorAbsolute(SizeCellCountInt(sx), SizeCellCountInt(sy))
+							tm.Screens.Active.Cursor.PendingWrap = true
 							tm.SetCursorPos(row, col)
 							ex := min(x_max, max(col, 1)+x_off) - 1
 							ey := min(y_max, max(row, 1)+y_off) - 1
@@ -3295,7 +3295,7 @@ func TestTm5_term51_setCursorPos_sweep_of_requests_starts_origin_mode_and_margin
 								}()
 								tm5TExpectCursor(t, tm, ex, ey)
 								tm5TExpectCursorConsistent(t, tm)
-								expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+								expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 							}()
 						}
 					}
@@ -3352,8 +3352,8 @@ func TestTm5_term51_setTopAndBottomMargin_table_of_requests_on_a_5_row_screen(t 
 			defer tm.Deinit()
 			// A distinctive earlier region and cursor to see what is left alone.
 			tm5TRegion(tm, 1, 3, 1, 2)
-			tm.screens.active.CursorAbsolute(3, 4)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.CursorAbsolute(3, 4)
+			tm.Screens.Active.Cursor.PendingWrap = true
 
 			tm.SetTopAndBottomMargin(c.top, c.bottom)
 			defer func() {
@@ -3365,11 +3365,11 @@ func TestTm5_term51_setTopAndBottomMargin_table_of_requests_on_a_5_row_screen(t 
 				e := *c.expect
 				tm5TExpectRegion(t, tm, e[0], e[1], 1, 2)
 				tm5TExpectCursor(t, tm, 0, 0)
-				expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+				expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 			} else {
 				tm5TExpectRegion(t, tm, 1, 3, 1, 2)
 				tm5TExpectCursor(t, tm, 3, 4)
-				expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+				expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 			}
 		}()
 	}
@@ -3417,9 +3417,9 @@ func TestTm5_term51_setTopAndBottomMargin_cursor_homes_relative_to_the_region_in
 	tm := tm5Init(t, 6, 5)
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(3, 5)
-	tm.screens.active.CursorAbsolute(5, 4)
+	tm.Screens.Active.CursorAbsolute(5, 4)
 
 	// Not in origin mode: home is absolute (0, 0).
 	tm.SetTopAndBottomMargin(2, 4)
@@ -3427,14 +3427,14 @@ func TestTm5_term51_setTopAndBottomMargin_cursor_homes_relative_to_the_region_in
 	tm5TExpectCursor(t, tm, 0, 0)
 
 	// In origin mode: top-left of the region.
-	tm.modes.Set(ModesModeOrigin, true)
-	tm.screens.active.CursorAbsolute(5, 4)
+	tm.Modes.Set(ModesModeOrigin, true)
+	tm.Screens.Active.CursorAbsolute(5, 4)
 	tm.SetTopAndBottomMargin(3, 5)
 	tm5TExpectRegion(t, tm, 2, 4, 2, 4)
 	tm5TExpectCursor(t, tm, 2, 2)
 
 	// An invalid request in origin mode leaves cursor and region alone.
-	tm.screens.active.CursorAbsolute(5, 4)
+	tm.Screens.Active.CursorAbsolute(5, 4)
 	tm.SetTopAndBottomMargin(4, 3)
 	tm5TExpectRegion(t, tm, 2, 4, 2, 4)
 	tm5TExpectCursor(t, tm, 5, 4)
@@ -3455,13 +3455,13 @@ func TestTm5_term51_setLeftAndRightMargin_ignored_while_mode_69_is_off(t *testin
 	tm := tm5Init(t, 5, 4)
 	defer tm.Deinit()
 
-	tm.screens.active.CursorAbsolute(3, 2)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.CursorAbsolute(3, 2)
+	tm.Screens.Active.Cursor.PendingWrap = true
 	for _, c := range [][2]uint{{2, 4}, {0, 0}, {1, 5}, {3, 0}} {
 		tm.SetLeftAndRightMargin(c[0], c[1])
 		tm5TExpectRegion(t, tm, 0, 3, 0, 4)
 		tm5TExpectCursor(t, tm, 3, 2)
-		expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+		expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	}
 }
 
@@ -3504,10 +3504,10 @@ func TestTm5_term51_setLeftAndRightMargin_table_of_requests_on_a_5_column_screen
 		func() {
 			tm := tm5Init(t, 5, 4)
 			defer tm.Deinit()
-			tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+			tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 			tm5TRegion(tm, 1, 2, 1, 3)
-			tm.screens.active.CursorAbsolute(4, 3)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.CursorAbsolute(4, 3)
+			tm.Screens.Active.Cursor.PendingWrap = true
 
 			tm.SetLeftAndRightMargin(c.left, c.right)
 			defer func() {
@@ -3519,11 +3519,11 @@ func TestTm5_term51_setLeftAndRightMargin_table_of_requests_on_a_5_column_screen
 				e := *c.expect
 				tm5TExpectRegion(t, tm, 1, 2, e[0], e[1])
 				tm5TExpectCursor(t, tm, 0, 0)
-				expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+				expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 			} else {
 				tm5TExpectRegion(t, tm, 1, 2, 1, 3)
 				tm5TExpectCursor(t, tm, 4, 3)
-				expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+				expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 			}
 		}()
 	}
@@ -3535,7 +3535,7 @@ func TestTm5_term51_setLeftAndRightMargin_very_small_screens(t *testing.T) {
 	func() {
 		tm := tm5Init(t, 1, 3)
 		defer tm.Deinit()
-		tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+		tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 		for _, c := range [][2]uint{{0, 0}, {1, 1}, {1, 2}, {0, 5}} {
 			tm.SetLeftAndRightMargin(c[0], c[1])
 			tm5TExpectRegion(t, tm, 0, 2, 0, 0)
@@ -3545,7 +3545,7 @@ func TestTm5_term51_setLeftAndRightMargin_very_small_screens(t *testing.T) {
 	func() {
 		tm := tm5Init(t, 2, 3)
 		defer tm.Deinit()
-		tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+		tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 		tm.SetLeftAndRightMargin(2, 2)
 		tm5TExpectRegion(t, tm, 0, 2, 0, 1)
 		tm.SetLeftAndRightMargin(1, 2)
@@ -3557,7 +3557,7 @@ func TestTm5_term51_setLeftAndRightMargin_very_small_screens(t *testing.T) {
 	func() {
 		tm := tm5Init(t, 3, 3)
 		defer tm.Deinit()
-		tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+		tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 		tm.SetLeftAndRightMargin(1, 2)
 		tm5TExpectRegion(t, tm, 0, 2, 0, 1)
 		tm.SetLeftAndRightMargin(2, 3)
@@ -3572,22 +3572,22 @@ func TestTm5_term51_setLeftAndRightMargin_cursor_homes_relative_to_the_region_in
 	tm := tm5Init(t, 6, 5)
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetTopAndBottomMargin(2, 4)
-	tm.screens.active.CursorAbsolute(5, 4)
+	tm.Screens.Active.CursorAbsolute(5, 4)
 
 	tm.SetLeftAndRightMargin(2, 5)
 	tm5TExpectRegion(t, tm, 1, 3, 1, 4)
 	tm5TExpectCursor(t, tm, 0, 0)
 
-	tm.modes.Set(ModesModeOrigin, true)
-	tm.screens.active.CursorAbsolute(5, 4)
+	tm.Modes.Set(ModesModeOrigin, true)
+	tm.Screens.Active.CursorAbsolute(5, 4)
 	tm.SetLeftAndRightMargin(3, 6)
 	tm5TExpectRegion(t, tm, 1, 3, 2, 5)
 	tm5TExpectCursor(t, tm, 2, 1)
 
 	// Invalid request in origin mode: nothing changes.
-	tm.screens.active.CursorAbsolute(5, 4)
+	tm.Screens.Active.CursorAbsolute(5, 4)
 	tm.SetLeftAndRightMargin(5, 4)
 	tm5TExpectRegion(t, tm, 1, 3, 2, 5)
 	tm5TExpectCursor(t, tm, 5, 4)
@@ -3602,8 +3602,8 @@ func TestTm5_term51_setLeftAndRightMargin_sweep_against_a_model(t *testing.T) {
 				func() {
 					tm := tm5Init(t, SizeCellCountInt(cols), 4)
 					defer tm.Deinit()
-					tm.modes.Set(ModesModeEnableLeftAndRightMargin, mode)
-					tm.modes.Set(ModesModeOrigin, origin)
+					tm.Modes.Set(ModesModeEnableLeftAndRightMargin, mode)
+					tm.Modes.Set(ModesModeOrigin, origin)
 					for _, l := range reqs {
 						for _, r := range reqs {
 							var prev_left uint
@@ -3611,8 +3611,8 @@ func TestTm5_term51_setLeftAndRightMargin_sweep_against_a_model(t *testing.T) {
 								prev_left = 1
 							}
 							tm5TRegion(tm, 1, 2, prev_left, cols-1)
-							tm.screens.active.CursorAbsolute(SizeCellCountInt(cols-1), 3)
-							tm.screens.active.cursor.pending_wrap = true
+							tm.Screens.Active.CursorAbsolute(SizeCellCountInt(cols-1), 3)
+							tm.Screens.Active.Cursor.PendingWrap = true
 							tm.SetLeftAndRightMargin(l, r)
 
 							left := max(1, l)
@@ -3638,11 +3638,11 @@ func TestTm5_term51_setLeftAndRightMargin_sweep_against_a_model(t *testing.T) {
 										ey = 1
 									}
 									tm5TExpectCursor(t, tm, ex, ey)
-									expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+									expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 								} else {
 									tm5TExpectRegion(t, tm, 1, 2, prev_left, cols-1)
 									tm5TExpectCursor(t, tm, cols-1, 3)
-									expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+									expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 								}
 							}()
 						}
@@ -3661,9 +3661,9 @@ func TestTm5_term51_setTopAndBottomMargin_sweep_against_a_model(t *testing.T) {
 			func() {
 				tm := tm5Init(t, 6, SizeCellCountInt(rows))
 				defer tm.Deinit()
-				tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+				tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 				tm.SetLeftAndRightMargin(2, 5)
-				tm.modes.Set(ModesModeOrigin, origin)
+				tm.Modes.Set(ModesModeOrigin, origin)
 				for _, tp := range reqs {
 					for _, bt := range reqs {
 						var prev_top uint
@@ -3671,8 +3671,8 @@ func TestTm5_term51_setTopAndBottomMargin_sweep_against_a_model(t *testing.T) {
 							prev_top = 1
 						}
 						tm5TRegion(tm, prev_top, rows-1, 1, 4)
-						tm.screens.active.CursorAbsolute(5, SizeCellCountInt(rows-1))
-						tm.screens.active.cursor.pending_wrap = true
+						tm.Screens.Active.CursorAbsolute(5, SizeCellCountInt(rows-1))
+						tm.Screens.Active.Cursor.PendingWrap = true
 						tm.SetTopAndBottomMargin(tp, bt)
 
 						top := max(1, tp)
@@ -3697,11 +3697,11 @@ func TestTm5_term51_setTopAndBottomMargin_sweep_against_a_model(t *testing.T) {
 									ey = top - 1
 								}
 								tm5TExpectCursor(t, tm, ex, ey)
-								expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+								expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 							} else {
 								tm5TExpectRegion(t, tm, prev_top, rows-1, 1, 4)
 								tm5TExpectCursor(t, tm, 5, rows-1)
-								expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+								expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 							}
 						}()
 					}
@@ -3728,7 +3728,7 @@ func tm5TScrollCase(t *testing.T, up bool, top uint, bottom uint, left uint, rig
 	if bg {
 		tm5Attr(t, tm, tm5TBg)
 	}
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	// Zig-only: if (comptime build_options.kitty_graphics) t.screens.active.kitty_images.dirty = false;
 
 	blank := tm5TBlank(bg)
@@ -3750,7 +3750,7 @@ func tm5TScrollCase(t *testing.T, up bool, top uint, bottom uint, left uint, rig
 	tm5TExpectModel(t, tm, &g)
 	tm5TExpectCursor(t, tm, cx, cy)
 	tm5TExpectCursorConsistent(t, tm)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm5TExpectRegion(t, tm, top, bottom, left, right)
 	// Zig-only: if (comptime build_options.kitty_graphics) { // scrollUp on a full-width region at the top marks images dirty even for a count of zero; every other path only does when it scrolls. const expected = count > 0 or (up and full); try term51TTesting.expectEqual(expected, t.screens.active.kitty_images.dirty); }
 }
@@ -3793,8 +3793,8 @@ func TestTm5_panic_index_output_content_with_clear_eol_set(t *testing.T) {
 	// the output branch of the deferred semantic content handling.
 	tm := tm5Init(t, 5, 3)
 	defer tm.Deinit()
-	tm.screens.active.cursor.semantic_content = PageCellSemanticContentOutput
-	tm.screens.active.cursor.semantic_content_clear_eol = true
+	tm.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentOutput
+	tm.Screens.Active.Cursor.SemanticContentClearEol = true
 	tm5ExpectPanic(t, func() { _ = tm.Index() })
 }
 
@@ -3804,14 +3804,14 @@ func TestTm5_panic_setCursorPos_column_overflow_in_origin_mode(t *testing.T) {
 	// addition; the Zig tests only use maxInt(usize) without an offset.
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
-	tm.scrolling_region.left = 1
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.ScrollingRegion.Left = 1
+	tm.Modes.Set(ModesModeOrigin, true)
 	// The addition is in 64-bit usize (the reference) on every platform. A
 	// Go uint is 32 bits on 32-bit ARM, where maxInt(uint) + 1 fits a
 	// usize: no trap, the column clamps to the margin as on the reference.
 	if bits.UintSize == 32 {
 		tm.SetCursorPos(1, math.MaxUint)
-		expectEqual(t, SizeCellCountInt(tm.scrolling_region.right), tm.screens.active.cursor.x)
+		expectEqual(t, SizeCellCountInt(tm.ScrollingRegion.Right), tm.Screens.Active.Cursor.X)
 		return
 	}
 	tm5ExpectPanic(t, func() { tm.SetCursorPos(1, math.MaxUint) })
@@ -3823,12 +3823,12 @@ func TestTm5_panic_setCursorPos_row_overflow_in_origin_mode(t *testing.T) {
 	// addition; the Zig tests only use maxInt(usize) without an offset.
 	tm := tm5Init(t, 10, 5)
 	defer tm.Deinit()
-	tm.scrolling_region.top = 1
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.ScrollingRegion.Top = 1
+	tm.Modes.Set(ModesModeOrigin, true)
 	// As above: no trap where a Go uint is 32 bits; the row clamps.
 	if bits.UintSize == 32 {
 		tm.SetCursorPos(math.MaxUint, 1)
-		expectEqual(t, SizeCellCountInt(tm.scrolling_region.bottom), tm.screens.active.cursor.y)
+		expectEqual(t, SizeCellCountInt(tm.ScrollingRegion.Bottom), tm.Screens.Active.Cursor.Y)
 		return
 	}
 	tm5ExpectPanic(t, func() { tm.SetCursorPos(math.MaxUint, 1) })

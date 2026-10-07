@@ -185,24 +185,24 @@ func TestColor_palette_default(t *testing.T) {
 
 // Zig: test "RGB.parse"
 func TestColor_RGB_parse(t *testing.T) {
-	expectEqual(t, ColorRGB{r: 255, g: 0, b: 0}, col_parse(t, "rgbi:1.0/0/0"))
-	expectEqual(t, ColorRGB{r: 127, g: 160, b: 0}, col_parse(t, "rgb:7f/a0a0/0"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, col_parse(t, "rgb:f/ff/fff"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, col_parse(t, "#ffffff"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, col_parse(t, "#fff"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, col_parse(t, "#fffffffff"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, col_parse(t, "#ffffffffffff"))
-	expectEqual(t, ColorRGB{r: 255, g: 0, b: 16}, col_parse(t, "#ff0010"))
+	expectEqual(t, ColorRGB{R: 255, G: 0, B: 0}, col_parse(t, "rgbi:1.0/0/0"))
+	expectEqual(t, ColorRGB{R: 127, G: 160, B: 0}, col_parse(t, "rgb:7f/a0a0/0"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, col_parse(t, "rgb:f/ff/fff"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, col_parse(t, "#ffffff"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, col_parse(t, "#fff"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, col_parse(t, "#fffffffff"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, col_parse(t, "#ffffffffffff"))
+	expectEqual(t, ColorRGB{R: 255, G: 0, B: 16}, col_parse(t, "#ff0010"))
 
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, col_parse(t, "black"))
-	expectEqual(t, ColorRGB{r: 255, g: 0, b: 0}, col_parse(t, "red"))
-	expectEqual(t, ColorRGB{r: 0, g: 255, b: 0}, col_parse(t, "green"))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 255}, col_parse(t, "blue"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, col_parse(t, "white"))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, col_parse(t, "black"))
+	expectEqual(t, ColorRGB{R: 255, G: 0, B: 0}, col_parse(t, "red"))
+	expectEqual(t, ColorRGB{R: 0, G: 255, B: 0}, col_parse(t, "green"))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 255}, col_parse(t, "blue"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, col_parse(t, "white"))
 
-	expectEqual(t, ColorRGB{r: 124, g: 252, b: 0}, col_parse(t, "LawnGreen"))
-	expectEqual(t, ColorRGB{r: 0, g: 250, b: 154}, col_parse(t, "medium spring green"))
-	expectEqual(t, ColorRGB{r: 34, g: 139, b: 34}, col_parse(t, " Forest Green "))
+	expectEqual(t, ColorRGB{R: 124, G: 252, B: 0}, col_parse(t, "LawnGreen"))
+	expectEqual(t, ColorRGB{R: 0, G: 250, B: 154}, col_parse(t, "medium spring green"))
+	expectEqual(t, ColorRGB{R: 34, G: 139, B: 34}, col_parse(t, " Forest Green "))
 
 	// Invalid format
 	col_expectError(t, ErrInvalidFormat, col_parseErr("rgb;"))
@@ -225,109 +225,109 @@ func TestColor_RGB_parse(t *testing.T) {
 // Zig: test "DynamicPalette: init"
 func TestColor_DynamicPalette_init(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
-	expectEqual(t, ColorDefault, p.current)
-	expectEqual(t, ColorDefault, p.original)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, ColorDefault, p.Current)
+	expectEqual(t, ColorDefault, p.Original)
+	expectEqual(t, 0, p.Mask.count())
 }
 
 // Zig: test "DynamicPalette: set"
 func TestColor_DynamicPalette_set(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
-	new_color := ColorRGB{r: 255, g: 0, b: 0}
+	new_color := ColorRGB{R: 255, G: 0, B: 0}
 
 	p.Set(0, new_color)
-	expectEqual(t, new_color, p.current[0])
-	expect(t, p.mask.isSet(0), "p.mask.isSet(0)")
-	expectEqual(t, 1, p.mask.count())
+	expectEqual(t, new_color, p.Current[0])
+	expect(t, p.Mask.isSet(0), "p.mask.isSet(0)")
+	expectEqual(t, 1, p.Mask.count())
 
-	expectEqual(t, ColorDefault[0], p.original[0])
+	expectEqual(t, ColorDefault[0], p.Original[0])
 }
 
 // Zig: test "DynamicPalette: reset"
 func TestColor_DynamicPalette_reset(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
-	new_color := ColorRGB{r: 255, g: 0, b: 0}
+	new_color := ColorRGB{R: 255, G: 0, B: 0}
 
 	p.Set(0, new_color)
-	expect(t, p.mask.isSet(0), "p.mask.isSet(0)")
+	expect(t, p.Mask.isSet(0), "p.mask.isSet(0)")
 
 	p.Reset(0)
-	expectEqual(t, ColorDefault[0], p.current[0])
-	expect(t, !p.mask.isSet(0), "!p.mask.isSet(0)")
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, ColorDefault[0], p.Current[0])
+	expect(t, !p.Mask.isSet(0), "!p.mask.isSet(0)")
+	expectEqual(t, 0, p.Mask.count())
 }
 
 // Zig: test "DynamicPalette: resetAll"
 func TestColor_DynamicPalette_resetAll(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
-	new_color := ColorRGB{r: 255, g: 0, b: 0}
+	new_color := ColorRGB{R: 255, G: 0, B: 0}
 
 	p.Set(0, new_color)
 	p.Set(5, new_color)
 	p.Set(10, new_color)
-	expectEqual(t, 3, p.mask.count())
+	expectEqual(t, 3, p.Mask.count())
 
 	p.ResetAll()
-	expectEqual(t, ColorDefault, p.current)
-	expectEqual(t, ColorDefault, p.original)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, ColorDefault, p.Current)
+	expectEqual(t, ColorDefault, p.Original)
+	expectEqual(t, 0, p.Mask.count())
 }
 
 // Zig: test "DynamicPalette: changeDefault with no changes"
 func TestColor_DynamicPalette_changeDefault_with_no_changes(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
 	new_palette := ColorDefault
-	new_palette[0] = ColorRGB{r: 100, g: 100, b: 100}
+	new_palette[0] = ColorRGB{R: 100, G: 100, B: 100}
 
 	p.ChangeDefault(new_palette)
-	expectEqual(t, new_palette, p.original)
-	expectEqual(t, new_palette, p.current)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, new_palette, p.Original)
+	expectEqual(t, new_palette, p.Current)
+	expectEqual(t, 0, p.Mask.count())
 }
 
 // Zig: test "DynamicPalette: changeDefault preserves changes"
 func TestColor_DynamicPalette_changeDefault_preserves_changes(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
-	custom_color := ColorRGB{r: 255, g: 0, b: 0}
+	custom_color := ColorRGB{R: 255, G: 0, B: 0}
 
 	p.Set(5, custom_color)
-	expect(t, p.mask.isSet(5), "p.mask.isSet(5)")
+	expect(t, p.Mask.isSet(5), "p.mask.isSet(5)")
 
 	new_palette := ColorDefault
-	new_palette[0] = ColorRGB{r: 100, g: 100, b: 100}
-	new_palette[5] = ColorRGB{r: 50, g: 50, b: 50}
+	new_palette[0] = ColorRGB{R: 100, G: 100, B: 100}
+	new_palette[5] = ColorRGB{R: 50, G: 50, B: 50}
 
 	p.ChangeDefault(new_palette)
 
-	expectEqual(t, new_palette, p.original)
-	expectEqual(t, new_palette[0], p.current[0])
-	expectEqual(t, custom_color, p.current[5])
-	expect(t, p.mask.isSet(5), "p.mask.isSet(5)")
-	expectEqual(t, 1, p.mask.count())
+	expectEqual(t, new_palette, p.Original)
+	expectEqual(t, new_palette[0], p.Current[0])
+	expectEqual(t, custom_color, p.Current[5])
+	expect(t, p.Mask.isSet(5), "p.mask.isSet(5)")
+	expectEqual(t, 1, p.Mask.count())
 }
 
 // Zig: test "DynamicPalette: changeDefault with multiple changes"
 func TestColor_DynamicPalette_changeDefault_with_multiple_changes(t *testing.T) {
 	p := ColorDynamicPaletteInit(ColorDefault)
-	red := ColorRGB{r: 255, g: 0, b: 0}
-	green := ColorRGB{r: 0, g: 255, b: 0}
-	blue := ColorRGB{r: 0, g: 0, b: 255}
+	red := ColorRGB{R: 255, G: 0, B: 0}
+	green := ColorRGB{R: 0, G: 255, B: 0}
+	blue := ColorRGB{R: 0, G: 0, B: 255}
 
 	p.Set(1, red)
 	p.Set(2, green)
 	p.Set(3, blue)
 
 	new_palette := ColorDefault
-	new_palette[0] = ColorRGB{r: 50, g: 50, b: 50}
-	new_palette[1] = ColorRGB{r: 60, g: 60, b: 60}
+	new_palette[0] = ColorRGB{R: 50, G: 50, B: 50}
+	new_palette[1] = ColorRGB{R: 60, G: 60, B: 60}
 
 	p.ChangeDefault(new_palette)
 
-	expectEqual(t, new_palette[0], p.current[0])
-	expectEqual(t, red, p.current[1])
-	expectEqual(t, green, p.current[2])
-	expectEqual(t, blue, p.current[3])
-	expectEqual(t, 3, p.mask.count())
+	expectEqual(t, new_palette[0], p.Current[0])
+	expectEqual(t, red, p.Current[1])
+	expectEqual(t, green, p.Current[2])
+	expectEqual(t, blue, p.Current[3])
+	expectEqual(t, 3, p.Mask.count())
 }
 
 // Zig: test "LAB.fromRgb"
@@ -335,31 +335,31 @@ func TestColor_LAB_fromRgb(t *testing.T) {
 	const epsilon = 0.5
 
 	// White (255, 255, 255) -> L*=100, a*=0, b*=0
-	white := colorLABFromRgb(ColorRGB{r: 255, g: 255, b: 255})
+	white := colorLABFromRgb(ColorRGB{R: 255, G: 255, B: 255})
 	col_expectApproxEqAbs(t, float32(100.0), white.l, epsilon)
 	col_expectApproxEqAbs(t, float32(0.0), white.a, epsilon)
 	col_expectApproxEqAbs(t, float32(0.0), white.b, epsilon)
 
 	// Black (0, 0, 0) -> L*=0, a*=0, b*=0
-	black := colorLABFromRgb(ColorRGB{r: 0, g: 0, b: 0})
+	black := colorLABFromRgb(ColorRGB{R: 0, G: 0, B: 0})
 	col_expectApproxEqAbs(t, float32(0.0), black.l, epsilon)
 	col_expectApproxEqAbs(t, float32(0.0), black.a, epsilon)
 	col_expectApproxEqAbs(t, float32(0.0), black.b, epsilon)
 
 	// Pure red (255, 0, 0) -> L*≈53.23, a*≈80.11, b*≈67.22
-	red := colorLABFromRgb(ColorRGB{r: 255, g: 0, b: 0})
+	red := colorLABFromRgb(ColorRGB{R: 255, G: 0, B: 0})
 	col_expectApproxEqAbs(t, float32(53.23), red.l, epsilon)
 	col_expectApproxEqAbs(t, float32(80.11), red.a, epsilon)
 	col_expectApproxEqAbs(t, float32(67.22), red.b, epsilon)
 
 	// Pure green (0, 128, 0) -> L*≈46.23, a*≈-51.70, b*≈49.90
-	green := colorLABFromRgb(ColorRGB{r: 0, g: 128, b: 0})
+	green := colorLABFromRgb(ColorRGB{R: 0, G: 128, B: 0})
 	col_expectApproxEqAbs(t, float32(46.23), green.l, epsilon)
 	col_expectApproxEqAbs(t, float32(-51.70), green.a, epsilon)
 	col_expectApproxEqAbs(t, float32(49.90), green.b, epsilon)
 
 	// Pure blue (0, 0, 255) -> L*≈32.30, a*≈79.20, b*≈-107.86
-	blue := colorLABFromRgb(ColorRGB{r: 0, g: 0, b: 255})
+	blue := colorLABFromRgb(ColorRGB{R: 0, G: 0, B: 255})
 	col_expectApproxEqAbs(t, float32(32.30), blue.l, epsilon)
 	col_expectApproxEqAbs(t, float32(79.20), blue.a, epsilon)
 	col_expectApproxEqAbs(t, float32(-107.86), blue.b, epsilon)
@@ -367,8 +367,8 @@ func TestColor_LAB_fromRgb(t *testing.T) {
 
 // Zig: test "generate256Color: base16 preserved"
 func TestColor_generate256Color_base16_preserved(t *testing.T) {
-	bg := ColorRGB{r: 0, g: 0, b: 0}
-	fg := ColorRGB{r: 255, g: 255, b: 255}
+	bg := ColorRGB{R: 0, G: 0, B: 0}
+	fg := ColorRGB{R: 255, G: 255, B: 255}
 	palette := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, false)
 
 	// The first 16 colors (base16) must remain unchanged.
@@ -379,8 +379,8 @@ func TestColor_generate256Color_base16_preserved(t *testing.T) {
 
 // Zig: test "generate256Color: cube corners match base colors"
 func TestColor_generate256Color_cube_corners_match_base_colors(t *testing.T) {
-	bg := ColorRGB{r: 0, g: 0, b: 0}
-	fg := ColorRGB{r: 255, g: 255, b: 255}
+	bg := ColorRGB{R: 0, G: 0, B: 0}
+	fg := ColorRGB{R: 255, G: 255, B: 255}
 	palette := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, false)
 
 	// Index 16 is cube (0,0,0) which should equal bg.
@@ -392,8 +392,8 @@ func TestColor_generate256Color_cube_corners_match_base_colors(t *testing.T) {
 
 // Zig: test "generate256Color: cube corners black/white with harmonious=false"
 func TestColor_generate256Color_cube_corners_black_white_with_harmonious_false(t *testing.T) {
-	black := ColorRGB{r: 0, g: 0, b: 0}
-	white := ColorRGB{r: 255, g: 255, b: 255}
+	black := ColorRGB{R: 0, G: 0, B: 0}
+	white := ColorRGB{R: 255, G: 255, B: 255}
 
 	// Dark theme: bg=black, fg=white.
 	dark := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), black, white, false)
@@ -409,8 +409,8 @@ func TestColor_generate256Color_cube_corners_black_white_with_harmonious_false(t
 
 // Zig: test "generate256Color: light theme cube corners with harmonious=true"
 func TestColor_generate256Color_light_theme_cube_corners_with_harmonious_true(t *testing.T) {
-	white := ColorRGB{r: 255, g: 255, b: 255}
-	black := ColorRGB{r: 0, g: 0, b: 0}
+	white := ColorRGB{R: 255, G: 255, B: 255}
+	black := ColorRGB{R: 0, G: 0, B: 0}
 
 	// harmonious=true skips the bg/fg swap, so the cube preserves the
 	// original orientation: (0,0,0)=bg=white, (5,5,5)=fg=black.
@@ -421,8 +421,8 @@ func TestColor_generate256Color_light_theme_cube_corners_with_harmonious_true(t 
 
 // Zig: test "generate256Color: grayscale ramp monotonic luminance"
 func TestColor_generate256Color_grayscale_ramp_monotonic_luminance(t *testing.T) {
-	bg := ColorRGB{r: 0, g: 0, b: 0}
-	fg := ColorRGB{r: 255, g: 255, b: 255}
+	bg := ColorRGB{R: 0, G: 0, B: 0}
+	fg := ColorRGB{R: 255, G: 255, B: 255}
 	palette := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, false)
 
 	// The grayscale ramp (232–255) should have monotonically increasing
@@ -437,8 +437,8 @@ func TestColor_generate256Color_grayscale_ramp_monotonic_luminance(t *testing.T)
 
 // Zig: test "generate256Color: skip mask preserves original colors"
 func TestColor_generate256Color_skip_mask_preserves_original_colors(t *testing.T) {
-	bg := ColorRGB{r: 0, g: 0, b: 0}
-	fg := ColorRGB{r: 255, g: 255, b: 255}
+	bg := ColorRGB{R: 0, G: 0, B: 0}
+	fg := ColorRGB{R: 255, G: 255, B: 255}
 
 	// Mark a few indices as skipped; they should keep their base value.
 	skip := StaticBitSet256InitEmpty()
@@ -459,8 +459,8 @@ func TestColor_generate256Color_skip_mask_preserves_original_colors(t *testing.T
 func TestColor_generate256Color_dark_theme_harmonious_has_no_effect(t *testing.T) {
 	// For a dark theme (fg lighter than bg), harmonious should not change
 	// the output because the inversion is only relevant for light themes.
-	bg := ColorRGB{r: 0, g: 0, b: 0}
-	fg := ColorRGB{r: 255, g: 255, b: 255}
+	bg := ColorRGB{R: 0, G: 0, B: 0}
+	fg := ColorRGB{R: 255, G: 255, B: 255}
 	normal := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, false)
 	harmonious := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, true)
 
@@ -473,8 +473,8 @@ func TestColor_generate256Color_dark_theme_harmonious_has_no_effect(t *testing.T
 func TestColor_generate256Color_light_theme_harmonious_skips_inversion(t *testing.T) {
 	// For a light theme (fg darker than bg), harmonious=true skips the
 	// bg/red swap, producing different cube colors than harmonious=false.
-	bg := ColorRGB{r: 255, g: 255, b: 255}
-	fg := ColorRGB{r: 0, g: 0, b: 0}
+	bg := ColorRGB{R: 255, G: 255, B: 255}
+	fg := ColorRGB{R: 0, G: 0, B: 0}
 	inverted := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, false)
 	harmonious := ColorGenerate256Color(ColorDefault, StaticBitSet256InitEmpty(), bg, fg, true)
 
@@ -495,8 +495,8 @@ func TestColor_generate256Color_light_theme_harmonious_skips_inversion(t *testin
 
 // Zig: test "generate256Color: light theme harmonious grayscale ramp"
 func TestColor_generate256Color_light_theme_harmonious_grayscale_ramp(t *testing.T) {
-	bg := ColorRGB{r: 255, g: 255, b: 255}
-	fg := ColorRGB{r: 0, g: 0, b: 0}
+	bg := ColorRGB{R: 255, G: 255, B: 255}
+	fg := ColorRGB{R: 0, G: 0, B: 0}
 
 	// harmonious=false swaps bg/fg, so the ramp runs black→white (increasing).
 	{
@@ -525,21 +525,21 @@ func TestColor_generate256Color_light_theme_harmonious_grayscale_ramp(t *testing
 func TestColor_LAB_toRgb(t *testing.T) {
 	// Round-trip: RGB -> LAB -> RGB should recover the original values.
 	cases := [...]ColorRGB{
-		{r: 255, g: 255, b: 255},
-		{r: 0, g: 0, b: 0},
-		{r: 255, g: 0, b: 0},
-		{r: 0, g: 128, b: 0},
-		{r: 0, g: 0, b: 255},
-		{r: 128, g: 128, b: 128},
-		{r: 64, g: 224, b: 208},
+		{R: 255, G: 255, B: 255},
+		{R: 0, G: 0, B: 0},
+		{R: 255, G: 0, B: 0},
+		{R: 0, G: 128, B: 0},
+		{R: 0, G: 0, B: 255},
+		{R: 128, G: 128, B: 128},
+		{R: 64, G: 224, B: 208},
 	}
 
 	for _, expected := range cases {
 		lab := colorLABFromRgb(expected)
 		actual := lab.toRgb()
-		expectEqual(t, expected.r, actual.r)
-		expectEqual(t, expected.g, actual.g)
-		expectEqual(t, expected.b, actual.b)
+		expectEqual(t, expected.R, actual.R)
+		expectEqual(t, expected.G, actual.G)
+		expectEqual(t, expected.B, actual.B)
 	}
 }
 
@@ -549,7 +549,7 @@ func TestColor_LAB_toRgb(t *testing.T) {
 
 // term51Rgb is the term51 test helper: build an RGB value.
 func term51Rgb(r uint8, g uint8, b uint8) ColorRGB {
-	return ColorRGB{r: r, g: g, b: b}
+	return ColorRGB{R: r, G: g, B: b}
 }
 
 // term51_eps is the term51 test helper: tolerance for the f64 luminance and
@@ -680,11 +680,11 @@ func TestColor_term51_Dynamic_next_integer_values_and_the_end_of_the_list(t *tes
 func TestColor_term51_DynamicRGB_init_default_set_no_override(t *testing.T) {
 	c := term51Rgb(1, 2, 3)
 	d := ColorDynamicRGBInit(c)
-	expectEqual(t, None[ColorRGB](), d.override)
-	expectEqual(t, Some(c), d.default_)
+	expectEqual(t, None[ColorRGB](), d.Override)
+	expectEqual(t, Some(c), d.Default)
 
-	expectEqual(t, None[ColorRGB](), ColorDynamicRGBUnset.override)
-	expectEqual(t, None[ColorRGB](), ColorDynamicRGBUnset.default_)
+	expectEqual(t, None[ColorRGB](), ColorDynamicRGBUnset.Override)
+	expectEqual(t, None[ColorRGB](), ColorDynamicRGBUnset.Default)
 }
 
 // Zig: test "term51: DynamicRGB.get: override wins over default, null when neither"
@@ -715,11 +715,11 @@ func TestColor_term51_DynamicRGB_set_replaces_the_override_keeps_the_default(t *
 	def := term51Rgb(10, 20, 30)
 	d := ColorDynamicRGBInit(def)
 	d.Set(term51Rgb(1, 1, 1))
-	expectEqual(t, Some(term51Rgb(1, 1, 1)), d.override)
-	expectEqual(t, Some(def), d.default_)
+	expectEqual(t, Some(term51Rgb(1, 1, 1)), d.Override)
+	expectEqual(t, Some(def), d.Default)
 	d.Set(term51Rgb(2, 2, 2))
-	expectEqual(t, Some(term51Rgb(2, 2, 2)), d.override)
-	expectEqual(t, Some(def), d.default_)
+	expectEqual(t, Some(term51Rgb(2, 2, 2)), d.Override)
+	expectEqual(t, Some(def), d.Default)
 }
 
 // Zig: test "term51: DynamicRGB.reset: restores the default, also when never set"
@@ -731,19 +731,19 @@ func TestColor_term51_DynamicRGB_reset_restores_the_default_also_when_never_set(
 	d.Reset()
 	expectEqual(t, Some(def), d.Get())
 	// reset copies the default into the override rather than clearing it.
-	expectEqual(t, Some(def), d.override)
+	expectEqual(t, Some(def), d.Override)
 
 	// Reset of something never set: override becomes the default value.
 	never := ColorDynamicRGBInit(def)
-	expectEqual(t, None[ColorRGB](), never.override)
+	expectEqual(t, None[ColorRGB](), never.Override)
 	never.Reset()
-	expectEqual(t, Some(def), never.override)
+	expectEqual(t, Some(def), never.Override)
 	expectEqual(t, Some(def), never.Get())
 
 	// Fully unset stays unset after reset.
 	u := ColorDynamicRGBUnset
 	u.Reset()
-	expectEqual(t, None[ColorRGB](), u.override)
+	expectEqual(t, None[ColorRGB](), u.Override)
 	expectEqual(t, None[ColorRGB](), u.Get())
 
 	// Override with no default: reset clears to null.
@@ -759,13 +759,13 @@ func TestColor_term51_DynamicPalette_init_custom_palette_empty_mask_and_default_
 	pal[0] = term51Rgb(9, 9, 9)
 	pal[255] = term51Rgb(8, 8, 8)
 	p := ColorDynamicPaletteInit(pal)
-	expectEqual(t, pal, p.current)
-	expectEqual(t, pal, p.original)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, pal, p.Current)
+	expectEqual(t, pal, p.Original)
+	expectEqual(t, 0, p.Mask.count())
 
-	expectEqual(t, ColorDefault, ColorDynamicPaletteDefault.current)
-	expectEqual(t, ColorDefault, ColorDynamicPaletteDefault.original)
-	expectEqual(t, 0, ColorDynamicPaletteDefault.mask.count())
+	expectEqual(t, ColorDefault, ColorDynamicPaletteDefault.Current)
+	expectEqual(t, ColorDefault, ColorDynamicPaletteDefault.Original)
+	expectEqual(t, 0, ColorDynamicPaletteDefault.Mask.count())
 }
 
 // Zig: test "term51: DynamicPalette.set: index 0, 255 and repeated sets"
@@ -775,34 +775,34 @@ func TestColor_term51_DynamicPalette_set_index_0_255_and_repeated_sets(t *testin
 	b := term51Rgb(4, 5, 6)
 
 	p.Set(255, a)
-	expectEqual(t, a, p.current[255])
-	expect(t, p.mask.isSet(255), "p.mask.isSet(255)")
-	expect(t, !p.mask.isSet(254), "!p.mask.isSet(254)")
-	expectEqual(t, 1, p.mask.count())
-	expectEqual(t, ColorDefault[255], p.original[255])
+	expectEqual(t, a, p.Current[255])
+	expect(t, p.Mask.isSet(255), "p.mask.isSet(255)")
+	expect(t, !p.Mask.isSet(254), "!p.mask.isSet(254)")
+	expectEqual(t, 1, p.Mask.count())
+	expectEqual(t, ColorDefault[255], p.Original[255])
 
 	p.Set(0, b)
-	expectEqual(t, b, p.current[0])
-	expect(t, p.mask.isSet(0), "p.mask.isSet(0)")
-	expectEqual(t, 2, p.mask.count())
+	expectEqual(t, b, p.Current[0])
+	expect(t, p.Mask.isSet(0), "p.mask.isSet(0)")
+	expectEqual(t, 2, p.Mask.count())
 
 	// Setting the same index again overwrites and does not add a bit.
 	p.Set(0, a)
-	expectEqual(t, a, p.current[0])
-	expectEqual(t, 2, p.mask.count())
+	expectEqual(t, a, p.Current[0])
+	expectEqual(t, 2, p.Mask.count())
 
 	// Setting a color equal to the original still marks it as changed.
 	p.Set(16, ColorDefault[16])
-	expect(t, p.mask.isSet(16), "p.mask.isSet(16)")
-	expectEqual(t, 3, p.mask.count())
+	expect(t, p.Mask.isSet(16), "p.mask.isSet(16)")
+	expectEqual(t, 3, p.Mask.count())
 
 	// Cube/gray boundaries.
 	p.Set(231, a)
 	p.Set(232, b)
-	expect(t, p.mask.isSet(231), "p.mask.isSet(231)")
-	expect(t, p.mask.isSet(232), "p.mask.isSet(232)")
-	expectEqual(t, a, p.current[231])
-	expectEqual(t, b, p.current[232])
+	expect(t, p.Mask.isSet(231), "p.mask.isSet(231)")
+	expect(t, p.Mask.isSet(232), "p.mask.isSet(232)")
+	expectEqual(t, a, p.Current[231])
+	expectEqual(t, b, p.Current[232])
 }
 
 // Zig: test "term51: DynamicPalette.reset: restores one index, never-set index is a no-op"
@@ -813,25 +813,25 @@ func TestColor_term51_DynamicPalette_reset_restores_one_index_never_set_index_is
 	p.Set(255, a)
 	p.Set(1, a)
 	p.Reset(255)
-	expectEqual(t, ColorDefault[255], p.current[255])
-	expect(t, !p.mask.isSet(255), "!p.mask.isSet(255)")
-	expectEqual(t, a, p.current[1])
-	expect(t, p.mask.isSet(1), "p.mask.isSet(1)")
-	expectEqual(t, 1, p.mask.count())
+	expectEqual(t, ColorDefault[255], p.Current[255])
+	expect(t, !p.Mask.isSet(255), "!p.mask.isSet(255)")
+	expectEqual(t, a, p.Current[1])
+	expect(t, p.Mask.isSet(1), "p.mask.isSet(1)")
+	expectEqual(t, 1, p.Mask.count())
 
 	// Reset of an index that was never set.
 	before := p
 	p.Reset(100)
-	expectEqual(t, before.current, p.current)
-	expectEqual(t, 1, p.mask.count())
+	expectEqual(t, before.Current, p.Current)
+	expectEqual(t, 1, p.Mask.count())
 	p.Reset(0)
-	expectEqual(t, before.current, p.current)
+	expectEqual(t, before.Current, p.Current)
 
 	// Reset twice.
 	p.Reset(1)
 	p.Reset(1)
-	expectEqual(t, ColorDefault, p.current)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, ColorDefault, p.Current)
+	expectEqual(t, 0, p.Mask.count())
 
 	// Reset uses the current original, which may have been changed.
 	pal := ColorDefault
@@ -839,8 +839,8 @@ func TestColor_term51_DynamicPalette_reset_restores_one_index_never_set_index_is
 	p.Set(7, a)
 	p.ChangeDefault(pal)
 	p.Reset(7)
-	expectEqual(t, pal[7], p.current[7])
-	expect(t, !p.mask.isSet(7), "!p.mask.isSet(7)")
+	expectEqual(t, pal[7], p.Current[7])
+	expect(t, !p.Mask.isSet(7), "!p.mask.isSet(7)")
 }
 
 // Zig: test "term51: DynamicPalette.resetAll: clears every change and uses the current original"
@@ -850,18 +850,18 @@ func TestColor_term51_DynamicPalette_resetAll_clears_every_change_and_uses_the_c
 
 	// Nothing set: no-op.
 	p.ResetAll()
-	expectEqual(t, ColorDefault, p.current)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, ColorDefault, p.Current)
+	expectEqual(t, 0, p.Mask.count())
 
 	// Every index set.
 	for i := 0; i < 256; i++ {
 		p.Set(uint8(i), a)
 	}
-	expectEqual(t, 256, p.mask.count())
+	expectEqual(t, 256, p.Mask.count())
 	p.ResetAll()
-	expectEqual(t, ColorDefault, p.current)
-	expectEqual(t, ColorDefault, p.original)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, ColorDefault, p.Current)
+	expectEqual(t, ColorDefault, p.Original)
+	expectEqual(t, 0, p.Mask.count())
 
 	// After changeDefault, resetAll resets to the new default.
 	pal := ColorDefault
@@ -869,9 +869,9 @@ func TestColor_term51_DynamicPalette_resetAll_clears_every_change_and_uses_the_c
 	p.Set(4, a)
 	p.ChangeDefault(pal)
 	p.ResetAll()
-	expectEqual(t, pal, p.current)
-	expectEqual(t, pal, p.original)
-	expectEqual(t, 0, p.mask.count())
+	expectEqual(t, pal, p.Current)
+	expectEqual(t, pal, p.Original)
+	expectEqual(t, 0, p.Mask.count())
 }
 
 // Zig: test "term51: DynamicPalette.changeDefault: boundary indexes and repeated changes"
@@ -888,12 +888,12 @@ func TestColor_term51_DynamicPalette_changeDefault_boundary_indexes_and_repeated
 		pal[i] = term51Rgb(7, 7, 7)
 	}
 	p.ChangeDefault(pal)
-	expectEqual(t, pal, p.original)
-	expectEqual(t, a, p.current[0])
-	expectEqual(t, b, p.current[255])
-	expectEqual(t, term51Rgb(7, 7, 7), p.current[1])
-	expectEqual(t, term51Rgb(7, 7, 7), p.current[254])
-	expectEqual(t, 2, p.mask.count())
+	expectEqual(t, pal, p.Original)
+	expectEqual(t, a, p.Current[0])
+	expectEqual(t, b, p.Current[255])
+	expectEqual(t, term51Rgb(7, 7, 7), p.Current[1])
+	expectEqual(t, term51Rgb(7, 7, 7), p.Current[254])
+	expectEqual(t, 2, p.Mask.count())
 
 	// Changing again keeps the same overrides.
 	pal2 := ColorDefault
@@ -901,20 +901,20 @@ func TestColor_term51_DynamicPalette_changeDefault_boundary_indexes_and_repeated
 		pal2[i] = term51Rgb(9, 9, 9)
 	}
 	p.ChangeDefault(pal2)
-	expectEqual(t, a, p.current[0])
-	expectEqual(t, b, p.current[255])
-	expectEqual(t, term51Rgb(9, 9, 9), p.current[128])
+	expectEqual(t, a, p.Current[0])
+	expectEqual(t, b, p.Current[255])
+	expectEqual(t, term51Rgb(9, 9, 9), p.Current[128])
 
 	// Resetting a preserved index goes to the newest default.
 	p.Reset(0)
-	expectEqual(t, term51Rgb(9, 9, 9), p.current[0])
-	expectEqual(t, 1, p.mask.count())
+	expectEqual(t, term51Rgb(9, 9, 9), p.Current[0])
+	expectEqual(t, 1, p.Mask.count())
 
 	// Changing to the same palette is a fixed point.
 	snapshot := p
 	p.ChangeDefault(pal2)
-	expectEqual(t, snapshot.current, p.current)
-	expectEqual(t, snapshot.mask.count(), p.mask.count())
+	expectEqual(t, snapshot.Current, p.Current)
+	expectEqual(t, snapshot.Mask.count(), p.Mask.count())
 }
 
 // Zig: test "term51: RGB.eql: each channel compared independently"
@@ -1723,14 +1723,14 @@ var term51_lab_levels = [...]uint8{0, 1, 2, 5, 8, 16, 32, 51, 64, 85, 100, 127, 
 func TestColor_term51_LAB_fromRgb_exact_float_bits_for_black_white_and_mid_gray(t *testing.T) {
 	// Pinned bit patterns of the f32 results: any libm difference in pow or
 	// cbrt shows up here.
-	black := colorLABFromRgb(ColorRGB{r: 0, g: 0, b: 0})
+	black := colorLABFromRgb(ColorRGB{R: 0, G: 0, B: 0})
 	expectEqual(t, uint32(0x00000000), math.Float32bits(black.l)&0x80000000)
-	white := colorLABFromRgb(ColorRGB{r: 255, g: 255, b: 255})
+	white := colorLABFromRgb(ColorRGB{R: 255, G: 255, B: 255})
 	// white maps back to white exactly
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, white.toRgb())
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, black.toRgb())
-	gray := colorLABFromRgb(ColorRGB{r: 128, g: 128, b: 128})
-	expectEqual(t, ColorRGB{r: 128, g: 128, b: 128}, gray.toRgb())
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, white.toRgb())
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, black.toRgb())
+	gray := colorLABFromRgb(ColorRGB{R: 128, G: 128, B: 128})
+	expectEqual(t, ColorRGB{R: 128, G: 128, B: 128}, gray.toRgb())
 }
 
 // Zig: test "term51: RGB.fromIntensity: infinity and negative zero do not crash"
@@ -1743,7 +1743,7 @@ func TestColor_term51_RGB_fromIntensity_infinity_and_negative_zero_do_not_crash(
 	expectEqual(t, uint8(0), col_fromIntensity(t, "-0"))
 	expectEqual(t, uint8(0), col_fromIntensity(t, "-0.0"))
 	expectEqual(t, uint8(0), col_fromIntensity(t, "-0e5"))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, col_parse(t, "rgbi:-0/-0/-0"))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, col_parse(t, "rgbi:-0/-0/-0"))
 	col_expectError(t, ErrInvalidFormat, col_parseErr("rgbi:inf/0/0"))
 	col_expectError(t, ErrInvalidFormat, col_parseErr("rgbi:0/-inf/0"))
 }

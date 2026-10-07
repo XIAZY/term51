@@ -68,7 +68,7 @@ func kpPasteSamePtr(a []uint8, b []uint8) bool {
 // Error.MutableRequired, encode(data, opts))` for `[]const u8` data.
 func kpPasteExpectMutableRequired(tt *testing.T, data []uint8, bracketed bool) {
 	tt.Helper()
-	_, err := InputPasteEncode(data, InputPasteOptions{bracketed: bracketed})
+	_, err := InputPasteEncode(data, InputPasteOptions{Bracketed: bracketed})
 	if err != ErrMutableRequired {
 		tt.Fatalf("expected error MutableRequired, found %v", err)
 	}
@@ -87,7 +87,7 @@ func kpPasteExpectMutable(
 	tt.Helper()
 	data := []uint8(input)
 	// Zig-only: defer std.testing.allocator.free(data)
-	r := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: bracketed})
+	r := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: bracketed})
 	expectEqualStrings(tt, want0, string(r[0]))
 	expectEqualStrings(tt, want1, string(r[1]))
 	expectEqualStrings(tt, want2, string(r[2]))
@@ -121,7 +121,7 @@ func TestKpPaste_isSafe(t *testing.T) {
 func TestKpPaste_encode_bracketed(t *testing.T) {
 	result, err := InputPasteEncode(
 		[]uint8("hello"),
-		InputPasteOptions{bracketed: true},
+		InputPasteOptions{Bracketed: true},
 	)
 	zigTry(t, err)
 	expectEqualStrings(t, "\x1b[200~", string(result[0]))
@@ -133,7 +133,7 @@ func TestKpPaste_encode_bracketed(t *testing.T) {
 func TestKpPaste_encode_unbracketed_no_newlines(t *testing.T) {
 	result, err := InputPasteEncode(
 		[]uint8("hello"),
-		InputPasteOptions{bracketed: false},
+		InputPasteOptions{Bracketed: false},
 	)
 	zigTry(t, err)
 	expectEqualStrings(t, "", string(result[0]))
@@ -150,7 +150,7 @@ func TestKpPaste_encode_unbracketed_newlines_const(t *testing.T) {
 func TestKpPaste_encode_unbracketed_newlines(t *testing.T) {
 	data := []uint8("hello\nworld")
 	// Zig-only: defer testing.allocator.free(data)
-	result := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: false})
+	result := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: false})
 	expectEqualStrings(t, "", string(result[0]))
 	expectEqualStrings(t, "hello\rworld", string(result[1]))
 	expectEqualStrings(t, "", string(result[2]))
@@ -160,7 +160,7 @@ func TestKpPaste_encode_unbracketed_newlines(t *testing.T) {
 func TestKpPaste_encode_unbracketed_windows_stye_newline(t *testing.T) {
 	data := []uint8("hello\r\nworld")
 	// Zig-only: defer testing.allocator.free(data)
-	result := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: false})
+	result := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: false})
 	expectEqualStrings(t, "", string(result[0]))
 	expectEqualStrings(t, "hello\r\rworld", string(result[1]))
 	expectEqualStrings(t, "", string(result[2]))
@@ -175,7 +175,7 @@ func TestKpPaste_encode_strip_unsafe_bytes_const(t *testing.T) {
 func TestKpPaste_encode_strip_unsafe_bytes_mutable_bracketed(t *testing.T) {
 	data := []uint8("hel\x1blo\x00world")
 	// Zig-only: defer testing.allocator.free(data)
-	result := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: true})
+	result := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: true})
 	expectEqualStrings(t, "\x1b[200~", string(result[0]))
 	expectEqualStrings(t, "hel lo world", string(result[1]))
 	expectEqualStrings(t, "\x1b[201~", string(result[2]))
@@ -185,7 +185,7 @@ func TestKpPaste_encode_strip_unsafe_bytes_mutable_bracketed(t *testing.T) {
 func TestKpPaste_encode_strip_unsafe_bytes_mutable_unbracketed(t *testing.T) {
 	data := []uint8("hel\x03lo")
 	// Zig-only: defer testing.allocator.free(data)
-	result := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: false})
+	result := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: false})
 	expectEqualStrings(t, "", string(result[0]))
 	expectEqualStrings(t, "hel lo", string(result[1]))
 	expectEqualStrings(t, "", string(result[2]))
@@ -195,7 +195,7 @@ func TestKpPaste_encode_strip_unsafe_bytes_mutable_unbracketed(t *testing.T) {
 func TestKpPaste_encode_strip_multiple_unsafe_bytes(t *testing.T) {
 	data := []uint8("\x00\x08\x7f")
 	// Zig-only: defer testing.allocator.free(data)
-	result := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: true})
+	result := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: true})
 	expectEqualStrings(t, "   ", string(result[1]))
 }
 
@@ -203,7 +203,7 @@ func TestKpPaste_encode_strip_multiple_unsafe_bytes(t *testing.T) {
 func TestKpPaste_Options_fromTerminal_default_terminal_has_bracketed_paste_off(t *testing.T) {
 	term := kpPasteTerminal(t, nil)
 	defer term.Deinit()
-	expectEqual(t, false, InputPasteOptionsFromTerminal(term).bracketed)
+	expectEqual(t, false, InputPasteOptionsFromTerminal(term).Bracketed)
 }
 
 // Zig: test "term51: Options.fromTerminal: follows the bracketed paste mode"
@@ -211,17 +211,17 @@ func TestKpPaste_Options_fromTerminal_follows_the_bracketed_paste_mode(t *testin
 	term := kpPasteTerminal(t, nil)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeBracketedPaste, true)
-	expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
+	term.Modes.Set(ModesModeBracketedPaste, true)
+	expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
 	// Idempotent.
-	term.modes.Set(ModesModeBracketedPaste, true)
-	expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
+	term.Modes.Set(ModesModeBracketedPaste, true)
+	expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
 
-	term.modes.Set(ModesModeBracketedPaste, false)
-	expectEqual(t, false, InputPasteOptionsFromTerminal(term).bracketed)
+	term.Modes.Set(ModesModeBracketedPaste, false)
+	expectEqual(t, false, InputPasteOptionsFromTerminal(term).Bracketed)
 
-	term.modes.Set(ModesModeBracketedPaste, true)
-	expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
+	term.Modes.Set(ModesModeBracketedPaste, true)
+	expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
 }
 
 // Zig: test "term51: Options.fromTerminal: other modes do not affect it"
@@ -229,15 +229,15 @@ func TestKpPaste_Options_fromTerminal_other_modes_do_not_affect_it(t *testing.T)
 	term := kpPasteTerminal(t, nil)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeFocusEvent, true)
-	term.modes.Set(ModesModeMouseEventNormal, true)
-	term.modes.Set(ModesModeCursorKeys, true)
-	term.modes.Set(ModesModeAltScreen, true)
-	expectEqual(t, false, InputPasteOptionsFromTerminal(term).bracketed)
+	term.Modes.Set(ModesModeFocusEvent, true)
+	term.Modes.Set(ModesModeMouseEventNormal, true)
+	term.Modes.Set(ModesModeCursorKeys, true)
+	term.Modes.Set(ModesModeAltScreen, true)
+	expectEqual(t, false, InputPasteOptionsFromTerminal(term).Bracketed)
 
-	term.modes.Set(ModesModeBracketedPaste, true)
-	term.modes.Set(ModesModeFocusEvent, false)
-	expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
+	term.Modes.Set(ModesModeBracketedPaste, true)
+	term.Modes.Set(ModesModeFocusEvent, false)
+	expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
 }
 
 // Zig: test "term51: Options.fromTerminal: default_modes and reset"
@@ -245,24 +245,24 @@ func TestKpPaste_Options_fromTerminal_default_modes_and_reset(t *testing.T) {
 	// Default on: starts on, a reset restores on, and clearing works until reset.
 	{
 		term := kpPasteTerminal(t, func(opts *TerminalOptions) {
-			opts.default_modes.bracketed_paste = true
+			opts.DefaultModes.bracketed_paste = true
 		})
 		defer term.Deinit()
-		expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
-		term.modes.Set(ModesModeBracketedPaste, false)
-		expectEqual(t, false, InputPasteOptionsFromTerminal(term).bracketed)
+		expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
+		term.Modes.Set(ModesModeBracketedPaste, false)
+		expectEqual(t, false, InputPasteOptionsFromTerminal(term).Bracketed)
 		term.FullReset()
-		expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
+		expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
 	}
 
 	// Default off: set on, a reset turns it back off.
 	{
 		term := kpPasteTerminal(t, nil)
 		defer term.Deinit()
-		term.modes.Set(ModesModeBracketedPaste, true)
-		expectEqual(t, true, InputPasteOptionsFromTerminal(term).bracketed)
+		term.Modes.Set(ModesModeBracketedPaste, true)
+		expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)
 		term.FullReset()
-		expectEqual(t, false, InputPasteOptionsFromTerminal(term).bracketed)
+		expectEqual(t, false, InputPasteOptionsFromTerminal(term).Bracketed)
 	}
 }
 
@@ -277,7 +277,7 @@ func TestKpPaste_Options_fromTerminal_result_drives_encode(t *testing.T) {
 	expectEqualStrings(t, "hi", string(off[1]))
 	expectEqualStrings(t, "", string(off[2]))
 
-	term.modes.Set(ModesModeBracketedPaste, true)
+	term.Modes.Set(ModesModeBracketedPaste, true)
 	on, err := InputPasteEncode([]uint8("hi"), InputPasteOptionsFromTerminal(term))
 	zigTry(t, err) // `catch unreachable`
 	expectEqualStrings(t, "\x1b[200~", string(on[0]))
@@ -301,7 +301,7 @@ func TestKpPaste_encode_error_set_and_return_types(t *testing.T) {
 // Zig: test "term51: encode: bracketed const clean data is passed through without a copy"
 func TestKpPaste_encode_bracketed_const_clean_data_is_passed_through_without_a_copy(t *testing.T) {
 	c := []uint8("hello world")
-	r, err := InputPasteEncode(c, InputPasteOptions{bracketed: true})
+	r, err := InputPasteEncode(c, InputPasteOptions{Bracketed: true})
 	zigTry(t, err)
 	expectEqualStrings(t, "\x1b[200~", string(r[0]))
 	expectEqualStrings(t, "hello world", string(r[1]))
@@ -317,7 +317,7 @@ func TestKpPaste_encode_bracketed_const_clean_data_is_passed_through_without_a_c
 // Zig: test "term51: encode: unbracketed const clean data has empty fences"
 func TestKpPaste_encode_unbracketed_const_clean_data_has_empty_fences(t *testing.T) {
 	c := []uint8("hello world")
-	r, err := InputPasteEncode(c, InputPasteOptions{bracketed: false})
+	r, err := InputPasteEncode(c, InputPasteOptions{Bracketed: false})
 	zigTry(t, err)
 	expectEqual(t, 0, len(r[0]))
 	expectEqual(t, 0, len(r[2]))
@@ -332,13 +332,13 @@ func TestKpPaste_encode_unbracketed_const_clean_data_has_empty_fences(t *testing
 // Zig: test "term51: encode: empty data"
 func TestKpPaste_encode_empty_data(t *testing.T) {
 	c := []uint8("")
-	rb, err := InputPasteEncode(c, InputPasteOptions{bracketed: true})
+	rb, err := InputPasteEncode(c, InputPasteOptions{Bracketed: true})
 	zigTry(t, err)
 	expectEqualStrings(t, "\x1b[200~", string(rb[0]))
 	expectEqual(t, 0, len(rb[1]))
 	expectEqualStrings(t, "\x1b[201~", string(rb[2]))
 
-	ru, err := InputPasteEncode(c, InputPasteOptions{bracketed: false})
+	ru, err := InputPasteEncode(c, InputPasteOptions{Bracketed: false})
 	zigTry(t, err)
 	expectEqual(t, 0, len(ru[0]))
 	expectEqual(t, 0, len(ru[1]))
@@ -360,7 +360,7 @@ func TestKpPaste_encode_every_byte_value_const_and_mutable_bracketed_and_not(t *
 			needs_mut := strip || (!bracketed && nl)
 			cbuf := [...]uint8{byte_}
 			cdata := cbuf[:]
-			if r, err := InputPasteEncode(cdata, InputPasteOptions{bracketed: bracketed}); err == nil {
+			if r, err := InputPasteEncode(cdata, InputPasteOptions{Bracketed: bracketed}); err == nil {
 				expect(t, !needs_mut, "!needs_mut")
 				expectEqual(t, byte_, r[1][0])
 				expectEqual(t, 1, len(r[1]))
@@ -374,7 +374,7 @@ func TestKpPaste_encode_every_byte_value_const_and_mutable_bracketed_and_not(t *
 			// Mutable.
 			mbuf := [...]uint8{byte_}
 			mdata := mbuf[:]
-			r := InputPasteEncodeMutable(mdata, InputPasteOptions{bracketed: bracketed})
+			r := InputPasteEncodeMutable(mdata, InputPasteOptions{Bracketed: bracketed})
 			var want uint8
 			if strip {
 				want = ' '
@@ -451,10 +451,10 @@ func TestKpPaste_encode_control_characters_that_are_not_stripped_are_kept(t *tes
 		kpPasteExpectMutable(t, string(input[:]), false, "", string(input[:]), "")
 
 		c := input[:]
-		rb, err := InputPasteEncode(c, InputPasteOptions{bracketed: true})
+		rb, err := InputPasteEncode(c, InputPasteOptions{Bracketed: true})
 		zigTry(t, err)
 		expectEqualSlices(t, input[:], rb[1])
-		ru, err := InputPasteEncode(c, InputPasteOptions{bracketed: false})
+		ru, err := InputPasteEncode(c, InputPasteOptions{Bracketed: false})
 		zigTry(t, err)
 		expectEqualSlices(t, input[:], ru[1])
 	}
@@ -472,7 +472,7 @@ func TestKpPaste_encode_boundary_bytes_around_the_C0_range_DEL_and_8_bit_bytes(t
 	// Valid UTF-8 multibyte text is left alone, const and mutable.
 	text := "h\xc3\xa9llo \xe2\x82\xac \xf0\x9f\x98\x80"
 	c := []uint8(text)
-	r, err := InputPasteEncode(c, InputPasteOptions{bracketed: false})
+	r, err := InputPasteEncode(c, InputPasteOptions{Bracketed: false})
 	zigTry(t, err)
 	expectEqualStrings(t, text, string(r[1]))
 	kpPasteExpectMutable(t, text, true, "\x1b[200~", text, "\x1b[201~")
@@ -487,7 +487,7 @@ func TestKpPaste_encode_boundary_bytes_around_the_C0_range_DEL_and_8_bit_bytes(t
 func TestKpPaste_encode_newline_handling_bracketed(t *testing.T) {
 	// Bracketed: newlines are kept as LF, const data does not need a copy.
 	c := []uint8("a\nb\r\nc\n")
-	r, err := InputPasteEncode(c, InputPasteOptions{bracketed: true})
+	r, err := InputPasteEncode(c, InputPasteOptions{Bracketed: true})
 	zigTry(t, err)
 	expectEqualStrings(t, "a\nb\r\nc\n", string(r[1]))
 	expect(t, kpPasteSamePtr(c, r[1]), "@intFromPtr(c.ptr) == @intFromPtr(r[1].ptr)")
@@ -511,7 +511,7 @@ func TestKpPaste_encode_newline_handling_unbracketed(t *testing.T) {
 	kpPasteExpectMutableRequired(t, c2, false)
 	// CR alone does not need conversion, so const data is fine.
 	c3 := []uint8("a\rb")
-	r, err := InputPasteEncode(c3, InputPasteOptions{bracketed: false})
+	r, err := InputPasteEncode(c3, InputPasteOptions{Bracketed: false})
 	zigTry(t, err)
 	expectEqualStrings(t, "a\rb", string(r[1]))
 }
@@ -527,7 +527,7 @@ func TestKpPaste_encode_strip_and_newline_together(t *testing.T) {
 	kpPasteExpectMutableRequired(t, strip_only, true)
 	kpPasteExpectMutableRequired(t, strip_only, false)
 	nl_only := []uint8("a\nb")
-	_, err := InputPasteEncode(nl_only, InputPasteOptions{bracketed: true})
+	_, err := InputPasteEncode(nl_only, InputPasteOptions{Bracketed: true})
 	zigTry(t, err)
 	kpPasteExpectMutableRequired(t, nl_only, false)
 	both := []uint8("a\x00\nb")
@@ -570,7 +570,7 @@ func TestKpPaste_encode_embedded_bracketed_paste_end_sequence_is_defanged_by_ESC
 		data := []uint8("a\x1b[201~b")
 		// Zig-only: defer std.testing.allocator.free(data)
 		expect(t, !InputPasteIsSafe(data), "!isSafe(data)")
-		r := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: true})
+		r := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: true})
 		expect(t, InputPasteIsSafe(r[1]), "isSafe(r[1])")
 	}
 
@@ -581,7 +581,7 @@ func TestKpPaste_encode_embedded_bracketed_paste_end_sequence_is_defanged_by_ESC
 
 	// The text without ESC is not a problem for const data.
 	c2 := []uint8("a[201~b")
-	r2, err := InputPasteEncode(c2, InputPasteOptions{bracketed: true})
+	r2, err := InputPasteEncode(c2, InputPasteOptions{Bracketed: true})
 	zigTry(t, err)
 	expectEqualStrings(t, "a[201~b", string(r2[1]))
 }
@@ -598,14 +598,14 @@ func TestKpPaste_encode_large_data(t *testing.T) {
 			buf[i] = 'x'
 		}
 		c := buf
-		r, err := InputPasteEncode(c, InputPasteOptions{bracketed: false})
+		r, err := InputPasteEncode(c, InputPasteOptions{Bracketed: false})
 		zigTry(t, err)
 		expectEqual(t, n, len(r[1]))
 		expect(t, kpPasteSamePtr(buf, r[1]), "@intFromPtr(buf.ptr) == @intFromPtr(r[1].ptr)")
 		// Last byte newline: error when unbracketed, fine when bracketed.
 		buf[n-1] = '\n'
 		kpPasteExpectMutableRequired(t, c, false)
-		rb, err := InputPasteEncode(c, InputPasteOptions{bracketed: true})
+		rb, err := InputPasteEncode(c, InputPasteOptions{Bracketed: true})
 		zigTry(t, err)
 		expectEqual(t, n, len(rb[1]))
 		// Last byte ESC: error when bracketed too.
@@ -629,7 +629,7 @@ func TestKpPaste_encode_large_data(t *testing.T) {
 				buf[i] = 0x80
 			}
 		}
-		r := InputPasteEncodeMutable(buf, InputPasteOptions{bracketed: false})
+		r := InputPasteEncodeMutable(buf, InputPasteOptions{Bracketed: false})
 		expectEqual(t, n, len(r[1]))
 		for i, b := range r[1] {
 			var want uint8
@@ -654,7 +654,7 @@ func TestKpPaste_encode_large_data(t *testing.T) {
 		for i := range buf {
 			buf[i] = 0x1b
 		}
-		r := InputPasteEncodeMutable(buf, InputPasteOptions{bracketed: true})
+		r := InputPasteEncodeMutable(buf, InputPasteOptions{Bracketed: true})
 		expectEqual(t, n, len(r[1]))
 		for _, b := range r[1] {
 			expectEqual(t, uint8(' '), b)
@@ -666,14 +666,14 @@ func TestKpPaste_encode_large_data(t *testing.T) {
 func TestKpPaste_encode_three_slices_concatenate_to_the_pty_bytes(t *testing.T) {
 	data := []uint8("ls\x03 -l\nexit\n")
 	// Zig-only: defer std.testing.allocator.free(data)
-	r := InputPasteEncodeMutable(data, InputPasteOptions{bracketed: true})
+	r := InputPasteEncodeMutable(data, InputPasteOptions{Bracketed: true})
 	joined := kpPasteJoin(r)
 	// Zig-only: defer std.testing.allocator.free(joined)
 	expectEqualStrings(t, "\x1b[200~ls  -l\nexit\n\x1b[201~", string(joined))
 
 	data2 := []uint8("ls\x03 -l\nexit\n")
 	// Zig-only: defer std.testing.allocator.free(data2)
-	r2 := InputPasteEncodeMutable(data2, InputPasteOptions{bracketed: false})
+	r2 := InputPasteEncodeMutable(data2, InputPasteOptions{Bracketed: false})
 	joined2 := kpPasteJoin(r2)
 	// Zig-only: defer std.testing.allocator.free(joined2)
 	expectEqualStrings(t, "ls  -l\rexit\r", string(joined2))

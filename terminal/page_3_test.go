@@ -140,9 +140,9 @@ func pg3HGrapheme(t *testing.T, page *Page, x uint, y uint, cp uint32, extra []u
 // pg3HStyleCells is term51HStyleCells: add a style (distinguished by palette
 // fg n) and put it on the cells. After this the style's reference count is
 // exactly len(cells).
-func pg3HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleId {
+func pg3HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleID {
 	t.Helper()
-	id, err := page.styles.Add(Style{fg_color: StyleColor{Tag: StyleColorPalette, Palette: n}})
+	id, err := page.styles.Add(Style{FgColor: StyleColor{Tag: StyleColorPalette, Palette: n}})
 	zigTry(t, err)
 	for _, c := range cells {
 		rac := page.GetRowAndCell(c[0], c[1])
@@ -156,7 +156,7 @@ func pg3HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleId 
 
 // pg3HLinkCells is term51HLinkCells: insert a hyperlink and put it on the
 // cells. After this the link's reference count is exactly len(cells).
-func pg3HLinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) HyperlinkId {
+func pg3HLinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) HyperlinkID {
 	t.Helper()
 	id, err := page.InsertHyperlink(link)
 	zigTry(t, err)
@@ -172,8 +172,8 @@ func pg3HLinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) Hy
 // pg3HLink is term51HLink.
 func pg3HLink(uri string) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
-		uri: []uint8(uri),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
+		URI: []uint8(uri),
 	}
 }
 
@@ -266,7 +266,7 @@ func pg3IBgPalette(index uint8) PageCell {
 func pg3IBgRgb(r uint8, g uint8, b uint8) PageCell {
 	return PageCell{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{r: r, g: g, b: b}},
+		content:     PageCellContent{color_rgb: PageCellRGB{R: r, G: g, B: b}},
 	}
 }
 
@@ -286,15 +286,15 @@ func pg3IPut(page *Page, x uint, y uint, cp uint32) pg3IRC {
 
 // pg3ILinkErr is term51ILink: insert an implicit-id hyperlink (ref count 1 on
 // success), returning the error for the tests that inspect it.
-func pg3ILinkErr(page *Page, n uint32) (HyperlinkId, error) {
+func pg3ILinkErr(page *Page, n uint32) (HyperlinkID, error) {
 	return page.InsertHyperlink(Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: n},
-		uri: []uint8("https://example.com"),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: n},
+		URI: []uint8("https://example.com"),
 	})
 }
 
 // pg3ILink is `try term51ILink(page, n)`.
-func pg3ILink(t *testing.T, page *Page, n uint32) HyperlinkId {
+func pg3ILink(t *testing.T, page *Page, n uint32) HyperlinkID {
 	t.Helper()
 	id, err := pg3ILinkErr(page, n)
 	zigTry(t, err)
@@ -302,7 +302,7 @@ func pg3ILink(t *testing.T, page *Page, n uint32) HyperlinkId {
 }
 
 // pg3IRefs is term51IRefs.
-func pg3IRefs(page *Page, id HyperlinkId) uint {
+func pg3IRefs(page *Page, id HyperlinkID) uint {
 	return uint(page.hyperlink_set.RefCount(id))
 }
 
@@ -363,7 +363,7 @@ func TestPg3_Page_clearCells_plain_full_row_is_zeroed(t *testing.T) {
 		c.semantic_content = PageCellSemanticContentInput
 		c.wide = PageCellWideNarrow
 	}
-	*page.GetRowAndCell(1, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 9, g: 9, b: 9}}}
+	*page.GetRowAndCell(1, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 9, G: 9, B: 9}}}
 	*page.GetRowAndCell(2, 0).cell = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 3}}
 
 	page.ClearCells(page.GetRow(0), 0, 6)
@@ -482,7 +482,7 @@ func TestPg3_Page_clearCells_styles_are_released_and_the_styled_flag_follows_the
 	page.ClearCells(row, 0, 3)
 	expectEqual(t, uint16(1), page.styles.RefCount(a))
 	expect(t, row.styled, "row.styled")
-	expectEqual(t, StyleId(0), page.GetRowAndCell(1, 0).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(1, 0).cell.style_id)
 	expectEqual(t, a, page.GetRowAndCell(7, 0).cell.style_id)
 
 	page.ClearCells(row, 3, 10)
@@ -492,7 +492,7 @@ func TestPg3_Page_clearCells_styles_are_released_and_the_styled_flag_follows_the
 	// are zeroed, and releasing a style does not reset the cell's style_id,
 	// so the flag stays set although no styled cell remains.
 	expect(t, row.styled, "row.styled")
-	expectEqual(t, StyleId(0), page.GetRowAndCell(7, 0).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(7, 0).cell.style_id)
 	// A second pass over the (now zeroed) cells does clear it.
 	page.ClearCells(row, 0, 2)
 	expect(t, !row.styled, "!row.styled")
@@ -665,10 +665,10 @@ func TestPg3_Cell_init_layout_of_Cell_bit_fields(t *testing.T) {
 	expectEqual(t, uint32(0x1FFFFF), pg3IRaw(uint64(0x1FFFFF)<<2).content.codepoint)
 	expectEqual(t, uint8(0xAB), pg3IRaw(uint64(0xAB)<<2).content.color_palette)
 	rgb := pg3IRaw(uint64(0x030201) << 2).content.color_rgb
-	expectEqual(t, uint8(1), rgb.r)
-	expectEqual(t, uint8(2), rgb.g)
-	expectEqual(t, uint8(3), rgb.b)
-	expectEqual(t, StyleId(0xABCD), pg3IRaw(uint64(0xABCD)<<26).style_id)
+	expectEqual(t, uint8(1), rgb.R)
+	expectEqual(t, uint8(2), rgb.G)
+	expectEqual(t, uint8(3), rgb.B)
+	expectEqual(t, StyleID(0xABCD), pg3IRaw(uint64(0xABCD)<<26).style_id)
 	expectEqual(t, PageCellWideWide, pg3IRaw(uint64(1)<<42).wide)
 	expectEqual(t, PageCellWideSpacerTail, pg3IRaw(uint64(2)<<42).wide)
 	expectEqual(t, PageCellWideSpacerHead, pg3IRaw(uint64(3)<<42).wide)
@@ -711,7 +711,7 @@ func TestPg3_Cell_init_sets_the_codepoint_and_nothing_else(t *testing.T) {
 	expectEqual(t, uint64(0), pg3IBits(zero))
 	expectEqual(t, PageCellContentTagCodepoint, zero.content_tag)
 	expectEqual(t, uint32(0), zero.content.codepoint)
-	expectEqual(t, StyleId(0), zero.style_id)
+	expectEqual(t, StyleID(0), zero.style_id)
 	expectEqual(t, PageCellWideNarrow, zero.wide)
 	expect(t, !zero.protected, "!zero.protected")
 	expect(t, !zero.hyperlink, "!zero.hyperlink")
@@ -729,7 +729,7 @@ func TestPg3_Cell_init_sets_the_codepoint_and_nothing_else(t *testing.T) {
 		expectEqual(t, PageCellContentTagCodepoint, c.content_tag)
 		expectEqual(t, cp, c.content.codepoint)
 		expectEqual(t, cp, c.Codepoint())
-		expectEqual(t, StyleId(0), c.style_id)
+		expectEqual(t, StyleID(0), c.style_id)
 		expectEqual(t, PageCellWideNarrow, c.wide)
 		expect(t, !c.protected, "!c.protected")
 		expect(t, !c.hyperlink, "!c.hyperlink")
@@ -871,7 +871,7 @@ func TestPg3_Cell_isZero_background_only_cells_are_never_zero(t *testing.T) {
 		expect(t, !pg3ITagged(PageCellContentTagBgColorRgb, rgb).IsZero(), "!term51ITagged(.bg_color_rgb, rgb).isZero()")
 		lit := pg3IBgRgb(uint8(rgb), uint8(rgb>>8), uint8(rgb>>16))
 		expectEqual(t, PageCellContentTagBgColorRgb, lit.content_tag)
-		expectEqual(t, uint8(rgb), lit.content.color_rgb.r)
+		expectEqual(t, uint8(rgb), lit.content.color_rgb.R)
 		expect(t, !lit.IsZero(), "!lit.isZero()")
 	}
 }
@@ -1294,16 +1294,16 @@ func pg3Bytes(n int, b uint8) []uint8 {
 // pg3Implicit is `.{ .id = .{ .implicit = n }, .uri = uri }`.
 func pg3Implicit(n SizeOffsetInt, uri []uint8) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: n},
-		uri: uri,
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: n},
+		URI: uri,
 	}
 }
 
 // pg3Explicit is `.{ .id = .{ .explicit = id }, .uri = uri }`.
 func pg3Explicit(id []uint8, uri []uint8) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: id},
-		uri: uri,
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: id},
+		URI: uri,
 	}
 }
 
@@ -1316,7 +1316,7 @@ func TestPg3_Page_lookupHyperlink_null_without_a_link_id_with_one(t *testing.T) 
 	for y := uint(0); y < uint(page.size.rows); y++ {
 		for x := uint(0); x < uint(page.size.cols); x++ {
 			expectEqual(t,
-				None[HyperlinkId](),
+				None[HyperlinkID](),
 				page.LookupHyperlink(page.GetRowAndCell(x, y).cell),
 			)
 		}
@@ -1340,15 +1340,15 @@ func TestPg3_Page_lookupHyperlink_null_without_a_link_id_with_one(t *testing.T) 
 			if cell == a.cell || cell == b.cell {
 				continue
 			}
-			expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(cell))
+			expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(cell))
 		}
 	}
 
 	// Neighbours of the linked cell do not have the link.
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(page.GetRowAndCell(2, 4).cell))
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(page.GetRowAndCell(4, 4).cell))
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(page.GetRowAndCell(3, 3).cell))
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(page.GetRowAndCell(3, 5).cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(page.GetRowAndCell(2, 4).cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(page.GetRowAndCell(4, 4).cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(page.GetRowAndCell(3, 3).cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(page.GetRowAndCell(3, 5).cell))
 }
 
 // Zig: test "term51: Page.lookupHyperlink: consults the map, not the cell flag"
@@ -1369,7 +1369,7 @@ func TestPg3_Page_lookupHyperlink_consults_the_map_not_the_cell_flag(t *testing.
 	// Setting the flag on another cell by hand: no map entry, no id.
 	b := pg3IPut(page, 1, 0, 'b')
 	b.cell.hyperlink = true
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(b.cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(b.cell))
 	b.cell.hyperlink = false
 
 	// Rewriting the cell content does not drop the map entry either.
@@ -1394,7 +1394,7 @@ func TestPg3_Page_clearHyperlink_releases_the_link_clears_the_cell_flag(t *testi
 	// Clear one of two.
 	page.ClearHyperlink(a.cell)
 	expect(t, !a.cell.hyperlink, "!a.cell.hyperlink")
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(a.cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(a.cell))
 	expectEqual(t, uint(1), page.HyperlinkCount())
 	expectEqual(t, uint(1), pg3IRefs(page, id))
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
@@ -1559,7 +1559,7 @@ func TestPg3_Page_insertHyperlink_implicit_id(t *testing.T) {
 	id, err := page.InsertHyperlink(pg3Implicit(7, uri))
 	zigTry(t, err)
 	// The first id handed out by the set is 1 (0 is reserved).
-	expectEqual(t, HyperlinkId(1), id)
+	expectEqual(t, HyperlinkID(1), id)
 	expectEqual(t, uint(1), pg3IRefs(page, id))
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
 	// Inserting does not touch the cell map.
@@ -1587,7 +1587,7 @@ func TestPg3_Page_insertHyperlink_explicit_id(t *testing.T) {
 
 	id, err := page.InsertHyperlink(pg3Explicit([]uint8("my-id"), []uint8("https://example.com/b")))
 	zigTry(t, err)
-	expectEqual(t, HyperlinkId(1), id)
+	expectEqual(t, HyperlinkID(1), id)
 	expectEqual(t, uint(1), pg3IRefs(page, id))
 
 	entry := *page.hyperlink_set.Get(id)
@@ -1678,14 +1678,14 @@ func TestPg3_Page_insertHyperlink_different_links_get_different_ids(t *testing.T
 		pg3Explicit([]uint8("2"), []uint8("u")), // other explicit id
 		pg3Implicit(0xFFFFFFFF, []uint8("u")),
 	}
-	ids := make([]HyperlinkId, len(links))
+	ids := make([]HyperlinkID, len(links))
 	for i, link := range links {
 		id, err := page.InsertHyperlink(link)
 		zigTry(t, err)
 		ids[i] = id
 		expectEqual(t, uint(1), pg3IRefs(page, ids[i]))
 		// Ids are handed out in order.
-		expectEqual(t, HyperlinkId(i+1), ids[i])
+		expectEqual(t, HyperlinkID(i+1), ids[i])
 	}
 	expectEqual(t, uint(len(links)), page.hyperlink_set.Count())
 
@@ -1771,8 +1771,8 @@ func TestPg3_Page_insertHyperlink_SetOutOfMemory_frees_the_strings(t *testing.T)
 	// The default hyperlink_bytes (4 items) leave room for 2 distinct links.
 	id1 := pg3ILink(t, page, 1)
 	id2 := pg3ILink(t, page, 2)
-	expectEqual(t, HyperlinkId(1), id1)
-	expectEqual(t, HyperlinkId(2), id2)
+	expectEqual(t, HyperlinkID(1), id1)
+	expectEqual(t, HyperlinkID(2), id2)
 	used := pg3IStrUsed(page)
 	expectEqual(t, uint64(64), used)
 
@@ -1863,7 +1863,7 @@ func TestPg3_Page_insertHyperlink_SetNeedsRehash_after_releasing_a_link_below_th
 	page.hyperlink_set.Release(id2)
 	id3, err := page.InsertHyperlink(pg3Implicit(3, []uint8("https://example.com")))
 	zigTry(t, err)
-	expectEqual(t, HyperlinkId(1), id3)
+	expectEqual(t, HyperlinkID(1), id3)
 	expectEqual(t, uint64(32), pg3IStrUsed(page))
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
 }
@@ -1987,7 +1987,7 @@ func TestPg3_Page_setHyperlink_HyperlinkMapOutOfMemory_at_the_map_capacity(t *te
 	pg3ExpectError(t, ErrHyperlinkMapOutOfMemory, page.SetHyperlink(extra.row, extra.cell, id))
 	expect(t, !extra.cell.hyperlink, "!extra.cell.hyperlink")
 	expect(t, !extra.row.hyperlink, "!extra.row.hyperlink")
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(extra.cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(extra.cell))
 	expectEqual(t, cap, page.HyperlinkCount())
 	expectEqual(t, cap, pg3IRefs(page, id))
 
@@ -2041,7 +2041,7 @@ func TestPg3_Page_moveHyperlink_moves_the_map_entry_only(t *testing.T) {
 	page.moveHyperlink(src.cell, dst.cell)
 
 	// The entry moved: same id, count and reference count.
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(src.cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(src.cell))
 	expectEqual(t, Some(id), page.LookupHyperlink(dst.cell))
 	expectEqual(t, Some(id), page.LookupHyperlink(other.cell))
 	expectEqual(t, uint(2), page.HyperlinkCount())
@@ -2072,7 +2072,7 @@ func TestPg3_Page_moveHyperlink_across_rows_chained_at_capacity(t *testing.T) {
 	m := page.hyperlink_map.Map()
 	for i := 0; i < 16; i++ {
 		cell := page.GetRowAndCell(uint(i%10), uint(i/10)).cell
-		zigTry(t, m.Put(page.cellOffset(cell), HyperlinkId(100+i)))
+		zigTry(t, m.Put(page.cellOffset(cell), HyperlinkID(100+i)))
 	}
 	expectEqual(t, uint(16), page.HyperlinkCount())
 	expectEqual(t, page.HyperlinkCapacity(), page.HyperlinkCount())
@@ -2082,8 +2082,8 @@ func TestPg3_Page_moveHyperlink_across_rows_chained_at_capacity(t *testing.T) {
 	dst := page.GetRowAndCell(3, 8)
 	src.cell.hyperlink = true
 	page.moveHyperlink(src.cell, dst.cell)
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(src.cell))
-	expectEqual(t, Some(HyperlinkId(100)), page.LookupHyperlink(dst.cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(src.cell))
+	expectEqual(t, Some(HyperlinkID(100)), page.LookupHyperlink(dst.cell))
 	expectEqual(t, uint(16), page.HyperlinkCount())
 
 	// Chain it on to a third cell (the flag has to be moved by hand for the
@@ -2091,14 +2091,14 @@ func TestPg3_Page_moveHyperlink_across_rows_chained_at_capacity(t *testing.T) {
 	dst.cell.hyperlink = true
 	third := page.GetRowAndCell(9, 9)
 	page.moveHyperlink(dst.cell, third.cell)
-	expectEqual(t, None[HyperlinkId](), page.LookupHyperlink(dst.cell))
-	expectEqual(t, Some(HyperlinkId(100)), page.LookupHyperlink(third.cell))
+	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(dst.cell))
+	expectEqual(t, Some(HyperlinkID(100)), page.LookupHyperlink(third.cell))
 	expectEqual(t, uint(16), page.HyperlinkCount())
 
 	// Other entries are untouched.
 	for i := 1; i < 16; i++ {
 		cell := page.GetRowAndCell(uint(i%10), uint(i/10)).cell
-		expectEqual(t, Some(HyperlinkId(100+i)), page.LookupHyperlink(cell))
+		expectEqual(t, Some(HyperlinkID(100+i)), page.LookupHyperlink(cell))
 	}
 }
 

@@ -33,7 +33,7 @@ func TestPoint_term51_Tag_values_and_order(t *testing.T) {
 
 // Zig: test "term51: Point.coord: returns the coordinate for every tag"
 func TestPoint_term51_Point_coord_returns_the_coordinate_for_every_tag(t *testing.T) {
-	c := PointCoordinate{x: 12, y: 345}
+	c := PointCoordinate{X: 12, Y: 345}
 
 	active := Point{Tag: PointTagActive, Active: c}
 	viewport := Point{Tag: PointTagViewport, Viewport: c}
@@ -47,8 +47,8 @@ func TestPoint_term51_Point_coord_returns_the_coordinate_for_every_tag(t *testin
 
 	// The tag is dropped; only the coordinate comes back.
 	for _, p := range []Point{active, viewport, screen, history} {
-		expectEqual(t, SizeCellCountInt(12), p.Coord().x)
-		expectEqual(t, uint32(345), p.Coord().y)
+		expectEqual(t, SizeCellCountInt(12), p.Coord().X)
+		expectEqual(t, uint32(345), p.Coord().Y)
 		expect(t, p.Coord().Eql(c), "p.coord().eql(c)")
 	}
 }
@@ -56,67 +56,67 @@ func TestPoint_term51_Point_coord_returns_the_coordinate_for_every_tag(t *testin
 // Zig: test "term51: Point.coord: default and extreme coordinates"
 func TestPoint_term51_Point_coord_default_and_extreme_coordinates(t *testing.T) {
 	zero := Point{Tag: PointTagScreen, Screen: PointCoordinate{}}
-	expectEqual(t, SizeCellCountInt(0), zero.Coord().x)
-	expectEqual(t, uint32(0), zero.Coord().y)
+	expectEqual(t, SizeCellCountInt(0), zero.Coord().X)
+	expectEqual(t, uint32(0), zero.Coord().Y)
 
 	max := Point{Tag: PointTagHistory, History: PointCoordinate{
-		x: 1<<16 - 1, // std.math.maxInt(size.CellCountInt)
-		y: 1<<32 - 1, // std.math.maxInt(u32)
+		X: 1<<16 - 1, // std.math.maxInt(size.CellCountInt)
+		Y: 1<<32 - 1, // std.math.maxInt(u32)
 	}}
-	expectEqual(t, SizeCellCountInt(65535), max.Coord().x)
-	expectEqual(t, uint32(4294967295), max.Coord().y)
+	expectEqual(t, SizeCellCountInt(65535), max.Coord().X)
+	expectEqual(t, uint32(4294967295), max.Coord().Y)
 
 	// Only x/y are returned; the result is a copy.
-	p := Point{Tag: PointTagActive, Active: PointCoordinate{x: 1, y: 2}}
+	p := Point{Tag: PointTagActive, Active: PointCoordinate{X: 1, Y: 2}}
 	got := p.Coord()
-	got.x = 9
-	expectEqual(t, SizeCellCountInt(1), p.Active.x)
-	p.Active.y = 7
-	expectEqual(t, uint32(7), p.Coord().y)
+	got.X = 9
+	expectEqual(t, SizeCellCountInt(1), p.Active.X)
+	p.Active.Y = 7
+	expectEqual(t, uint32(7), p.Coord().Y)
 }
 
 // Zig: test "term51: Coordinate.eql: defaults and field types"
 func TestPoint_term51_Coordinate_eql_defaults_and_field_types(t *testing.T) {
 	c := PointCoordinate{}
-	expectEqual(t, SizeCellCountInt(0), c.x)
-	expectEqual(t, uint32(0), c.y)
-	expect(t, reflect.TypeOf(c.x).Kind() == reflect.Uint16, "@TypeOf(c.x) == u16")
-	expect(t, reflect.TypeOf(c.y).Kind() == reflect.Uint32, "@TypeOf(c.y) == u32")
+	expectEqual(t, SizeCellCountInt(0), c.X)
+	expectEqual(t, uint32(0), c.Y)
+	expect(t, reflect.TypeOf(c.X).Kind() == reflect.Uint16, "@TypeOf(c.x) == u16")
+	expect(t, reflect.TypeOf(c.Y).Kind() == reflect.Uint32, "@TypeOf(c.y) == u32")
 	expect(t, c.Eql(PointCoordinate{}), "c.eql(.{})")
 }
 
 // Zig: test "term51: Coordinate.eql: compares both fields"
 func TestPoint_term51_Coordinate_eql_compares_both_fields(t *testing.T) {
-	a := PointCoordinate{x: 3, y: 4}
+	a := PointCoordinate{X: 3, Y: 4}
 
-	expect(t, a.Eql(PointCoordinate{x: 3, y: 4}), "a.eql(.{ .x = 3, .y = 4 })")
-	expect(t, !a.Eql(PointCoordinate{x: 4, y: 4}), "!a.eql(.{ .x = 4, .y = 4 })")
-	expect(t, !a.Eql(PointCoordinate{x: 3, y: 5}), "!a.eql(.{ .x = 3, .y = 5 })")
-	expect(t, !a.Eql(PointCoordinate{x: 4, y: 5}), "!a.eql(.{ .x = 4, .y = 5 })")
+	expect(t, a.Eql(PointCoordinate{X: 3, Y: 4}), "a.eql(.{ .x = 3, .y = 4 })")
+	expect(t, !a.Eql(PointCoordinate{X: 4, Y: 4}), "!a.eql(.{ .x = 4, .y = 4 })")
+	expect(t, !a.Eql(PointCoordinate{X: 3, Y: 5}), "!a.eql(.{ .x = 3, .y = 5 })")
+	expect(t, !a.Eql(PointCoordinate{X: 4, Y: 5}), "!a.eql(.{ .x = 4, .y = 5 })")
 	// Swapped fields are not equal.
-	expect(t, !a.Eql(PointCoordinate{x: 4, y: 3}), "!a.eql(.{ .x = 4, .y = 3 })")
+	expect(t, !a.Eql(PointCoordinate{X: 4, Y: 3}), "!a.eql(.{ .x = 4, .y = 3 })")
 	// Zero in one field only.
-	expect(t, !a.Eql(PointCoordinate{x: 0, y: 4}), "!a.eql(.{ .x = 0, .y = 4 })")
-	expect(t, !a.Eql(PointCoordinate{x: 3, y: 0}), "!a.eql(.{ .x = 3, .y = 0 })")
+	expect(t, !a.Eql(PointCoordinate{X: 0, Y: 4}), "!a.eql(.{ .x = 0, .y = 4 })")
+	expect(t, !a.Eql(PointCoordinate{X: 3, Y: 0}), "!a.eql(.{ .x = 3, .y = 0 })")
 	expect(t, !a.Eql(PointCoordinate{}), "!a.eql(.{})")
 
 	// Symmetric.
-	b := PointCoordinate{x: 4, y: 3}
+	b := PointCoordinate{X: 4, Y: 3}
 	expectEqual(t, a.Eql(b), b.Eql(a))
 	expect(t, a.Eql(a), "a.eql(a)")
 }
 
 // Zig: test "term51: Coordinate.eql: maximum values and y beyond a u16"
 func TestPoint_term51_Coordinate_eql_maximum_values_and_y_beyond_a_u16(t *testing.T) {
-	max := PointCoordinate{x: 65535, y: 4294967295}
-	expect(t, max.Eql(PointCoordinate{x: 65535, y: 4294967295}), "max.eql(.{ .x = 65535, .y = 4294967295 })")
-	expect(t, !max.Eql(PointCoordinate{x: 65534, y: 4294967295}), "!max.eql(.{ .x = 65534, .y = 4294967295 })")
-	expect(t, !max.Eql(PointCoordinate{x: 65535, y: 4294967294}), "!max.eql(.{ .x = 65535, .y = 4294967294 })")
+	max := PointCoordinate{X: 65535, Y: 4294967295}
+	expect(t, max.Eql(PointCoordinate{X: 65535, Y: 4294967295}), "max.eql(.{ .x = 65535, .y = 4294967295 })")
+	expect(t, !max.Eql(PointCoordinate{X: 65534, Y: 4294967295}), "!max.eql(.{ .x = 65534, .y = 4294967295 })")
+	expect(t, !max.Eql(PointCoordinate{X: 65535, Y: 4294967294}), "!max.eql(.{ .x = 65535, .y = 4294967294 })")
 
 	// y is a full u32: 65536 is not the same as 0.
-	y0 := PointCoordinate{x: 1, y: 0}
-	expect(t, !y0.Eql(PointCoordinate{x: 1, y: 65536}), "!y0.eql(.{ .x = 1, .y = 65536 })")
-	y1 := PointCoordinate{x: 1, y: 65536}
-	expect(t, y1.Eql(PointCoordinate{x: 1, y: 65536}), "y1.eql(.{ .x = 1, .y = 65536 })")
-	expect(t, !y1.Eql(PointCoordinate{x: 1, y: 1}), "!y1.eql(.{ .x = 1, .y = 1 })")
+	y0 := PointCoordinate{X: 1, Y: 0}
+	expect(t, !y0.Eql(PointCoordinate{X: 1, Y: 65536}), "!y0.eql(.{ .x = 1, .y = 65536 })")
+	y1 := PointCoordinate{X: 1, Y: 65536}
+	expect(t, y1.Eql(PointCoordinate{X: 1, Y: 65536}), "y1.eql(.{ .x = 1, .y = 65536 })")
+	expect(t, !y1.Eql(PointCoordinate{X: 1, Y: 1}), "!y1.eql(.{ .x = 1, .y = 1 })")
 }

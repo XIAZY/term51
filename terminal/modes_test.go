@@ -177,7 +177,7 @@ func sm1_modesReference(v uint16, ansi bool) Optional[ModesMode] {
 
 // Zig: test "order"
 func TestModes_order(t *testing.T) {
-	tag := ModesModeTag{value: 1}
+	tag := ModesModeTag{Value: 1}
 	int_ := tag.Int()
 	expectEqual(t, ModesModeTagBacking(1), int_)
 }
@@ -262,13 +262,13 @@ func TestModes_term51_Mode_ANSI_modes_are_exactly_the_four_documented(t *testing
 // Zig: test "term51: ModeTag: layout of the value and ansi bit"
 func TestModes_term51_ModeTag_layout_of_the_value_and_ansi_bit(t *testing.T) {
 	expect(t, reflect.TypeOf(ModesModeTagBacking(0)).Kind() == reflect.Uint16, "ModeTag.Backing == u16")
-	expectEqual(t, uint16(1), ModesModeTag{value: 1}.Int())
-	expectEqual(t, uint16(0x8001), ModesModeTag{value: 1, ansi: true}.Int())
-	expectEqual(t, uint16(0x7FFF), ModesModeTag{value: 0x7FFF}.Int())
-	expectEqual(t, uint16(0xFFFF), ModesModeTag{value: 0x7FFF, ansi: true}.Int())
+	expectEqual(t, uint16(1), ModesModeTag{Value: 1}.Int())
+	expectEqual(t, uint16(0x8001), ModesModeTag{Value: 1, Ansi: true}.Int())
+	expectEqual(t, uint16(0x7FFF), ModesModeTag{Value: 0x7FFF}.Int())
+	expectEqual(t, uint16(0xFFFF), ModesModeTag{Value: 0x7FFF, Ansi: true}.Int())
 	tag := ModesModeTagFromInt(0x8004)
-	expectEqual(t, uint16(4), tag.value)
-	expect(t, tag.ansi, "t.ansi")
+	expectEqual(t, uint16(4), tag.Value)
+	expect(t, tag.Ansi, "t.ansi")
 }
 
 // Zig: test "term51: ModePacked: layout one bit per mode in declaration order"
@@ -357,8 +357,8 @@ func TestModes_term51_modeFromInt_every_mode_round_trips_and_the_other_namespace
 		expectEqual(t, row.mode, m)
 		// The returned tag carries the value and the ansi bit.
 		tag := ModesModeTagFromInt(ModesModeTagBacking(m))
-		expectEqual(t, row.value, tag.value)
-		expectEqual(t, row.ansi, tag.ansi)
+		expectEqual(t, row.value, tag.Value)
+		expectEqual(t, row.ansi, tag.Ansi)
 	}
 
 	// Numbers that exist in both namespaces map to different modes.
@@ -450,9 +450,9 @@ func TestModes_term51_modeFromInt_no_entry_is_disabled(t *testing.T) {
 // Zig: test "term51: ModeState: defaults for values, saved and default"
 func TestModes_term51_ModeState_defaults_for_values_saved_and_default(t *testing.T) {
 	s := ModesModeStateInit()
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.values))
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.saved))
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.default_))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Values))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Saved))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Default))
 	for _, row := range sm1_modeRows {
 		expectEqual(t, row.default_, s.Get(row.mode))
 	}
@@ -463,7 +463,7 @@ func TestModes_term51_ModeState_get_reads_every_mode_from_the_values_field(t *te
 	for i, row := range sm1_modeRows {
 		s := ModesModeStateInit()
 		// Flip exactly one bit directly in values.
-		s.values = sm1_modesFromBits(sm1_modesDefaultBits() ^ (uint64(1) << uint(i)))
+		s.Values = sm1_modesFromBits(sm1_modesDefaultBits() ^ (uint64(1) << uint(i)))
 		for _, other := range sm1_modeRows {
 			var want bool
 			if other.mode == row.mode {
@@ -484,21 +484,21 @@ func TestModes_term51_ModeState_set_every_mode_sets_and_clears_only_its_own_bit(
 
 		s.Set(row.mode, true)
 		expect(t, s.Get(row.mode), "s.get(row.mode)")
-		expectEqual(t, sm1_modesDefaultBits()|bit, sm1_modesBits(s.values))
+		expectEqual(t, sm1_modesDefaultBits()|bit, sm1_modesBits(s.Values))
 
 		s.Set(row.mode, true)
-		expectEqual(t, sm1_modesDefaultBits()|bit, sm1_modesBits(s.values))
+		expectEqual(t, sm1_modesDefaultBits()|bit, sm1_modesBits(s.Values))
 
 		s.Set(row.mode, false)
 		expect(t, !s.Get(row.mode), "!s.get(row.mode)")
-		expectEqual(t, sm1_modesDefaultBits()&^bit, sm1_modesBits(s.values))
+		expectEqual(t, sm1_modesDefaultBits()&^bit, sm1_modesBits(s.Values))
 
 		s.Set(row.mode, false)
-		expectEqual(t, sm1_modesDefaultBits()&^bit, sm1_modesBits(s.values))
+		expectEqual(t, sm1_modesDefaultBits()&^bit, sm1_modesBits(s.Values))
 
 		// set does not touch saved or default.
-		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.saved))
-		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.default_))
+		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Saved))
+		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Default))
 	}
 }
 
@@ -508,14 +508,14 @@ func TestModes_term51_ModeState_set_all_modes_can_be_set_and_cleared_together(t 
 	for _, row := range sm1_modeRows {
 		s.Set(row.mode, true)
 	}
-	expectEqual(t, uint64(0xFF_FFFF_FFFF), sm1_modesBits(s.values))
+	expectEqual(t, uint64(0xFF_FFFF_FFFF), sm1_modesBits(s.Values))
 	for _, row := range sm1_modeRows {
 		expect(t, s.Get(row.mode), "s.get(row.mode)")
 	}
 	for _, row := range sm1_modeRows {
 		s.Set(row.mode, false)
 	}
-	expectEqual(t, uint64(0), sm1_modesBits(s.values))
+	expectEqual(t, uint64(0), sm1_modesBits(s.Values))
 	for _, row := range sm1_modeRows {
 		expect(t, !s.Get(row.mode), "!s.get(row.mode)")
 	}
@@ -529,19 +529,19 @@ func TestModes_term51_ModeState_save_copies_one_mode_into_saved(t *testing.T) {
 
 		// Saving the default leaves saved equal to the default pattern.
 		s.Save(row.mode)
-		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.saved))
+		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Saved))
 
 		// Saving the flipped value changes only this mode's saved bit.
 		s.Set(row.mode, !row.default_)
 		s.Save(row.mode)
-		expectEqual(t, sm1_modesDefaultBits()^bit, sm1_modesBits(s.saved))
+		expectEqual(t, sm1_modesDefaultBits()^bit, sm1_modesBits(s.Saved))
 		// values are unchanged by save.
-		expectEqual(t, sm1_modesDefaultBits()^bit, sm1_modesBits(s.values))
+		expectEqual(t, sm1_modesDefaultBits()^bit, sm1_modesBits(s.Values))
 
 		// Saving again overwrites the single saved slot.
 		s.Set(row.mode, row.default_)
 		s.Save(row.mode)
-		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.saved))
+		expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Saved))
 	}
 }
 
@@ -566,7 +566,7 @@ func TestModes_term51_ModeState_restore_returns_the_restored_value_and_leaves_ot
 			} else {
 				want = sm1_modesDefaultBits() &^ bit
 			}
-			expectEqual(t, want, sm1_modesBits(s.values))
+			expectEqual(t, want, sm1_modesBits(s.Values))
 
 			// The saved slot is not consumed: restoring again gives the same.
 			s.Set(row.mode, !saved_value)
@@ -623,13 +623,13 @@ func TestModes_term51_ModeState_reset_restores_defaults_and_clears_saved_for_eve
 		s.Set(row.mode, !row.default_)
 		s.Save(row.mode)
 	}
-	expectEqual(t, ^sm1_modesDefaultBits()&0xFF_FFFF_FFFF, sm1_modesBits(s.values))
-	expectEqual(t, ^sm1_modesDefaultBits()&0xFF_FFFF_FFFF, sm1_modesBits(s.saved))
+	expectEqual(t, ^sm1_modesDefaultBits()&0xFF_FFFF_FFFF, sm1_modesBits(s.Values))
+	expectEqual(t, ^sm1_modesDefaultBits()&0xFF_FFFF_FFFF, sm1_modesBits(s.Saved))
 
 	s.Reset()
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.values))
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.saved))
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.default_))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Values))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Saved))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Default))
 	for _, row := range sm1_modeRows {
 		expectEqual(t, row.default_, s.Get(row.mode))
 		// Saved was cleared: restore yields the default again.
@@ -641,27 +641,27 @@ func TestModes_term51_ModeState_reset_restores_defaults_and_clears_saved_for_eve
 func TestModes_term51_ModeState_reset_uses_the_configured_default_values(t *testing.T) {
 	s := ModesModeStateInit()
 	// Custom defaults: every mode on.
-	s.default_ = sm1_modesFromBits(0xFF_FFFF_FFFF)
+	s.Default = sm1_modesFromBits(0xFF_FFFF_FFFF)
 	s.Set(ModesModeCursorKeys, false)
 	s.Save(ModesModeCursorKeys)
 
 	s.Reset()
-	expectEqual(t, uint64(0xFF_FFFF_FFFF), sm1_modesBits(s.values))
+	expectEqual(t, uint64(0xFF_FFFF_FFFF), sm1_modesBits(s.Values))
 	expect(t, s.Get(ModesModeCursorKeys), "s.get(.cursor_keys)")
 	// saved is reset to the type's default pattern, not to `default`.
-	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.saved))
+	expectEqual(t, sm1_modesDefaultBits(), sm1_modesBits(s.Saved))
 	expect(t, !s.Restore(ModesModeCursorKeys), "!s.restore(.cursor_keys)")
 	expect(t, s.Restore(ModesModeWraparound), "s.restore(.wraparound)")
 
 	// Custom defaults: every mode off.
-	s.default_ = sm1_modesFromBits(0)
+	s.Default = sm1_modesFromBits(0)
 	s.Reset()
-	expectEqual(t, uint64(0), sm1_modesBits(s.values))
+	expectEqual(t, uint64(0), sm1_modesBits(s.Values))
 	for _, row := range sm1_modeRows {
 		expect(t, !s.Get(row.mode), "!s.get(row.mode)")
 	}
 
 	// reset is idempotent.
 	s.Reset()
-	expectEqual(t, uint64(0), sm1_modesBits(s.values))
+	expectEqual(t, uint64(0), sm1_modesBits(s.Values))
 }

@@ -85,18 +85,18 @@ var oscParsersKittyTextSizingHAlignNames = [...]string{
 // wherever Zig writes `.{ .text = ... }`.
 type OSCParsersKittyTextSizingOSC struct {
 	// Zig: u3, default 1. 1 - 7
-	scale uint8
+	Scale uint8
 	// Zig: u3, default 0. 0 - 7 (0 means default)
-	width uint8
+	Width uint8
 	// Zig: u4, default 0.
-	numerator uint8
+	Numerator uint8
 	// Zig: u4, default 0.
-	denominator uint8
+	Denominator uint8
 	// Zig: default .top.
-	valign OSCParsersKittyTextSizingVAlign
+	Valign OSCParsersKittyTextSizingVAlign
 	// Zig: default .left.
-	halign OSCParsersKittyTextSizingHAlign
-	text   []uint8
+	Halign OSCParsersKittyTextSizingHAlign
+	Text   []uint8
 }
 
 // oscParsersKittyTextSizingParseIntU4 is std.fmt.parseInt(u4, buf, 10)
@@ -205,29 +205,29 @@ func (self *OSCParsersKittyTextSizingOSC) update(key uint8, value []uint8) error
 		if v > 7 {
 			return ErrInvalidValue
 		}
-		self.scale = v
+		self.Scale = v
 	case 'w':
 		// std.math.cast(u3, v) orelse return error.InvalidValue
 		if v > 7 {
 			return ErrInvalidValue
 		}
-		self.width = v
+		self.Width = v
 	case 'n':
-		self.numerator = v
+		self.Numerator = v
 	case 'd':
-		self.denominator = v
+		self.Denominator = v
 	case 'v':
 		// std.enums.fromInt(VAlign, v) orelse return error.InvalidValue
 		if v > uint8(OSCParsersKittyTextSizingVAlignCenter) {
 			return ErrInvalidValue
 		}
-		self.valign = OSCParsersKittyTextSizingVAlign(v)
+		self.Valign = OSCParsersKittyTextSizingVAlign(v)
 	case 'h':
 		// std.enums.fromInt(HAlign, v) orelse return error.InvalidValue
 		if v > uint8(OSCParsersKittyTextSizingHAlignCenter) {
 			return ErrInvalidValue
 		}
-		self.halign = OSCParsersKittyTextSizingHAlign(v)
+		self.Halign = OSCParsersKittyTextSizingHAlign(v)
 	default:
 		return ErrUnknownKey
 	}
@@ -281,7 +281,7 @@ func OSCParsersKittyTextSizingParse(parser *OSCParser, _ Optional[uint8]) *OSCCo
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyKittyTextSizing,
 		// Zig: .{ .text = payload }; scale defaults to 1.
-		KittyTextSizing: OSCParsersKittyTextSizingOSC{scale: 1, text: payload},
+		KittyTextSizing: OSCParsersKittyTextSizingOSC{Scale: 1, Text: payload},
 	}
 	cmd := &parser.command.KittyTextSizing
 

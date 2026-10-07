@@ -21,7 +21,7 @@ func TestStreamEnums_DeviceStatusValues(t *testing.T) {
 	// The "?" bit is the top bit of the u16.
 	expectEqual(t, uint16(996|0x8000), uint16(DeviceStatusRequestColorScheme))
 	expectEqual(t, uint16(0x83E4), uint16(DeviceStatusRequestColorScheme))
-	tag := DeviceStatusTag{value: 996, question: true}
+	tag := DeviceStatusTag{Value: 996, Question: true}
 	expectEqual(t, tag.Int(), uint16(DeviceStatusRequestColorScheme))
 }
 
@@ -40,8 +40,8 @@ func TestStreamEnums_ModeValues(t *testing.T) {
 	expectEqual(t, uint16(4), uint16(ModesModeSlowScroll))
 
 	// The same values through the packed tag.
-	expectEqual(t, ModesModeTag{value: 1}.Int(), uint16(ModesModeCursorKeys))
-	expectEqual(t, ModesModeTag{value: 1049}.Int(), uint16(ModesModeAltScreenSaveCursorClearEnter))
-	expectEqual(t, ModesModeTag{value: 4, ansi: true}.Int(), uint16(ModesModeInsert))
-	expectEqual(t, ModesModeTag{value: 4}.Int(), uint16(ModesModeSlowScroll))
+	expectEqual(t, ModesModeTag{Value: 1}.Int(), uint16(ModesModeCursorKeys))
+	expectEqual(t, ModesModeTag{Value: 1049}.Int(), uint16(ModesModeAltScreenSaveCursorClearEnter))
+	expectEqual(t, ModesModeTag{Value: 4, Ansi: true}.Int(), uint16(ModesModeInsert))
+	expectEqual(t, ModesModeTag{Value: 4}.Int(), uint16(ModesModeSlowScroll))
 }

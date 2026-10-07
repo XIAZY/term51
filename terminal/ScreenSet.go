@@ -115,10 +115,10 @@ func (self *screenSetEnumMap) Count() uint {
 type ScreenSet struct {
 	// The key value of the currently active screen. Useful for simple
 	// comparisons, e.g. "is this screen the primary screen".
-	active_key ScreenSetKey
+	ActiveKey ScreenSetKey
 
 	// The active screen pointer.
-	active *Screen
+	Active *Screen
 
 	// All screens that are initialized.
 	//
@@ -143,9 +143,9 @@ func ScreenSetInit(opts ScreenOptions) (ScreenSet, error) {
 	var all screenSetEnumMap
 	all.Put(ScreenSetKeyPrimary, screen) // Zig: .init(.{ .primary = screen })
 	return ScreenSet{
-		active_key: ScreenSetKeyPrimary,
-		active:     screen,
-		all:        all,
+		ActiveKey: ScreenSetKeyPrimary,
+		Active:    screen,
+		all:       all,
 	}, nil
 }
 
@@ -218,8 +218,8 @@ func (self *ScreenSet) Remove(key ScreenSetKey) {
 // Switch the active screen to the given key. Requires that the
 // screen is initialized.
 func (self *ScreenSet) SwitchTo(key ScreenSetKey) {
-	self.active_key = key
+	self.ActiveKey = key
 	active := self.all.Get(key)
 	assert(active != nil) // .?
-	self.active = active
+	self.Active = active
 }

@@ -45,7 +45,7 @@ import "bytes"
 // HyperlinkId is hyperlink.Id: the unique identifier for a hyperlink. This
 // is at most the number of cells that can fit in a single terminal page,
 // since each cell can only contain at most one hyperlink.
-type HyperlinkId = SizeHyperlinkCountInt
+type HyperlinkID = SizeHyperlinkCountInt
 
 // HyperlinkMap is hyperlink.Map.
 //
@@ -56,7 +56,7 @@ type HyperlinkId = SizeHyperlinkCountInt
 // Zig: AutoOffsetHashMap(Offset(Cell), Id). The key is the cell's byte
 // offset in the page as upstream would have it; see Page.grapheme_map in
 // page.go.
-type HyperlinkMap = HashMapAutoOffsetHashMap[SizeOffsetInt, HyperlinkId]
+type HyperlinkMap = HashMapAutoOffsetHashMap[SizeOffsetInt, HyperlinkID]
 
 // hyperlinkMapEntrySizes is NOT a Zig declaration: @sizeOf and @alignOf of
 // the key and value types of hyperlink.Map, which
@@ -71,8 +71,8 @@ var hyperlinkMapEntrySizes = hashMapEntrySizes{key_size: 4, key_align: 4, val_si
 // on the context so users should check with the source of the
 // hyperlink.
 type Hyperlink struct {
-	id  HyperlinkHyperlinkId
-	uri []uint8
+	ID  HyperlinkHyperlinkId
+	URI []uint8
 }
 
 // HyperlinkHyperlinkId is hyperlink.Hyperlink.Id. See PageEntry.Id.
@@ -120,7 +120,7 @@ func (self *Hyperlink) Deinit() {
 	// Zig: `alloc.free(self.uri)`, and `alloc.free(v)` of an explicit id
 	// (an implicit id owns no memory). The garbage collector frees in Go;
 	// the switch is kept for its exhaustiveness.
-	switch self.id.Tag {
+	switch self.ID.Tag {
 	case HyperlinkHyperlinkIdImplicit:
 	case HyperlinkHyperlinkIdExplicit:
 	default:
@@ -138,16 +138,16 @@ func (self *Hyperlink) Deinit() {
 // Allocator.Error!Hyperlink. The allocator parameter is dropped.
 func (self *Hyperlink) Dupe() (Hyperlink, error) {
 	// alloc.dupe(u8, self.uri); the allocation cannot fail in Go.
-	uri := make([]uint8, len(self.uri))
-	copy(uri, self.uri)
+	uri := make([]uint8, len(self.URI))
+	copy(uri, self.URI)
 	// Zig: errdefer alloc.free(uri): nothing below fails.
 
 	var id HyperlinkHyperlinkId
-	switch self.id.Tag {
+	switch self.ID.Tag {
 	case HyperlinkHyperlinkIdImplicit:
-		id = self.id
+		id = self.ID
 	case HyperlinkHyperlinkIdExplicit:
-		v := self.id.Explicit
+		v := self.ID.Explicit
 		dup := make([]uint8, len(v)) // alloc.dupe(u8, v)
 		copy(dup, v)
 		id = HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: dup}
@@ -156,7 +156,7 @@ func (self *Hyperlink) Dupe() (Hyperlink, error) {
 	}
 	// Zig: errdefer of the explicit id: nothing below fails.
 
-	return Hyperlink{id: id, uri: uri}, nil
+	return Hyperlink{ID: id, URI: uri}, nil
 }
 
 // HyperlinkPageEntry is hyperlink.PageEntry.
@@ -347,7 +347,7 @@ func (self *HyperlinkPageEntry) Free(page *Page) {
 // can share the same hyperlink without duplicating the data.
 //
 // Zig: RefCountedSet(PageEntry, Id, size.CellCountInt, struct { ... }).
-type HyperlinkSet = RefCountedSet[HyperlinkPageEntry, HyperlinkId, SizeCellCountInt, HyperlinkSetContext]
+type HyperlinkSet = RefCountedSet[HyperlinkPageEntry, HyperlinkID, SizeCellCountInt, HyperlinkSetContext]
 
 // hyperlinkSetItemSizeOf is NOT a Zig declaration: it is
 // @sizeOf(hyperlink.Set.Item), which page.zig and its tests use to convert

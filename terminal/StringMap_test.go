@@ -40,10 +40,10 @@ func TestStringMap_term51_deinit_frees_the_string_and_the_map(t *testing.T) {
 		m[i] = pin
 	}
 
-	sm := StringMap{string: str, map_: m}
-	expectEqual(t, 5, len(sm.string))
-	expectEqual(t, uint8(0), sm.string[:len(sm.string)+1][len(sm.string)])
-	expectEqual(t, 5, len(sm.map_))
+	sm := StringMap{String: str, Map: m}
+	expectEqual(t, 5, len(sm.String))
+	expectEqual(t, uint8(0), sm.String[:len(sm.String)+1][len(sm.String)])
+	expectEqual(t, 5, len(sm.Map))
 	// The testing allocator reports a leak if either is not freed.
 	sm.Deinit()
 }
@@ -53,11 +53,11 @@ func TestStringMap_term51_deinit_empty_string_and_empty_map(t *testing.T) {
 	testStdCapacity(t)
 	// Zig-only: const alloc = std.testing.allocator;
 	sm := StringMap{
-		string: ssDupeZ(""),
-		map_:   make([]PageListPin, 0),
+		String: ssDupeZ(""),
+		Map:    make([]PageListPin, 0),
 	}
-	expectEqual(t, 0, len(sm.string))
-	expectEqual(t, 0, len(sm.map_))
+	expectEqual(t, 0, len(sm.String))
+	expectEqual(t, 0, len(sm.Map))
 	sm.Deinit()
 }
 
@@ -76,25 +76,25 @@ func TestStringMap_term51_deinit_map_produced_by_Screen_selectionString(t *testi
 		false,
 	)
 	var m StringMap
-	text, err := s.SelectionString(ScreenSelectionString{sel: sel, trim: false, map_: &m})
+	text, err := s.SelectionString(ScreenSelectionString{Sel: sel, Trim: false, Map: &m})
 	zigTry(t, err)
 	// Zig-only: defer alloc.free(text);
 	defer m.Deinit()
 
 	expectEqualStrings(t, "aあb", string(text))
 	// The map owns a separate copy of the string, with a sentinel.
-	expectEqualStrings(t, "aあb", string(m.string))
-	expect(t, &m.string[0] != &text[0], "map.string.ptr != text.ptr")
-	expectEqual(t, uint8(0), m.string[:len(m.string)+1][len(m.string)])
+	expectEqualStrings(t, "aあb", string(m.String))
+	expect(t, &m.String[0] != &text[0], "map.string.ptr != text.ptr")
+	expectEqual(t, uint8(0), m.String[:len(m.String)+1][len(m.String)])
 	// One pin per byte.
-	expectEqual(t, len(m.string), len(m.map_))
-	expectEqual(t, 5, len(m.map_))
+	expectEqual(t, len(m.String), len(m.Map))
+	expectEqual(t, 5, len(m.Map))
 	expected_x := [...]SizeCellCountInt{0, 1, 1, 1, 3}
-	for i, p := range m.map_ {
+	for i, p := range m.Map {
 		x := expected_x[i]
 		expectEqualPoint(t,
 			ssScreen(x, 0),
-			zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p)),
+			zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, p)),
 		)
 	}
 }

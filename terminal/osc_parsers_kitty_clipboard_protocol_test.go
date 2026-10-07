@@ -74,8 +74,8 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_metadata_and_missing_pa
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "", string(cmd.KittyClipboardProtocol.metadata))
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expectEqualStrings(t, "", string(cmd.KittyClipboardProtocol.Metadata))
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -94,8 +94,8 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_metadata_and_empty_payl
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "", string(cmd.KittyClipboardProtocol.metadata))
-	expectEqualStrings(t, "", string(zigUnwrap(t, cmd.KittyClipboardProtocol.payload)))
+	expectEqualStrings(t, "", string(cmd.KittyClipboardProtocol.Metadata))
+	expectEqualStrings(t, "", string(zigUnwrap(t, cmd.KittyClipboardProtocol.Payload)))
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -114,8 +114,8 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_non_empty_metadata_and_payloa
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "type=read", string(cmd.KittyClipboardProtocol.metadata))
-	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.payload)))
+	expectEqualStrings(t, "type=read", string(cmd.KittyClipboardProtocol.Metadata))
+	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.Payload)))
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -234,7 +234,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_1(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -253,7 +253,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_2(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "R2hvc3R0eQ==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.payload)))
+	expectEqualStrings(t, "R2hvc3R0eQ==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.Payload)))
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime)))
@@ -272,7 +272,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_3(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -291,7 +291,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_4(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -310,7 +310,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_5(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "R2hvc3R0eQ==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.payload)))
+	expectEqualStrings(t, "R2hvc3R0eQ==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.Payload)))
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime)))
@@ -329,7 +329,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_6(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -348,7 +348,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_7(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -367,7 +367,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_8(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -386,7 +386,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_9(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "dGV4dC9odG1sIGFwcGxpY2F0aW9uL2pzb24=", string(zigUnwrap(t, cmd.KittyClipboardProtocol.payload)))
+	expectEqualStrings(t, "dGV4dC9odG1sIGFwcGxpY2F0aW9uL2pzb24=", string(zigUnwrap(t, cmd.KittyClipboardProtocol.Payload)))
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime)))
@@ -405,7 +405,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_10(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -424,7 +424,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_11(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime)))
@@ -443,7 +443,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_12(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime)))
@@ -462,7 +462,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_13(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -481,7 +481,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_14(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expectEqualStrings(t, "Qk9CUiBLVVJXQQ==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.payload)))
+	expectEqualStrings(t, "Qk9CUiBLVVJXQQ==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.Payload)))
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expectEqualStrings(t, "dGV4dC9wbGFpbg==", string(zigUnwrap(t, cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime)))
@@ -500,7 +500,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_15(t *testing.T) {
 	oscB_kcp_feed(&p, input)
 	cmd := oscB_kcp_end(t, &p, Some[uint8](0x1b))
 	expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-	expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+	expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionId).Id.Valid, "cmd.kitty_clipboard_protocol.readOption(.id) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionLoc).Loc.Valid, "cmd.kitty_clipboard_protocol.readOption(.loc) == null")
 	expect(t, !cmd.KittyClipboardProtocol.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime.Valid, "cmd.kitty_clipboard_protocol.readOption(.mime) == null")
@@ -809,9 +809,9 @@ func TestOSCParsersKittyClipboardProtocol_term51_Status_init_names_are_exact_and
 // Zig: test "term51: OSC.readOption: reads from the metadata"
 func TestOSCParsersKittyClipboardProtocol_term51_OSC_readOption_reads_from_the_metadata(t *testing.T) {
 	osc := OSCParsersKittyClipboardProtocolOSC{
-		metadata:   []uint8("type=wdata:mime=text/plain"),
-		payload:    None[[]uint8](),
-		terminator: OSCTerminatorSt,
+		Metadata:   []uint8("type=wdata:mime=text/plain"),
+		Payload:    None[[]uint8](),
+		Terminator: OSCTerminatorSt,
 	}
 	expectEqual(t, Some(OSCParsersKittyClipboardProtocolOperationWdata), osc.ReadOption(OSCParsersKittyClipboardProtocolOptionType).Type)
 	expectEqualStrings(t, "text/plain", oscB_kcp_str(t, osc.ReadOption(OSCParsersKittyClipboardProtocolOptionMime).Mime))
@@ -852,11 +852,11 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_metadata_and_payload_spli
 		oscB_kcp_feed(&p, c.input)
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyKittyClipboardProtocol, "cmd == .kitty_clipboard_protocol")
-		expectEqualSlices(t, []uint8(c.metadata), cmd.KittyClipboardProtocol.metadata)
+		expectEqualSlices(t, []uint8(c.metadata), cmd.KittyClipboardProtocol.Metadata)
 		if !c.payload.Valid {
-			expect(t, !cmd.KittyClipboardProtocol.payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
+			expect(t, !cmd.KittyClipboardProtocol.Payload.Valid, "cmd.kitty_clipboard_protocol.payload == null")
 		} else {
-			expectEqualSlices(t, []uint8(c.payload.Value), zigUnwrap(t, cmd.KittyClipboardProtocol.payload))
+			expectEqualSlices(t, []uint8(c.payload.Value), zigUnwrap(t, cmd.KittyClipboardProtocol.Payload))
 		}
 	}
 }
@@ -878,7 +878,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_terminator_is_recorded(t 
 		defer p.Deinit()
 		oscB_kcp_feed(&p, "5522;type=read;x")
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, c.ch))
-		expect(t, cmd.KittyClipboardProtocol.terminator == c.want, "cmd.kitty_clipboard_protocol.terminator == case[1]")
+		expect(t, cmd.KittyClipboardProtocol.Terminator == c.want, "cmd.kitty_clipboard_protocol.terminator == case[1]")
 	}
 }
 
@@ -893,8 +893,8 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_buffer_limit_without_allo
 		oscB_kcp_feed(&p, "5522;"+prefix+payload)
 		expect(t, p.state == OSCParserState5522, "p.state == .@\"5522\"")
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, None[uint8]()))
-		expectEqualStrings(t, "type=wdata", string(cmd.KittyClipboardProtocol.metadata))
-		expectEqualStrings(t, payload, oscB_kcp_str(t, cmd.KittyClipboardProtocol.payload))
+		expectEqualStrings(t, "type=wdata", string(cmd.KittyClipboardProtocol.Metadata))
+		expectEqualStrings(t, payload, oscB_kcp_str(t, cmd.KittyClipboardProtocol.Payload))
 	}
 	{
 		payload := strings.Repeat("A", OSCParserMAX_BUF-len(prefix)+1)
@@ -914,8 +914,8 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_no_buffer_limit_with_allo
 		defer p.Deinit()
 		oscB_kcp_feed(&p, "5522;"+prefix+payload)
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, Some[uint8](0x07)))
-		expectEqualStrings(t, "type=wdata", string(cmd.KittyClipboardProtocol.metadata))
-		expectEqualStrings(t, payload, oscB_kcp_str(t, cmd.KittyClipboardProtocol.payload))
-		expect(t, cmd.KittyClipboardProtocol.terminator == OSCTerminatorBel, "cmd.kitty_clipboard_protocol.terminator == .bel")
+		expectEqualStrings(t, "type=wdata", string(cmd.KittyClipboardProtocol.Metadata))
+		expectEqualStrings(t, payload, oscB_kcp_str(t, cmd.KittyClipboardProtocol.Payload))
+		expect(t, cmd.KittyClipboardProtocol.Terminator == OSCTerminatorBel, "cmd.kitty_clipboard_protocol.terminator == .bel")
 	}
 }

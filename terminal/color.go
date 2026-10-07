@@ -69,9 +69,9 @@ func colorDefaultInit() ColorPalette {
 			var b uint8 = 0
 			for b < 6 {
 				result[i] = ColorRGB{
-					r: colorDefaultCubeLevel(r),
-					g: colorDefaultCubeLevel(g),
-					b: colorDefaultCubeLevel(b),
+					R: colorDefaultCubeLevel(r),
+					G: colorDefaultCubeLevel(g),
+					B: colorDefaultCubeLevel(b),
 				}
 
 				i += 1
@@ -88,7 +88,7 @@ func colorDefaultInit() ColorPalette {
 	// after 255 and ends the loop.
 	for i > 0 {
 		value := ((i - 232) * 10) + 8
-		result[i] = ColorRGB{r: value, g: value, b: value}
+		result[i] = ColorRGB{R: value, G: value, B: value}
 		i += 1
 	}
 
@@ -324,14 +324,14 @@ func ColorGenerate256Color(
 // colors changed and reset. Purposely built for terminal color operations.
 type ColorDynamicPalette struct {
 	// The current palette including any user modifications.
-	current ColorPalette
+	Current ColorPalette
 
 	// The original/default palette values.
-	original ColorPalette
+	Original ColorPalette
 
 	// A bitset where each bit represents whether the corresponding
 	// palette index has been modified from its default value.
-	mask ColorPaletteMask
+	Mask ColorPaletteMask
 }
 
 // ColorDynamicPaletteDefault is color.DynamicPalette.default:
@@ -342,59 +342,59 @@ var ColorDynamicPaletteDefault ColorDynamicPalette = ColorDynamicPaletteInit(Col
 // palette with a default palette.
 func ColorDynamicPaletteInit(def ColorPalette) ColorDynamicPalette {
 	return ColorDynamicPalette{
-		current:  def,
-		original: def,
-		mask:     StaticBitSet256InitEmpty(),
+		Current:  def,
+		Original: def,
+		Mask:     StaticBitSet256InitEmpty(),
 	}
 }
 
 // Set is color.DynamicPalette.set: set a custom color at the given palette
 // index.
 func (self *ColorDynamicPalette) Set(idx uint8, color ColorRGB) {
-	self.current[idx] = color
-	self.mask.set(int(idx))
+	self.Current[idx] = color
+	self.Mask.set(int(idx))
 }
 
 // Reset is color.DynamicPalette.reset: reset the color at the given palette
 // index to its original value.
 func (self *ColorDynamicPalette) Reset(idx uint8) {
-	self.current[idx] = self.original[idx]
-	self.mask.unset(int(idx))
+	self.Current[idx] = self.Original[idx]
+	self.Mask.unset(int(idx))
 }
 
 // ResetAll is color.DynamicPalette.resetAll: reset all colors to their
 // original values.
 func (self *ColorDynamicPalette) ResetAll() {
-	*self = ColorDynamicPaletteInit(self.original)
+	*self = ColorDynamicPaletteInit(self.Original)
 }
 
 // ChangeDefault is color.DynamicPalette.changeDefault: change the default
 // palette, but preserve the changed values.
 func (self *ColorDynamicPalette) ChangeDefault(def ColorPalette) {
-	self.original = def
+	self.Original = def
 
 	// Fast path, the palette is usually not changed.
-	if self.mask.count() == 0 {
-		self.current = self.original
+	if self.Mask.count() == 0 {
+		self.Current = self.Original
 		return
 	}
 
 	// There are usually less set than unset, so iterate over the changed
 	// values and override them.
 	current := def
-	it := self.mask.iterator()
+	it := self.Mask.iterator()
 	for idx := it.Next(); idx.Valid; idx = it.Next() {
-		current[idx.Value] = self.current[idx.Value]
+		current[idx.Value] = self.Current[idx.Value]
 	}
-	self.current = current
+	self.Current = current
 }
 
 // ColorDynamicRGB is color.DynamicRGB: RGB value that can be changed and
 // reset. This can also be totally unset in every way, in which case the
 // caller can determine their own ultimate default.
 type ColorDynamicRGB struct {
-	override Optional[ColorRGB]
-	default_ Optional[ColorRGB]
+	Override Optional[ColorRGB]
+	Default  Optional[ColorRGB]
 }
 
 // ColorDynamicRGBUnset is color.DynamicRGB.unset: both fields null. The zero
@@ -404,28 +404,28 @@ var ColorDynamicRGBUnset = ColorDynamicRGB{}
 // ColorDynamicRGBInit is color.DynamicRGB.init.
 func ColorDynamicRGBInit(def ColorRGB) ColorDynamicRGB {
 	return ColorDynamicRGB{
-		override: None[ColorRGB](),
-		default_: Some(def),
+		Override: None[ColorRGB](),
+		Default:  Some(def),
 	}
 }
 
 // Get is color.DynamicRGB.get.
 func (self *ColorDynamicRGB) Get() Optional[ColorRGB] {
 	// Zig: self.override orelse self.default
-	if self.override.Valid {
-		return self.override
+	if self.Override.Valid {
+		return self.Override
 	}
-	return self.default_
+	return self.Default
 }
 
 // Set is color.DynamicRGB.set.
 func (self *ColorDynamicRGB) Set(color ColorRGB) {
-	self.override = Some(color)
+	self.Override = Some(color)
 }
 
 // Reset is color.DynamicRGB.reset.
 func (self *ColorDynamicRGB) Reset() {
-	self.override = self.default_
+	self.Override = self.Default
 }
 
 // ColorName is color.Name: color names in the standard 8 or 16 color
@@ -491,38 +491,38 @@ func (self ColorName) String() string {
 func (self ColorName) Default() (ColorRGB, error) {
 	switch self {
 	case ColorNameBlack:
-		return ColorRGB{r: 0x1D, g: 0x1F, b: 0x21}, nil
+		return ColorRGB{R: 0x1D, G: 0x1F, B: 0x21}, nil
 	case ColorNameRed:
-		return ColorRGB{r: 0xCC, g: 0x66, b: 0x66}, nil
+		return ColorRGB{R: 0xCC, G: 0x66, B: 0x66}, nil
 	case ColorNameGreen:
-		return ColorRGB{r: 0xB5, g: 0xBD, b: 0x68}, nil
+		return ColorRGB{R: 0xB5, G: 0xBD, B: 0x68}, nil
 	case ColorNameYellow:
-		return ColorRGB{r: 0xF0, g: 0xC6, b: 0x74}, nil
+		return ColorRGB{R: 0xF0, G: 0xC6, B: 0x74}, nil
 	case ColorNameBlue:
-		return ColorRGB{r: 0x81, g: 0xA2, b: 0xBE}, nil
+		return ColorRGB{R: 0x81, G: 0xA2, B: 0xBE}, nil
 	case ColorNameMagenta:
-		return ColorRGB{r: 0xB2, g: 0x94, b: 0xBB}, nil
+		return ColorRGB{R: 0xB2, G: 0x94, B: 0xBB}, nil
 	case ColorNameCyan:
-		return ColorRGB{r: 0x8A, g: 0xBE, b: 0xB7}, nil
+		return ColorRGB{R: 0x8A, G: 0xBE, B: 0xB7}, nil
 	case ColorNameWhite:
-		return ColorRGB{r: 0xC5, g: 0xC8, b: 0xC6}, nil
+		return ColorRGB{R: 0xC5, G: 0xC8, B: 0xC6}, nil
 
 	case ColorNameBrightBlack:
-		return ColorRGB{r: 0x66, g: 0x66, b: 0x66}, nil
+		return ColorRGB{R: 0x66, G: 0x66, B: 0x66}, nil
 	case ColorNameBrightRed:
-		return ColorRGB{r: 0xD5, g: 0x4E, b: 0x53}, nil
+		return ColorRGB{R: 0xD5, G: 0x4E, B: 0x53}, nil
 	case ColorNameBrightGreen:
-		return ColorRGB{r: 0xB9, g: 0xCA, b: 0x4A}, nil
+		return ColorRGB{R: 0xB9, G: 0xCA, B: 0x4A}, nil
 	case ColorNameBrightYellow:
-		return ColorRGB{r: 0xE7, g: 0xC5, b: 0x47}, nil
+		return ColorRGB{R: 0xE7, G: 0xC5, B: 0x47}, nil
 	case ColorNameBrightBlue:
-		return ColorRGB{r: 0x7A, g: 0xA6, b: 0xDA}, nil
+		return ColorRGB{R: 0x7A, G: 0xA6, B: 0xDA}, nil
 	case ColorNameBrightMagenta:
-		return ColorRGB{r: 0xC3, g: 0x97, b: 0xD8}, nil
+		return ColorRGB{R: 0xC3, G: 0x97, B: 0xD8}, nil
 	case ColorNameBrightCyan:
-		return ColorRGB{r: 0x70, g: 0xC0, b: 0xB1}, nil
+		return ColorRGB{R: 0x70, G: 0xC0, B: 0xB1}, nil
 	case ColorNameBrightWhite:
-		return ColorRGB{r: 0xEA, g: 0xEA, b: 0xEA}, nil
+		return ColorRGB{R: 0xEA, G: 0xEA, B: 0xEA}, nil
 
 	default:
 		return ColorRGB{}, ErrNoDefaultValue
@@ -627,14 +627,14 @@ func (self ColorDynamic) String() string {
 // Zig: packed struct(u24). The packed value is not visible to other code, so
 // it is an ordinary Go struct with the same field names.
 type ColorRGB struct {
-	r uint8
-	g uint8
-	b uint8
+	R uint8
+	G uint8
+	B uint8
 }
 
 // Eql is color.RGB.eql.
 func (self ColorRGB) Eql(other ColorRGB) bool {
-	return self.r == other.r && self.g == other.g && self.b == other.b
+	return self.R == other.R && self.G == other.G && self.B == other.B
 }
 
 // Contrast is color.RGB.contrast: calculates the contrast ratio between two
@@ -662,9 +662,9 @@ func (self ColorRGB) Contrast(other ColorRGB) float64 {
 //
 // https://www.w3.org/TR/WCAG20/#relativeluminancedef
 func (self ColorRGB) Luminance() float64 {
-	r_lum := colorRGBComponentLuminance(self.r)
-	g_lum := colorRGBComponentLuminance(self.g)
-	b_lum := colorRGBComponentLuminance(self.b)
+	r_lum := colorRGBComponentLuminance(self.R)
+	g_lum := colorRGBComponentLuminance(self.G)
+	b_lum := colorRGBComponentLuminance(self.B)
 	return float64(0.2126*r_lum) + float64(0.7152*g_lum) + float64(0.0722*b_lum)
 }
 
@@ -688,9 +688,9 @@ func colorRGBComponentLuminance(c uint8) float64 {
 //
 // Source: https://www.w3.org/TR/AERT/#color-contrast
 func (self ColorRGB) PerceivedLuminance() float64 {
-	r_f64 := float64(self.r)
-	g_f64 := float64(self.g)
-	b_f64 := float64(self.b)
+	r_f64 := float64(self.R)
+	g_f64 := float64(self.G)
+	b_f64 := float64(self.B)
 	return float64(0.299*(r_f64/255)) + float64(0.587*(g_f64/255)) + float64(0.114*(b_f64/255))
 }
 
@@ -877,9 +877,9 @@ func ColorRGBParse(value []uint8) (ColorRGB, error) {
 	}
 
 	return ColorRGB{
-		r: r,
-		g: g,
-		b: b,
+		R: r,
+		G: g,
+		B: b,
 	}, nil
 }
 
@@ -900,7 +900,7 @@ func colorRGBFromHex3(r []uint8, g []uint8, b []uint8) (ColorRGB, error) {
 	if err != nil {
 		return ColorRGB{}, err
 	}
-	return ColorRGB{r: rv, g: gv, b: bv}, nil
+	return ColorRGB{R: rv, G: gv, B: bv}, nil
 }
 
 // colorLAB is color.LAB (private in Zig).
@@ -918,9 +918,9 @@ type colorLAB struct {
 // colorLABFromRgb is color.LAB.fromRgb: RGB to LAB.
 func colorLABFromRgb(rgb ColorRGB) colorLAB {
 	// Step 1: Normalize sRGB channels from [0, 255] to [0.0, 1.0].
-	r := float32(rgb.r) / 255.0
-	g := float32(rgb.g) / 255.0
-	b := float32(rgb.b) / 255.0
+	r := float32(rgb.R) / 255.0
+	g := float32(rgb.G) / 255.0
+	b := float32(rgb.B) / 255.0
 
 	// Step 2: Apply the inverse sRGB companding (gamma correction) to
 	// convert from sRGB to linear RGB. The sRGB transfer function has
@@ -1035,9 +1035,9 @@ func (self colorLAB) toRgb() ColorRGB {
 	// Step 5: Clamp to [0.0, 1.0], scale to [0, 255], and round to
 	// the nearest integer to produce the final 8-bit sRGB values.
 	return ColorRGB{
-		r: colorLABChannel(r),
-		g: colorLABChannel(g),
-		b: colorLABChannel(b),
+		R: colorLABChannel(r),
+		G: colorLABChannel(g),
+		B: colorLABChannel(b),
 	}
 }
 

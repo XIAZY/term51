@@ -61,7 +61,7 @@ Set by the project lead; they take precedence over anything below.
 | private `fn name` | unexported, name unchanged | `doAction`, `genTable`, `single` |
 | `init` returning the type | function `<Type>Init` | `Parser.init()` -> `ParserInit()` |
 | A name that is a Go keyword | trailing underscore | `range` -> `range_` |
-| Struct fields | unchanged, including snake_case | `params_idx`, `param_acc` |
+| Struct fields | unchanged, including snake_case (`params_idx`, `param_acc`), except in the types a user of the library reads or fills in (listed in `public-api.md`): there the field is exported under its Go name, the snake_case words joined in CamelCase with Go's spelling of `ID`, `URI`, `URL`, `RGB`, `UTF8`, `HTML` | `cursor.x` is `Cursor.X`, `style_id` is `StyleID`; done by `scripts/exportfields`, never by hand. Left as they are: a field whose Go name a method already has (`Style.underline_color`), padding fields, and fields whose type is internal. The cell, the row and the packed mode set keep unexported fields and are read through methods (`api_accessors.go`), because their storage may change |
 | File-level constants | unchanged | `MAX_PARAMS`, `ACCEPT_STATE` |
 
 Every enum type has a `String()` method returning the Zig tag name, which is

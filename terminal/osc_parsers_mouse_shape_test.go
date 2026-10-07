@@ -54,7 +54,7 @@ func TestOSCParsersMouseShape_OSC_22_pointer_cursor(t *testing.T) {
 
 	cmd := oscB_mouse_shape_unwrap(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyMouseShape, "cmd == .mouse_shape")
-	expectEqualStrings(t, "pointer", string(cmd.MouseShape.value))
+	expectEqualStrings(t, "pointer", string(cmd.MouseShape.Value))
 }
 
 // Zig: test "term51: parse: basic shape name"
@@ -64,8 +64,8 @@ func TestOSCParsersMouseShape_term51_parse_basic_shape_name(t *testing.T) {
 		oscB_mouse_shape_term51Feed(&p, []uint8("22;text"))
 		cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyMouseShape, "cmd == .mouse_shape")
-		expectEqualStrings(t, "text", string(cmd.MouseShape.value))
-		expectEqual(t, uint8(0), oscB_mouse_shape_at(cmd.MouseShape.value, 4))
+		expectEqualStrings(t, "text", string(cmd.MouseShape.Value))
+		expectEqual(t, uint8(0), oscB_mouse_shape_at(cmd.MouseShape.Value, 4))
 	}
 }
 
@@ -84,7 +84,7 @@ func TestOSCParsersMouseShape_term51_parse_empty_shape_name(t *testing.T) {
 	oscB_mouse_shape_term51Feed(&p, []uint8("22;"))
 	cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyMouseShape, "cmd == .mouse_shape")
-	expectEqual(t, 0, len(cmd.MouseShape.value))
+	expectEqual(t, 0, len(cmd.MouseShape.Value))
 }
 
 // Zig: test "term51: parse: the value is not validated"
@@ -94,7 +94,7 @@ func TestOSCParsersMouseShape_term51_parse_the_value_is_not_validated(t *testing
 	p := OSCParserInit(nil)
 	oscB_mouse_shape_term51Feed(&p, []uint8("22;Not A Cursor;x\xff"))
 	cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, None[uint8]()))
-	expectEqualSlices(t, []uint8("Not A Cursor;x\xff"), cmd.MouseShape.value)
+	expectEqualSlices(t, []uint8("Not A Cursor;x\xff"), cmd.MouseShape.Value)
 }
 
 // Zig: test "term51: parse: buffer limit"
@@ -103,7 +103,7 @@ func TestOSCParsersMouseShape_term51_parse_buffer_limit(t *testing.T) {
 		p := OSCParserInit(nil)
 		oscB_mouse_shape_term51Feed(&p, []uint8("22;"+strings.Repeat("a", OSCParserMAX_BUF-1)))
 		cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, None[uint8]()))
-		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.MouseShape.value))
+		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.MouseShape.Value))
 	}
 	{
 		p := OSCParserInit(nil)

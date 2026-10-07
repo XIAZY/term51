@@ -108,7 +108,7 @@ func TestPageRuling_slow_runtime_safety_clone_of_an_unmarked_row_with_managed_ce
 	for x := range uint(10) {
 		expectEqual(t, uint32('a')+uint32(x), dst.GetRowAndCell(x, 0).cell.Codepoint())
 	}
-	expectEqual(t, StyleId(1), dst.GetRowAndCell(1, 0).cell.style_id)
+	expectEqual(t, StyleID(1), dst.GetRowAndCell(1, 0).cell.style_id)
 	expect(t, dst.GetRowAndCell(2, 0).cell.hyperlink, "cell(2).hyperlink")
 	row := dst.GetRow(0)
 	expect(t, !row.styled, "!row.styled")

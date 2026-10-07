@@ -42,7 +42,7 @@ func OSCParsersHyperlinkParse(parser *OSCParser, _ Optional[uint8]) *OSCCommand 
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyHyperlinkStart,
 		HyperlinkStart: OSCCommandHyperlinkStartPayload{
-			uri: data[s+1 : len(data)-1],
+			URI: data[s+1 : len(data)-1],
 		},
 	}
 
@@ -76,7 +76,7 @@ func OSCParsersHyperlinkParse(parser *OSCParser, _ Optional[uint8]) *OSCCommand 
 		value := kv[v+1 : len(kv)-1]
 		if bytes.Equal(key, []uint8("id")) {
 			if len(value) > 0 {
-				parser.command.HyperlinkStart.id = Some(value)
+				parser.command.HyperlinkStart.ID = Some(value)
 			}
 		} else {
 			warn("osc_hyperlink", "unknown hyperlink option: '%s'", key)
@@ -84,8 +84,8 @@ func OSCParsersHyperlinkParse(parser *OSCParser, _ Optional[uint8]) *OSCCommand 
 		kv_start = kv_end + 1
 	}
 
-	if len(parser.command.HyperlinkStart.uri) == 0 {
-		if parser.command.HyperlinkStart.id.Valid {
+	if len(parser.command.HyperlinkStart.URI) == 0 {
+		if parser.command.HyperlinkStart.ID.Valid {
 			parser.state = OSCParserStateInvalid
 			return nil
 		}

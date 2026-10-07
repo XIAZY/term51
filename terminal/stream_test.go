@@ -78,7 +78,7 @@ type strA_printH struct {
 func (self *strA_printH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyPrint:
-		self.c = Some(value.Print.cp)
+		self.c = Some(value.Print.Cp)
 	}
 	return nil
 }
@@ -119,7 +119,7 @@ type strA_cursorRightH struct {
 func (self *strA_cursorRightH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyCursorRight:
-		self.amount = value.CursorRight.value
+		self.amount = value.CursorRight.Value
 	}
 	return nil
 }
@@ -150,7 +150,7 @@ type strA_decSetModeH struct {
 func (self *strA_decSetModeH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeySetMode:
-		self.mode = value.SetMode.mode
+		self.mode = value.SetMode.Mode
 	case StreamActionKeyResetMode:
 		self.mode = ModesMode(1)
 	}
@@ -180,7 +180,7 @@ type strA_ansiSetModeH struct {
 func (self *strA_ansiSetModeH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeySetMode:
-		self.mode = Some(value.SetMode.mode)
+		self.mode = Some(value.SetMode.Mode)
 	case StreamActionKeyResetMode:
 		self.mode = None[ModesMode]()
 	}
@@ -1215,9 +1215,9 @@ func (self *strA_recorder) Vt(action StreamActionKey, value *StreamAction) error
 	}
 	switch action {
 	case StreamActionKeyPrint:
-		self.cps = append(self.cps, value.Print.cp)
+		self.cps = append(self.cps, value.Print.Cp)
 		if self.log_prints {
-			strA_recPut(self, "print %x\n", value.Print.cp)
+			strA_recPut(self, "print %x\n", value.Print.Cp)
 		} else {
 			self.pending_prints += 1
 		}
@@ -1225,77 +1225,77 @@ func (self *strA_recorder) Vt(action StreamActionKey, value *StreamAction) error
 		strA_recPut(
 			self,
 			"invoke_charset %s %s locking=%t\n",
-			value.InvokeCharset.bank.String(), value.InvokeCharset.charset.String(), value.InvokeCharset.locking,
+			value.InvokeCharset.Bank.String(), value.InvokeCharset.Charset.String(), value.InvokeCharset.Locking,
 		)
 	case StreamActionKeyConfigureCharset:
 		strA_recPut(
 			self,
 			"configure_charset %s %s\n",
-			value.ConfigureCharset.slot.String(), value.ConfigureCharset.charset.String(),
+			value.ConfigureCharset.Slot.String(), value.ConfigureCharset.Charset.String(),
 		)
 	case StreamActionKeySetMode, StreamActionKeyResetMode, StreamActionKeySaveMode, StreamActionKeyRestoreMode, StreamActionKeyRequestMode:
 		strA_recPut(
 			self,
 			"%s %s\n",
-			name, strA_modeOf(action, *value).mode.String(),
+			name, strA_modeOf(action, *value).Mode.String(),
 		)
 	case StreamActionKeyDeviceAttributes:
 		strA_recPut(self, "device_attributes %s\n", value.DeviceAttributes.String())
 	case StreamActionKeyWindowTitle:
-		strA_recPut(self, "window_title %s\n", value.WindowTitle.title)
+		strA_recPut(self, "window_title %s\n", value.WindowTitle.Title)
 	case StreamActionKeyReportPwd:
-		strA_recPut(self, "report_pwd %s\n", value.ReportPwd.url)
+		strA_recPut(self, "report_pwd %s\n", value.ReportPwd.URL)
 	case StreamActionKeyShowDesktopNotification:
 		strA_recPut(
 			self,
 			"show_desktop_notification title=%s body=%s\n",
-			value.ShowDesktopNotification.title, value.ShowDesktopNotification.body,
+			value.ShowDesktopNotification.Title, value.ShowDesktopNotification.Body,
 		)
 	case StreamActionKeyStartHyperlink:
 		// "{?s}" of the id.
 		id := "null"
-		if value.StartHyperlink.id.Valid {
-			id = string(value.StartHyperlink.id.Value)
+		if value.StartHyperlink.ID.Valid {
+			id = string(value.StartHyperlink.ID.Value)
 		}
 		strA_recPut(
 			self,
 			"start_hyperlink uri=%s id=%s\n",
-			value.StartHyperlink.uri, id,
+			value.StartHyperlink.URI, id,
 		)
 	case StreamActionKeyClipboardContents:
 		strA_recPut(
 			self,
 			"clipboard_contents kind=%d data=%s\n",
-			value.ClipboardContents.kind, value.ClipboardContents.data,
+			value.ClipboardContents.Kind, value.ClipboardContents.Data,
 		)
 	case StreamActionKeyMouseShape:
 		strA_recPut(self, "mouse_shape %s\n", value.MouseShape.String())
 	case StreamActionKeyProgressReport:
 		// "{?d}" of the progress.
 		progress := "null"
-		if value.ProgressReport.progress.Valid {
-			progress = fmt.Sprintf("%d", value.ProgressReport.progress.Value)
+		if value.ProgressReport.Progress.Valid {
+			progress = fmt.Sprintf("%d", value.ProgressReport.Progress.Value)
 		}
 		strA_recPut(
 			self,
 			"progress_report %s %s\n",
-			value.ProgressReport.state.String(), progress,
+			value.ProgressReport.State.String(), progress,
 		)
 	case StreamActionKeySemanticPrompt:
 		strA_recPut(
 			self,
 			"semantic_prompt %s opts=%s\n",
-			value.SemanticPrompt.action.String(), value.SemanticPrompt.options_unvalidated,
+			value.SemanticPrompt.Action.String(), value.SemanticPrompt.OptionsUnvalidated,
 		)
 	case StreamActionKeyKittyColorReport:
-		strA_recPut(self, "kitty_color_report %s n=%d", strA_terminatorName(value.KittyColorReport.terminator), len(value.KittyColorReport.list))
-		for _, req := range value.KittyColorReport.list {
+		strA_recPut(self, "kitty_color_report %s n=%d", strA_terminatorName(value.KittyColorReport.Terminator), len(value.KittyColorReport.List))
+		for _, req := range value.KittyColorReport.List {
 			switch req.Tag {
 			case KittyColorOSCRequestQuery:
 				strA_recPut(self, " query(%s)", req.Query.Format())
 			case KittyColorOSCRequestSet:
 				v := req.Set
-				strA_recPut(self, " set(%s=#%02x%02x%02x)", v.key.Format(), v.color.r, v.color.g, v.color.b)
+				strA_recPut(self, " set(%s=#%02x%02x%02x)", v.Key.Format(), v.Color.R, v.Color.G, v.Color.B)
 			case KittyColorOSCRequestReset:
 				strA_recPut(self, " reset(%s)", req.Reset.Format())
 			}
@@ -1305,17 +1305,17 @@ func (self *strA_recorder) Vt(action StreamActionKey, value *StreamAction) error
 		strA_recPut(
 			self,
 			"color_operation %s %s n=%d",
-			value.ColorOperation.op.String(), strA_terminatorName(value.ColorOperation.terminator), value.ColorOperation.requests.count(),
+			value.ColorOperation.Op.String(), strA_terminatorName(value.ColorOperation.Terminator), value.ColorOperation.Requests.count(),
 		)
-		reqs := value.ColorOperation.requests
+		reqs := value.ColorOperation.Requests
 		it := reqs.constIterator(0)
 		for req := it.next(); req != nil; req = it.next() {
 			switch req.Tag {
 			case OSCParsersColorRequestSet:
 				v := req.Set
 				strA_recPut(self, " set(")
-				strA_recPutTarget(self, v.target)
-				strA_recPut(self, "=#%02x%02x%02x)", v.color.r, v.color.g, v.color.b)
+				strA_recPutTarget(self, v.Target)
+				strA_recPut(self, "=#%02x%02x%02x)", v.Color.R, v.Color.G, v.Color.B)
 			case OSCParsersColorRequestQuery:
 				strA_recPut(self, " query(")
 				strA_recPutTarget(self, req.Query)
@@ -1341,9 +1341,9 @@ func (self *strA_recorder) Vt(action StreamActionKey, value *StreamAction) error
 		StreamActionKeyCursorRow,
 		StreamActionKeyCursorColRelative,
 		StreamActionKeyCursorRowRelative:
-		strA_recPut(self, "%s %d\n", name, strA_cursorMovement(action, *value).value)
+		strA_recPut(self, "%s %d\n", name, strA_cursorMovement(action, *value).Value)
 	case StreamActionKeyCursorPos:
-		strA_recPut(self, "cursor_pos %d %d\n", value.CursorPos.row, value.CursorPos.col)
+		strA_recPut(self, "cursor_pos %d %d\n", value.CursorPos.Row, value.CursorPos.Col)
 	case StreamActionKeySetAttribute:
 		strA_recPut(self, "set_attribute %s\n", value.SetAttribute.Tag.String())
 	case StreamActionKeyDcsHook:
@@ -4514,7 +4514,7 @@ func TestStream_term51_Stream_oscDispatch_semantic_prompt_is_forwarded_unchanged
 		s := StreamInit(&rec)
 		defer s.Deinit()
 		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommandInit(a.first)}))
-		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommand{action: a.first, options_unvalidated: []uint8("aid=1;cl=m")}}))
+		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommand{Action: a.first, OptionsUnvalidated: []uint8("aid=1;cl=m")}}))
 		expected := fmt.Sprintf("semantic_prompt %s opts=\nsemantic_prompt %s opts=aid=1;cl=m\n", a.second, a.second)
 		// Zig-only: defer testing.allocator.free(expected);
 		expectEqualStrings(t, expected, strA_recText(&rec))
@@ -4528,12 +4528,12 @@ func TestStream_term51_Stream_oscDispatch_clipboard_contents(t *testing.T) {
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{kind: 'c', data: []uint8("Zm9v")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{kind: 's', data: []uint8("?")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{kind: 'p', data: []uint8("")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{Kind: 'c', Data: []uint8("Zm9v")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{Kind: 's', Data: []uint8("?")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{Kind: 'p', Data: []uint8("")}}))
 	// The kind is not validated.
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{kind: 0, data: []uint8("x")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{kind: 0xFF, data: []uint8("\xFF")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{Kind: 0, Data: []uint8("x")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{Kind: 0xFF, Data: []uint8("\xFF")}}))
 	expectEqualStrings(
 		t,
 		"clipboard_contents kind=99 data=Zm9v\n"+
@@ -4552,9 +4552,9 @@ func TestStream_term51_Stream_oscDispatch_report_pwd_is_forwarded_without_valida
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{value: []uint8("file:///tmp/x")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{value: []uint8("")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{value: []uint8("not a url \xFF")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{Value: []uint8("file:///tmp/x")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{Value: []uint8("")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{Value: []uint8("not a url \xFF")}}))
 	expectEqualStrings(
 		t,
 		"report_pwd file:///tmp/x\nreport_pwd \nreport_pwd not a url \xFF\n",
@@ -4589,7 +4589,7 @@ func TestStream_term51_Stream_oscDispatch_mouse_shape_by_name(t *testing.T) {
 	}
 	for _, n := range names {
 		strA_recReset(&rec)
-		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyMouseShape, MouseShape: OSCCommandMouseShapePayload{value: []uint8(n.first)}}))
+		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyMouseShape, MouseShape: OSCCommandMouseShapePayload{Value: []uint8(n.first)}}))
 		expected := fmt.Sprintf("mouse_shape %s\n", n.second)
 		// Zig-only: defer testing.allocator.free(expected);
 		expectEqualStrings(t, expected, strA_recText(&rec))
@@ -4605,7 +4605,7 @@ func TestStream_term51_Stream_oscDispatch_unknown_mouse_shapes_are_dropped(t *te
 
 	unknown := []string{"", "bogus", "POINTER", "Pointer", "pointer ", " pointer", "context_menu", "col_resize", "zoom", "left-ptr", "\xFF"}
 	for _, name := range unknown {
-		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyMouseShape, MouseShape: OSCCommandMouseShapePayload{value: []uint8(name)}}))
+		zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyMouseShape, MouseShape: OSCCommandMouseShapePayload{Value: []uint8(name)}}))
 	}
 	expectEqualStrings(t, "", strA_recText(&rec))
 }
@@ -4619,10 +4619,10 @@ func TestStream_term51_Stream_oscDispatch_colour_operations_pass_op_terminator_a
 	defer s.Deinit()
 
 	// Empty list, each terminator.
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{op: OSCParsersColorOperationOsc104, terminator: OSCTerminatorSt}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{op: OSCParsersColorOperationOsc119, terminator: OSCTerminatorBel}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{Op: OSCParsersColorOperationOsc104, Terminator: OSCTerminatorSt}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{Op: OSCParsersColorOperationOsc119, Terminator: OSCTerminatorBel}}))
 	// Default terminator is ST.
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{op: OSCParsersColorOperationOsc4}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{Op: OSCParsersColorOperationOsc4}}))
 	expectEqualStrings(
 		t,
 		"color_operation osc_104 st n=0\ncolor_operation osc_119 bel n=0\ncolor_operation osc_4 st n=0\n",
@@ -4635,12 +4635,12 @@ func TestStream_term51_Stream_oscDispatch_colour_operations_pass_op_terminator_a
 	// Zig-only: errdefer list.deinit(alloc);
 	// Zig: list.append(alloc, x) is an append to the items of the list.
 	list.items = append(list.items, OSCParsersColorRequest{Tag: OSCParsersColorRequestQuery, Query: OSCParsersColorTarget{Tag: OSCParsersColorTargetDynamic, Dynamic: ColorDynamicForeground}})
-	list.items = append(list.items, OSCParsersColorRequest{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{target: OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette, Palette: 7}, color: ColorRGB{r: 1, g: 2, b: 3}}})
+	list.items = append(list.items, OSCParsersColorRequest{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{Target: OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette, Palette: 7}, Color: ColorRGB{R: 1, G: 2, B: 3}}})
 	list.items = append(list.items, OSCParsersColorRequest{Tag: OSCParsersColorRequestReset, Reset: OSCParsersColorTarget{Tag: OSCParsersColorTargetSpecial, Special: ColorSpecialBold}})
 	list.items = append(list.items, OSCParsersColorRequest{Tag: OSCParsersColorRequestResetPalette})
 	list.items = append(list.items, OSCParsersColorRequest{Tag: OSCParsersColorRequestResetSpecial})
 	// The recorder takes ownership of the list and frees it.
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{op: OSCParsersColorOperationOsc4, requests: list, terminator: OSCTerminatorBel}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{Op: OSCParsersColorOperationOsc4, Requests: list, Terminator: OSCTerminatorBel}}))
 	expectEqualStrings(
 		t,
 		"color_operation osc_4 bel n=5 query(d.foreground) set(p7=#010203) reset(s.bold) reset_palette reset_special\n",
@@ -4656,8 +4656,8 @@ func TestStream_term51_Stream_oscDispatch_kitty_colour_protocol_is_forwarded(t *
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{list: nil, terminator: OSCTerminatorSt}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{list: nil, terminator: OSCTerminatorBel}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{List: nil, Terminator: OSCTerminatorSt}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{List: nil, Terminator: OSCTerminatorBel}}))
 	expectEqualStrings(
 		t,
 		"kitty_color_report st n=0\nkitty_color_report bel n=0\n",
@@ -4665,12 +4665,12 @@ func TestStream_term51_Stream_oscDispatch_kitty_colour_protocol_is_forwarded(t *
 	)
 
 	strA_recReset(&rec)
-	c := OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{list: nil, terminator: OSCTerminatorBel}}
+	c := OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{List: nil, Terminator: OSCTerminatorBel}}
 	defer c.KittyColorProtocol.Deinit()
 	// Zig: list.append(alloc, x) is an append to the list.
-	c.KittyColorProtocol.list = append(c.KittyColorProtocol.list, KittyColorOSCRequest{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialCursor}})
-	c.KittyColorProtocol.list = append(c.KittyColorProtocol.list, KittyColorOSCRequest{Tag: KittyColorOSCRequestSet, Set: KittyColorOSCRequestSetPayload{key: KittyColorKind{Tag: KittyColorKindPalette, Palette: 3}, color: ColorRGB{r: 255, g: 0, b: 16}}})
-	c.KittyColorProtocol.list = append(c.KittyColorProtocol.list, KittyColorOSCRequest{Tag: KittyColorOSCRequestReset, Reset: KittyColorKind{Tag: KittyColorKindPalette, Palette: 255}})
+	c.KittyColorProtocol.List = append(c.KittyColorProtocol.List, KittyColorOSCRequest{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialCursor}})
+	c.KittyColorProtocol.List = append(c.KittyColorProtocol.List, KittyColorOSCRequest{Tag: KittyColorOSCRequestSet, Set: KittyColorOSCRequestSetPayload{Key: KittyColorKind{Tag: KittyColorKindPalette, Palette: 3}, Color: ColorRGB{R: 255, G: 0, B: 16}}})
+	c.KittyColorProtocol.List = append(c.KittyColorProtocol.List, KittyColorOSCRequest{Tag: KittyColorOSCRequestReset, Reset: KittyColorKind{Tag: KittyColorKindPalette, Palette: 255}})
 	zigTry(t, s.oscDispatch(c))
 	expectEqualStrings(
 		t,
@@ -4686,9 +4686,9 @@ func TestStream_term51_Stream_oscDispatch_desktop_notification(t *testing.T) {
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{title: []uint8("Title"), body: []uint8("Body")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{title: []uint8(""), body: []uint8("only body")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{title: []uint8(""), body: []uint8("")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{Title: []uint8("Title"), Body: []uint8("Body")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{Title: []uint8(""), Body: []uint8("only body")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{Title: []uint8(""), Body: []uint8("")}}))
 	expectEqualStrings(
 		t,
 		"show_desktop_notification title=Title body=Body\n"+
@@ -4705,9 +4705,9 @@ func TestStream_term51_Stream_oscDispatch_hyperlinks(t *testing.T) {
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{uri: []uint8("http://example.com")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{uri: []uint8("http://example.com"), id: Some([]uint8("abc"))}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{uri: []uint8(""), id: None[[]uint8]()}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{URI: []uint8("http://example.com")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{URI: []uint8("http://example.com"), ID: Some([]uint8("abc"))}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{URI: []uint8(""), ID: None[[]uint8]()}}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyHyperlinkEnd}))
 	expectEqualStrings(
 		t,
@@ -4726,13 +4726,13 @@ func TestStream_term51_Stream_oscDispatch_progress_report(t *testing.T) {
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateSet, progress: Some(uint8(50))}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateRemove}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateError, progress: Some(uint8(100))}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateIndeterminate}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStatePause, progress: Some(uint8(0))}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateSet, Progress: Some(uint8(50))}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateRemove}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateError, Progress: Some(uint8(100))}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateIndeterminate}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStatePause, Progress: Some(uint8(0))}}))
 	// The value is forwarded as is, even beyond 100.
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateSet, progress: Some(uint8(255))}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateSet, Progress: Some(uint8(255))}}))
 	expectEqualStrings(
 		t,
 		"progress_report set 50\nprogress_report remove null\nprogress_report error 100\n"+
@@ -4748,7 +4748,7 @@ func TestStream_term51_Stream_oscDispatch_ConEmu_and_kitty_commands_that_are_not
 	s := StreamInit(&rec)
 	defer s.Deinit()
 
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuSleep, ConemuSleep: OSCCommandConemuSleepPayload{duration_ms: 100}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuSleep, ConemuSleep: OSCCommandConemuSleepPayload{DurationMs: 100}}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuShowMessageBox, ConemuShowMessageBox: []uint8("message")}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuChangeTabTitle, ConemuChangeTabTitle: OSCCommandConemuChangeTabTitlePayload{Tag: OSCCommandConemuChangeTabTitlePayloadReset}}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuChangeTabTitle, ConemuChangeTabTitle: OSCCommandConemuChangeTabTitlePayload{Tag: OSCCommandConemuChangeTabTitlePayloadValue, Value: []uint8("tab")}}))
@@ -4756,14 +4756,14 @@ func TestStream_term51_Stream_oscDispatch_ConEmu_and_kitty_commands_that_are_not
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuGuimacro, ConemuGuimacro: []uint8("macro")}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuRunProcess, ConemuRunProcess: []uint8("cmd")}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuOutputEnvironmentVariable, ConemuOutputEnvironmentVariable: []uint8("VAR")}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation, ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{keyboard: Some(true), output: None[bool]()}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation, ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{keyboard: None[bool](), output: Some(false)}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation, ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{Keyboard: Some(true), Output: None[bool]()}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation, ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{Keyboard: None[bool](), Output: Some(false)}}))
 	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyConemuComment, ConemuComment: []uint8("comment")}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyTextSizing, KittyTextSizing: OSCParsersKittyTextSizingOSC{text: []uint8("text")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{metadata: []uint8("type=read"), payload: None[[]uint8](), terminator: OSCTerminatorSt}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{metadata: []uint8(""), payload: Some([]uint8("abc")), terminator: OSCTerminatorBel}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyContextSignal, ContextSignal: OSCParsersContextSignalCommand{action: OSCParsersContextSignalCommandActionStart, id: []uint8("ctx"), metadata: []uint8("")}}))
-	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyContextSignal, ContextSignal: OSCParsersContextSignalCommand{action: OSCParsersContextSignalCommandActionEnd, id: []uint8("ctx"), metadata: []uint8("exit=success")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyTextSizing, KittyTextSizing: OSCParsersKittyTextSizingOSC{Text: []uint8("text")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{Metadata: []uint8("type=read"), Payload: None[[]uint8](), Terminator: OSCTerminatorSt}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{Metadata: []uint8(""), Payload: Some([]uint8("abc")), Terminator: OSCTerminatorBel}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyContextSignal, ContextSignal: OSCParsersContextSignalCommand{Action: OSCParsersContextSignalCommandActionStart, ID: []uint8("ctx"), Metadata: []uint8("")}}))
+	zigTry(t, s.oscDispatch(OSCCommand{Tag: OSCCommandKeyContextSignal, ContextSignal: OSCParsersContextSignalCommand{Action: OSCParsersContextSignalCommandActionEnd, ID: []uint8("ctx"), Metadata: []uint8("exit=success")}}))
 	expectEqualStrings(t, "", strA_recText(&rec))
 }
 

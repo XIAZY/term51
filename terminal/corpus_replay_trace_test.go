@@ -60,10 +60,10 @@ func (self *actionHandler) flush() {
 func (self *actionHandler) Vt(action StreamActionKey, value *StreamAction) error {
 	if action == StreamActionKeyPrint {
 		if self.inPrintRun {
-			fmt.Fprintf(self.w, ",%x", value.Print.cp)
+			fmt.Fprintf(self.w, ",%x", value.Print.Cp)
 		} else {
 			self.inPrintRun = true
-			fmt.Fprintf(self.w, "@print %x", value.Print.cp)
+			fmt.Fprintf(self.w, "@print %x", value.Print.Cp)
 		}
 		return nil
 	}

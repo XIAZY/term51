@@ -24,7 +24,7 @@ import (
 
 // Zig: test "order"
 func TestDeviceStatus_order(t *testing.T) {
-	tag := DeviceStatusTag{value: 1}
+	tag := DeviceStatusTag{Value: 1}
 	int_ := tag.Int()
 	expectEqual(t, DeviceStatusTagBacking(1), int_)
 }
@@ -52,13 +52,13 @@ func TestDeviceStatus_term51_Request_values_and_order(t *testing.T) {
 // Zig: test "term51: Tag: layout of the value and question bit"
 func TestDeviceStatus_term51_Tag_layout_of_the_value_and_question_bit(t *testing.T) {
 	expect(t, reflect.TypeOf(DeviceStatusTagBacking(0)).Kind() == reflect.Uint16, "Tag.Backing == u16")
-	expectEqual(t, uint16(5), DeviceStatusTag{value: 5}.Int())
-	expectEqual(t, uint16(0x8005), DeviceStatusTag{value: 5, question: true}.Int())
-	expectEqual(t, uint16(0x7FFF), DeviceStatusTag{value: 0x7FFF}.Int())
-	expectEqual(t, uint16(0xFFFF), DeviceStatusTag{value: 0x7FFF, question: true}.Int())
+	expectEqual(t, uint16(5), DeviceStatusTag{Value: 5}.Int())
+	expectEqual(t, uint16(0x8005), DeviceStatusTag{Value: 5, Question: true}.Int())
+	expectEqual(t, uint16(0x7FFF), DeviceStatusTag{Value: 0x7FFF}.Int())
+	expectEqual(t, uint16(0xFFFF), DeviceStatusTag{Value: 0x7FFF, Question: true}.Int())
 	tag := DeviceStatusTagFromInt(uint16(0x83E4))
-	expectEqual(t, uint16(996), tag.value)
-	expect(t, tag.question, "t.question")
+	expectEqual(t, uint16(996), tag.Value)
+	expect(t, tag.Question, "t.question")
 }
 
 // Zig: test "term51: reqFromInt: supported requests"

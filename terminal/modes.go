@@ -56,26 +56,26 @@ package terminal
 // its default: ModesModeStateInit (see the file header).
 type ModesModeState struct {
 	// The values of the current modes.
-	values ModesModePacked
+	Values ModesModePacked
 
 	// The saved values. We only allow saving each mode once. This is in
 	// line with other terminals that implement XTSAVE and XTRESTORE. We can
 	// improve this in the future if it becomes a real-world issue but we
 	// need to be aware of a DoS vector.
-	saved ModesModePacked
+	Saved ModesModePacked
 
 	// The default values for the modes. This is used to reset the modes to
 	// their default values during reset.
 	//
 	// Zig: `default`, a Go keyword.
-	default_ ModesModePacked
+	Default ModesModePacked
 }
 
 // Reset is modes.ModeState.reset: reset the modes to their default values.
 // This also clears the saved state.
 func (self *ModesModeState) Reset() {
-	self.values = self.default_
-	self.saved = ModesModePackedInit()
+	self.Values = self.Default
+	self.Saved = ModesModePackedInit()
 }
 
 // Set is modes.ModeState.set: set a mode to a value.
@@ -83,7 +83,7 @@ func (self *ModesModeState) Set(mode ModesMode, value bool) {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
 	i := modesModeEntryIndex(mode)
-	*modesModePackedFields[i](&self.values) = value
+	*modesModePackedFields[i](&self.Values) = value
 }
 
 // Get is modes.ModeState.get: get the value of a mode.
@@ -94,7 +94,7 @@ func (self *ModesModeState) Get(mode ModesMode) bool {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
 	i := modesModeEntryIndex(mode)
-	return *modesModePackedFields[i](&self.values)
+	return *modesModePackedFields[i](&self.Values)
 }
 
 // Save is modes.ModeState.save: save the state of the given mode. This can
@@ -105,7 +105,7 @@ func (self *ModesModeState) Save(mode ModesMode) {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
 	i := modesModeEntryIndex(mode)
-	*modesModePackedFields[i](&self.saved) = *modesModePackedFields[i](&self.values)
+	*modesModePackedFields[i](&self.Saved) = *modesModePackedFields[i](&self.Values)
 }
 
 // Restore is modes.ModeState.restore: see save. This will return the
@@ -114,8 +114,8 @@ func (self *ModesModeState) Restore(mode ModesMode) bool {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
 	i := modesModeEntryIndex(mode)
-	*modesModePackedFields[i](&self.values) = *modesModePackedFields[i](&self.saved)
-	return *modesModePackedFields[i](&self.values)
+	*modesModePackedFields[i](&self.Values) = *modesModePackedFields[i](&self.Saved)
+	return *modesModePackedFields[i](&self.Values)
 }
 
 // ModesModePacked is modes.ModePacked: a packed struct of all the settable
@@ -332,9 +332,9 @@ func modesModePackedFieldsCheck() bool {
 // true.
 func ModesModeStateInit() ModesModeState {
 	return ModesModeState{
-		values:   ModesModePackedInit(),
-		saved:    ModesModePackedInit(),
-		default_: ModesModePackedInit(),
+		Values:  ModesModePackedInit(),
+		Saved:   ModesModePackedInit(),
+		Default: ModesModePackedInit(),
 	}
 }
 
@@ -426,8 +426,8 @@ func modesModeInit() []modesModeField {
 		fields[i] = modesModeField{
 			name: entry.name,
 			value: ModesModeTag{
-				value: uint16(entry.value),
-				ansi:  entry.ansi,
+				Value: uint16(entry.value),
+				Ansi:  entry.ansi,
 			}.Int(),
 		}
 	}
@@ -479,9 +479,9 @@ func modesModeEntryIndex(mode ModesMode) int {
 // conversion Zig writes as @bitCast.
 type ModesModeTag struct {
 	// Zig: u15.
-	value uint16
+	Value uint16
 	// Zig: default false.
-	ansi bool
+	Ansi bool
 }
 
 // ModesModeTagBacking is modes.ModeTag.Backing: the backing integer of
@@ -494,12 +494,12 @@ type ModesModeTagBacking = uint16
 // `value` is a u15 in Zig, so it cannot exceed 0x7FFF; the Go field is a
 // uint16, and a larger value is asserted against instead of being dropped.
 func (self ModesModeTag) Int() ModesModeTagBacking {
-	assert(self.value <= 0x7FFF)
+	assert(self.Value <= 0x7FFF)
 	var ansi ModesModeTagBacking = 0
-	if self.ansi {
+	if self.Ansi {
 		ansi = 1
 	}
-	return self.value | ansi<<15
+	return self.Value | ansi<<15
 }
 
 // ModesModeFromInt is modes.modeFromInt.
@@ -514,7 +514,7 @@ func ModesModeFromInt(v uint16, ansi bool) Optional[ModesMode] {
 	if v > 0x7FFF {
 		return None[ModesMode]()
 	}
-	tag := ModesModeTag{ansi: ansi, value: v}
+	tag := ModesModeTag{Ansi: ansi, Value: v}
 	int_ := tag.Int()
 	if i := modesModeIndex[int_]; i != modesModeIndexNone && !modesEntries[i].disabled {
 		return Some(ModesMode(int_))
@@ -527,8 +527,8 @@ func ModesModeFromInt(v uint16, ansi bool) Optional[ModesMode] {
 // (ModeTag.Backing, a u16) to a ModeTag: the reverse of ModesModeTag.Int.
 func ModesModeTagFromInt(v ModesModeTagBacking) ModesModeTag {
 	return ModesModeTag{
-		value: v & 0x7FFF,
-		ansi:  v>>15 != 0,
+		Value: v & 0x7FFF,
+		Ansi:  v>>15 != 0,
 	}
 }
 

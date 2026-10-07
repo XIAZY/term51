@@ -22,48 +22,48 @@ func testStdCapacity(t *testing.T) {
 // Zig defaults reflow = true and prompt_redraw = .false.
 func screenResizeDefault(cols SizeCellCountInt, rows SizeCellCountInt) ScreenResize {
 	return ScreenResize{
-		cols:          cols,
-		rows:          rows,
-		reflow:        true,
-		prompt_redraw: OSCParsersSemanticPromptRedrawFalse,
+		Cols:         cols,
+		Rows:         rows,
+		Reflow:       true,
+		PromptRedraw: OSCParsersSemanticPromptRedrawFalse,
 	}
 }
 
 // screenCharsetStateDefault is `Screen.CharsetState{}`: gl G0, gr G2.
 func screenCharsetStateDefault() ScreenCharsetState {
-	return ScreenCharsetState{gr: CharsetsSlotsG2}
+	return ScreenCharsetState{Gr: CharsetsSlotsG2}
 }
 
 // screenCursorDefault is a Screen.Cursor with the Zig default style, block.
 func screenCursorDefault() ScreenCursor {
-	return ScreenCursor{cursor_style: ScreenCursorStyleBlock}
+	return ScreenCursor{CursorStyle: ScreenCursorStyleBlock}
 }
 
 // screenCursorCopyOptionsDefault is `.{}` for cursorCopy: hyperlink = true.
 func screenCursorCopyOptionsDefault() ScreenCursorCopyOptions {
-	return ScreenCursorCopyOptions{hyperlink: true}
+	return ScreenCursorCopyOptions{Hyperlink: true}
 }
 
 // screenSelectionStringDefault is `.{ .sel = sel }` for selectionString:
 // trim = true, no map.
 func screenSelectionStringDefault(sel Selection) ScreenSelectionString {
-	return ScreenSelectionString{sel: sel, trim: true}
+	return ScreenSelectionString{Sel: sel, Trim: true}
 }
 
 // screenSelectLineDefault is `.{ .pin = pin }` for selectLine: whitespace
 // NUL, space and tab, semantic_prompt_boundary = true.
 func screenSelectLineDefault(pin PageListPin) ScreenSelectLine {
 	return ScreenSelectLine{
-		pin:                      pin,
-		whitespace:               Some([]uint32{0, ' ', '\t'}),
-		semantic_prompt_boundary: true,
+		Pin:                    pin,
+		Whitespace:             Some([]uint32{0, ' ', '\t'}),
+		SemanticPromptBoundary: true,
 	}
 }
 
 // screenDumpStringOptionsDefault is `.{ .tl = tl }` for dumpString: no br,
 // unwrap = true.
 func screenDumpStringOptionsDefault(tl PageListPin) ScreenDumpStringOptions {
-	return ScreenDumpStringOptions{tl: tl, unwrap: true}
+	return ScreenDumpStringOptions{Tl: tl, Unwrap: true}
 }
 
 // terminalOptionsDefault is `Terminal.Options{ .cols = cols, .rows = rows }`
@@ -71,17 +71,17 @@ func screenDumpStringOptionsDefault(tl PageListPin) ScreenDumpStringOptions {
 // default_modes .{}. Tests that pass other fields modify the result.
 func terminalOptionsDefault(cols SizeCellCountInt, rows SizeCellCountInt) TerminalOptions {
 	return TerminalOptions{
-		cols:           cols,
-		rows:           rows,
-		max_scrollback: 10_000,
-		colors:         TerminalColorsDefault,
-		default_modes:  ModesModePackedInit(),
+		Cols:          cols,
+		Rows:          rows,
+		MaxScrollback: 10_000,
+		Colors:        TerminalColorsDefault,
+		DefaultModes:  ModesModePackedInit(),
 	}
 }
 
 // terminalFlagsDefault is Terminal.Flags `.{}`: focused = true.
 func terminalFlagsDefault() TerminalFlags {
-	return TerminalFlags{focused: true}
+	return TerminalFlags{Focused: true}
 }
 
 // testPlatform sets platformGOOS (the platform whose behaviour the keyboard

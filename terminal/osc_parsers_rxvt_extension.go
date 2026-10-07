@@ -59,8 +59,8 @@ func OSCParsersRxvtExtensionParse(parser *OSCParser, _ Optional[uint8]) *OSCComm
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyShowDesktopNotification,
 		ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{
-			title: title,
-			body:  body,
+			Title: title,
+			Body:  body,
 		},
 	}
 	return &parser.command

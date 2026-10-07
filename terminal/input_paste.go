@@ -68,14 +68,14 @@ type InputPasteOptions struct {
 	// True if bracketed paste mode is on.
 	//
 	// Zig: no default.
-	bracketed bool
+	Bracketed bool
 }
 
 // InputPasteOptionsFromTerminal is paste.Options.fromTerminal: return the
 // encoding options based on the current terminal state.
 func InputPasteOptionsFromTerminal(t *Terminal) InputPasteOptions {
 	return InputPasteOptions{
-		bracketed: t.modes.Get(ModesModeBracketedPaste),
+		Bracketed: t.Modes.Get(ModesModeBracketedPaste),
 	}
 }
 
@@ -149,7 +149,7 @@ func InputPasteEncode(data []uint8, opts InputPasteOptions) ([3][]uint8, error) 
 
 	// Bracketed paste mode (mode 2004) wraps pasted data in
 	// fenceposts so that the terminal can ignore things like newlines.
-	if opts.bracketed {
+	if opts.Bracketed {
 		result[0] = []uint8("\x1b[200~")
 		result[2] = []uint8("\x1b[201~")
 		return result, nil
@@ -198,7 +198,7 @@ func InputPasteEncodeMutable(data []uint8, opts InputPasteOptions) [3][]uint8 {
 
 	// Bracketed paste mode (mode 2004) wraps pasted data in
 	// fenceposts so that the terminal can ignore things like newlines.
-	if opts.bracketed {
+	if opts.Bracketed {
 		result[0] = []uint8("\x1b[200~")
 		result[2] = []uint8("\x1b[201~")
 		return result

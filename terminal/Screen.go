@@ -193,22 +193,22 @@ const (
 // require allocation."), is dropped.
 type Screen struct {
 	// The list of pages in the screen.
-	pages PageList
+	Pages PageList
 
 	// Special-case where we want no scrollback whatsoever. We have to flag
 	// this because max_size 0 in PageList gets rounded up to two pages so
 	// we can always have an active screen.
 	//
 	// Zig default: false.
-	no_scrollback bool
+	NoScrollback bool
 
 	// The current cursor position
-	cursor ScreenCursor
+	Cursor ScreenCursor
 
 	// The saved cursor
 	//
 	// Zig: ?SavedCursor, default null.
-	saved_cursor Optional[ScreenSavedCursor]
+	SavedCursor Optional[ScreenSavedCursor]
 
 	// The selection for this screen (if any). This MUST be a tracked selection
 	// otherwise the selection will become invalid. Instead of accessing this
@@ -216,13 +216,13 @@ type Screen struct {
 	// automatically setup tracking.
 	//
 	// Zig: ?Selection, default null.
-	selection Optional[Selection]
+	Selection Optional[Selection]
 
 	// The charset state
 	//
 	// Zig default: `.{}`, which is NOT the Go zero value (`gr` is G2); see
 	// ScreenCharsetState.
-	charset ScreenCharsetState
+	Charset ScreenCharsetState
 
 	// The current or most recent protected mode. Once a protection mode is
 	// set, this will never become "off" again until the screen is reset.
@@ -231,12 +231,12 @@ type Screen struct {
 	// protection mode since some sequences such as ECH depend on this.
 	//
 	// Zig default: .off.
-	protected_mode ANSIProtectedMode
+	ProtectedMode ANSIProtectedMode
 
 	// The kitty keyboard settings.
 	//
 	// Zig default: `.{}`.
-	kitty_keyboard KittyKeyFlagStack
+	KittyKeyboard KittyKeyFlagStack
 
 	// Screen.kitty_images (line 72), the Kitty graphics protocol state, is
 	// omitted; see the file header.
@@ -244,12 +244,12 @@ type Screen struct {
 	// Semantic prompt (OSC133) state.
 	//
 	// Zig default: .disabled (ScreenSemanticPromptDisabled).
-	semantic_prompt ScreenSemanticPrompt
+	SemanticPrompt ScreenSemanticPrompt
 
 	// Dirty flags for the renderer.
 	//
 	// Zig default: `.{}`.
-	dirty ScreenDirty
+	Dirty ScreenDirty
 }
 
 // ScreenDirty is Screen.Dirty.
@@ -261,11 +261,11 @@ type Screen struct {
 type ScreenDirty struct {
 	// Set when the selection is set or unset, regardless of if the
 	// selection is changed or not.
-	selection bool
+	Selection bool
 
 	// When an OSC8 hyperlink is hovered, we set the full screen as dirty
 	// because links can span multiple lines.
-	hyperlink_hover bool
+	HyperlinkHover bool
 }
 
 // ScreenSemanticPrompt is Screen.SemanticPrompt.
@@ -276,18 +276,18 @@ type ScreenSemanticPrompt struct {
 	//
 	// This is used to optimize away semantic content operations if we know
 	// we've never seen them.
-	seen bool
+	Seen bool
 
 	// This is set on any `cl` or `click_events` option set on the
 	// most recent OSC 133 commands to specify how click handling in a
 	// prompt is handling.
-	click ScreenSemanticPromptSemanticClick
+	Click ScreenSemanticPromptSemanticClick
 }
 
 // ScreenSemanticPromptDisabled is Screen.SemanticPrompt.disabled.
 var ScreenSemanticPromptDisabled = ScreenSemanticPrompt{
-	seen:  false,
-	click: ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone},
+	Seen:  false,
+	Click: ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone},
 }
 
 // ScreenSemanticPromptSemanticClick is
@@ -327,9 +327,9 @@ type ScreenCursor struct {
 	// The x/y position within the active area.
 	//
 	// Zig default: 0.
-	x SizeCellCountInt
+	X SizeCellCountInt
 	// Zig default: 0.
-	y SizeCellCountInt
+	Y SizeCellCountInt
 
 	// The visual style of the cursor. This defaults to block because
 	// it has to default to something, but users of this struct are
@@ -337,40 +337,40 @@ type ScreenCursor struct {
 	//
 	// Zig default: .block, which is NOT the Go zero value (.bar); see the
 	// file header.
-	cursor_style ScreenCursorStyle
+	CursorStyle ScreenCursorStyle
 
 	// The "last column flag (LCF)" as its called. If this is set then the
 	// next character print will force a soft-wrap.
 	//
 	// Zig default: false.
-	pending_wrap bool
+	PendingWrap bool
 
 	// The protected mode state of the cursor. If this is true then
 	// all new characters printed will have the protected state set.
 	//
 	// Zig default: false.
-	protected bool
+	Protected bool
 
 	// The currently active style. This is the concrete style value
 	// that should be kept up to date. The style ID to use for cell writing
 	// is below.
 	//
 	// Zig default: `.{}`.
-	style Style
+	Style Style
 
 	// The currently active style ID. The style is page-specific so when
 	// we change pages we need to ensure that we update that page with
 	// our style when used.
 	//
 	// Zig default: style.default_id (StyleDefaultId, 0).
-	style_id StyleId
+	StyleID StyleID
 
 	// The hyperlink ID that is currently active for the cursor. A value
 	// of zero means no hyperlink is active. (Implements OSC8, saying that
 	// so code search can find it.).
 	//
 	// Zig default: 0.
-	hyperlink_id HyperlinkId
+	HyperlinkID HyperlinkID
 
 	// This is the implicit ID to use for hyperlinks that don't specify
 	// an ID. We do an overflowing add to this so repeats can technically
@@ -379,7 +379,7 @@ type ScreenCursor struct {
 	// IDs.
 	//
 	// Zig default: 0.
-	hyperlink_implicit_id SizeOffsetInt
+	HyperlinkImplicitID SizeOffsetInt
 
 	// Heap-allocated hyperlink state so that we can recreate it when
 	// the cursor page pin changes. We can't get it from the old screen
@@ -387,21 +387,21 @@ type ScreenCursor struct {
 	// because its most likely null.
 	//
 	// Zig: ?*hyperlink.Hyperlink, default null.
-	hyperlink *Hyperlink
+	Hyperlink *Hyperlink
 
 	// The current semantic content type for the cursor that will be
 	// applied to any newly written cells.
 	//
 	// Zig default: .output.
-	semantic_content PageCellSemanticContent
+	SemanticContent PageCellSemanticContent
 	// Zig default: false.
-	semantic_content_clear_eol bool
+	SemanticContentClearEol bool
 
 	// The pointers into the page list where the cursor is currently
 	// located. This makes it faster to move the cursor.
-	page_pin  *PageListPin
-	page_row  *PageRow
-	page_cell *PageCell
+	PagePin  *PageListPin
+	PageRow  *PageRow
+	PageCell *PageCell
 }
 
 // Deinit is Screen.Cursor.deinit.
@@ -410,8 +410,8 @@ type ScreenCursor struct {
 // parameter is dropped. It deinitialises and frees the cursor's hyperlink,
 // if any; the stub is kept because the tests call it.
 func (self *ScreenCursor) Deinit() {
-	if self.hyperlink != nil {
-		link := self.hyperlink
+	if self.Hyperlink != nil {
+		link := self.Hyperlink
 		link.Deinit()
 		// Zig: alloc.destroy(link); Go memory.
 	}
@@ -419,13 +419,13 @@ func (self *ScreenCursor) Deinit() {
 
 // ScreenSavedCursor is Screen.SavedCursor: saved cursor state.
 type ScreenSavedCursor struct {
-	x            SizeCellCountInt
-	y            SizeCellCountInt
-	style        Style
-	protected    bool
-	pending_wrap bool
-	origin       bool
-	charset      ScreenCharsetState
+	X           SizeCellCountInt
+	Y           SizeCellCountInt
+	Style       Style
+	Protected   bool
+	PendingWrap bool
+	Origin      bool
+	Charset     ScreenCharsetState
 }
 
 // ScreenCharsetState is Screen.CharsetState: state required for all
@@ -444,14 +444,14 @@ type ScreenCharsetState struct {
 	// GR used for 8-bit printable chars.
 	//
 	// Zig default: .G0.
-	gl CharsetsSlots
+	Gl CharsetsSlots
 	// Zig default: .G2, which is NOT the Go zero value.
-	gr CharsetsSlots
+	Gr CharsetsSlots
 
 	// Single shift where a slot is used for exactly one char.
 	//
 	// Zig: ?charsets.Slots, default null.
-	single_shift Optional[CharsetsSlots]
+	SingleShift Optional[CharsetsSlots]
 }
 
 // screenCharsetStateCharsetArray is Screen.CharsetState.CharsetArray
@@ -510,8 +510,8 @@ func (self *screenCharsetStateCharsetArray) Set(slot CharsetsSlots, charset Char
 
 // ScreenOptions is Screen.Options.
 type ScreenOptions struct {
-	cols SizeCellCountInt
-	rows SizeCellCountInt
+	Cols SizeCellCountInt
+	Rows SizeCellCountInt
 
 	// The maximum size of scrollback in bytes. Zero means unlimited. Any
 	// other value will be clamped to support a minimum of the active area.
@@ -519,7 +519,7 @@ type ScreenOptions struct {
 	// Zig: usize, default 0. Bytes: it is passed to PageList.init as
 	// max_size. (Whatever the comment above says, `init` treats zero as "no
 	// scrollback": it sets `no_scrollback` and passes a max_size of 0.)
-	max_scrollback uint64
+	MaxScrollback uint64
 
 	// The total storage limit for Kitty images in bytes for this
 	// screen. Kitty image storage is per-screen.
@@ -527,7 +527,7 @@ type ScreenOptions struct {
 	// Zig: usize, default 320 * 1000 * 1000 (320MB), which is NOT the Go
 	// zero value. Bytes. Nothing reads it in the library build (Kitty
 	// graphics are compiled out).
-	kitty_image_storage_limit uint64
+	KittyImageStorageLimit uint64
 }
 
 // ScreenOptionsDefault is Screen.Options.default.
@@ -536,10 +536,10 @@ type ScreenOptions struct {
 // scrollback (or lack of) then do not use this directly. This is just
 // for callers that need some defaults.
 var ScreenOptionsDefault = ScreenOptions{
-	cols:                      80,
-	rows:                      24,
-	max_scrollback:            0,
-	kitty_image_storage_limit: 320 * 1000 * 1000,
+	Cols:                   80,
+	Rows:                   24,
+	MaxScrollback:          0,
+	KittyImageStorageLimit: 320 * 1000 * 1000,
 }
 
 // ScreenInit is Screen.init.
@@ -557,9 +557,9 @@ var ScreenOptionsDefault = ScreenOptions{
 func ScreenInit(opts ScreenOptions) (_ Screen, err error) {
 	// Initialize our backing pages.
 	pages, err := PageListInit(
-		opts.cols,
-		opts.rows,
-		Some(opts.max_scrollback),
+		opts.Cols,
+		opts.Rows,
+		Some(opts.MaxScrollback),
 	)
 	if err != nil {
 		return Screen{}, err
@@ -573,7 +573,7 @@ func ScreenInit(opts ScreenOptions) (_ Screen, err error) {
 
 	// Create our tracked pin for the cursor.
 	assert(pages.pages.first != nil) // .?
-	page_pin, err := pages.TrackPin(PageListPin{node: pages.pages.first})
+	page_pin, err := pages.TrackPin(PageListPin{Node: pages.pages.first})
 	if err != nil {
 		return Screen{}, err
 	}
@@ -581,18 +581,18 @@ func ScreenInit(opts ScreenOptions) (_ Screen, err error) {
 	page_rac := page_pin.RowAndCell()
 
 	result := Screen{
-		pages:         pages,
-		no_scrollback: opts.max_scrollback == 0,
-		cursor: ScreenCursor{
-			x:            0,
-			y:            0,
-			cursor_style: ScreenCursorStyleBlock, // Zig default
-			page_pin:     page_pin,
-			page_row:     page_rac.row,
-			page_cell:    page_rac.cell,
+		Pages:        pages,
+		NoScrollback: opts.MaxScrollback == 0,
+		Cursor: ScreenCursor{
+			X:           0,
+			Y:           0,
+			CursorStyle: ScreenCursorStyleBlock, // Zig default
+			PagePin:     page_pin,
+			PageRow:     page_rac.row,
+			PageCell:    page_rac.cell,
 		},
-		charset:         ScreenCharsetState{gr: CharsetsSlotsG2}, // Zig default .{}
-		semantic_prompt: ScreenSemanticPromptDisabled,
+		Charset:        ScreenCharsetState{Gr: CharsetsSlotsG2}, // Zig default .{}
+		SemanticPrompt: ScreenSemanticPromptDisabled,
 	}
 
 	// Zig: `if (comptime build_options.kitty_graphics)` block
@@ -608,8 +608,8 @@ func ScreenInit(opts ScreenOptions) (_ Screen, err error) {
 func (self *Screen) Deinit() {
 	// Zig: `if (comptime build_options.kitty_graphics)` block
 	// (kitty_images.deinit): compiled out; see the file header.
-	self.cursor.Deinit()
-	self.pages.Deinit()
+	self.Cursor.Deinit()
+	self.Pages.Deinit()
 }
 
 // AssertIntegrity is Screen.assertIntegrity.
@@ -629,23 +629,23 @@ func (self *Screen) AssertIntegrity() {
 		// Zig: `if (std.valgrind.runningOnValgrind() > 0) return;`; no Go
 		// counterpart (file header).
 
-		assert(self.cursor.x < self.pages.cols)
-		assert(self.cursor.y < self.pages.rows)
+		assert(self.Cursor.X < self.Pages.cols)
+		assert(self.Cursor.Y < self.Pages.rows)
 
 		// Our cursor x/y should always match the pin. If this doesn't
 		// match then it indicates that the tracked pin moved and we didn't
 		// account for it by either calling cursorReload or manually
 		// adjusting.
-		pt_ := self.pages.PointFromPin(
+		pt_ := self.Pages.PointFromPin(
 			PointTagActive,
-			*self.cursor.page_pin,
+			*self.Cursor.PagePin,
 		)
 		if !pt_.Valid {
 			panic("unreachable") // orelse unreachable
 		}
 		pt := pt_.Value
-		assert(self.cursor.x == pt.Active.x)
-		assert(uint32(self.cursor.y) == pt.Active.y)
+		assert(self.Cursor.X == pt.Active.X)
+		assert(uint32(self.Cursor.Y) == pt.Active.Y)
 	}
 }
 
@@ -663,33 +663,33 @@ func (self *Screen) AssertIntegrity() {
 //   - Disables protection mode
 func (self *Screen) Reset() {
 	// Reset our pages
-	self.pages.Reset()
+	self.Pages.Reset()
 
 	// The above reset preserves tracked pins so we can still use
 	// our cursor pin, which should be at the top-left already.
-	cursor_pin := self.cursor.page_pin
-	assert(self.pages.pages.first != nil) // .?
-	assert(cursor_pin.node == self.pages.pages.first)
-	assert(cursor_pin.x == 0)
-	assert(cursor_pin.y == 0)
+	cursor_pin := self.Cursor.PagePin
+	assert(self.Pages.pages.first != nil) // .?
+	assert(cursor_pin.Node == self.Pages.pages.first)
+	assert(cursor_pin.X == 0)
+	assert(cursor_pin.Y == 0)
 	cursor_rac := cursor_pin.RowAndCell()
-	self.cursor.Deinit()
-	self.cursor = ScreenCursor{
-		cursor_style: ScreenCursorStyleBlock, // Zig default
-		page_pin:     cursor_pin,
-		page_row:     cursor_rac.row,
-		page_cell:    cursor_rac.cell,
+	self.Cursor.Deinit()
+	self.Cursor = ScreenCursor{
+		CursorStyle: ScreenCursorStyleBlock, // Zig default
+		PagePin:     cursor_pin,
+		PageRow:     cursor_rac.row,
+		PageCell:    cursor_rac.cell,
 	}
 
 	// Zig: `if (comptime build_options.kitty_graphics)` block (reset
 	// kitty graphics storage): compiled out; see the file header.
 
 	// Reset our basic state
-	self.saved_cursor = None[ScreenSavedCursor]()
-	self.charset = ScreenCharsetState{gr: CharsetsSlotsG2} // Zig: .{}
-	self.kitty_keyboard = KittyKeyFlagStack{}
-	self.protected_mode = ANSIProtectedModeOff
-	self.semantic_prompt = ScreenSemanticPromptDisabled
+	self.SavedCursor = None[ScreenSavedCursor]()
+	self.Charset = ScreenCharsetState{Gr: CharsetsSlotsG2} // Zig: .{}
+	self.KittyKeyboard = KittyKeyFlagStack{}
+	self.ProtectedMode = ANSIProtectedModeOff
+	self.SemanticPrompt = ScreenSemanticPromptDisabled
 	self.ClearSelection()
 }
 
@@ -737,10 +737,10 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 	pin_remap := PageListCloneTrackedPinsRemap{}
 	// Zig: defer pin_remap.deinit(); Go memory.
 
-	pages, err := self.pages.Clone(PageListClone{
-		top:          top,
-		bot:          bot,
-		tracked_pins: &pin_remap,
+	pages, err := self.Pages.Clone(PageListClone{
+		Top:         top,
+		Bot:         bot,
+		TrackedPins: &pin_remap,
 	})
 	if err != nil {
 		return Screen{}, err
@@ -757,36 +757,36 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 	//
 	// Zig: the labeled block `cursor:`, with the inner block `remap:`.
 	cursor, err := func() (ScreenCursor, error) {
-		if p := pin_remap[self.cursor.page_pin]; p != nil {
+		if p := pin_remap[self.Cursor.PagePin]; p != nil {
 			page_rac := p.RowAndCell()
 			if pt := pages.PointFromPin(PointTagActive, *p); pt.Valid {
 				// Zig: @intCast(pt.active.y) to u16.
-				assert(pt.Value.Active.y <= 0xFFFF)
+				assert(pt.Value.Active.Y <= 0xFFFF)
 				return ScreenCursor{
-					x:            pt.Value.Active.x,
-					y:            SizeCellCountInt(pt.Value.Active.y),
-					cursor_style: ScreenCursorStyleBlock, // Zig default
-					page_pin:     p,
-					page_row:     page_rac.row,
-					page_cell:    page_rac.cell,
+					X:           pt.Value.Active.X,
+					Y:           SizeCellCountInt(pt.Value.Active.Y),
+					CursorStyle: ScreenCursorStyleBlock, // Zig default
+					PagePin:     p,
+					PageRow:     page_rac.row,
+					PageCell:    page_rac.cell,
 				}, nil
 			}
 			// break :remap
 		}
 
 		assert(pages.pages.first != nil) // .?
-		page_pin, err := pages.TrackPin(PageListPin{node: pages.pages.first})
+		page_pin, err := pages.TrackPin(PageListPin{Node: pages.pages.first})
 		if err != nil {
 			return ScreenCursor{}, err
 		}
 		page_rac := page_pin.RowAndCell()
 		return ScreenCursor{
-			x:            0,
-			y:            0,
-			cursor_style: ScreenCursorStyleBlock, // Zig default
-			page_pin:     page_pin,
-			page_row:     page_rac.row,
-			page_cell:    page_rac.cell,
+			X:           0,
+			Y:           0,
+			CursorStyle: ScreenCursorStyleBlock, // Zig default
+			PagePin:     page_pin,
+			PageRow:     page_rac.row,
+			PageCell:    page_rac.cell,
 		}, nil
 	}()
 	if err != nil {
@@ -798,10 +798,10 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 	// Zig: `if (self.selection) |sel| sel: { ... } else null`; `break :sel
 	// null` is a return of null from the closure.
 	sel, err := func() (Optional[Selection], error) {
-		if !self.selection.Valid {
+		if !self.Selection.Valid {
 			return None[Selection](), nil
 		}
-		sel := self.selection.Value
+		sel := self.Selection.Value
 		assert(sel.Tracked())
 
 		var ordered struct {
@@ -810,11 +810,11 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 		}
 		switch sel.Order(self) {
 		case SelectionOrderForward, SelectionOrderMirroredForward:
-			ordered.tl = sel.bounds.Tracked.start
-			ordered.br = sel.bounds.Tracked.end
+			ordered.tl = sel.Bounds.Tracked.Start
+			ordered.br = sel.Bounds.Tracked.End
 		case SelectionOrderReverse, SelectionOrderMirroredReverse:
-			ordered.tl = sel.bounds.Tracked.end
-			ordered.br = sel.bounds.Tracked.start
+			ordered.tl = sel.Bounds.Tracked.End
+			ordered.br = sel.Bounds.Tracked.Start
 		default:
 			panic("unreachable")
 		}
@@ -833,31 +833,31 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 				// cloned area, in either of these cases it means that
 				// the selection is fully out of bounds, so we have no
 				// selection in the cloned area and break out now.
-				clone_top_ := self.pages.Pin(top)
+				clone_top_ := self.Pages.Pin(top)
 				if !clone_top_.Valid {
 					return None[Selection](), nil
 				}
 				clone_top := clone_top_.Value
-				clone_top_y_ := self.pages.PointFromPin(
+				clone_top_y_ := self.Pages.PointFromPin(
 					PointTagScreen,
 					clone_top,
 				)
 				assert(clone_top_y_.Valid) // .?
-				clone_top_y := clone_top_y_.Value.Screen.y
-				br_pt := self.pages.PointFromPin(
+				clone_top_y := clone_top_y_.Value.Screen.Y
+				br_pt := self.Pages.PointFromPin(
 					PointTagScreen,
 					*ordered.br,
 				)
 				assert(br_pt.Valid) // .?
-				if br_pt.Value.Screen.y < clone_top_y {
+				if br_pt.Value.Screen.Y < clone_top_y {
 					return None[Selection](), nil
 				}
-				tl_pt := self.pages.PointFromPin(
+				tl_pt := self.Pages.PointFromPin(
 					PointTagScreen,
 					*ordered.tl,
 				)
 				assert(tl_pt.Valid) // .?
-				if tl_pt.Value.Screen.y > clone_top_y {
+				if tl_pt.Value.Screen.Y > clone_top_y {
 					return None[Selection](), nil
 				}
 			}
@@ -865,12 +865,12 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 			// We move the top pin back in bounds to the top row.
 			assert(pages.pages.first != nil) // .?
 			var x SizeCellCountInt = 0
-			if sel.rectangle {
-				x = ordered.tl.x
+			if sel.Rectangle {
+				x = ordered.tl.X
 			}
 			start_pin, err = pages.TrackPin(PageListPin{
-				node: pages.pages.first,
-				x:    x,
+				Node: pages.pages.first,
+				X:    x,
 			})
 			if err != nil {
 				return None[Selection](), err
@@ -884,17 +884,17 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 		if end_pin == nil {
 			assert(pages.pages.last != nil) // .?
 			var x SizeCellCountInt
-			if sel.rectangle {
-				x = ordered.br.x
+			if sel.Rectangle {
+				x = ordered.br.X
 			} else {
 				assert(pages.cols > 0) // Zig: - traps
 				x = pages.cols - 1
 			}
 			assert(pages.pages.last.data.size.rows > 0) // Zig: - traps
 			end_pin, err = pages.TrackPin(PageListPin{
-				node: pages.pages.last,
-				x:    x,
-				y:    pages.pages.last.data.size.rows - 1,
+				Node: pages.pages.last,
+				X:    x,
+				Y:    pages.pages.last.data.size.rows - 1,
 			})
 			if err != nil {
 				return None[Selection](), err
@@ -902,14 +902,14 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 		}
 
 		return Some(Selection{
-			bounds: SelectionBounds{
+			Bounds: SelectionBounds{
 				Tag: SelectionBoundsTagTracked,
 				Tracked: SelectionBoundsTracked{
-					start: start_pin,
-					end:   end_pin,
+					Start: start_pin,
+					End:   end_pin,
 				},
 			},
-			rectangle: sel.rectangle,
+			Rectangle: sel.Rectangle,
 		}), nil
 	}()
 	if err != nil {
@@ -917,13 +917,13 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 	}
 
 	result := Screen{
-		pages:           pages,
-		no_scrollback:   self.no_scrollback,
-		cursor:          cursor,
-		selection:       sel,
-		charset:         ScreenCharsetState{gr: CharsetsSlotsG2}, // Zig default .{}
-		semantic_prompt: ScreenSemanticPromptDisabled,
-		dirty:           self.dirty,
+		Pages:          pages,
+		NoScrollback:   self.NoScrollback,
+		Cursor:         cursor,
+		Selection:      sel,
+		Charset:        ScreenCharsetState{Gr: CharsetsSlotsG2}, // Zig default .{}
+		SemanticPrompt: ScreenSemanticPromptDisabled,
+		Dirty:          self.Dirty,
 	}
 
 	// term51 (docs/mapping.md, "Page-layer bookkeeping"; term51
@@ -933,7 +933,7 @@ func (self *Screen) Clone(top Point, bot Optional[Point]) (_ Screen, err error) 
 	// not in the active area and upstream aborts in the assertIntegrity
 	// below (`pointFromPin(...) orelse unreachable`). The port returns its
 	// own error instead; the errdefer above deinits the clone.
-	if !result.pages.PointFromPin(PointTagActive, *result.cursor.page_pin).Valid {
+	if !result.Pages.PointFromPin(PointTagActive, *result.Cursor.PagePin).Valid {
 		return Screen{}, ErrScreenCloneCursorOutside
 	}
 
@@ -962,8 +962,8 @@ func (self *Screen) IncreaseCapacity(
 	// accounting. We have to do this check here BEFORE calling
 	// increaseCapacity because increaseCapacity will update all
 	// our tracked pins (including our cursor).
-	if node != self.cursor.page_pin.node {
-		return self.pages.IncreaseCapacity(
+	if node != self.Cursor.PagePin.Node {
+		return self.Pages.IncreaseCapacity(
 			node,
 			adjustment,
 		)
@@ -972,7 +972,7 @@ func (self *Screen) IncreaseCapacity(
 	// We're modifying the cursor page. When we increase the
 	// capacity below it will be short the ref count on our
 	// current style and hyperlink, so we need to init those.
-	new_node, err := self.pages.IncreaseCapacity(node, adjustment)
+	new_node, err := self.Pages.IncreaseCapacity(node, adjustment)
 	if err != nil {
 		return nil, err
 	}
@@ -981,9 +981,9 @@ func (self *Screen) IncreaseCapacity(
 	// Re-add the style, if the page somehow doesn't have enough
 	// memory to add it, we emit a warning and gracefully degrade
 	// to the default style for the cursor.
-	if self.cursor.style_id != StyleDefaultId {
+	if self.Cursor.StyleID != StyleDefaultID {
 		id, err := new_page.styles.Add(
-			self.cursor.style,
+			self.Cursor.Style,
 		)
 		if err != nil {
 			// id:
@@ -995,21 +995,21 @@ func (self *Screen) IncreaseCapacity(
 			)
 
 			// Reset the cursor style.
-			self.cursor.style = Style{}
-			id = StyleDefaultId
+			self.Cursor.Style = Style{}
+			id = StyleDefaultID
 		}
-		self.cursor.style_id = id
+		self.Cursor.StyleID = id
 	}
 
 	// Re-add the hyperlink, if the page somehow doesn't have enough
 	// memory to add it, we emit a warning and gracefully degrade to
 	// no hyperlink.
-	if self.cursor.hyperlink != nil {
-		link := self.cursor.hyperlink
+	if self.Cursor.Hyperlink != nil {
+		link := self.Cursor.Hyperlink
 
 		// So we don't attempt to free any memory in the replaced page.
-		self.cursor.hyperlink_id = 0
-		self.cursor.hyperlink = nil
+		self.Cursor.HyperlinkID = 0
+		self.Cursor.Hyperlink = nil
 
 		// Re-add
 		if err := self.startHyperlinkOnce(*link); err != nil {
@@ -1040,10 +1040,10 @@ func (self *Screen) IncreaseCapacity(
 func (self *Screen) CursorCellRight(n SizeCellCountInt) *PageCell {
 	// Zig: `self.cursor.x + n` is u16 and traps on overflow; the sum is
 	// taken wider so an overflow fails the assertion instead of wrapping.
-	assert(uint32(self.cursor.x)+uint32(n) < uint32(self.pages.cols))
+	assert(uint32(self.Cursor.X)+uint32(n) < uint32(self.Pages.cols))
 	// Zig: `@as([*]Cell, @ptrCast(self.cursor.page_cell)) + n`.
-	page := &self.cursor.page_pin.node.data
-	return &page.cells[page.cellIndex(self.cursor.page_cell)+uint(n)]
+	page := &self.Cursor.PagePin.Node.data
+	return &page.cells[page.cellIndex(self.Cursor.PageCell)+uint(n)]
 }
 
 // CursorCellLeft is Screen.cursorCellLeft.
@@ -1051,20 +1051,20 @@ func (self *Screen) CursorCellRight(n SizeCellCountInt) *PageCell {
 // Zig: pub inline fn cursorCellLeft(self: *Screen, n: size.CellCountInt)
 // *pagepkg.Cell. The result points into the cursor row's cells.
 func (self *Screen) CursorCellLeft(n SizeCellCountInt) *PageCell {
-	assert(self.cursor.x >= n)
+	assert(self.Cursor.X >= n)
 	// Zig: `@as([*]Cell, @ptrCast(self.cursor.page_cell)) - n`.
-	page := &self.cursor.page_pin.node.data
-	return &page.cells[page.cellIndex(self.cursor.page_cell)-uint(n)]
+	page := &self.Cursor.PagePin.Node.data
+	return &page.cells[page.cellIndex(self.Cursor.PageCell)-uint(n)]
 }
 
 // CursorCellEndOfPrev is Screen.cursorCellEndOfPrev.
 func (self *Screen) CursorCellEndOfPrev() *PageCell {
-	assert(self.cursor.y > 0)
+	assert(self.Cursor.Y > 0)
 
-	page_pin_ := self.cursor.page_pin.Up(1)
+	page_pin_ := self.Cursor.PagePin.Up(1)
 	assert(page_pin_.Valid) // .?
 	page_pin := page_pin_.Value
-	page_pin.x = self.pages.cols - 1
+	page_pin.X = self.Pages.cols - 1
 	page_rac := page_pin.RowAndCell()
 	return page_rac.cell
 }
@@ -1075,15 +1075,15 @@ func (self *Screen) CursorCellEndOfPrev() *PageCell {
 // if the caller can guarantee we have space to move right (no wrapping).
 func (self *Screen) CursorRight(n SizeCellCountInt) {
 	// Zig: `self.cursor.x + n` is u16 and traps on overflow.
-	assert(uint32(self.cursor.x)+uint32(n) < uint32(self.pages.cols))
+	assert(uint32(self.Cursor.X)+uint32(n) < uint32(self.Pages.cols))
 	// Zig: defer self.assertIntegrity(); Go: the call at the end of the
 	// function, which has no other exit (Terminal.Print has the reason).
 
 	// Zig: `cell + n` on the many-item pointer.
-	page := &self.cursor.page_pin.node.data
-	self.cursor.page_cell = &page.cells[page.cellIndex(self.cursor.page_cell)+uint(n)]
-	self.cursor.page_pin.x += n
-	self.cursor.x += n
+	page := &self.Cursor.PagePin.Node.data
+	self.Cursor.PageCell = &page.cells[page.cellIndex(self.Cursor.PageCell)+uint(n)]
+	self.Cursor.PagePin.X += n
+	self.Cursor.X += n
 
 	self.AssertIntegrity()
 }
@@ -1092,16 +1092,16 @@ func (self *Screen) CursorRight(n SizeCellCountInt) {
 //
 // Move the cursor left.
 func (self *Screen) CursorLeft(n SizeCellCountInt) {
-	assert(self.cursor.x >= n)
+	assert(self.Cursor.X >= n)
 	defer self.AssertIntegrity()
 
 	// Zig: `cell - n` on the many-item pointer.
-	page := &self.cursor.page_pin.node.data
-	self.cursor.page_cell = &page.cells[page.cellIndex(self.cursor.page_cell)-uint(n)]
+	page := &self.Cursor.PagePin.Node.data
+	self.Cursor.PageCell = &page.cells[page.cellIndex(self.Cursor.PageCell)-uint(n)]
 	// Zig: `-=` on u16 traps on underflow; the pin's x is the cursor's x
 	// (assertIntegrity), so the assertion above covers it.
-	self.cursor.page_pin.x -= n
-	self.cursor.x -= n
+	self.Cursor.PagePin.X -= n
+	self.Cursor.X -= n
 }
 
 // CursorUp is Screen.cursorUp.
@@ -1110,16 +1110,16 @@ func (self *Screen) CursorLeft(n SizeCellCountInt) {
 //
 // Precondition: The cursor is not at the top of the screen.
 func (self *Screen) CursorUp(n SizeCellCountInt) {
-	assert(self.cursor.y >= n)
+	assert(self.Cursor.Y >= n)
 	defer self.AssertIntegrity()
 
-	self.cursor.y -= n // Must be set before cursorChangePin
-	up := self.cursor.page_pin.Up(uint(n))
+	self.Cursor.Y -= n // Must be set before cursorChangePin
+	up := self.Cursor.PagePin.Up(uint(n))
 	assert(up.Valid) // .?
 	self.cursorChangePin(up.Value)
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_row = page_rac.row
-	self.cursor.page_cell = page_rac.cell
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageRow = page_rac.row
+	self.Cursor.PageCell = page_rac.cell
 }
 
 // CursorRowUp is Screen.cursorRowUp.
@@ -1127,10 +1127,10 @@ func (self *Screen) CursorUp(n SizeCellCountInt) {
 // Zig: pub fn cursorRowUp(self: *Screen, n: size.CellCountInt)
 // *pagepkg.Row.
 func (self *Screen) CursorRowUp(n SizeCellCountInt) *PageRow {
-	assert(self.cursor.y >= n)
+	assert(self.Cursor.Y >= n)
 	defer self.AssertIntegrity()
 
-	page_pin_ := self.cursor.page_pin.Up(uint(n))
+	page_pin_ := self.Cursor.PagePin.Up(uint(n))
 	assert(page_pin_.Valid) // .?
 	page_rac := page_pin_.Value.RowAndCell()
 	return page_rac.row
@@ -1143,61 +1143,61 @@ func (self *Screen) CursorRowUp(n SizeCellCountInt) *PageRow {
 // Precondition: The cursor is not at the bottom of the screen.
 func (self *Screen) CursorDown(n SizeCellCountInt) {
 	// Zig: `self.cursor.y + n` is u16 and traps on overflow.
-	assert(uint32(self.cursor.y)+uint32(n) < uint32(self.pages.rows))
+	assert(uint32(self.Cursor.Y)+uint32(n) < uint32(self.Pages.rows))
 	defer self.AssertIntegrity()
 
-	self.cursor.y += n // Must be set before cursorChangePin
+	self.Cursor.Y += n // Must be set before cursorChangePin
 
 	// We move the offset into our page list to the next row and then
 	// get the pointers to the row/cell and set all the cursor state up.
-	down := self.cursor.page_pin.Down(uint(n))
+	down := self.Cursor.PagePin.Down(uint(n))
 	assert(down.Valid) // .?
 	self.cursorChangePin(down.Value)
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_row = page_rac.row
-	self.cursor.page_cell = page_rac.cell
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageRow = page_rac.row
+	self.Cursor.PageCell = page_rac.cell
 }
 
 // CursorHorizontalAbsolute is Screen.cursorHorizontalAbsolute.
 //
 // Move the cursor to some absolute horizontal position.
 func (self *Screen) CursorHorizontalAbsolute(x SizeCellCountInt) {
-	assert(x < self.pages.cols)
+	assert(x < self.Pages.cols)
 	defer self.AssertIntegrity()
 
-	self.cursor.page_pin.x = x
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_cell = page_rac.cell
-	self.cursor.x = x
+	self.Cursor.PagePin.X = x
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageCell = page_rac.cell
+	self.Cursor.X = x
 }
 
 // CursorAbsolute is Screen.cursorAbsolute.
 //
 // Move the cursor to some absolute position.
 func (self *Screen) CursorAbsolute(x SizeCellCountInt, y SizeCellCountInt) {
-	assert(x < self.pages.cols)
-	assert(y < self.pages.rows)
+	assert(x < self.Pages.cols)
+	assert(y < self.Pages.rows)
 	defer self.AssertIntegrity()
 
 	var page_pin PageListPin
-	if y < self.cursor.y {
-		up := self.cursor.page_pin.Up(uint(self.cursor.y - y))
+	if y < self.Cursor.Y {
+		up := self.Cursor.PagePin.Up(uint(self.Cursor.Y - y))
 		assert(up.Valid) // .?
 		page_pin = up.Value
-	} else if y > self.cursor.y {
-		down := self.cursor.page_pin.Down(uint(y - self.cursor.y))
+	} else if y > self.Cursor.Y {
+		down := self.Cursor.PagePin.Down(uint(y - self.Cursor.Y))
 		assert(down.Valid) // .?
 		page_pin = down.Value
 	} else {
-		page_pin = *self.cursor.page_pin
+		page_pin = *self.Cursor.PagePin
 	}
-	page_pin.x = x
-	self.cursor.x = x // Must be set before cursorChangePin
-	self.cursor.y = y
+	page_pin.X = x
+	self.Cursor.X = x // Must be set before cursorChangePin
+	self.Cursor.Y = y
 	self.cursorChangePin(page_pin)
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_row = page_rac.row
-	self.cursor.page_cell = page_rac.cell
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageRow = page_rac.row
+	self.Cursor.PageCell = page_rac.cell
 }
 
 // CursorReload is Screen.cursorReload.
@@ -1212,40 +1212,40 @@ func (self *Screen) CursorReload() {
 	// point from the pin. If this returns null it means our pin
 	// points outside the active area. In that case, we update the
 	// pin to be the top-left.
-	pt_ := self.pages.PointFromPin(
+	pt_ := self.Pages.PointFromPin(
 		PointTagActive,
-		*self.cursor.page_pin,
+		*self.Cursor.PagePin,
 	)
 	if !pt_.Valid {
 		// reset:
-		pin_ := self.pages.Pin(Point{Tag: PointTagActive})
+		pin_ := self.Pages.Pin(Point{Tag: PointTagActive})
 		assert(pin_.Valid) // .?
 		pin := pin_.Value
-		*self.cursor.page_pin = pin
-		pt_ = self.pages.PointFromPin(PointTagActive, pin)
+		*self.Cursor.PagePin = pin
+		pt_ = self.Pages.PointFromPin(PointTagActive, pin)
 		assert(pt_.Valid) // .?
 	}
 	pt := pt_.Value
 
-	self.cursor.x = pt.Active.x
+	self.Cursor.X = pt.Active.X
 	// Zig: @intCast(pt.active.y) to u16.
-	assert(pt.Active.y <= 0xFFFF)
-	self.cursor.y = SizeCellCountInt(pt.Active.y)
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_row = page_rac.row
-	self.cursor.page_cell = page_rac.cell
+	assert(pt.Active.Y <= 0xFFFF)
+	self.Cursor.Y = SizeCellCountInt(pt.Active.Y)
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageRow = page_rac.row
+	self.Cursor.PageCell = page_rac.cell
 
 	// If we have a style, we need to ensure it is in the page because this
 	// method may also be called after a page change.
-	if self.cursor.style_id != StyleDefaultId {
+	if self.Cursor.StyleID != StyleDefaultID {
 		if err := self.ManualStyleUpdate(); err != nil {
 			// This failure should not happen because manualStyleUpdate
 			// handles page splitting, overflow, and more. This should only
 			// happen if we're out of RAM. In this case, we'll just degrade
 			// gracefully back to the default style.
 			warn("screen", "failed to update style on cursor reload err=error.%v", err) // Zig: log.err
-			self.cursor.style = Style{}
-			self.cursor.style_id = 0
+			self.Cursor.Style = Style{}
+			self.Cursor.StyleID = 0
 		}
 	}
 }
@@ -1258,33 +1258,33 @@ func (self *Screen) CursorReload() {
 // Zig: !void. The inferred error set is that of PageList.eraseRow and
 // PageList.grow: ErrOutOfMemory (dcs.go) and Page.CloneFromError (page.go).
 func (self *Screen) CursorDownScroll() error {
-	assert(self.cursor.y == self.pages.rows-1)
+	assert(self.Cursor.Y == self.Pages.rows-1)
 	defer self.AssertIntegrity()
 
 	// Zig: `if (comptime build_options.kitty_graphics)` block (scrolling
 	// dirties the images): compiled out; see the file header.
 
 	// If we have no scrollback, then we shift all our rows instead.
-	if self.no_scrollback {
+	if self.NoScrollback {
 		// If we have a single-row screen, we have no rows to shift
 		// so our cursor is in the correct place we just have to clear
 		// the cells.
-		if self.pages.rows == 1 {
-			page := &self.cursor.page_pin.node.data
+		if self.Pages.rows == 1 {
+			page := &self.Cursor.PagePin.Node.data
 			self.ClearCells(
 				page,
-				self.cursor.page_row,
-				page.GetCells(self.cursor.page_row),
+				self.Cursor.PageRow,
+				page.GetCells(self.Cursor.PageRow),
 			)
 			self.CursorMarkDirty()
 		} else {
 			// The call to `eraseRow` will move the tracked cursor pin up by one
 			// row, but we don't actually want that, so we keep the old pin and
 			// put it back after calling `eraseRow`.
-			old_pin := *self.cursor.page_pin
+			old_pin := *self.Cursor.PagePin
 
 			// eraseRow will shift everything below it up.
-			if err := self.pages.EraseRow(Point{Tag: PointTagActive}); err != nil {
+			if err := self.Pages.EraseRow(Point{Tag: PointTagActive}); err != nil {
 				return err
 			}
 
@@ -1294,20 +1294,20 @@ func (self *Screen) CursorDownScroll() error {
 
 			// We don't use `cursorChangePin` here because we aren't
 			// actually changing the pin, we're keeping it the same.
-			*self.cursor.page_pin = old_pin
+			*self.Cursor.PagePin = old_pin
 
 			// We do, however, need to refresh the cached page row
 			// and cell, because `eraseRow` will have moved the row.
-			page_rac := self.cursor.page_pin.RowAndCell()
-			self.cursor.page_row = page_rac.row
-			self.cursor.page_cell = page_rac.cell
+			page_rac := self.Cursor.PagePin.RowAndCell()
+			self.Cursor.PageRow = page_rac.row
+			self.Cursor.PageCell = page_rac.cell
 		}
 	} else {
-		old_pin := *self.cursor.page_pin
+		old_pin := *self.Cursor.PagePin
 
 		// Grow our pages by one row. The PageList will handle if we need to
 		// allocate, prune scrollback, whatever.
-		if _, err := self.pages.Grow(); err != nil {
+		if _, err := self.Pages.Grow(); err != nil {
 			return err
 		}
 
@@ -1324,61 +1324,61 @@ func (self *Screen) CursorDownScroll() error {
 			// the top-left of the new page. This effectively moves it by
 			// one already, we just need to fix up the x value.
 			var page_pin PageListPin
-			if old_pin.node == self.cursor.page_pin.node {
-				down := self.cursor.page_pin.Down(1)
+			if old_pin.Node == self.Cursor.PagePin.Node {
+				down := self.Cursor.PagePin.Down(1)
 				assert(down.Valid) // .?
 				page_pin = down.Value
 			} else {
 				// reuse:
-				pin := *self.cursor.page_pin
-				pin.x = self.cursor.x
+				pin := *self.Cursor.PagePin
+				pin.X = self.Cursor.X
 				page_pin = pin
 			}
 
 			// These assertions help catch some pagelist math errors. Our
 			// x/y should be unchanged after the grow.
 			if pageSlowRuntimeSafety {
-				active_ := self.pages.PointFromPin(
+				active_ := self.Pages.PointFromPin(
 					PointTagActive,
 					page_pin,
 				)
 				assert(active_.Valid) // .?
 				active := active_.Value.Active
-				assert(active.x == self.cursor.x)
-				assert(active.y == uint32(self.cursor.y))
+				assert(active.X == self.Cursor.X)
+				assert(active.Y == uint32(self.Cursor.Y))
 			}
 
 			new_pin = page_pin
 		}
 		self.cursorChangePin(new_pin)
-		page_rac := self.cursor.page_pin.RowAndCell()
-		self.cursor.page_row = page_rac.row
-		self.cursor.page_cell = page_rac.cell
+		page_rac := self.Cursor.PagePin.RowAndCell()
+		self.Cursor.PageRow = page_rac.row
+		self.Cursor.PageCell = page_rac.cell
 
 		// Our new row is always dirty
 		self.CursorMarkDirty()
 
 		// Clear the new row so it gets our bg color. We only do this
 		// if we have a bg color at all.
-		if self.cursor.style.bg_color.Tag != StyleColorNone {
-			page := &self.cursor.page_pin.node.data
+		if self.Cursor.Style.BgColor.Tag != StyleColorNone {
+			page := &self.Cursor.PagePin.Node.data
 			self.ClearCells(
 				page,
-				self.cursor.page_row,
-				page.GetCells(self.cursor.page_row),
+				self.Cursor.PageRow,
+				page.GetCells(self.Cursor.PageRow),
 			)
 		}
 	}
 
-	if self.cursor.style_id != StyleDefaultId {
+	if self.Cursor.StyleID != StyleDefaultID {
 		// The newly created line needs to be styled according to
 		// the bg color if it is set.
-		if blank_cell := self.cursor.style.BgCell(); blank_cell.Valid {
+		if blank_cell := self.Cursor.Style.BgCell(); blank_cell.Valid {
 			// Zig: `cell_current - self.cursor.x` on the many-item
 			// pointer, then `@memset(cells[0..self.pages.cols], blank_cell)`.
-			page := &self.cursor.page_pin.node.data
-			start := page.cellIndex(self.cursor.page_cell) - uint(self.cursor.x)
-			cells := page.cells[start : start+uint(self.pages.cols)]
+			page := &self.Cursor.PagePin.Node.data
+			start := page.cellIndex(self.Cursor.PageCell) - uint(self.Cursor.X)
+			cells := page.cells[start : start+uint(self.Pages.cols)]
 			for i := range cells {
 				cells[i] = blank_cell.Value
 			}
@@ -1405,14 +1405,14 @@ func (self *Screen) CursorScrollAbove() error {
 
 	// If the cursor is on the bottom of the screen, its faster to use
 	// our specialized function for that case.
-	if self.cursor.y == self.pages.rows-1 {
+	if self.Cursor.Y == self.Pages.rows-1 {
 		return self.CursorDownScroll()
 	}
 
 	defer self.AssertIntegrity()
 
 	// Logic below assumes we always have at least one row that isn't moving
-	assert(self.cursor.y < self.pages.rows-1)
+	assert(self.Cursor.Y < self.Pages.rows-1)
 
 	// Explanation:
 	//  We don't actually move everything that's at or above the cursor row,
@@ -1422,8 +1422,8 @@ func (self *Screen) CursorScrollAbove() error {
 	//  DOWN by one row. This has the same practical result but it's a whole
 	//  lot cheaper in 99% of cases.
 
-	old_pin := *self.cursor.page_pin
-	grown, err := self.pages.Grow()
+	old_pin := *self.Cursor.PagePin
+	grown, err := self.Pages.Grow()
 	if err != nil {
 		return err
 	}
@@ -1434,25 +1434,25 @@ func (self *Screen) CursorScrollAbove() error {
 	} else {
 		// In this case, it means grow() didn't allocate a new page.
 
-		if self.cursor.page_pin.node == self.pages.pages.last {
+		if self.Cursor.PagePin.Node == self.Pages.pages.last {
 			// If we're on the last page we can do a very fast path because
 			// all the rows we need to move around are within a single page.
 
 			// Note: we don't need to call cursorChangePin here because
 			// the pin page is the same so there is no accounting to do
 			// for styles or any of that.
-			assert(old_pin.node == self.cursor.page_pin.node)
-			down := self.cursor.page_pin.Down(1)
+			assert(old_pin.Node == self.Cursor.PagePin.Node)
+			down := self.Cursor.PagePin.Down(1)
 			assert(down.Valid) // .?
-			*self.cursor.page_pin = down.Value
+			*self.Cursor.PagePin = down.Value
 
-			pin := self.cursor.page_pin
-			page := &self.cursor.page_pin.node.data
+			pin := self.Cursor.PagePin
+			page := &self.Cursor.PagePin.Node.data
 
 			// Rotate the rows so that the newly created empty row is at the
 			// beginning. e.g. [ 0 1 2 3 ] in to [ 3 0 1 2 ].
 			rows := page.rows
-			screenRotateOnceR(rows[pin.y:page.size.rows])
+			screenRotateOnceR(rows[pin.Y:page.size.rows])
 
 			// Mark the whole page as dirty.
 			//
@@ -1462,9 +1462,9 @@ func (self *Screen) CursorScrollAbove() error {
 
 			// Setup our cursor caches after the rotation so it points to the
 			// correct data
-			page_rac := self.cursor.page_pin.RowAndCell()
-			self.cursor.page_row = page_rac.row
-			self.cursor.page_cell = page_rac.cell
+			page_rac := self.Cursor.PagePin.RowAndCell()
+			self.Cursor.PageRow = page_rac.row
+			self.Cursor.PageCell = page_rac.cell
 		} else {
 			// We didn't grow pages but our cursor isn't on the last page.
 			// In this case we need to do more work because we need to copy
@@ -1491,15 +1491,15 @@ func (self *Screen) CursorScrollAbove() error {
 		}
 	}
 
-	if self.cursor.style_id != StyleDefaultId {
+	if self.Cursor.StyleID != StyleDefaultID {
 		// The newly created line needs to be styled according to
 		// the bg color if it is set.
-		if blank_cell := self.cursor.style.BgCell(); blank_cell.Valid {
+		if blank_cell := self.Cursor.Style.BgCell(); blank_cell.Valid {
 			// Zig: `cell_current - self.cursor.x` on the many-item
 			// pointer, then `@memset(cells[0..self.pages.cols], blank_cell)`.
-			page := &self.cursor.page_pin.node.data
-			start := page.cellIndex(self.cursor.page_cell) - uint(self.cursor.x)
-			cells := page.cells[start : start+uint(self.pages.cols)]
+			page := &self.Cursor.PagePin.Node.data
+			start := page.cellIndex(self.Cursor.PageCell) - uint(self.Cursor.X)
+			cells := page.cells[start : start+uint(self.Pages.cols)]
 			for i := range cells {
 				cells[i] = blank_cell.Value
 			}
@@ -1514,15 +1514,15 @@ func (self *Screen) CursorScrollAbove() error {
 // Zig: !void. The inferred error set is that of Page.cloneRowFrom:
 // Page.CloneFromError (page.go).
 func (self *Screen) cursorScrollAboveRotate() error {
-	down := self.cursor.page_pin.Down(1)
+	down := self.Cursor.PagePin.Down(1)
 	assert(down.Valid) // .?
 	self.cursorChangePin(down.Value)
 
 	// Go through each of the pages following our pin, shift all rows
 	// down by one, and copy the last row of the previous page.
-	current := self.pages.pages.last
+	current := self.Pages.pages.last
 	assert(current != nil) // .?
-	for current != self.cursor.page_pin.node {
+	for current != self.Cursor.PagePin.Node {
 		prev := current.prev
 		assert(prev != nil) // .?
 		prev_page := &prev.data
@@ -1553,14 +1553,14 @@ func (self *Screen) cursorScrollAboveRotate() error {
 
 	// Our current is our cursor page, we need to rotate down from
 	// our cursor and clear our row.
-	assert(current == self.cursor.page_pin.node)
+	assert(current == self.Cursor.PagePin.Node)
 	cur_page := &current.data
 	cur_rows := cur_page.rows
-	screenRotateOnceR(cur_rows[self.cursor.page_pin.y:cur_page.size.rows])
+	screenRotateOnceR(cur_rows[self.Cursor.PagePin.Y:cur_page.size.rows])
 	self.ClearCells(
 		cur_page,
-		&cur_rows[self.cursor.page_pin.y],
-		cur_page.GetCells(&cur_rows[self.cursor.page_pin.y]),
+		&cur_rows[self.Cursor.PagePin.Y],
+		cur_page.GetCells(&cur_rows[self.Cursor.PagePin.Y]),
 	)
 
 	// Mark the whole page as dirty.
@@ -1571,9 +1571,9 @@ func (self *Screen) cursorScrollAboveRotate() error {
 
 	// Setup cursor cache data after all the rotations so our
 	// row is valid.
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_row = page_rac.row
-	self.cursor.page_cell = page_rac.cell
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageRow = page_rac.row
+	self.Cursor.PageCell = page_rac.cell
 
 	return nil
 }
@@ -1602,7 +1602,7 @@ func screenRotateOnceR(items []PageRow) {
 // Zig: !void. The inferred error set is that of cursorDownScroll.
 func (self *Screen) cursorDownOrScroll() error {
 	// Zig: `self.cursor.y + 1` is u16; y < rows, so it cannot overflow.
-	if uint32(self.cursor.y)+1 < uint32(self.pages.rows) {
+	if uint32(self.Cursor.Y)+1 < uint32(self.Pages.rows) {
 		self.CursorDown(1)
 	} else {
 		if err := self.CursorDownScroll(); err != nil {
@@ -1620,7 +1620,7 @@ type ScreenCursorCopyOptions struct {
 	//
 	// Zig default: TRUE. The Go zero value is false; a caller that relies
 	// on the default (`.{}`) must set it.
-	hyperlink bool
+	Hyperlink bool
 }
 
 // CursorCopy is Screen.cursorCopy.
@@ -1633,35 +1633,35 @@ type ScreenCursorCopyOptions struct {
 // manualStyleUpdate: ErrOutOfMemory (dcs.go) or ErrOutOfSpace
 // (PageList.go).
 func (self *Screen) CursorCopy(other ScreenCursor, opts ScreenCursorCopyOptions) (err error) {
-	assert(other.x < self.pages.cols)
-	assert(other.y < self.pages.rows)
+	assert(other.X < self.Pages.cols)
+	assert(other.Y < self.Pages.rows)
 
 	// End any currently active hyperlink on our cursor.
 	self.EndHyperlink()
 
-	old := self.cursor
-	self.cursor = other
+	old := self.Cursor
+	self.Cursor = other
 	defer func() {
 		// errdefer self.cursor = old;
 		if err != nil {
-			self.cursor = old
+			self.Cursor = old
 		}
 	}()
 
 	// Keep our old style ID so it can be properly cleaned up below.
-	self.cursor.style_id = old.style_id
+	self.Cursor.StyleID = old.StyleID
 
 	// Hyperlinks will be managed separately below.
-	self.cursor.hyperlink_id = 0
-	self.cursor.hyperlink = nil
+	self.Cursor.HyperlinkID = 0
+	self.Cursor.Hyperlink = nil
 
 	// Keep our old page pin and X/Y because:
 	// 1. The old style will need to be cleaned up from the page it's from.
 	// 2. The new position navigated to by `cursorAbsolute` needs to be in our
 	//    own screen.
-	self.cursor.page_pin = old.page_pin
-	self.cursor.x = old.x
-	self.cursor.y = old.y
+	self.Cursor.PagePin = old.PagePin
+	self.Cursor.X = old.X
+	self.Cursor.Y = old.Y
 
 	// Call manual style update in order to clean up our old style, if we have
 	// one, and also to load the style from the other cursor, if it had one.
@@ -1670,13 +1670,13 @@ func (self *Screen) CursorCopy(other ScreenCursor, opts ScreenCursorCopyOptions)
 	}
 
 	// Move to the correct location to match the other cursor.
-	self.CursorAbsolute(other.x, other.y)
+	self.CursorAbsolute(other.X, other.Y)
 
 	// If the other cursor had a hyperlink, add it to ours.
-	if opts.hyperlink && other.hyperlink_id != 0 {
+	if opts.Hyperlink && other.HyperlinkID != 0 {
 		// Get the hyperlink from the other cursor's page.
-		other_page := &other.page_pin.node.data
-		other_link := other_page.hyperlink_set.Get(other.hyperlink_id)
+		other_page := &other.PagePin.Node.data
+		other_link := other_page.hyperlink_set.Get(other.HyperlinkID)
 
 		uri := other_link.uri
 		var id_ Optional[[]uint8]
@@ -1720,78 +1720,78 @@ func (self *Screen) cursorChangePin(new PageListPin) {
 	// Moving the cursor affects text run splitting (ligatures) so
 	// we must mark the old and new page dirty. We do this as long
 	// as the pins are not equal
-	if !self.cursor.page_pin.Eql(new) {
+	if !self.Cursor.PagePin.Eql(new) {
 		self.CursorMarkDirty()
 		new.MarkDirty()
 	}
 
 	// If our pin is on the same page, then we can just update the pin.
 	// We don't need to migrate any state.
-	if self.cursor.page_pin.node == new.node {
-		*self.cursor.page_pin = new
+	if self.Cursor.PagePin.Node == new.Node {
+		*self.Cursor.PagePin = new
 		return
 	}
 
 	// If we have an old style then we need to release it from the old page.
 	var old_style_ Optional[Style]
-	if self.cursor.style_id == StyleDefaultId {
+	if self.Cursor.StyleID == StyleDefaultID {
 		old_style_ = None[Style]()
 	} else {
-		old_style_ = Some(self.cursor.style)
+		old_style_ = Some(self.Cursor.Style)
 	}
 	if old_style_.Valid {
 		// Release the style directly from the old page instead of going through
 		// manualStyleUpdate, because the cursor position may have already been
 		// updated but the pin has not, which would fail integrity checks.
-		old_page := &self.cursor.page_pin.node.data
-		old_page.styles.Release(self.cursor.style_id)
-		self.cursor.style = Style{}
-		self.cursor.style_id = StyleDefaultId
+		old_page := &self.Cursor.PagePin.Node.data
+		old_page.styles.Release(self.Cursor.StyleID)
+		self.Cursor.Style = Style{}
+		self.Cursor.StyleID = StyleDefaultID
 	}
 
 	// If we have a hyperlink then we need to release it from the old page.
-	if self.cursor.hyperlink != nil {
-		old_page := &self.cursor.page_pin.node.data
-		old_page.hyperlink_set.Release(self.cursor.hyperlink_id)
+	if self.Cursor.Hyperlink != nil {
+		old_page := &self.Cursor.PagePin.Node.data
+		old_page.hyperlink_set.Release(self.Cursor.HyperlinkID)
 	}
 
 	// Update our pin to the new page
-	*self.cursor.page_pin = new
+	*self.Cursor.PagePin = new
 
 	// On the new page, we need to migrate our style
 	if old_style_.Valid {
 		old_style := old_style_.Value
-		self.cursor.style = old_style
+		self.Cursor.Style = old_style
 		if err := self.ManualStyleUpdate(); err != nil {
 			// This failure should not happen because manualStyleUpdate
 			// handles page splitting, overflow, and more. This should only
 			// happen if we're out of RAM. In this case, we'll just degrade
 			// gracefully back to the default style.
 			warn("screen", "failed to update style on cursor change err=error.%v", err) // Zig: log.err
-			self.cursor.style = Style{}
-			self.cursor.style_id = 0
+			self.Cursor.Style = Style{}
+			self.Cursor.StyleID = 0
 		}
 	}
 
 	// On the new page, we need to migrate our hyperlink
-	if self.cursor.hyperlink != nil {
-		link := self.cursor.hyperlink
+	if self.Cursor.Hyperlink != nil {
+		link := self.Cursor.Hyperlink
 
 		// So we don't attempt to free any memory in the replaced page.
-		self.cursor.hyperlink_id = 0
-		self.cursor.hyperlink = nil
+		self.Cursor.HyperlinkID = 0
+		self.Cursor.Hyperlink = nil
 
 		// Re-add
 		var id_ Optional[[]uint8]
-		switch link.id.Tag {
+		switch link.ID.Tag {
 		case HyperlinkHyperlinkIdExplicit:
-			id_ = Some(link.id.Explicit)
+			id_ = Some(link.ID.Explicit)
 		case HyperlinkHyperlinkIdImplicit:
 			id_ = None[[]uint8]()
 		default:
 			panic("unreachable")
 		}
-		if err := self.StartHyperlink(link.uri, id_); err != nil {
+		if err := self.StartHyperlink(link.URI, id_); err != nil {
 			// This shouldn't happen because startHyperlink should handle
 			// resizing. This only happens if we're truly out of RAM. Degrade
 			// to forgetting the hyperlink.
@@ -1809,7 +1809,7 @@ func (self *Screen) cursorChangePin(new PageListPin) {
 // Mark the cursor position as dirty.
 // TODO: test
 func (self *Screen) CursorMarkDirty() {
-	self.cursor.page_row.dirty = true
+	self.Cursor.PageRow.dirty = true
 }
 
 // CursorResetWrap is Screen.cursorResetWrap.
@@ -1824,9 +1824,9 @@ func (self *Screen) CursorMarkDirty() {
 // case, but not ideal.
 func (self *Screen) CursorResetWrap() {
 	// Reset the cursor's pending wrap state
-	self.cursor.pending_wrap = false
+	self.Cursor.PendingWrap = false
 
-	page_row := self.cursor.page_row
+	page_row := self.Cursor.PageRow
 
 	if !page_row.wrap {
 		return
@@ -1835,18 +1835,18 @@ func (self *Screen) CursorResetWrap() {
 	// This row does not wrap and the next row is not wrapped to
 	page_row.wrap = false
 
-	if next_row := self.cursor.page_pin.Down(1); next_row.Valid {
+	if next_row := self.Cursor.PagePin.Down(1); next_row.Valid {
 		next_row.Value.RowAndCell().row.wrap_continuation = false
 	}
 
 	// If the last cell in the row is a spacer head we need to clear it.
-	cells := self.cursor.page_pin.Cells(PageListPinCellSubsetAll)
-	cell := cells[self.cursor.page_pin.node.data.size.cols-1]
+	cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
+	cell := cells[self.Cursor.PagePin.Node.data.size.cols-1]
 	if cell.wide == PageCellWideSpacerHead {
 		self.ClearCells(
-			&self.cursor.page_pin.node.data,
+			&self.Cursor.PagePin.Node.data,
 			page_row,
-			cells[self.cursor.page_pin.node.data.size.cols-1:][0:1],
+			cells[self.Cursor.PagePin.Node.data.size.cols-1:][0:1],
 		)
 	}
 }
@@ -1907,17 +1907,17 @@ func (self *Screen) Scroll(behavior ScreenScroll) {
 
 	switch behavior.Tag {
 	case ScreenScrollActive:
-		self.pages.Scroll(PageListScroll{Tag: PageListScrollActive})
+		self.Pages.Scroll(PageListScroll{Tag: PageListScrollActive})
 	case ScreenScrollTop:
-		self.pages.Scroll(PageListScroll{Tag: PageListScrollTop})
+		self.Pages.Scroll(PageListScroll{Tag: PageListScrollTop})
 	case ScreenScrollPin:
-		self.pages.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: behavior.Pin})
+		self.Pages.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: behavior.Pin})
 	case ScreenScrollRow:
-		self.pages.Scroll(PageListScroll{Tag: PageListScrollRow, Row: behavior.Row})
+		self.Pages.Scroll(PageListScroll{Tag: PageListScrollRow, Row: behavior.Row})
 	case ScreenScrollDeltaRow:
-		self.pages.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: behavior.DeltaRow})
+		self.Pages.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: behavior.DeltaRow})
 	case ScreenScrollDeltaPrompt:
-		self.pages.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: behavior.DeltaPrompt})
+		self.Pages.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: behavior.DeltaPrompt})
 	default:
 		panic("unreachable")
 	}
@@ -1933,7 +1933,7 @@ func (self *Screen) Scroll(behavior ScreenScroll) {
 func (self *Screen) ScrollClear() error {
 	defer self.AssertIntegrity()
 
-	if err := self.pages.ScrollClear(); err != nil {
+	if err := self.Pages.ScrollClear(); err != nil {
 		return err
 	}
 	self.CursorReload()
@@ -1952,7 +1952,7 @@ func (self *Screen) ScrollClear() error {
 // screen by value; Go uses a pointer receiver like every other method of
 // Screen (a Screen is not meant to be copied).
 func (self *Screen) ViewportIsBottom() bool {
-	return self.pages.viewport.Tag == PageListViewportActive
+	return self.Pages.viewport.Tag == PageListViewportActive
 }
 
 // EraseRows is Screen.eraseRows.
@@ -1967,7 +1967,7 @@ func (self *Screen) EraseRows(tl Point, bl Optional[Point]) {
 	defer self.AssertIntegrity()
 
 	// Erase the rows
-	self.pages.EraseRows(tl, bl)
+	self.Pages.EraseRows(tl, bl)
 
 	// Just to be safe, reset our cursor since it is possible depending
 	// on the points that our active area shifted so our pointers are
@@ -1989,7 +1989,7 @@ func (self *Screen) EraseRows(tl Point, bl Optional[Point]) {
 func (self *Screen) ClearRows(tl Point, bl Optional[Point], protected bool) {
 	defer self.AssertIntegrity()
 
-	it := self.pages.PageIterator(PageListDirectionRightDown, tl, bl)
+	it := self.Pages.PageIterator(PageListDirectionRightDown, tl, bl)
 	for chunk_ := it.Next(); chunk_.Valid; chunk_ = it.Next() {
 		chunk := chunk_.Value
 		rows := chunk.Rows()
@@ -1998,7 +1998,7 @@ func (self *Screen) ClearRows(tl Point, bl Optional[Point], protected bool) {
 			cells_offset := row.cells
 			// Zig: `row.cells.ptr(chunk.node.data.memory)`, sliced.
 			cells_multi := chunk.node.data.rowCells(row)
-			cells := cells_multi[0:self.pages.cols]
+			cells := cells_multi[0:self.Pages.cols]
 
 			// Clear all cells
 			if protected {
@@ -2065,7 +2065,7 @@ func (self *Screen) ClearCells(page *Page, row *PageRow, cells []PageCell) {
 		// If we have no left/right scroll region we can be sure
 		// that we've cleared all the graphemes, so we clear the
 		// flag, otherwise we ask the page to update the flag.
-		if uint(len(cells)) == uint(self.pages.cols) {
+		if uint(len(cells)) == uint(self.Pages.cols) {
 			row.grapheme = false
 		} else {
 			page.UpdateRowGraphemeFlag(row)
@@ -2083,7 +2083,7 @@ func (self *Screen) ClearCells(page *Page, row *PageRow, cells []PageCell) {
 		// If we have no left/right scroll region we can be sure
 		// that we've cleared all the hyperlinks, so we clear the
 		// flag, otherwise we ask the page to update the flag.
-		if uint(len(cells)) == uint(self.pages.cols) {
+		if uint(len(cells)) == uint(self.Pages.cols) {
 			row.hyperlink = false
 		} else {
 			page.UpdateRowHyperlinkFlag(row)
@@ -2101,7 +2101,7 @@ func (self *Screen) ClearCells(page *Page, row *PageRow, cells []PageCell) {
 		// If we have no left/right scroll region we can be sure
 		// that we've cleared all the styles, so we clear the
 		// flag, otherwise we ask the page to update the flag.
-		if uint(len(cells)) == uint(self.pages.cols) {
+		if uint(len(cells)) == uint(self.Pages.cols) {
 			row.styled = false
 		} else {
 			page.UpdateRowStyledFlag(row)
@@ -2187,12 +2187,12 @@ func (self *Screen) ClearUnprotectedCells(page *Page, row *PageRow, cells []Page
 // line. Not an extremely urgent issue since it's an edge case of an edge
 // case, but not ideal.
 func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
-	page := &self.cursor.page_pin.node.data
+	page := &self.Cursor.PagePin.Node.data
 
 	page.PauseIntegrityChecks(true)
 	defer page.PauseIntegrityChecks(false)
 
-	cols := self.cursor.page_pin.node.data.size.cols
+	cols := self.Cursor.PagePin.Node.data.size.cols
 
 	// `x` may be up to an INCLUDING `cols`, since that signifies splitting
 	// the boundary to the right of the final cell in the row.
@@ -2201,17 +2201,17 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 	// [ A B C D E F|]
 	//              ^ Boundary between final cell and row end.
 	if x == cols {
-		if !self.cursor.page_row.wrap {
+		if !self.Cursor.PageRow.wrap {
 			return
 		}
 
-		cells := self.cursor.page_pin.Cells(PageListPinCellSubsetAll)
+		cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
 
 		// Spacer head at end of wrapped row.
 		if cells[cols-1].wide == PageCellWideSpacerHead {
 			self.ClearCells(
 				page,
-				self.cursor.page_row,
+				self.Cursor.PageRow,
 				cells[cols-1:][0:1],
 			)
 		}
@@ -2229,22 +2229,22 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 	//
 	// First cell may be a wrapped wide cell with a spacer
 	// head on the previous row that needs to be cleared.
-	if (x == 0 || x == 1) && self.cursor.page_row.wrap_continuation {
-		cells := self.cursor.page_pin.Cells(PageListPinCellSubsetAll)
+	if (x == 0 || x == 1) && self.Cursor.PageRow.wrap_continuation {
+		cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
 
 		// If the first cell in a row is wide the previous row
 		// may have a spacer head which needs to be cleared.
 		if cells[0].wide == PageCellWideWide {
-			if p_row_ := self.cursor.page_pin.Up(1); p_row_.Valid {
+			if p_row_ := self.Cursor.PagePin.Up(1); p_row_.Valid {
 				p_row := p_row_.Value
 				p_rac := p_row.RowAndCell()
 				p_cells := p_row.Cells(PageListPinCellSubsetAll)
-				p_cell := p_cells[p_row.node.data.size.cols-1]
+				p_cell := p_cells[p_row.Node.data.size.cols-1]
 				if p_cell.wide == PageCellWideSpacerHead {
 					self.ClearCells(
-						&p_row.node.data,
+						&p_row.Node.data,
 						p_rac.row,
-						p_cells[p_row.node.data.size.cols-1:][0:1],
+						p_cells[p_row.Node.data.size.cols-1:][0:1],
 					)
 				}
 			}
@@ -2262,7 +2262,7 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 		assert(x > 0)
 		assert(x < cols)
 
-		cells := self.cursor.page_pin.Cells(PageListPinCellSubsetAll)
+		cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
 
 		left := cells[x-1]
 		switch left.wide {
@@ -2277,7 +2277,7 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 		case PageCellWideWide:
 			self.ClearCells(
 				page,
-				self.cursor.page_row,
+				self.Cursor.PageRow,
 				cells[x-1:][0:2],
 			)
 
@@ -2294,10 +2294,10 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 //
 // Zig: self is *const Screen.
 func (self *Screen) BlankCell() PageCell {
-	if self.cursor.style_id == StyleDefaultId {
+	if self.Cursor.StyleID == StyleDefaultID {
 		return PageCell{}
 	}
-	if bg := self.cursor.style.BgCell(); bg.Valid {
+	if bg := self.Cursor.Style.BgCell(); bg.Valid {
 		return bg.Value
 	}
 	return PageCell{}
@@ -2306,8 +2306,8 @@ func (self *Screen) BlankCell() PageCell {
 // ScreenResize is Screen.Resize: the options of resize.
 type ScreenResize struct {
 	// The new size to resize to
-	cols SizeCellCountInt
-	rows SizeCellCountInt
+	Cols SizeCellCountInt
+	Rows SizeCellCountInt
 
 	// Whether to reflow soft-wrapped text.
 	//
@@ -2317,7 +2317,7 @@ type ScreenResize struct {
 	//
 	// Zig default: TRUE. The Go zero value is false; a caller that relies
 	// on the default must set it.
-	reflow bool
+	Reflow bool
 
 	// Set this to enable prompt redraw on resize. This signals
 	// that the running program can redraw the prompt if the cursor is
@@ -2327,7 +2327,7 @@ type ScreenResize struct {
 	// Zig default: .false (OSCParsersSemanticPromptRedrawFalse). The Go
 	// zero value is .true; a caller that relies on the default must set
 	// it.
-	prompt_redraw OSCParsersSemanticPromptRedraw
+	PromptRedraw OSCParsersSemanticPromptRedraw
 }
 
 // Resize is Screen.resize.
@@ -2353,22 +2353,22 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 
 	// Release the cursor style while resizing just
 	// in case the cursor ends up on a different page.
-	cursor_style := self.cursor.style
-	self.cursor.style = Style{}
+	cursor_style := self.Cursor.Style
+	self.Cursor.Style = Style{}
 	if err := self.ManualStyleUpdate(); err != nil {
 		panic("unreachable") // catch unreachable
 	}
 	defer func() {
 		// Restore the cursor style.
-		self.cursor.style = cursor_style
+		self.Cursor.Style = cursor_style
 		if err := self.ManualStyleUpdate(); err != nil {
 			// This failure should not happen because manualStyleUpdate
 			// handles page splitting, overflow, and more. This should only
 			// happen if we're out of RAM. In this case, we'll just degrade
 			// gracefully back to the default style.
 			warn("screen", "failed to update style on cursor reload err=error.%v", err) // Zig: log.err
-			self.cursor.style = Style{}
-			self.cursor.style_id = 0
+			self.Cursor.Style = Style{}
+			self.Cursor.StyleID = 0
 		}
 	}()
 
@@ -2376,14 +2376,14 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	// and then we need to re-add it to the new page. This needs
 	// to happen because resize below typically reallocates a
 	// new page so the old hyperlink is invalid.
-	hyperlink_ := self.cursor.hyperlink
-	if self.cursor.hyperlink_id != 0 {
+	hyperlink_ := self.Cursor.Hyperlink
+	if self.Cursor.HyperlinkID != 0 {
 		// Note we do NOT use endHyperlink because we want to keep
 		// our allocated self.cursor.hyperlink valid.
-		page := &self.cursor.page_pin.node.data
-		page.hyperlink_set.Release(self.cursor.hyperlink_id)
-		self.cursor.hyperlink_id = 0
-		self.cursor.hyperlink = nil
+		page := &self.Cursor.PagePin.Node.data
+		page.hyperlink_set.Release(self.Cursor.HyperlinkID)
+		self.Cursor.HyperlinkID = 0
+		self.Cursor.Hyperlink = nil
 	}
 
 	// We need to insert a tracked pin for our saved cursor so we can
@@ -2391,14 +2391,14 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	//
 	// Zig: the labeled block `saved_cursor:`.
 	var saved_cursor_pin *PageListPin
-	if self.saved_cursor.Valid {
-		sc := self.saved_cursor.Value
-		pin := self.pages.Pin(Point{Tag: PointTagActive, Active: PointCoordinate{
-			x: sc.x,
-			y: uint32(sc.y),
+	if self.SavedCursor.Valid {
+		sc := self.SavedCursor.Value
+		pin := self.Pages.Pin(Point{Tag: PointTagActive, Active: PointCoordinate{
+			X: sc.X,
+			Y: uint32(sc.Y),
 		}})
 		if pin.Valid {
-			saved_cursor_pin, err = self.pages.TrackPin(pin.Value)
+			saved_cursor_pin, err = self.Pages.TrackPin(pin.Value)
 			if err != nil {
 				return err
 			}
@@ -2406,7 +2406,7 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	}
 	defer func() {
 		if saved_cursor_pin != nil {
-			self.pages.UntrackPin(saved_cursor_pin)
+			self.Pages.UntrackPin(saved_cursor_pin)
 		}
 	}()
 
@@ -2423,18 +2423,18 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	//
 	// Zig: the labeled block `prompt:`; `break :prompt` is a return from the
 	// closure.
-	if opts.prompt_redraw != OSCParsersSemanticPromptRedrawFalse &&
-		self.cursor.semantic_content != PageCellSemanticContentOutput {
+	if opts.PromptRedraw != OSCParsersSemanticPromptRedrawFalse &&
+		self.Cursor.SemanticContent != PageCellSemanticContentOutput {
 		func() {
-			switch opts.prompt_redraw {
+			switch opts.PromptRedraw {
 			case OSCParsersSemanticPromptRedrawFalse:
 				panic("unreachable")
 
 			// For `.last`, only clear the current line where the cursor is.
 			// For `.true`, clear all prompt lines starting from the beginning.
 			case OSCParsersSemanticPromptRedrawLast:
-				page := &self.cursor.page_pin.node.data
-				row := self.cursor.page_row
+				page := &self.Cursor.PagePin.Node.data
+				row := self.Cursor.PageRow
 				cells := page.GetCells(row)
 				self.ClearCells(page, row, cells)
 
@@ -2442,7 +2442,7 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 				// start:
 				var start PageListPin
 				{
-					it := self.cursor.page_pin.PromptIterator(
+					it := self.Cursor.PagePin.PromptIterator(
 						PageListDirectionLeftUp,
 						None[PageListPin](),
 					)
@@ -2463,7 +2463,7 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 				it := start.RowIterator(PageListDirectionRightDown, None[PageListPin]())
 				for pin_ := it.Next(); pin_.Valid; pin_ = it.Next() {
 					pin := pin_.Value
-					page := &pin.node.data
+					page := &pin.Node.data
 					row := pin.RowAndCell().row
 					cells := page.GetCells(row)
 					self.ClearCells(page, row, cells)
@@ -2476,11 +2476,11 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	}
 
 	// Perform the resize operation.
-	if err := self.pages.Resize(PageListResize{
-		rows:   Some(opts.rows),
-		cols:   Some(opts.cols),
-		reflow: opts.reflow,
-		cursor: Some(PageListResizeCursor{x: self.cursor.x, y: self.cursor.y}),
+	if err := self.Pages.Resize(PageListResize{
+		Rows:   Some(opts.Rows),
+		Cols:   Some(opts.Cols),
+		Reflow: opts.Reflow,
+		Cursor: Some(PageListResizeCursor{x: self.Cursor.X, y: self.Cursor.Y}),
 	}); err != nil {
 		return err
 	}
@@ -2488,8 +2488,8 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	// If we have no scrollback and we shrunk our rows, we must explicitly
 	// erase our history. This is because PageList always keeps at least
 	// a page size of history.
-	if self.no_scrollback {
-		self.pages.EraseRows(Point{Tag: PointTagHistory}, None[Point]())
+	if self.NoScrollback {
+		self.Pages.EraseRows(Point{Tag: PointTagHistory}, None[Point]())
 	}
 
 	// If our cursor was updated, we do a full reload so all our cursor
@@ -2501,25 +2501,25 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 		p := saved_cursor_pin
 		// This should never fail because a non-null saved_cursor_pin
 		// implies a non-null saved_cursor.
-		assert(self.saved_cursor.Valid) // .?
-		sc := &self.saved_cursor.Value
-		if pt_ := self.pages.PointFromPin(PointTagActive, *p); pt_.Valid {
+		assert(self.SavedCursor.Valid) // .?
+		sc := &self.SavedCursor.Value
+		if pt_ := self.Pages.PointFromPin(PointTagActive, *p); pt_.Valid {
 			pt := pt_.Value
-			sc.x = pt.Active.x
+			sc.X = pt.Active.X
 			// Zig: @intCast(pt.active.y) to u16.
-			assert(pt.Active.y <= 0xFFFF)
-			sc.y = SizeCellCountInt(pt.Active.y)
+			assert(pt.Active.Y <= 0xFFFF)
+			sc.Y = SizeCellCountInt(pt.Active.Y)
 
 			// If we had pending wrap set and we're no longer at the end of
 			// the line, we unset the pending wrap and move the cursor to
 			// reflect the correct next position.
-			if sc.pending_wrap {
+			if sc.PendingWrap {
 				// Zig: `opts.cols - 1` is a u16 subtraction, evaluated
 				// only when pending_wrap is set; it traps at cols 0.
-				assert(opts.cols > 0)
-				if sc.x != opts.cols-1 {
-					sc.pending_wrap = false
-					sc.x += 1
+				assert(opts.Cols > 0)
+				if sc.X != opts.Cols-1 {
+					sc.PendingWrap = false
+					sc.X += 1
 				}
 			}
 		} else {
@@ -2530,9 +2530,9 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 			// top-left. It may be reasonable to also move the cursor to
 			// match the primary cursor. Any behavior is fine since this is
 			// totally unspecified.
-			sc.x = 0
-			sc.y = 0
-			sc.pending_wrap = false
+			sc.X = 0
+			sc.Y = 0
+			sc.PendingWrap = false
 		}
 	}
 
@@ -2540,15 +2540,15 @@ func (self *Screen) Resize(opts ScreenResize) (err error) {
 	if hyperlink_ != nil {
 		link := hyperlink_
 		var id_ Optional[[]uint8]
-		switch link.id.Tag {
+		switch link.ID.Tag {
 		case HyperlinkHyperlinkIdExplicit:
-			id_ = Some(link.id.Explicit)
+			id_ = Some(link.ID.Explicit)
 		case HyperlinkHyperlinkIdImplicit:
 			id_ = None[[]uint8]()
 		default:
 			panic("unreachable")
 		}
-		if err := self.StartHyperlink(link.uri, id_); err != nil {
+		if err := self.StartHyperlink(link.URI, id_); err != nil {
 			// This shouldn't happen because startHyperlink should handle
 			// resizing. This only happens if we're truly out of RAM. Degrade
 			// to forgetting the hyperlink.
@@ -2577,14 +2577,14 @@ func (self *Screen) SetAttribute(attr SGRAttribute) (err error) {
 	// If we fail to set our style for any reason, we should revert
 	// back to the old style. If we fail to do that, we revert back to
 	// the default style.
-	old_style := self.cursor.style
+	old_style := self.Cursor.Style
 	defer func() {
 		// errdefer
 		if err != nil {
-			self.cursor.style = old_style
+			self.Cursor.Style = old_style
 			if err := self.ManualStyleUpdate(); err != nil {
 				warn("screen", "setAttribute error restoring old style after failure err=error.%v", err)
-				self.cursor.style = Style{}
+				self.Cursor.Style = Style{}
 				if err := self.ManualStyleUpdate(); err != nil {
 					panic("unreachable") // catch unreachable
 				}
@@ -2594,117 +2594,117 @@ func (self *Screen) SetAttribute(attr SGRAttribute) (err error) {
 
 	switch attr.Tag {
 	case SGRAttributeTagUnset:
-		self.cursor.style = Style{}
+		self.Cursor.Style = Style{}
 
 	case SGRAttributeTagBold:
-		self.cursor.style.flags.bold = true
+		self.Cursor.Style.Flags.Bold = true
 
 	case SGRAttributeTagResetBold:
 		// Bold and faint share the same SGR code for this
-		self.cursor.style.flags.bold = false
-		self.cursor.style.flags.faint = false
+		self.Cursor.Style.Flags.Bold = false
+		self.Cursor.Style.Flags.Faint = false
 
 	case SGRAttributeTagItalic:
-		self.cursor.style.flags.italic = true
+		self.Cursor.Style.Flags.Italic = true
 
 	case SGRAttributeTagResetItalic:
-		self.cursor.style.flags.italic = false
+		self.Cursor.Style.Flags.Italic = false
 
 	case SGRAttributeTagFaint:
-		self.cursor.style.flags.faint = true
+		self.Cursor.Style.Flags.Faint = true
 
 	case SGRAttributeTagUnderline:
-		self.cursor.style.flags.underline = attr.Underline
+		self.Cursor.Style.Flags.Underline = attr.Underline
 
 	case SGRAttributeTagUnderlineColor:
 		rgb := attr.UnderlineColor
-		self.cursor.style.underline_color = StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: rgb.r,
-			g: rgb.g,
-			b: rgb.b,
+		self.Cursor.Style.underline_color = StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: rgb.R,
+			G: rgb.G,
+			B: rgb.B,
 		}}
 
 	case SGRAttributeTag256UnderlineColor:
-		self.cursor.style.underline_color = StyleColor{Tag: StyleColorPalette, Palette: attr.X256UnderlineColor}
+		self.Cursor.Style.underline_color = StyleColor{Tag: StyleColorPalette, Palette: attr.X256UnderlineColor}
 
 	case SGRAttributeTagResetUnderlineColor:
-		self.cursor.style.underline_color = StyleColor{Tag: StyleColorNone}
+		self.Cursor.Style.underline_color = StyleColor{Tag: StyleColorNone}
 
 	case SGRAttributeTagOverline:
-		self.cursor.style.flags.overline = true
+		self.Cursor.Style.Flags.Overline = true
 
 	case SGRAttributeTagResetOverline:
-		self.cursor.style.flags.overline = false
+		self.Cursor.Style.Flags.Overline = false
 
 	case SGRAttributeTagBlink:
-		self.cursor.style.flags.blink = true
+		self.Cursor.Style.Flags.Blink = true
 
 	case SGRAttributeTagResetBlink:
-		self.cursor.style.flags.blink = false
+		self.Cursor.Style.Flags.Blink = false
 
 	case SGRAttributeTagInverse:
-		self.cursor.style.flags.inverse = true
+		self.Cursor.Style.Flags.Inverse = true
 
 	case SGRAttributeTagResetInverse:
-		self.cursor.style.flags.inverse = false
+		self.Cursor.Style.Flags.Inverse = false
 
 	case SGRAttributeTagInvisible:
-		self.cursor.style.flags.invisible = true
+		self.Cursor.Style.Flags.Invisible = true
 
 	case SGRAttributeTagResetInvisible:
-		self.cursor.style.flags.invisible = false
+		self.Cursor.Style.Flags.Invisible = false
 
 	case SGRAttributeTagStrikethrough:
-		self.cursor.style.flags.strikethrough = true
+		self.Cursor.Style.Flags.Strikethrough = true
 
 	case SGRAttributeTagResetStrikethrough:
-		self.cursor.style.flags.strikethrough = false
+		self.Cursor.Style.Flags.Strikethrough = false
 
 	case SGRAttributeTagDirectColorFg:
 		rgb := attr.DirectColorFg
-		self.cursor.style.fg_color = StyleColor{
+		self.Cursor.Style.FgColor = StyleColor{
 			Tag: StyleColorRgb,
 			Rgb: ColorRGB{
-				r: rgb.r,
-				g: rgb.g,
-				b: rgb.b,
+				R: rgb.R,
+				G: rgb.G,
+				B: rgb.B,
 			},
 		}
 
 	case SGRAttributeTagDirectColorBg:
 		rgb := attr.DirectColorBg
-		self.cursor.style.bg_color = StyleColor{
+		self.Cursor.Style.BgColor = StyleColor{
 			Tag: StyleColorRgb,
 			Rgb: ColorRGB{
-				r: rgb.r,
-				g: rgb.g,
-				b: rgb.b,
+				R: rgb.R,
+				G: rgb.G,
+				B: rgb.B,
 			},
 		}
 
 	case SGRAttributeTag8Fg:
-		self.cursor.style.fg_color = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8Fg)}
+		self.Cursor.Style.FgColor = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8Fg)}
 
 	case SGRAttributeTag8Bg:
-		self.cursor.style.bg_color = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8Bg)}
+		self.Cursor.Style.BgColor = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8Bg)}
 
 	case SGRAttributeTagResetFg:
-		self.cursor.style.fg_color = StyleColor{Tag: StyleColorNone}
+		self.Cursor.Style.FgColor = StyleColor{Tag: StyleColorNone}
 
 	case SGRAttributeTagResetBg:
-		self.cursor.style.bg_color = StyleColor{Tag: StyleColorNone}
+		self.Cursor.Style.BgColor = StyleColor{Tag: StyleColorNone}
 
 	case SGRAttributeTag8BrightFg:
-		self.cursor.style.fg_color = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8BrightFg)}
+		self.Cursor.Style.FgColor = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8BrightFg)}
 
 	case SGRAttributeTag8BrightBg:
-		self.cursor.style.bg_color = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8BrightBg)}
+		self.Cursor.Style.BgColor = StyleColor{Tag: StyleColorPalette, Palette: uint8(attr.X8BrightBg)}
 
 	case SGRAttributeTag256Fg:
-		self.cursor.style.fg_color = StyleColor{Tag: StyleColorPalette, Palette: attr.X256Fg}
+		self.Cursor.Style.FgColor = StyleColor{Tag: StyleColorPalette, Palette: attr.X256Fg}
 
 	case SGRAttributeTag256Bg:
-		self.cursor.style.bg_color = StyleColor{Tag: StyleColorPalette, Palette: attr.X256Bg}
+		self.Cursor.Style.BgColor = StyleColor{Tag: StyleColorPalette, Palette: attr.X256Bg}
 
 	case SGRAttributeTagUnknown:
 		return nil
@@ -2737,18 +2737,18 @@ func (self *Screen) SetAttribute(attr SGRAttribute) (err error) {
 // (dcs.go) or ErrOutOfSpace (PageList.go).
 func (self *Screen) ManualStyleUpdate() error {
 	defer self.AssertIntegrity()
-	page := &self.cursor.page_pin.node.data
+	page := &self.Cursor.PagePin.Node.data
 
 	// std.log.warn("active styles={}", .{page.styles.count()});
 
 	// Release our previous style if it was not default.
-	if self.cursor.style_id != StyleDefaultId {
-		page.styles.Release(self.cursor.style_id)
+	if self.Cursor.StyleID != StyleDefaultID {
+		page.styles.Release(self.Cursor.StyleID)
 	}
 
 	// If our new style is the default, just reset to that
-	if self.cursor.style.Default() {
-		self.cursor.style_id = StyleDefaultId
+	if self.Cursor.Style.Default() {
+		self.Cursor.StyleID = StyleDefaultID
 		return nil
 	}
 
@@ -2758,7 +2758,7 @@ func (self *Screen) ManualStyleUpdate() error {
 	//
 	// This also ensures that if anything fails below, we fall back to
 	// clearing our style.
-	self.cursor.style_id = StyleDefaultId
+	self.Cursor.StyleID = StyleDefaultID
 
 	// After setting the style, we need to update our style map.
 	// Note that we COULD lazily do this in print. We should look into
@@ -2766,7 +2766,7 @@ func (self *Screen) ManualStyleUpdate() error {
 	// fast because setting a ton of styles that do nothing is uncommon
 	// and weird.
 	id, err := page.styles.Add(
-		self.cursor.style,
+		self.Cursor.Style,
 	)
 	if err != nil {
 		// id:
@@ -2782,7 +2782,7 @@ func (self *Screen) ManualStyleUpdate() error {
 			panic("unreachable")
 		}
 		node, increase_err := self.IncreaseCapacity(
-			self.cursor.page_pin.node,
+			self.Cursor.PagePin.Node,
 			adjustment,
 		)
 		if increase_err != nil {
@@ -2794,10 +2794,10 @@ func (self *Screen) ManualStyleUpdate() error {
 				// Out of space, we need to split the page. Split wherever
 				// is using less capacity and hope that works. If it doesn't
 				// work, we tried.
-				if err := self.splitForCapacity(*self.cursor.page_pin); err != nil {
+				if err := self.splitForCapacity(*self.Cursor.PagePin); err != nil {
 					return err
 				}
-				node = self.cursor.page_pin.node
+				node = self.Cursor.PagePin.Node
 			default:
 				panic("unreachable")
 			}
@@ -2805,7 +2805,7 @@ func (self *Screen) ManualStyleUpdate() error {
 
 		page = &node.data
 		id2, err2 := page.styles.Add(
-			self.cursor.style,
+			self.Cursor.Style,
 		)
 		if err2 != nil {
 			switch err2 {
@@ -2832,7 +2832,7 @@ func (self *Screen) ManualStyleUpdate() error {
 	// Zig: errdefer page.styles.release(page.memory, id): nothing fails
 	// after it.
 
-	self.cursor.style_id = id
+	self.Cursor.StyleID = id
 	return nil
 }
 
@@ -2865,17 +2865,17 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 	// `.styles = @intCast(styles_cap)` when one of the two ranges references
 	// every id of a full style set of the maximum capacity. The port returns
 	// ErrOutOfSpace (the page cannot be split) before anything has changed.
-	cap_above, err := pin.node.data.exactRowCapacityOrError(
+	cap_above, err := pin.Node.data.exactRowCapacityOrError(
 		0,
-		uint(pin.y)+1,
+		uint(pin.Y)+1,
 	)
 	if err != nil {
 		return err
 	}
 	bytes_above := PageLayoutOf(cap_above).total_size
-	cap_below, err := pin.node.data.exactRowCapacityOrError(
-		uint(pin.y),
-		uint(pin.node.data.size.rows),
+	cap_below, err := pin.Node.data.exactRowCapacityOrError(
+		uint(pin.Y),
+		uint(pin.Node.data.size.rows),
 	)
 	if err != nil {
 		return err
@@ -2884,7 +2884,7 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 
 	// We need to track the old cursor pin because if our split
 	// moves the cursor pin we need to update our accounting.
-	old_cursor := *self.cursor.page_pin
+	old_cursor := *self.Cursor.PagePin
 
 	// If our bytes above are less than bytes below, we move the pin
 	// to split down one since splitting includes the pinned row in
@@ -2895,12 +2895,12 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 			split_pin = down.Value
 		}
 	}
-	if err := self.pages.Split(split_pin); err != nil {
+	if err := self.Pages.Split(split_pin); err != nil {
 		return err
 	}
 
 	// Cursor didn't change nodes, we're done.
-	if self.cursor.page_pin.node == old_cursor.node {
+	if self.Cursor.PagePin.Node == old_cursor.Node {
 		return nil
 	}
 
@@ -2911,8 +2911,8 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 	// Note that page_row and all that will be invalid, it points to the
 	// new node, but at the time of writing this we don't need any of that
 	// to be right in cursorChangePin.
-	new_cursor := *self.cursor.page_pin
-	*self.cursor.page_pin = old_cursor
+	new_cursor := *self.Cursor.PagePin
+	*self.Cursor.PagePin = old_cursor
 	self.cursorChangePin(new_cursor)
 
 	// term51 (ruled departure, docs/mapping.md "Page-layer bookkeeping";
@@ -2925,9 +2925,9 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 	// cached row and cell from the moved pin, as cursorAbsolute does after
 	// cursorChangePin; x and y are unchanged (the split does not move the
 	// cursor on screen).
-	page_rac := self.cursor.page_pin.RowAndCell()
-	self.cursor.page_row = page_rac.row
-	self.cursor.page_cell = page_rac.cell
+	page_rac := self.Cursor.PagePin.RowAndCell()
+	self.Cursor.PageRow = page_rac.row
+	self.Cursor.PageCell = page_rac.cell
 	return nil
 }
 
@@ -2941,9 +2941,9 @@ func (self *Screen) splitForCapacity(pin PageListPin) error {
 func (self *Screen) AppendGrapheme(cell *PageCell, cp uint32) error {
 	// Zig's defer evaluates the expression when it runs; the cursor page
 	// may have changed by then.
-	defer func() { self.cursor.page_pin.node.data.AssertIntegrity() }()
-	if err := self.cursor.page_pin.node.data.AppendGrapheme(
-		self.cursor.page_row,
+	defer func() { self.Cursor.PagePin.Node.data.AssertIntegrity() }()
+	if err := self.Cursor.PagePin.Node.data.AppendGrapheme(
+		self.Cursor.PageRow,
 		cell,
 		cp,
 	); err != nil {
@@ -2957,8 +2957,8 @@ func (self *Screen) AppendGrapheme(cell *PageCell, cp uint32) error {
 				// row's first cell, then `(@intFromPtr(target) -
 				// @intFromPtr(zero)) / @sizeOf(Cell)`, which traps when the
 				// cell is before the row's first cell.
-				page := &self.cursor.page_pin.node.data
-				zero := page.cellIndex(self.cursor.page_cell) - uint(self.cursor.x)
+				page := &self.Cursor.PagePin.Node.data
+				zero := page.cellIndex(self.Cursor.PageCell) - uint(self.Cursor.X)
 				target := page.cellIndex(cell)
 				assert(target >= zero) // Zig: - traps
 				cell_idx = target - zero
@@ -2967,7 +2967,7 @@ func (self *Screen) AppendGrapheme(cell *PageCell, cp uint32) error {
 			// Adjust our capacity. This will update our cursor page pin and
 			// force us to reload.
 			if _, err := self.IncreaseCapacity(
-				self.cursor.page_pin.node,
+				self.Cursor.PagePin.Node,
 				Some(PageListIncreaseCapacityGraphemeBytes),
 			); err != nil {
 				return err
@@ -2977,18 +2977,18 @@ func (self *Screen) AppendGrapheme(cell *PageCell, cp uint32) error {
 			// the reloaded cursor pointers.
 			var reloaded_cell *PageCell
 			switch {
-			case cell_idx == uint(self.cursor.x):
-				reloaded_cell = self.cursor.page_cell
-			case cell_idx < uint(self.cursor.x):
-				reloaded_cell = self.CursorCellLeft(SizeCellCountInt(uint(self.cursor.x) - cell_idx))
+			case cell_idx == uint(self.Cursor.X):
+				reloaded_cell = self.Cursor.PageCell
+			case cell_idx < uint(self.Cursor.X):
+				reloaded_cell = self.CursorCellLeft(SizeCellCountInt(uint(self.Cursor.X) - cell_idx))
 			default:
 				// Zig: @intCast to u16.
-				assert(cell_idx-uint(self.cursor.x) <= 0xFFFF)
-				reloaded_cell = self.CursorCellRight(SizeCellCountInt(cell_idx - uint(self.cursor.x)))
+				assert(cell_idx-uint(self.Cursor.X) <= 0xFFFF)
+				reloaded_cell = self.CursorCellRight(SizeCellCountInt(cell_idx - uint(self.Cursor.X)))
 			}
 
-			if err2 := self.cursor.page_pin.node.data.AppendGrapheme(
-				self.cursor.page_row,
+			if err2 := self.Cursor.PagePin.Node.data.AppendGrapheme(
+				self.Cursor.PageRow,
 				reloaded_cell,
 				cp,
 			); err2 != nil {
@@ -3018,28 +3018,28 @@ func (self *Screen) AppendGrapheme(cell *PageCell, cp uint32) error {
 func (self *Screen) StartHyperlink(uri []uint8, id_ Optional[[]uint8]) (err error) {
 	// Create our pending entry.
 	var link Hyperlink
-	link.uri = uri
+	link.URI = uri
 	if id_.Valid {
-		link.id = HyperlinkHyperlinkId{
+		link.ID = HyperlinkHyperlinkId{
 			Tag:      HyperlinkHyperlinkIdExplicit,
 			Explicit: id_.Value,
 		}
 	} else {
 		// implicit:
-		link.id = HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: self.cursor.hyperlink_implicit_id}
+		link.ID = HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: self.Cursor.HyperlinkImplicitID}
 		// defer self.cursor.hyperlink_implicit_id += 1; (u32, traps on
 		// overflow)
-		assert(self.cursor.hyperlink_implicit_id != 0xFFFFFFFF)
-		self.cursor.hyperlink_implicit_id += 1
+		assert(self.Cursor.HyperlinkImplicitID != 0xFFFFFFFF)
+		self.Cursor.HyperlinkImplicitID += 1
 	}
 	defer func() {
 		// errdefer
 		if err != nil {
-			switch link.id.Tag {
+			switch link.ID.Tag {
 			case HyperlinkHyperlinkIdExplicit:
 			case HyperlinkHyperlinkIdImplicit:
 				// Cannot underflow: it was incremented above.
-				self.cursor.hyperlink_implicit_id -= 1
+				self.Cursor.HyperlinkImplicitID -= 1
 			default:
 				panic("unreachable")
 			}
@@ -3060,7 +3060,7 @@ func (self *Screen) StartHyperlink(uri []uint8, id_ Optional[[]uint8]) (err erro
 		// strings table is out of memory, adjust it up
 		case ErrStringsOutOfMemory:
 			if _, err := self.IncreaseCapacity(
-				self.cursor.page_pin.node,
+				self.Cursor.PagePin.Node,
 				Some(PageListIncreaseCapacityStringBytes),
 			); err != nil {
 				return err
@@ -3069,7 +3069,7 @@ func (self *Screen) StartHyperlink(uri []uint8, id_ Optional[[]uint8]) (err erro
 		// hyperlink set is out of memory, adjust it up
 		case ErrSetOutOfMemory:
 			if _, err := self.IncreaseCapacity(
-				self.cursor.page_pin.node,
+				self.Cursor.PagePin.Node,
 				Some(PageListIncreaseCapacityHyperlinkBytes),
 			); err != nil {
 				return err
@@ -3078,7 +3078,7 @@ func (self *Screen) StartHyperlink(uri []uint8, id_ Optional[[]uint8]) (err erro
 		// hyperlink set is too full, rehash it
 		case ErrSetNeedsRehash:
 			if _, err := self.IncreaseCapacity(
-				self.cursor.page_pin.node,
+				self.Cursor.PagePin.Node,
 				None[PageListIncreaseCapacity](),
 			); err != nil {
 				return err
@@ -3120,15 +3120,15 @@ func (self *Screen) startHyperlinkOnce(source Hyperlink) error {
 	// Zig: errdefer link.deinit(self.alloc); it only frees.
 
 	// Insert the hyperlink into page memory
-	page := &self.cursor.page_pin.node.data
+	page := &self.Cursor.PagePin.Node.data
 	id, err := page.InsertHyperlink(*link)
 	if err != nil {
 		return err
 	}
 
 	// Save it all
-	self.cursor.hyperlink = link
-	self.cursor.hyperlink_id = id
+	self.Cursor.Hyperlink = link
+	self.Cursor.HyperlinkID = id
 	return nil
 }
 
@@ -3138,8 +3138,8 @@ func (self *Screen) startHyperlinkOnce(source Hyperlink) error {
 // current hyperlink (if any). This is safe to call multiple times.
 func (self *Screen) EndHyperlink() {
 	// If we have no hyperlink state then do nothing
-	if self.cursor.hyperlink_id == 0 {
-		assert(self.cursor.hyperlink == nil)
+	if self.Cursor.HyperlinkID == 0 {
+		assert(self.Cursor.Hyperlink == nil)
 		return
 	}
 
@@ -3153,13 +3153,13 @@ func (self *Screen) EndHyperlink() {
 	// how RefCountedSet works). This causes some memory fragmentation but
 	// is fine because if it is ever pruned the context deleted callback
 	// will be called.
-	page := &self.cursor.page_pin.node.data
-	page.hyperlink_set.Release(self.cursor.hyperlink_id)
-	assert(self.cursor.hyperlink != nil) // .?
-	self.cursor.hyperlink.Deinit()
+	page := &self.Cursor.PagePin.Node.data
+	page.hyperlink_set.Release(self.Cursor.HyperlinkID)
+	assert(self.Cursor.Hyperlink != nil) // .?
+	self.Cursor.Hyperlink.Deinit()
 	// Zig: self.alloc.destroy(self.cursor.hyperlink.?); Go memory.
-	self.cursor.hyperlink_id = 0
-	self.cursor.hyperlink = nil
+	self.Cursor.HyperlinkID = 0
+	self.Cursor.Hyperlink = nil
 }
 
 // CursorSetHyperlink is Screen.cursorSetHyperlink.
@@ -3169,17 +3169,17 @@ func (self *Screen) EndHyperlink() {
 // Zig: PageList.IncreaseCapacityError!void. The error is ErrOutOfMemory
 // (dcs.go) or ErrOutOfSpace (PageList.go).
 func (self *Screen) CursorSetHyperlink() error {
-	assert(self.cursor.hyperlink_id != 0)
+	assert(self.Cursor.HyperlinkID != 0)
 
-	page := &self.cursor.page_pin.node.data
+	page := &self.Cursor.PagePin.Node.data
 	err := page.SetHyperlink(
-		self.cursor.page_row,
-		self.cursor.page_cell,
-		self.cursor.hyperlink_id,
+		self.Cursor.PageRow,
+		self.Cursor.PageCell,
+		self.Cursor.HyperlinkID,
 	)
 	if err == nil {
 		// Success, increase the refcount for the hyperlink.
-		page.hyperlink_set.Use(self.cursor.hyperlink_id)
+		page.hyperlink_set.Use(self.Cursor.HyperlinkID)
 		return nil
 	}
 	switch err {
@@ -3193,10 +3193,10 @@ func (self *Screen) CursorSetHyperlink() error {
 		// string bytes.
 		//
 		// FIXME: increaseCapacity should not do this.
-		for self.cursor.hyperlink != nil {
-			link := self.cursor.hyperlink
+		for self.Cursor.Hyperlink != nil {
+			link := self.Cursor.Hyperlink
 			if slice, err := page.string_alloc.Alloc(
-				uint(len(link.uri)),
+				uint(len(link.URI)),
 			); err == nil {
 				// We don't bother freeing because we're
 				// about to free the entire page anyway.
@@ -3206,18 +3206,18 @@ func (self *Screen) CursorSetHyperlink() error {
 
 			// We didn't have enough room, let's increase string bytes
 			new_node, err := self.IncreaseCapacity(
-				self.cursor.page_pin.node,
+				self.Cursor.PagePin.Node,
 				Some(PageListIncreaseCapacityStringBytes),
 			)
 			if err != nil {
 				return err
 			}
-			assert(new_node == self.cursor.page_pin.node)
+			assert(new_node == self.Cursor.PagePin.Node)
 			page = &new_node.data
 		}
 
 		if _, err := self.IncreaseCapacity(
-			self.cursor.page_pin.node,
+			self.Cursor.PagePin.Node,
 			Some(PageListIncreaseCapacityHyperlinkBytes),
 		); err != nil {
 			return err
@@ -3228,7 +3228,7 @@ func (self *Screen) CursorSetHyperlink() error {
 		// We check that the cursor hyperlink hasn't been destroyed
 		// by the capacity adjustment first though- since despite the
 		// terrible code above, that can still apparently happen ._.
-		if self.cursor.hyperlink_id > 0 {
+		if self.Cursor.HyperlinkID > 0 {
 			return self.CursorSetHyperlink()
 		}
 
@@ -3301,35 +3301,35 @@ var screenCursorSetSemanticContentInputNames = [...]string{"clear_explicit", "cl
 // be preferred over setting it manually since it handles all the
 // proper accounting.
 func (self *Screen) CursorSetSemanticContent(t ScreenCursorSetSemanticContent) {
-	cursor := &self.cursor
+	cursor := &self.Cursor
 
 	switch t.Tag {
 	case ScreenCursorSetSemanticContentTagOutput:
-		cursor.semantic_content = PageCellSemanticContentOutput
-		cursor.semantic_content_clear_eol = false
+		cursor.SemanticContent = PageCellSemanticContentOutput
+		cursor.SemanticContentClearEol = false
 
 	case ScreenCursorSetSemanticContentTagInput:
 		clear := t.Input
-		cursor.semantic_content = PageCellSemanticContentInput
+		cursor.SemanticContent = PageCellSemanticContentInput
 		switch clear {
 		case ScreenCursorSetSemanticContentInputClearExplicit:
-			cursor.semantic_content_clear_eol = false
+			cursor.SemanticContentClearEol = false
 		case ScreenCursorSetSemanticContentInputClearEol:
-			cursor.semantic_content_clear_eol = true
+			cursor.SemanticContentClearEol = true
 		default:
 			panic("unreachable")
 		}
 
 	case ScreenCursorSetSemanticContentTagPrompt:
 		kind := t.Prompt
-		self.semantic_prompt.seen = true
-		cursor.semantic_content = PageCellSemanticContentPrompt
-		cursor.semantic_content_clear_eol = false
+		self.SemanticPrompt.Seen = true
+		cursor.SemanticContent = PageCellSemanticContentPrompt
+		cursor.SemanticContentClearEol = false
 		switch kind {
 		case OSCParsersSemanticPromptPromptKindInitial, OSCParsersSemanticPromptPromptKindRight:
-			cursor.page_row.semantic_prompt = PageRowSemanticPromptPrompt
+			cursor.PageRow.semantic_prompt = PageRowSemanticPromptPrompt
 		case OSCParsersSemanticPromptPromptKindContinuation, OSCParsersSemanticPromptPromptKindSecondary:
-			cursor.page_row.semantic_prompt = PageRowSemanticPromptPromptContinuation
+			cursor.PageRow.semantic_prompt = PageRowSemanticPromptPromptContinuation
 		default:
 			panic("unreachable")
 		}
@@ -3376,12 +3376,12 @@ func (self *Screen) Select(sel_ Optional[Selection]) error {
 	// fails after it.
 
 	// Untrack prior selection
-	if self.selection.Valid {
-		old := &self.selection.Value
+	if self.Selection.Valid {
+		old := &self.Selection.Value
 		old.Deinit(self)
 	}
-	self.selection = Some(tracked_sel)
-	self.dirty.selection = true
+	self.Selection = Some(tracked_sel)
+	self.Dirty.Selection = true
 	return nil
 }
 
@@ -3389,32 +3389,32 @@ func (self *Screen) Select(sel_ Optional[Selection]) error {
 //
 // Same as select(null) but can't fail.
 func (self *Screen) ClearSelection() {
-	if self.selection.Valid {
-		sel := &self.selection.Value
+	if self.Selection.Valid {
+		sel := &self.Selection.Value
 		sel.Deinit(self)
-		self.dirty.selection = true
+		self.Dirty.Selection = true
 	}
-	self.selection = None[Selection]()
+	self.Selection = None[Selection]()
 }
 
 // ScreenSelectionString is Screen.SelectionString: the options of
 // selectionString.
 type ScreenSelectionString struct {
 	// The selection to convert to a string.
-	sel Selection
+	Sel Selection
 
 	// If true, trim whitespace around the selection.
 	//
 	// Zig default: TRUE. The Go zero value is false; a caller that relies
 	// on the default must set it.
-	trim bool
+	Trim bool
 
 	// If non-null, a stringmap will be written here. This will use
 	// the same allocator as the call to selectionString. The string will
 	// be duplicated here and in the return value so both must be freed.
 	//
 	// Zig: `map: ?*StringMap`, default null. `map` is a Go keyword.
-	map_ *StringMap
+	Map *StringMap
 }
 
 // Screen.selectionString_tw (line 2439) is omitted; see the file header.
@@ -3439,22 +3439,22 @@ func (self *Screen) SelectionString(opts ScreenSelectionString) ([]uint8, error)
 	formatter := FormatterScreenFormatterInit(
 		self,
 		FormatterOptions{
-			emit:   FormatterFormatPlain,
-			unwrap: true,
-			trim:   opts.trim,
+			Emit:   FormatterFormatPlain,
+			Unwrap: true,
+			Trim:   opts.Trim,
 			// Zig default: `.{}`, an empty non-null list.
-			codepoint_map: Optional[[]FormatterCodepointMap]{Valid: true},
+			CodepointMap: Optional[[]FormatterCodepointMap]{Valid: true},
 		},
 	)
 	formatter.content = FormatterScreenFormatterContent{
 		Tag:       FormatterScreenFormatterContentSelection,
-		Selection: Some(opts.sel),
+		Selection: Some(opts.Sel),
 	}
 
 	// If we have a string map, we need to set that up.
 	var pins []PageListPin // std.ArrayList(Pin) = .empty
 	// Zig: defer pins.deinit(alloc); Go memory.
-	if opts.map_ != nil {
+	if opts.Map != nil {
 		formatter.pin_map = Some(FormatterPinMap{
 			map_: &pins,
 		})
@@ -3462,7 +3462,7 @@ func (self *Screen) SelectionString(opts ScreenSelectionString) ([]uint8, error)
 
 	// Emit. Since this is an allocating writer, a failed write
 	// just becomes an OOM.
-	if err := formatter.Format(&aw.writer); err != nil {
+	if err := formatter.format(&aw.writer); err != nil {
 		return nil, ErrOutOfMemory
 	}
 
@@ -3472,8 +3472,8 @@ func (self *Screen) SelectionString(opts ScreenSelectionString) ([]uint8, error)
 		return nil, err
 	}
 	// Zig: errdefer alloc.free(text); Go memory.
-	if opts.map_ != nil {
-		map_ := opts.map_
+	if opts.Map != nil {
+		map_ := opts.Map
 		// alloc.dupeZ(u8, text)
 		map_string := make([]uint8, len(text), len(text)+1)
 		copy(map_string, text)
@@ -3485,8 +3485,8 @@ func (self *Screen) SelectionString(opts ScreenSelectionString) ([]uint8, error)
 		map_pins := make([]PageListPin, len(pins))
 		copy(map_pins, pins)
 		*map_ = StringMap{
-			string: map_string,
-			map_:   map_pins,
+			String: map_string,
+			Map:    map_pins,
 		}
 	}
 
@@ -3514,7 +3514,7 @@ func (self *oscWriterAllocating) toOwnedSliceSentinel(sentinel uint8) ([]uint8, 
 // ScreenSelectLine is Screen.SelectLine: the options of selectLine.
 type ScreenSelectLine struct {
 	// The pin of some part of the line to select.
-	pin PageListPin
+	Pin PageListPin
 
 	// These are the codepoints to consider whitespace to trim
 	// from the ends of the selection.
@@ -3522,7 +3522,7 @@ type ScreenSelectLine struct {
 	// Zig: ?[]const u21, default `&.{ 0, ' ', '\t' }`, which is NOT the Go
 	// zero value (null); a caller that relies on the default must write
 	// `Some([]uint32{0, ' ', '\t'})`.
-	whitespace Optional[[]uint32]
+	Whitespace Optional[[]uint32]
 
 	// If true, line selection will consider semantic prompt
 	// state changing a boundary. State changing is ANY state
@@ -3530,7 +3530,7 @@ type ScreenSelectLine struct {
 	//
 	// Zig default: TRUE. The Go zero value is false; a caller that relies
 	// on the default must set it.
-	semantic_prompt_boundary bool
+	SemanticPromptBoundary bool
 }
 
 // SelectLine is Screen.selectLine.
@@ -3550,8 +3550,8 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 	// click output, but the shell uses spaces to soft-wrap to the prompt
 	// then the selection will stop prior to the prompt. See issue #1329.
 	var semantic_prompt_state Optional[PageCellSemanticContent]
-	if opts.semantic_prompt_boundary {
-		rac := opts.pin.RowAndCell()
+	if opts.SemanticPromptBoundary {
+		rac := opts.Pin.RowAndCell()
 		semantic_prompt_state = Some(rac.cell.semantic_content)
 	}
 
@@ -3559,7 +3559,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 	//
 	// Zig: the labeled block `start_pin:`.
 	start_pin := func() PageListPin {
-		it := opts.pin.RowIterator(PageListDirectionLeftUp, None[PageListPin]())
+		it := opts.Pin.RowIterator(PageListDirectionLeftUp, None[PageListPin]())
 		it_prev_ := it.Next()  // skip self
 		assert(it_prev_.Valid) // .?
 		it_prev := it_prev_.Value
@@ -3568,15 +3568,15 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 		if semantic_prompt_state.Valid {
 			v := semantic_prompt_state.Value
 			row := it_prev.RowAndCell().row
-			cells := it_prev.node.data.GetCells(row)
+			cells := it_prev.Node.data.GetCells(row)
 			// Scan backwards from clicked position to find where our content starts
-			n := uint(opts.pin.x) + 1
+			n := uint(opts.Pin.X) + 1
 			for i := uint(0); i < n; i++ {
-				x_rev := uint(opts.pin.x) - i
+				x_rev := uint(opts.Pin.X) - i
 				if cells[x_rev].semantic_content != v {
 					copy_ := it_prev
 					// Zig: @intCast to u16; x_rev < pin.x here.
-					copy_.x = SizeCellCountInt(x_rev + 1)
+					copy_.X = SizeCellCountInt(x_rev + 1)
 					return copy_
 				}
 			}
@@ -3592,7 +3592,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 
 			if !row.wrap {
 				copy_ := it_prev
-				copy_.x = 0
+				copy_.X = 0
 				return copy_
 			}
 
@@ -3600,7 +3600,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 				v := semantic_prompt_state.Value
 				// We need to check every cell in this row in reverse
 				// order since we're going up and back.
-				cells := p.node.data.GetCells(row)
+				cells := p.Node.data.GetCells(row)
 				for x := 0; x < len(cells); x++ {
 					x_rev := len(cells) - 1 - x
 					cell := cells[x_rev]
@@ -3608,7 +3608,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 						return it_prev
 					}
 					it_prev = p
-					it_prev.x = SizeCellCountInt(x_rev)
+					it_prev.X = SizeCellCountInt(x_rev)
 				}
 
 				continue
@@ -3618,7 +3618,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 		}
 		// Zig: the `else` of the while loop.
 		copy_ := it_prev
-		copy_.x = 0
+		copy_.X = 0
 		return copy_
 	}()
 
@@ -3627,7 +3627,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 	// Zig: the labeled block `end_pin:`; its `return null` returns from
 	// selectLine.
 	end_pin_ := func() Optional[PageListPin] {
-		it := opts.pin.RowIterator(PageListDirectionRightDown, None[PageListPin]())
+		it := opts.Pin.RowIterator(PageListDirectionRightDown, None[PageListPin]())
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
 			p := p_.Value
 			row := p.RowAndCell().row
@@ -3635,14 +3635,14 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 			if semantic_prompt_state.Valid {
 				v := semantic_prompt_state.Value
 				// We need to check every cell in this row
-				cells := p.node.data.GetCells(row)
+				cells := p.Node.data.GetCells(row)
 
 				// If this is our pin row we can start from our x because
 				// the start_pin logic already found the real start.
 				var start_offset uint = 0
-				if p.node == opts.pin.node &&
-					p.y == opts.pin.y {
-					start_offset = uint(opts.pin.x)
+				if p.Node == opts.Pin.Node &&
+					p.Y == opts.Pin.Y {
+					start_offset = uint(opts.Pin.X)
 				}
 
 				// Handle the zero case specially because if the first
@@ -3653,7 +3653,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 					prev_ := p.Up(1)
 					assert(prev_.Valid) // .?
 					prev := prev_.Value
-					prev.x = p.node.data.size.cols - 1
+					prev.X = p.Node.data.size.cols - 1
 					return Some(prev)
 				}
 
@@ -3663,7 +3663,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 					if cell.semantic_content != v {
 						copy_ := p
 						assert(x >= 1) // Zig: - traps
-						copy_.x = SizeCellCountInt(x - 1)
+						copy_.X = SizeCellCountInt(x - 1)
 						return Some(copy_)
 					}
 				}
@@ -3671,7 +3671,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 
 			if !row.wrap {
 				copy_ := p
-				copy_.x = p.node.data.size.cols - 1
+				copy_.X = p.Node.data.size.cols - 1
 				return Some(copy_)
 			}
 		}
@@ -3687,10 +3687,10 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 	//
 	// Zig: the labeled block `start:`.
 	var start PageListPin
-	if !opts.whitespace.Valid {
+	if !opts.Whitespace.Valid {
 		start = start_pin
 	} else {
-		whitespace := opts.whitespace.Value
+		whitespace := opts.Whitespace.Value
 		found := false
 		it := start_pin.CellIterator(PageListDirectionRightDown, Some(end_pin))
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
@@ -3723,10 +3723,10 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 	//
 	// Zig: the labeled block `end:`.
 	var end PageListPin
-	if !opts.whitespace.Valid {
+	if !opts.Whitespace.Valid {
 		end = end_pin
 	} else {
-		whitespace := opts.whitespace.Value
+		whitespace := opts.Whitespace.Value
 		found := false
 		it := end_pin.CellIterator(PageListDirectionLeftUp, Some(start_pin))
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
@@ -3771,7 +3771,7 @@ func (self *Screen) SelectAll() Optional[Selection] {
 	var start PageListPin
 	{
 		found := false
-		it := self.pages.CellIterator(
+		it := self.Pages.CellIterator(
 			PageListDirectionRightDown,
 			Point{Tag: PointTagScreen},
 			None[Point](),
@@ -3806,7 +3806,7 @@ func (self *Screen) SelectAll() Optional[Selection] {
 	var end PageListPin
 	{
 		found := false
-		it := self.pages.CellIterator(
+		it := self.Pages.CellIterator(
 			PageListDirectionLeftUp,
 			Point{Tag: PointTagScreen},
 			None[Point](),
@@ -3949,7 +3949,7 @@ func (self *Screen) SelectWord(pin PageListPin, boundary_codepoints []uint32) Op
 
 			// If we are going to the next row and it isn't wrapped, we
 			// return the previous.
-			if p.x == p.node.data.size.cols-1 && !rac.row.wrap {
+			if p.X == p.Node.data.size.cols-1 && !rac.row.wrap {
 				return p
 			}
 
@@ -3974,7 +3974,7 @@ func (self *Screen) SelectWord(pin PageListPin, boundary_codepoints []uint32) Op
 
 			// If we are going to the next row and it isn't wrapped, we
 			// return the previous.
-			if p.x == p.node.data.size.cols-1 && !rac.row.wrap {
+			if p.X == p.Node.data.size.cols-1 && !rac.row.wrap {
 				return prev
 			}
 
@@ -4042,13 +4042,13 @@ func (self *Screen) SelectOutput(pin PageListPin) Optional[Selection] {
 
 		// We'll capture from the start of the screen to just above
 		// the prompt and will trim the trailing whitespace.
-		start_pin := self.pages.GetTopLeft(PointTagScreen)
+		start_pin := self.Pages.GetTopLeft(PointTagScreen)
 		end_pin_ := next.Up(1)
 		if !end_pin_.Valid {
 			return PageListPin{}, None[Selection](), true
 		}
 		end_pin := end_pin_.Value
-		end_pin.x = end_pin.node.data.size.cols - 1
+		end_pin.X = end_pin.Node.data.size.cols - 1
 		cell_it := end_pin.CellIterator(PageListDirectionLeftUp, Some(start_pin))
 		for p_ := cell_it.Next(); p_.Valid; p_ = cell_it.Next() {
 			p := p_.Value
@@ -4070,7 +4070,7 @@ func (self *Screen) SelectOutput(pin PageListPin) Optional[Selection] {
 	}
 
 	// Grab our content
-	hl_ := self.pages.HighlightSemanticContent(
+	hl_ := self.Pages.HighlightSemanticContent(
 		prompt_pin,
 		PageCellSemanticContentOutput,
 	)
@@ -4080,17 +4080,17 @@ func (self *Screen) SelectOutput(pin PageListPin) Optional[Selection] {
 	hl := hl_.Value
 
 	// Trim our trailing whitespace
-	cell_it := hl.end.CellIterator(PageListDirectionLeftUp, Some(hl.start))
+	cell_it := hl.End.CellIterator(PageListDirectionLeftUp, Some(hl.Start))
 	for p_ := cell_it.Next(); p_.Valid; p_ = cell_it.Next() {
 		p := p_.Value
 		cell := p.RowAndCell().cell
-		hl.end = p
+		hl.End = p
 		if cell.HasText() {
 			break
 		}
 	}
 
-	return Some(SelectionInit(hl.start, hl.end, false))
+	return Some(SelectionInit(hl.Start, hl.End, false))
 }
 
 // ScreenLineIterator is Screen.LineIterator.
@@ -4110,9 +4110,9 @@ func (self *ScreenLineIterator) Next() Optional[Selection] {
 	}
 	current := self.current.Value
 	result_ := self.screen.SelectLine(ScreenSelectLine{
-		pin:                      current,
-		whitespace:               None[[]uint32](),
-		semantic_prompt_boundary: false,
+		Pin:                    current,
+		Whitespace:             None[[]uint32](),
+		SemanticPromptBoundary: false,
 	})
 	if !result_.Valid {
 		self.current = None[PageListPin]()
@@ -4140,15 +4140,15 @@ func (self *Screen) LineIterator(start PageListPin) ScreenLineIterator {
 // ScreenPromptClickMove is Screen.PromptClickMove.
 type ScreenPromptClickMove struct {
 	// Zig: usize. A count.
-	left uint
+	Left uint
 	// Zig: usize. A count.
-	right uint
+	Right uint
 }
 
 // ScreenPromptClickMoveZero is Screen.PromptClickMove.zero.
 var ScreenPromptClickMoveZero = ScreenPromptClickMove{
-	left:  0,
-	right: 0,
+	Left:  0,
+	Right: 0,
 }
 
 // PromptClickMove is Screen.promptClickMove.
@@ -4166,18 +4166,18 @@ var ScreenPromptClickMoveZero = ScreenPromptClickMove{
 func (self *Screen) PromptClickMove(click_pin PageListPin) ScreenPromptClickMove {
 	// If we're not at an input cell with our cursor, no movement will
 	// ever be possible.
-	if self.cursor.semantic_content != PageCellSemanticContentInput &&
-		self.cursor.page_cell.semantic_content != PageCellSemanticContentInput {
+	if self.Cursor.SemanticContent != PageCellSemanticContentInput &&
+		self.Cursor.PageCell.semantic_content != PageCellSemanticContentInput {
 		return ScreenPromptClickMoveZero
 	}
 
-	switch self.semantic_prompt.click.Tag {
+	switch self.SemanticPrompt.Click.Tag {
 	// None doesn't support movement and click_events must use a
 	// different mechanism (SGR mouse events) that callers must handle.
 	case ScreenSemanticPromptSemanticClickNone, ScreenSemanticPromptSemanticClickClickEvents:
 		return ScreenPromptClickMoveZero
 	case ScreenSemanticPromptSemanticClickCl:
-		cl := self.semantic_prompt.click.Cl
+		cl := self.SemanticPrompt.Click.Cl
 		switch cl {
 		// All of these currently use dumb line-based navigation.
 		// But eventually we'll support more.
@@ -4204,7 +4204,7 @@ func (self *Screen) PromptClickMove(click_pin PageListPin) ScreenPromptClickMove
 func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove {
 	// If our click pin is our cursor pin, no movement is needed.
 	// Do this early so we can assume later that they are different.
-	cursor_pin := *self.cursor.page_pin
+	cursor_pin := *self.Cursor.PagePin
 	if cursor_pin.Eql(click_pin) {
 		return ScreenPromptClickMoveZero
 	}
@@ -4223,11 +4223,11 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 		for row_pin_ := row_it.Next(); row_pin_.Valid; row_pin_ = row_it.Next() {
 			row_pin := row_pin_.Value
 			rac := row_pin.RowAndCell()
-			cells := row_pin.node.data.GetCells(rac.row)
+			cells := row_pin.Node.data.GetCells(rac.row)
 
 			// Determine if this row is our cursor.
-			is_cursor_row := row_pin.node == cursor_pin.node &&
-				row_pin.y == cursor_pin.y
+			is_cursor_row := row_pin.Node == cursor_pin.Node &&
+				row_pin.Y == cursor_pin.Y
 
 			// If this is not the cursor row, verify it's still part of the
 			// continuation of our starting prompt.
@@ -4242,7 +4242,7 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 			start_x := func() uint {
 				// If this is our cursor row then we start after the cursor.
 				if is_cursor_row {
-					return uint(cursor_pin.x) + 1
+					return uint(cursor_pin.X) + 1
 				}
 
 				// Otherwise, we start at the first input cell, because
@@ -4276,9 +4276,9 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 				count += 1
 
 				// If this is our target, we're done.
-				if row_pin.node == click_pin.node &&
-					row_pin.y == click_pin.y &&
-					x == uint(click_pin.x) {
+				if row_pin.Node == click_pin.Node &&
+					row_pin.Y == click_pin.Y &&
+					x == uint(click_pin.X) {
 					break right_row_it
 				}
 			}
@@ -4291,7 +4291,7 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 				// right/beyond it. If we're already on a non-empty input cell
 				// then we add one so we can move to the newest, empty cell
 				// at the end, matching typical editor behavior.
-				if self.cursor.page_cell.semantic_content == PageCellSemanticContentInput {
+				if self.Cursor.PageCell.semantic_content == PageCellSemanticContentInput {
 					count += 1
 				}
 
@@ -4299,7 +4299,7 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 			}
 		}
 
-		return ScreenPromptClickMove{left: 0, right: count}
+		return ScreenPromptClickMove{Left: 0, Right: count}
 	}
 
 	// Otherwise, cursor is after click, so we're emitting left inputs.
@@ -4315,16 +4315,16 @@ left_row_it:
 	for row_pin_ := row_it.Next(); row_pin_.Valid; row_pin_ = row_it.Next() {
 		row_pin := row_pin_.Value
 		rac := row_pin.RowAndCell()
-		cells := row_pin.node.data.GetCells(rac.row)
+		cells := row_pin.Node.data.GetCells(rac.row)
 
 		// Determine the length of the cells we look at in this row.
 		//
 		// Zig: the labeled block `end_len:`.
 		var end_len uint
-		if row_pin.node == cursor_pin.node &&
-			row_pin.y == cursor_pin.y {
+		if row_pin.Node == cursor_pin.Node &&
+			row_pin.Y == cursor_pin.Y {
 			// If this is our cursor row then we end before the cursor.
-			end_len = uint(cursor_pin.x)
+			end_len = uint(cursor_pin.X)
 		} else {
 			// Otherwise, we end at the last cell in the row.
 			end_len = uint(len(cells))
@@ -4344,9 +4344,9 @@ left_row_it:
 			count += 1
 
 			// If this is our target, we're done.
-			if row_pin.node == click_pin.node &&
-				row_pin.y == click_pin.y &&
-				x == uint(click_pin.x) {
+			if row_pin.Node == click_pin.Node &&
+				row_pin.Y == click_pin.Y &&
+				x == uint(click_pin.X) {
 				break left_row_it
 			}
 		}
@@ -4357,7 +4357,7 @@ left_row_it:
 		}
 	}
 
-	return ScreenPromptClickMove{left: count, right: 0}
+	return ScreenPromptClickMove{Left: count, Right: 0}
 }
 
 // ScreenDumpStringOptions is NOT a named Zig declaration: it is the
@@ -4365,16 +4365,16 @@ left_row_it:
 type ScreenDumpStringOptions struct {
 	// The start and end points of the dump, both inclusive. The x will
 	// be ignored and the full row will always be dumped.
-	tl PageListPin
+	Tl PageListPin
 	// Zig: ?Pin, default null.
-	br Optional[PageListPin]
+	Br Optional[PageListPin]
 
 	// If true, this will unwrap soft-wrapped lines. If false, this will
 	// dump the screen as it is visually seen in a rendered window.
 	//
 	// Zig default: TRUE. The Go zero value is false; a caller that relies
 	// on the default must set it.
-	unwrap bool
+	Unwrap bool
 }
 
 // DumpString is Screen.dumpString.
@@ -4387,23 +4387,23 @@ type ScreenDumpStringOptions struct {
 // opts: struct { tl: Pin, br: ?Pin = null, unwrap: bool = true })
 // std.Io.Writer.Error!void. The writer is the stand-in oscWriter (osc.go);
 // the error is ErrWriteFailed (osc.go).
-func (self *Screen) DumpString(writer *oscWriter, opts ScreenDumpStringOptions) error {
+func (self *Screen) dumpString(writer *oscWriter, opts ScreenDumpStringOptions) error {
 	// Create a formatter and use that to emit our text.
 	formatter := FormatterScreenFormatterInit(self, FormatterOptions{
-		emit:   FormatterFormatPlain,
-		unwrap: opts.unwrap,
-		trim:   false,
+		Emit:   FormatterFormatPlain,
+		Unwrap: opts.Unwrap,
+		Trim:   false,
 		// Zig default: `.{}`, an empty non-null list.
-		codepoint_map: Optional[[]FormatterCodepointMap]{Valid: true},
+		CodepointMap: Optional[[]FormatterCodepointMap]{Valid: true},
 	})
 
 	// Set up the selection based on the pins
-	tl := opts.tl
+	tl := opts.Tl
 	var br PageListPin
-	if opts.br.Valid {
-		br = opts.br.Value
+	if opts.Br.Valid {
+		br = opts.Br.Value
 	} else {
-		br_ := self.pages.GetBottomRight(PointTagScreen)
+		br_ := self.Pages.GetBottomRight(PointTagScreen)
 		assert(br_.Valid) // .?
 		br = br_.Value
 	}
@@ -4418,7 +4418,7 @@ func (self *Screen) DumpString(writer *oscWriter, opts ScreenDumpStringOptions) 
 	}
 
 	// Emit
-	return formatter.Format(writer)
+	return formatter.format(writer)
 }
 
 // ErrUnknownPoint is Zig's error.UnknownPoint (dumpStringAlloc and
@@ -4438,15 +4438,15 @@ func (self *Screen) DumpStringAlloc(tl Point) ([]uint8, error) {
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
 
-	tl_pin := self.pages.GetTopLeft(tl.Tag)
-	br := self.pages.GetBottomRight(tl.Tag)
+	tl_pin := self.Pages.GetTopLeft(tl.Tag)
+	br := self.Pages.GetBottomRight(tl.Tag)
 	if !br.Valid {
 		return nil, ErrUnknownPoint
 	}
-	if err := self.DumpString(&builder.writer, ScreenDumpStringOptions{
-		tl:     tl_pin,
-		br:     Some(br.Value),
-		unwrap: false,
+	if err := self.dumpString(&builder.writer, ScreenDumpStringOptions{
+		Tl:     tl_pin,
+		Br:     Some(br.Value),
+		Unwrap: false,
 	}); err != nil {
 		return nil, err
 	}
@@ -4468,15 +4468,15 @@ func (self *Screen) DumpStringAllocUnwrapped(tl Point) ([]uint8, error) {
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
 
-	tl_pin := self.pages.GetTopLeft(tl.Tag)
-	br := self.pages.GetBottomRight(tl.Tag)
+	tl_pin := self.Pages.GetTopLeft(tl.Tag)
+	br := self.Pages.GetBottomRight(tl.Tag)
 	if !br.Valid {
 		return nil, ErrUnknownPoint
 	}
-	if err := self.DumpString(&builder.writer, ScreenDumpStringOptions{
-		tl:     tl_pin,
-		br:     Some(br.Value),
-		unwrap: true,
+	if err := self.dumpString(&builder.writer, ScreenDumpStringOptions{
+		Tl:     tl_pin,
+		Br:     Some(br.Value),
+		Unwrap: true,
 	}); err != nil {
 		return nil, err
 	}
@@ -4518,14 +4518,14 @@ func (self *Screen) TestWriteString(text []uint8) error {
 				return err
 			}
 			self.CursorHorizontalAbsolute(0)
-			self.cursor.pending_wrap = false
-			if self.cursor.semantic_content_clear_eol {
+			self.Cursor.PendingWrap = false
+			if self.Cursor.SemanticContentClearEol {
 				self.CursorSetSemanticContent(ScreenCursorSetSemanticContent{Tag: ScreenCursorSetSemanticContentTagOutput})
 			} else {
-				switch self.cursor.semantic_content {
+				switch self.Cursor.SemanticContent {
 				case PageCellSemanticContentOutput:
 				case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
-					self.cursor.page_row.semantic_prompt = PageRowSemanticPromptPromptContinuation
+					self.Cursor.PageRow.semantic_prompt = PageRowSemanticPromptPromptContinuation
 				default:
 					panic("unreachable")
 				}
@@ -4554,8 +4554,8 @@ func (self *Screen) TestWriteString(text []uint8) error {
 				panic("unreachable")
 			}
 
-			if err := self.cursor.page_pin.node.data.AppendGrapheme(
-				self.cursor.page_row,
+			if err := self.Cursor.PagePin.Node.data.AppendGrapheme(
+				self.Cursor.PageRow,
 				cell,
 				c,
 			); err != nil {
@@ -4564,19 +4564,19 @@ func (self *Screen) TestWriteString(text []uint8) error {
 			continue
 		}
 
-		if self.cursor.pending_wrap {
-			assert(self.cursor.x == self.pages.cols-1)
-			self.cursor.pending_wrap = false
-			self.cursor.page_row.wrap = true
+		if self.Cursor.PendingWrap {
+			assert(self.Cursor.X == self.Pages.cols-1)
+			self.Cursor.PendingWrap = false
+			self.Cursor.PageRow.wrap = true
 			if err := self.cursorDownOrScroll(); err != nil {
 				return err
 			}
 			self.CursorHorizontalAbsolute(0)
-			self.cursor.page_row.wrap_continuation = true
-			switch self.cursor.semantic_content {
+			self.Cursor.PageRow.wrap_continuation = true
+			switch self.Cursor.SemanticContent {
 			case PageCellSemanticContentOutput:
 			case PageCellSemanticContentInput, PageCellSemanticContentPrompt:
-				self.cursor.page_row.semantic_prompt = PageRowSemanticPromptPromptContinuation
+				self.Cursor.PageRow.semantic_prompt = PageRowSemanticPromptPromptContinuation
 			default:
 				panic("unreachable")
 			}
@@ -4585,26 +4585,26 @@ func (self *Screen) TestWriteString(text []uint8) error {
 		assert(width == 1 || width == 2)
 		switch width {
 		case 1:
-			*self.cursor.page_cell = PageCell{
+			*self.Cursor.PageCell = PageCell{
 				content_tag:      PageCellContentTagCodepoint,
 				content:          PageCellContent{codepoint: c},
-				style_id:         self.cursor.style_id,
-				protected:        self.cursor.protected,
-				semantic_content: self.cursor.semantic_content,
+				style_id:         self.Cursor.StyleID,
+				protected:        self.Cursor.Protected,
+				semantic_content: self.Cursor.SemanticContent,
 			}
 
 			// If we have a ref-counted style, increase.
-			if self.cursor.style_id != StyleDefaultId {
+			if self.Cursor.StyleID != StyleDefaultID {
 				// Zig: `const page = self.cursor.page_pin.node.data;`, a
 				// copy of the Page struct; `use` only writes the item's
 				// ref count, which the copy shares.
-				page := self.cursor.page_pin.node.data
-				page.styles.Use(self.cursor.style_id)
-				self.cursor.page_row.styled = true
+				page := self.Cursor.PagePin.Node.data
+				page.styles.Use(self.Cursor.StyleID)
+				self.Cursor.PageRow.styled = true
 			}
 
 			// If we have a hyperlink, add it to the cell.
-			if self.cursor.hyperlink_id > 0 {
+			if self.Cursor.HyperlinkID > 0 {
 				if err := self.CursorSetHyperlink(); err != nil {
 					return err
 				}
@@ -4612,42 +4612,42 @@ func (self *Screen) TestWriteString(text []uint8) error {
 
 		case 2:
 			// Need a wide spacer head
-			if self.cursor.x == self.pages.cols-1 {
-				*self.cursor.page_cell = PageCell{
+			if self.Cursor.X == self.Pages.cols-1 {
+				*self.Cursor.PageCell = PageCell{
 					content_tag:      PageCellContentTagCodepoint,
 					content:          PageCellContent{codepoint: 0},
 					wide:             PageCellWideSpacerHead,
-					protected:        self.cursor.protected,
-					semantic_content: self.cursor.semantic_content,
+					protected:        self.Cursor.Protected,
+					semantic_content: self.Cursor.SemanticContent,
 				}
 
 				// If we have a hyperlink, add it to the cell.
-				if self.cursor.hyperlink_id > 0 {
+				if self.Cursor.HyperlinkID > 0 {
 					if err := self.CursorSetHyperlink(); err != nil {
 						return err
 					}
 				}
 
-				self.cursor.page_row.wrap = true
+				self.Cursor.PageRow.wrap = true
 				if err := self.cursorDownOrScroll(); err != nil {
 					return err
 				}
 				self.CursorHorizontalAbsolute(0)
-				self.cursor.page_row.wrap_continuation = true
+				self.Cursor.PageRow.wrap_continuation = true
 			}
 
 			// Write our wide char
-			*self.cursor.page_cell = PageCell{
+			*self.Cursor.PageCell = PageCell{
 				content_tag:      PageCellContentTagCodepoint,
 				content:          PageCellContent{codepoint: c},
-				style_id:         self.cursor.style_id,
+				style_id:         self.Cursor.StyleID,
 				wide:             PageCellWideWide,
-				protected:        self.cursor.protected,
-				semantic_content: self.cursor.semantic_content,
+				protected:        self.Cursor.Protected,
+				semantic_content: self.Cursor.SemanticContent,
 			}
 
 			// If we have a hyperlink, add it to the cell.
-			if self.cursor.hyperlink_id > 0 {
+			if self.Cursor.HyperlinkID > 0 {
 				if err := self.CursorSetHyperlink(); err != nil {
 					return err
 				}
@@ -4655,38 +4655,38 @@ func (self *Screen) TestWriteString(text []uint8) error {
 
 			// Write our tail
 			self.CursorRight(1)
-			*self.cursor.page_cell = PageCell{
+			*self.Cursor.PageCell = PageCell{
 				content_tag:      PageCellContentTagCodepoint,
 				content:          PageCellContent{codepoint: 0},
 				wide:             PageCellWideSpacerTail,
-				protected:        self.cursor.protected,
-				semantic_content: self.cursor.semantic_content,
+				protected:        self.Cursor.Protected,
+				semantic_content: self.Cursor.SemanticContent,
 			}
 
 			// If we have a hyperlink, add it to the cell.
-			if self.cursor.hyperlink_id > 0 {
+			if self.Cursor.HyperlinkID > 0 {
 				if err := self.CursorSetHyperlink(); err != nil {
 					return err
 				}
 			}
 
 			// If we have a ref-counted style, increase twice.
-			if self.cursor.style_id != StyleDefaultId {
+			if self.Cursor.StyleID != StyleDefaultID {
 				// Zig: a copy of the Page struct, as above.
-				page := self.cursor.page_pin.node.data
-				page.styles.Use(self.cursor.style_id)
-				page.styles.Use(self.cursor.style_id)
-				self.cursor.page_row.styled = true
+				page := self.Cursor.PagePin.Node.data
+				page.styles.Use(self.Cursor.StyleID)
+				page.styles.Use(self.Cursor.StyleID)
+				self.Cursor.PageRow.styled = true
 			}
 
 		default:
 			panic("unreachable")
 		}
 
-		if uint32(self.cursor.x)+1 < uint32(self.pages.cols) {
+		if uint32(self.Cursor.X)+1 < uint32(self.Pages.cols) {
 			self.CursorRight(1)
 		} else {
-			self.cursor.pending_wrap = true
+			self.Cursor.PendingWrap = true
 		}
 	}
 	return nil

@@ -69,14 +69,14 @@ func ssrFeed(t *testing.T, stream *StreamReadonlyStream, b []byte) {
 
 func ssrPaletteStyle(fg, bg uint8) Style {
 	return Style{
-		fg_color: StyleColor{Tag: StyleColorPalette, Palette: fg},
-		bg_color: StyleColor{Tag: StyleColorPalette, Palette: bg},
+		FgColor: StyleColor{Tag: StyleColorPalette, Palette: fg},
+		BgColor: StyleColor{Tag: StyleColorPalette, Palette: bg},
 	}
 }
 
 func ssrCheckIntegrity(t *testing.T, term *Terminal) {
 	t.Helper()
-	for node := term.screens.active.pages.pages.first; node != nil; node = node.next {
+	for node := term.Screens.Active.Pages.pages.first; node != nil; node = node.next {
 		if err := node.data.VerifyIntegrity(); err != nil {
 			t.Fatalf("page integrity: %v", err)
 		}
@@ -86,7 +86,7 @@ func ssrCheckIntegrity(t *testing.T, term *Terminal) {
 // Go-only: ruling (Screen.splitForCapacity returns ErrOutOfSpace where upstream aborts in Page.exactRowCapacity's style-capacity cast; term51 docs/upstream-crashes.md)
 func TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_change(t *testing.T) {
 	opts := terminalOptionsDefault(ssrCols, 2)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term, err := TerminalInit(opts)
 	zigTry(t, err)
 	defer term.Deinit()
@@ -100,24 +100,24 @@ func TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_chan
 	}
 	ssrFeed(t, &stream, fill)
 
-	s := term.screens.active
-	node := s.pages.pages.first
+	s := term.Screens.Active
+	node := s.Pages.pages.first
 	expect(t, node.next == nil, "one page")
 	expect(t, node.data.capacity.styles == 65535, "style capacity at its maximum")
 	expect(t, node.data.styles.Count() == ssrStyles, "every usable style id in use")
-	expect(t, s.cursor.x == ssrStyles-ssrCols && s.cursor.y == 1, "cursor after the last cell")
+	expect(t, s.Cursor.X == ssrStyles-ssrCols && s.Cursor.Y == 1, "cursor after the last cell")
 	old_style := ssrPaletteStyle(254, 207)
-	expect(t, s.cursor.style == old_style, "cursor has the last cell's style")
-	old_id := s.cursor.style_id
+	expect(t, s.Cursor.Style == old_style, "cursor has the last cell's style")
+	old_id := s.Cursor.StyleID
 
 	// A new style: the set is full, the page is at maximum capacity, and the
 	// rows 0..1 above the cursor reference all 53,247 ids. Upstream traps
 	// here; the port fails the style change.
 	err = s.SetAttribute(SGRAttribute{Tag: SGRAttributeTag256Bg, X256Bg: 208})
 	expect(t, err == ErrOutOfSpace, "setAttribute returns error.OutOfSpace")
-	expect(t, s.cursor.style == old_style, "the previous style is restored")
-	expect(t, s.cursor.style_id == old_id, "the previous style id is restored")
-	expect(t, s.pages.pages.first == node && node.next == nil, "the page is not split")
+	expect(t, s.Cursor.Style == old_style, "the previous style is restored")
+	expect(t, s.Cursor.StyleID == old_id, "the previous style id is restored")
+	expect(t, s.Pages.pages.first == node && node.next == nil, "the page is not split")
 	expect(t, node.data.size.rows == 2, "the page keeps both rows")
 	expect(t, node.data.styles.Count() == ssrStyles, "no style added")
 	ssrCheckIntegrity(t, &term)
@@ -125,8 +125,8 @@ func TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_chan
 	// Through the stream (the handler ignores the error) and on to printing:
 	// the SGR has no effect and the text gets the previous style.
 	ssrFeed(t, &stream, []byte("\x1b[48;5;208mAB"))
-	expect(t, s.cursor.style == old_style, "the SGR had no effect")
-	expect(t, s.cursor.x == ssrStyles-ssrCols+2, "two cells printed")
+	expect(t, s.Cursor.Style == old_style, "the SGR had no effect")
+	expect(t, s.Cursor.X == ssrStyles-ssrCols+2, "two cells printed")
 	for i, want := range "AB" {
 		x := ssrStyles - ssrCols + i
 		cell := node.data.GetRowAndCell(uint(x), 1).cell
@@ -139,7 +139,7 @@ func TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_chan
 // Go-only: ruling (as above; the range below the cursor, rows cursor..end, references every id)
 func TestScreenSplitRuling_full_style_set_in_the_rows_below_fails_the_style_change(t *testing.T) {
 	opts := terminalOptionsDefault(ssrCols, 2)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term, err := TerminalInit(opts)
 	zigTry(t, err)
 	defer term.Deinit()
@@ -155,23 +155,23 @@ func TestScreenSplitRuling_full_style_set_in_the_rows_below_fails_the_style_chan
 	fill = append(fill, "\x1b[1;1H"...)
 	ssrFeed(t, &stream, fill)
 
-	s := term.screens.active
-	node := s.pages.pages.first
-	expect(t, s.cursor.x == 0 && s.cursor.y == 0, "cursor at the top left")
-	old_style := s.cursor.style
-	old_id := s.cursor.style_id
+	s := term.Screens.Active
+	node := s.Pages.pages.first
+	expect(t, s.Cursor.X == 0 && s.Cursor.Y == 0, "cursor at the top left")
+	old_style := s.Cursor.Style
+	old_id := s.Cursor.StyleID
 
 	err = s.SetAttribute(SGRAttribute{Tag: SGRAttributeTag256Bg, X256Bg: 208})
 	expect(t, err == ErrOutOfSpace, "setAttribute returns error.OutOfSpace")
-	expect(t, s.cursor.style == old_style && s.cursor.style_id == old_id, "the previous style is restored")
-	expect(t, s.pages.pages.first == node && node.next == nil, "the page is not split")
+	expect(t, s.Cursor.Style == old_style && s.Cursor.StyleID == old_id, "the previous style is restored")
+	expect(t, s.Pages.pages.first == node && node.next == nil, "the page is not split")
 	ssrCheckIntegrity(t, &term)
 }
 
 // Go-only: ruling (Screen.splitForCapacity reloads cursor.page_row/page_cell when the split moves the cursor row to a new page, where upstream leaves them in the old page; term51 docs/upstream-crashes.md)
 func TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visible_row(t *testing.T) {
 	opts := terminalOptionsDefault(ssrCols, 3)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term, err := TerminalInit(opts)
 	zigTry(t, err)
 	defer term.Deinit()
@@ -193,26 +193,26 @@ func TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visib
 	fill = append(fill, "\x1b[2;1H"...)
 	ssrFeed(t, &stream, fill)
 
-	s := term.screens.active
-	first := s.pages.pages.first
+	s := term.Screens.Active
+	first := s.Pages.pages.first
 	expect(t, first.next == nil, "one page before the split")
-	expect(t, s.cursor.x == 0 && s.cursor.y == 1, "cursor on row 1")
+	expect(t, s.Cursor.X == 0 && s.Cursor.Y == 1, "cursor on row 1")
 
 	ssrFeed(t, &stream, []byte("\x1b[48;5;208m"))
-	expect(t, s.pages.pages.first == first && first.next != nil, "the page was split")
+	expect(t, s.Pages.pages.first == first && first.next != nil, "the page was split")
 	expect(t, first.data.size.rows == 1, "row 0 stays in the old page")
 	second := first.next
-	expect(t, s.cursor.page_pin.node == second && s.cursor.page_pin.y == 0, "the cursor row moved to the new page")
-	expect(t, s.cursor.style == ssrPaletteStyle(254, 208), "the new style is set")
-	rac := s.cursor.page_pin.RowAndCell()
-	expect(t, s.cursor.page_row == rac.row, "page_row is the visible cursor row")
-	expect(t, s.cursor.page_cell == rac.cell, "page_cell is the visible cursor cell")
+	expect(t, s.Cursor.PagePin.Node == second && s.Cursor.PagePin.Y == 0, "the cursor row moved to the new page")
+	expect(t, s.Cursor.Style == ssrPaletteStyle(254, 208), "the new style is set")
+	rac := s.Cursor.PagePin.RowAndCell()
+	expect(t, s.Cursor.PageRow == rac.row, "page_row is the visible cursor row")
+	expect(t, s.Cursor.PageCell == rac.cell, "page_cell is the visible cursor cell")
 	ssrCheckIntegrity(t, &term)
 
 	// The same steps as the corpus case: print, CR + print, CUP within the
 	// row + print, erase row 2.
 	ssrFeed(t, &stream, []byte("AB\rC\x1b[2;5HD"))
-	style_id := s.cursor.style_id
+	style_id := s.Cursor.StyleID
 	row := second.data.GetRow(0)
 	expect(t, row.styled, "the cursor row is marked styled")
 	for _, c := range []struct {
@@ -223,10 +223,10 @@ func TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visib
 		expect(t, cell.content.codepoint == c.cp, fmt.Sprintf("cell %d holds %c", c.x, rune(c.cp)))
 		expect(t, cell.style_id == style_id, fmt.Sprintf("cell %d has the new style", c.x))
 	}
-	expect(t, s.cursor.x == 5 && s.cursor.y == 1, "cursor after D")
+	expect(t, s.Cursor.X == 5 && s.Cursor.Y == 1, "cursor after D")
 	ssrCheckIntegrity(t, &term)
 
 	ssrFeed(t, &stream, []byte("\x1b[3;1H\x1b[K"))
 	ssrCheckIntegrity(t, &term)
-	expect(t, s.pages.verifyIntegrity() == nil, "page list integrity")
+	expect(t, s.Pages.verifyIntegrity() == nil, "page list integrity")
 }

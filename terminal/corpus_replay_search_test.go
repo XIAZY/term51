@@ -565,7 +565,7 @@ func searchOptPoint(p Optional[PointCoordinate]) string {
 	if !p.Valid {
 		return "none"
 	}
-	return fmt.Sprintf("%d,%d", p.Value.x, p.Value.y)
+	return fmt.Sprintf("%d,%d", p.Value.X, p.Value.Y)
 }
 
 func (r searchHlRec) format() string {
@@ -730,7 +730,7 @@ func (self *searchCtx) ensureTerminal() (*Terminal, error) {
 func (self *searchCtx) initTerminal(cols, rows uint16, sb uint64) error {
 	self.closeTerminal()
 	opts := terminalOptionsDefault(cols, rows)
-	opts.max_scrollback = sb
+	opts.MaxScrollback = sb
 	t := new(Terminal)
 	var err error
 	*t, err = TerminalInit(opts)
@@ -749,11 +749,11 @@ func (self *searchCtx) pages() *PageList {
 	if t == nil {
 		return nil
 	}
-	s := t.screens.Get(self.target)
+	s := t.Screens.Get(self.target)
 	if s == nil {
 		return nil
 	}
-	return &s.pages
+	return &s.Pages
 }
 
 // Mirrors harness/src/search.zig:405 Ctx.pageIndex
@@ -802,7 +802,7 @@ func (self *searchCtx) winOf() *SearchSlidingWindow {
 
 // Mirrors harness/src/search.zig:438 Ctx.printLayoutOf
 func (self *searchCtx) printLayoutOf(name string, screen *Screen) {
-	p := &screen.pages
+	p := &screen.Pages
 	rec := searchLayoutRec{name: name, serialMin: p.page_serial_min, nextSerial: p.page_serial, viewport: p.viewport.Tag.String()}
 	for node := p.pages.first; node != nil; node = node.next {
 		rec.pages++
@@ -813,10 +813,10 @@ func (self *searchCtx) printLayoutOf(name string, screen *Screen) {
 	vtTop := p.PointFromPin(PointTagScreen, p.GetTopLeft(PointTagViewport))
 	acTop := p.PointFromPin(PointTagScreen, p.GetTopLeft(PointTagActive))
 	if vtTop.Valid {
-		rec.viewportTop = Some(vtTop.Value.Screen.y)
+		rec.viewportTop = Some(vtTop.Value.Screen.Y)
 	}
 	if acTop.Valid {
-		rec.activeTop = Some(acTop.Value.Screen.y)
+		rec.activeTop = Some(acTop.Value.Screen.Y)
 	}
 	rec.cols, rec.rows = uint16(p.cols), uint16(p.rows)
 	self.w.WriteString(rec.format())
@@ -831,10 +831,10 @@ func (self *searchCtx) printLayout() {
 	if t == nil {
 		return
 	}
-	if s := t.screens.Get(ScreenSetKeyPrimary); s != nil {
+	if s := t.Screens.Get(ScreenSetKeyPrimary); s != nil {
 		self.printLayoutOf("primary", s)
 	}
-	if s := t.screens.Get(ScreenSetKeyAlternate); s != nil {
+	if s := t.Screens.Get(ScreenSetKeyAlternate); s != nil {
 		self.printLayoutOf("alternate", s)
 	}
 }
@@ -842,8 +842,8 @@ func (self *searchCtx) printLayout() {
 // Mirrors harness/src/search.zig:484 Ctx.printHl
 func (self *searchCtx) printHl(label string, hl HighlightFlattened) {
 	list := self.pages()
-	rec := searchHlRec{label: label, topX: uint16(hl.top_x), botX: uint16(hl.bot_x)}
-	k := len(hl.chunks)
+	rec := searchHlRec{label: label, topX: uint16(hl.TopX), botX: uint16(hl.BotX)}
+	k := len(hl.Chunks)
 	if k == 0 {
 		self.w.WriteString(rec.format())
 		return
@@ -851,19 +851,19 @@ func (self *searchCtx) printHl(label string, hl HighlightFlattened) {
 	// The start pin is (top_x, starts[0]) in nodes[0], the end pin
 	// (bot_x, ends[k-1] - 1) in nodes[k-1].
 	if list != nil {
-		pt := list.PointFromPin(PointTagScreen, PageListPin{node: hl.chunks[0].node, x: hl.top_x, y: hl.chunks[0].start})
+		pt := list.PointFromPin(PointTagScreen, PageListPin{Node: hl.Chunks[0].Node, X: hl.TopX, Y: hl.Chunks[0].Start})
 		if pt.Valid {
 			rec.tl = Some(pt.Value.Screen)
 		}
 	}
-	if list != nil && hl.chunks[k-1].end > 0 {
-		pt := list.PointFromPin(PointTagScreen, PageListPin{node: hl.chunks[k-1].node, x: hl.bot_x, y: hl.chunks[k-1].end - 1})
+	if list != nil && hl.Chunks[k-1].End > 0 {
+		pt := list.PointFromPin(PointTagScreen, PageListPin{Node: hl.Chunks[k-1].Node, X: hl.BotX, Y: hl.Chunks[k-1].End - 1})
 		if pt.Valid {
 			rec.br = Some(pt.Value.Screen)
 		}
 	}
-	for _, c := range hl.chunks {
-		rec.chunks = append(rec.chunks, searchChunkRec{page: searchPageIndex(list, c.node), start: uint16(c.start), end: uint16(c.end), serial: c.serial})
+	for _, c := range hl.Chunks {
+		rec.chunks = append(rec.chunks, searchChunkRec{page: searchPageIndex(list, c.Node), start: uint16(c.Start), end: uint16(c.End), serial: c.Serial})
 	}
 	self.w.WriteString(rec.format())
 }
@@ -900,7 +900,7 @@ func (self *searchCtx) printState() {
 		hist: s.history.Valid, actWin: searchWinRecOf(&s.active.window),
 	}
 	if s.selected.Valid {
-		rec.sel = Some(s.selected.Value.idx)
+		rec.sel = Some(s.selected.Value.Idx)
 	}
 	if s.history.Valid {
 		rec.histWin = Some(searchWinRecOf(&s.history.Value.searcher.window))
@@ -1102,7 +1102,7 @@ func (self *searchCtx) runScrollViewport(d int64) error {
 	if err != nil {
 		return err
 	}
-	t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: d})
+	t.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: d})
 	self.printLayout()
 	return nil
 }
@@ -1113,7 +1113,7 @@ func (self *searchCtx) runScrollTop() error {
 	if err != nil {
 		return err
 	}
-	t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
+	t.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
 	self.printLayout()
 	return nil
 }
@@ -1124,7 +1124,7 @@ func (self *searchCtx) runScrollActive() error {
 	if err != nil {
 		return err
 	}
-	t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollActive})
+	t.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollActive})
 	self.printLayout()
 	return nil
 }
@@ -1431,12 +1431,12 @@ func (self *searchCtx) open(o searchOpen) error {
 	}
 	self.closeSearcher()
 	self.target = o.screen
-	screen := t.screens.Get(o.screen)
+	screen := t.Screens.Get(o.screen)
 	if screen == nil {
 		self.ret("err NoSuchScreen")
 		return nil
 	}
-	list := &screen.pages
+	list := &screen.Pages
 	switch o.kind {
 	case searchKindScreen:
 		if s, err := SearchScreenInit(screen, o.needle); err == nil {

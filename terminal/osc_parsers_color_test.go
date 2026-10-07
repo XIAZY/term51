@@ -41,8 +41,8 @@ import (
 	"testing"
 )
 
-var oscA_colRed = ColorRGB{r: 255, g: 0, b: 0}
-var oscA_colBlue = ColorRGB{r: 0, g: 0, b: 255}
+var oscA_colRed = ColorRGB{R: 255, G: 0, B: 0}
+var oscA_colBlue = ColorRGB{R: 0, G: 0, B: 255}
 
 // oscA_colSpecials is every value of color.Special in order (Zig:
 // `0..@typeInfo(SpecialColor).@"enum".fields.len` and intToEnum).
@@ -76,7 +76,7 @@ var oscA_colDynamics = []struct {
 
 // Request literals.
 func oscA_colSet(target OSCParsersColorTarget, color ColorRGB) OSCParsersColorRequest {
-	return OSCParsersColorRequest{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{target: target, color: color}}
+	return OSCParsersColorRequest{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{Target: target, Color: color}}
 }
 
 func oscA_colQuery(target OSCParsersColorTarget) OSCParsersColorRequest {
@@ -252,8 +252,8 @@ func TestOSCParsersColor_OSC_4_multiple_requests(t *testing.T) {
 		list := oscA_parseColor(t, OSCParsersColorOperationOsc4, "0;red;1;blue")
 		defer list.deinit()
 		expectEqual(t, 2, list.count())
-		expectEqual(t, oscA_colSet(oscA_colPalette(0), ColorRGB{r: 255, g: 0, b: 0}), *list.at(0))
-		expectEqual(t, oscA_colSet(oscA_colPalette(1), ColorRGB{r: 0, g: 0, b: 255}), *list.at(1))
+		expectEqual(t, oscA_colSet(oscA_colPalette(0), ColorRGB{R: 255, G: 0, B: 0}), *list.at(0))
+		expectEqual(t, oscA_colSet(oscA_colPalette(1), ColorRGB{R: 0, G: 0, B: 255}), *list.at(1))
 	}
 
 	// Multiple requests with same index overwrite each other
@@ -262,8 +262,8 @@ func TestOSCParsersColor_OSC_4_multiple_requests(t *testing.T) {
 		list := oscA_parseColor(t, OSCParsersColorOperationOsc4, "0;red;0;blue")
 		defer list.deinit()
 		expectEqual(t, 2, list.count())
-		expectEqual(t, oscA_colSet(oscA_colPalette(0), ColorRGB{r: 255, g: 0, b: 0}), *list.at(0))
-		expectEqual(t, oscA_colSet(oscA_colPalette(0), ColorRGB{r: 0, g: 0, b: 255}), *list.at(1))
+		expectEqual(t, oscA_colSet(oscA_colPalette(0), ColorRGB{R: 255, G: 0, B: 0}), *list.at(0))
+		expectEqual(t, oscA_colSet(oscA_colPalette(0), ColorRGB{R: 0, G: 0, B: 255}), *list.at(1))
 	}
 }
 
@@ -346,7 +346,7 @@ func TestOSCParsersColor_OSC_10_OSC_11_OSC_12_OSC_13_OSC_14_OSC_15_OSC_16_OSC_17
 			list := oscA_parseColor(t, op, "red")
 			defer list.deinit()
 			expectEqual(t, 1, list.count())
-			expectEqual(t, oscA_colSet(oscA_colDynamic(color), ColorRGB{r: 255, g: 0, b: 0}), *list.at(0))
+			expectEqual(t, oscA_colSet(oscA_colDynamic(color), ColorRGB{R: 255, G: 0, B: 0}), *list.at(0))
 		}
 	}
 }
@@ -359,8 +359,8 @@ func TestOSCParsersColor_OSC_10_OSC_11_OSC_12_OSC_13_OSC_14_OSC_15_OSC_16_OSC_17
 		list := oscA_parseColor(t, OSCParsersColorOperationOsc11, "red;blue")
 		defer list.deinit()
 		expectEqual(t, 2, list.count())
-		expectEqual(t, oscA_colSet(oscA_colDynamic(ColorDynamicBackground), ColorRGB{r: 255, g: 0, b: 0}), *list.at(0))
-		expectEqual(t, oscA_colSet(oscA_colDynamic(ColorDynamicCursor), ColorRGB{r: 0, g: 0, b: 255}), *list.at(1))
+		expectEqual(t, oscA_colSet(oscA_colDynamic(ColorDynamicBackground), ColorRGB{R: 255, G: 0, B: 0}), *list.at(0))
+		expectEqual(t, oscA_colSet(oscA_colDynamic(ColorDynamicCursor), ColorRGB{R: 0, G: 0, B: 255}), *list.at(1))
 	}
 }
 
@@ -462,14 +462,14 @@ func TestOSCParsersColor_term51_parse_operation_for_every_state_without_a_separa
 		oscA_term51Feed(&p, c.input)
 		expect(t, p.writer == nil, "p.writer == null")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-		defer cmd.ColorOperation.requests.deinit()
+		defer cmd.ColorOperation.Requests.deinit()
 		expect(t, cmd.Tag == OSCCommandKeyColorOperation, "cmd.* == .color_operation")
-		expectEqual(t, c.op, cmd.ColorOperation.op)
+		expectEqual(t, c.op, cmd.ColorOperation.Op)
 		if !c.req.Valid {
-			expectEqual(t, 0, cmd.ColorOperation.requests.count())
+			expectEqual(t, 0, cmd.ColorOperation.Requests.count())
 		} else {
-			expectEqual(t, 1, cmd.ColorOperation.requests.count())
-			expectEqual(t, c.req.Value, *cmd.ColorOperation.requests.at(0))
+			expectEqual(t, 1, cmd.ColorOperation.Requests.count())
+			expectEqual(t, c.req.Value, *cmd.ColorOperation.Requests.at(0))
 		}
 	}
 }
@@ -481,19 +481,19 @@ func TestOSCParsersColor_term51_parse_a_separator_with_no_body_behaves_like_no_s
 		defer p.Deinit()
 		oscA_term51Feed(&p, "104;")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-		defer cmd.ColorOperation.requests.deinit()
-		expectEqual(t, OSCParsersColorOperationOsc104, cmd.ColorOperation.op)
-		expectEqual(t, 1, cmd.ColorOperation.requests.count())
-		expectEqual(t, OSCParsersColorRequest{Tag: OSCParsersColorRequestResetPalette}, *cmd.ColorOperation.requests.at(0))
+		defer cmd.ColorOperation.Requests.deinit()
+		expectEqual(t, OSCParsersColorOperationOsc104, cmd.ColorOperation.Op)
+		expectEqual(t, 1, cmd.ColorOperation.Requests.count())
+		expectEqual(t, OSCParsersColorRequest{Tag: OSCParsersColorRequestResetPalette}, *cmd.ColorOperation.Requests.at(0))
 	}
 	{
 		p := OSCParserInit(oscA_testingAllocator)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "4;")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-		defer cmd.ColorOperation.requests.deinit()
-		expectEqual(t, OSCParsersColorOperationOsc4, cmd.ColorOperation.op)
-		expectEqual(t, 0, cmd.ColorOperation.requests.count())
+		defer cmd.ColorOperation.Requests.deinit()
+		expectEqual(t, OSCParsersColorOperationOsc4, cmd.ColorOperation.Op)
+		expectEqual(t, 0, cmd.ColorOperation.Requests.count())
 	}
 }
 
@@ -515,11 +515,11 @@ func TestOSCParsersColor_term51_parse_terminator_is_recorded(t *testing.T) {
 		defer p.Deinit()
 		oscA_term51Feed(&p, "10;?")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, c.term))
-		defer cmd.ColorOperation.requests.deinit()
-		expect(t, cmd.ColorOperation.terminator == c.want, "cmd.color_operation.terminator == case[1]")
-		expectEqual(t, OSCParsersColorOperationOsc10, cmd.ColorOperation.op)
-		expectEqual(t, 1, cmd.ColorOperation.requests.count())
-		expectEqual(t, oscA_colQuery(oscA_colDynamic(ColorDynamicForeground)), *cmd.ColorOperation.requests.at(0))
+		defer cmd.ColorOperation.Requests.deinit()
+		expect(t, cmd.ColorOperation.Terminator == c.want, "cmd.color_operation.terminator == case[1]")
+		expectEqual(t, OSCParsersColorOperationOsc10, cmd.ColorOperation.Op)
+		expectEqual(t, 1, cmd.ColorOperation.Requests.count())
+		expectEqual(t, oscA_colQuery(oscA_colDynamic(ColorDynamicForeground)), *cmd.ColorOperation.Requests.at(0))
 	}
 }
 
@@ -529,9 +529,9 @@ func TestOSCParsersColor_term51_parse_OSC_4_with_several_requests(t *testing.T) 
 	defer p.Deinit()
 	oscA_term51Feed(&p, "4;1;red;2;?;256;#0000ff")
 	cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, Some[uint8](0x07)))
-	defer cmd.ColorOperation.requests.deinit()
-	reqs := &cmd.ColorOperation.requests
-	expectEqual(t, OSCParsersColorOperationOsc4, cmd.ColorOperation.op)
+	defer cmd.ColorOperation.Requests.deinit()
+	reqs := &cmd.ColorOperation.Requests
+	expectEqual(t, OSCParsersColorOperationOsc4, cmd.ColorOperation.Op)
 	expectEqual(t, 3, reqs.count())
 	expectEqual(t, oscA_colSet(oscA_colPalette(1), oscA_colRed), *reqs.at(0))
 	expectEqual(t, oscA_colQuery(oscA_colPalette(2)), *reqs.at(1))
@@ -545,21 +545,21 @@ func TestOSCParsersColor_term51_parse_OSC_5_and_OSC_104_through_the_parser(t *te
 		defer p.Deinit()
 		oscA_term51Feed(&p, "5;4;?")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-		defer cmd.ColorOperation.requests.deinit()
-		expectEqual(t, OSCParsersColorOperationOsc5, cmd.ColorOperation.op)
-		expectEqual(t, 1, cmd.ColorOperation.requests.count())
-		expectEqual(t, oscA_colQuery(oscA_colSpecial(ColorSpecialItalic)), *cmd.ColorOperation.requests.at(0))
+		defer cmd.ColorOperation.Requests.deinit()
+		expectEqual(t, OSCParsersColorOperationOsc5, cmd.ColorOperation.Op)
+		expectEqual(t, 1, cmd.ColorOperation.Requests.count())
+		expectEqual(t, oscA_colQuery(oscA_colSpecial(ColorSpecialItalic)), *cmd.ColorOperation.Requests.at(0))
 	}
 	{
 		p := OSCParserInit(oscA_testingAllocator)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "104;7;260")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-		defer cmd.ColorOperation.requests.deinit()
-		expectEqual(t, OSCParsersColorOperationOsc104, cmd.ColorOperation.op)
-		expectEqual(t, 2, cmd.ColorOperation.requests.count())
-		expectEqual(t, oscA_colReset(oscA_colPalette(7)), *cmd.ColorOperation.requests.at(0))
-		expectEqual(t, oscA_colReset(oscA_colSpecial(ColorSpecialItalic)), *cmd.ColorOperation.requests.at(1))
+		defer cmd.ColorOperation.Requests.deinit()
+		expectEqual(t, OSCParsersColorOperationOsc104, cmd.ColorOperation.Op)
+		expectEqual(t, 2, cmd.ColorOperation.Requests.count())
+		expectEqual(t, oscA_colReset(oscA_colPalette(7)), *cmd.ColorOperation.Requests.at(0))
+		expectEqual(t, oscA_colReset(oscA_colSpecial(ColorSpecialItalic)), *cmd.ColorOperation.Requests.at(1))
 	}
 }
 
@@ -581,9 +581,9 @@ func TestOSCParsersColor_term51_parse_unparseable_body_still_yields_a_command(t 
 	defer p.Deinit()
 	oscA_term51Feed(&p, "4;bogus;data")
 	cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-	defer cmd.ColorOperation.requests.deinit()
+	defer cmd.ColorOperation.Requests.deinit()
 	expect(t, cmd.Tag == OSCCommandKeyColorOperation, "cmd.* == .color_operation")
-	expectEqual(t, 0, cmd.ColorOperation.requests.count())
+	expectEqual(t, 0, cmd.ColorOperation.Requests.count())
 }
 
 // Zig: test "term51: parse: buffer limit"
@@ -598,9 +598,9 @@ func TestOSCParsersColor_term51_parse_buffer_limit(t *testing.T) {
 		oscA_term51Feed(&p, "4;"+body)
 		expect(t, p.state == OSCParserState4, "p.state == .@\"4\"")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
-		defer cmd.ColorOperation.requests.deinit()
-		expectEqual(t, OSCParserMAX_BUF/4, cmd.ColorOperation.requests.count())
-		expectEqual(t, oscA_colQuery(oscA_colPalette(0)), *cmd.ColorOperation.requests.at(OSCParserMAX_BUF/4 - 1))
+		defer cmd.ColorOperation.Requests.deinit()
+		expectEqual(t, OSCParserMAX_BUF/4, cmd.ColorOperation.Requests.count())
+		expectEqual(t, oscA_colQuery(oscA_colPalette(0)), *cmd.ColorOperation.Requests.at(OSCParserMAX_BUF/4 - 1))
 	}
 	{
 		p := OSCParserInit(oscA_testingAllocator)

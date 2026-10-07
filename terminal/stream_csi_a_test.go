@@ -122,7 +122,7 @@ func strB_boolEv(kind strB_kind, b bool) strB_event {
 }
 
 func strB_pos(row uint16, col uint16) strB_event {
-	return strB_event{kind: strB_cursor_pos, pos: StreamActionCursorPos{row: row, col: col}}
+	return strB_event{kind: strB_cursor_pos, pos: StreamActionCursorPos{Row: row, Col: col}}
 }
 
 func strB_da(req ANSIDeviceAttributeReq) strB_event {
@@ -214,21 +214,21 @@ func (self *strB_recorder) push(e strB_event) error {
 func (self *strB_recorder) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyCursorUp:
-		return self.push(strB_event{kind: strB_cursor_up, u16: value.CursorUp.value})
+		return self.push(strB_event{kind: strB_cursor_up, u16: value.CursorUp.Value})
 	case StreamActionKeyCursorDown:
-		return self.push(strB_event{kind: strB_cursor_down, u16: value.CursorDown.value})
+		return self.push(strB_event{kind: strB_cursor_down, u16: value.CursorDown.Value})
 	case StreamActionKeyCursorLeft:
-		return self.push(strB_event{kind: strB_cursor_left, u16: value.CursorLeft.value})
+		return self.push(strB_event{kind: strB_cursor_left, u16: value.CursorLeft.Value})
 	case StreamActionKeyCursorRight:
-		return self.push(strB_event{kind: strB_cursor_right, u16: value.CursorRight.value})
+		return self.push(strB_event{kind: strB_cursor_right, u16: value.CursorRight.Value})
 	case StreamActionKeyCursorCol:
-		return self.push(strB_event{kind: strB_cursor_col, u16: value.CursorCol.value})
+		return self.push(strB_event{kind: strB_cursor_col, u16: value.CursorCol.Value})
 	case StreamActionKeyCursorRow:
-		return self.push(strB_event{kind: strB_cursor_row, u16: value.CursorRow.value})
+		return self.push(strB_event{kind: strB_cursor_row, u16: value.CursorRow.Value})
 	case StreamActionKeyCursorColRelative:
-		return self.push(strB_event{kind: strB_cursor_col_relative, u16: value.CursorColRelative.value})
+		return self.push(strB_event{kind: strB_cursor_col_relative, u16: value.CursorColRelative.Value})
 	case StreamActionKeyCursorRowRelative:
-		return self.push(strB_event{kind: strB_cursor_row_relative, u16: value.CursorRowRelative.value})
+		return self.push(strB_event{kind: strB_cursor_row_relative, u16: value.CursorRowRelative.Value})
 	case StreamActionKeyCursorPos:
 		return self.push(strB_event{kind: strB_cursor_pos, pos: value.CursorPos})
 	case StreamActionKeyHorizontalTab:
@@ -278,9 +278,9 @@ func (self *strB_recorder) Vt(action StreamActionKey, value *StreamAction) error
 	case StreamActionKeyCarriageReturn:
 		return self.push(strB_none(strB_carriage_return))
 	case StreamActionKeySetMode:
-		return self.push(strB_event{kind: strB_set_mode, mode: value.SetMode.mode})
+		return self.push(strB_event{kind: strB_set_mode, mode: value.SetMode.Mode})
 	case StreamActionKeyResetMode:
-		return self.push(strB_event{kind: strB_reset_mode, mode: value.ResetMode.mode})
+		return self.push(strB_event{kind: strB_reset_mode, mode: value.ResetMode.Mode})
 	case StreamActionKeyDeviceAttributes:
 		return self.push(strB_da(value.DeviceAttributes))
 	case StreamActionKeyModifyKeyFormat:
@@ -289,7 +289,7 @@ func (self *strB_recorder) Vt(action StreamActionKey, value *StreamAction) error
 		switch value.SetAttribute.Tag {
 		case SGRAttributeTagUnknown:
 			u := value.SetAttribute.Unknown
-			return self.push(strB_event{kind: strB_sgr_unknown, unk: strB_mkUnk(u.full, u.partial)})
+			return self.push(strB_event{kind: strB_sgr_unknown, unk: strB_mkUnk(u.Full, u.Partial)})
 		default:
 			return self.push(strB_sgr(value.SetAttribute))
 		}
@@ -312,7 +312,7 @@ func strB_repeat(v uint16, n int) []uint16 {
 
 // strB_rgb is term51BRgb.
 func strB_rgb(r uint8, g uint8, b uint8) ColorRGB {
-	return ColorRGB{r: r, g: g, b: b}
+	return ColorRGB{R: r, G: g, B: b}
 }
 
 // strB_ifs is Zig's `if (cond) a else b` on two strings.

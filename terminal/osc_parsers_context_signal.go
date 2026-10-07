@@ -34,14 +34,14 @@ const oscParsersContextSignalMaxContextIdLen = 64
 // OSCParsersContextSignalCommand is osc.parsers.context_signal.Command: a
 // single OSC 3008 context signal command.
 type OSCParsersContextSignalCommand struct {
-	action OSCParsersContextSignalCommandAction
+	Action OSCParsersContextSignalCommandAction
 	// The context identifier. Must be 1-64 characters in the 32..126 byte
 	// range.
-	id []uint8
+	ID []uint8
 	// Raw unparsed metadata fields after the context ID.
 	// Fields are semicolon-separated key=value pairs.
 	// Parsed lazily via `readOption`.
-	metadata []uint8
+	Metadata []uint8
 }
 
 // OSCParsersContextSignalCommandAction is
@@ -75,7 +75,7 @@ var oscParsersContextSignalCommandActionNames = [...]string{
 func (self OSCParsersContextSignalCommand) ReadOption(
 	option OSCParsersContextSignalField,
 ) OSCParsersContextSignalFieldValue {
-	return option.Read(self.metadata)
+	return option.Read(self.Metadata)
 }
 
 // OSCParsersContextSignalContextType is
@@ -476,9 +476,9 @@ func OSCParsersContextSignalParse(parser *OSCParser, _ Optional[uint8]) *OSCComm
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyContextSignal,
 		ContextSignal: OSCParsersContextSignalCommand{
-			action:   action,
-			id:       id,
-			metadata: metadata,
+			Action:   action,
+			ID:       id,
+			Metadata: metadata,
 		},
 	}
 

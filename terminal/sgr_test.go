@@ -72,9 +72,9 @@ func TestSGR_sgr_Parser(t *testing.T) {
 	{
 		v := sgr_testParse(t, []uint16{38, 2, 40, 44, 52})
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(40), v.DirectColorFg.r)
-		expectEqual(t, uint8(44), v.DirectColorFg.g)
-		expectEqual(t, uint8(52), v.DirectColorFg.b)
+		expectEqual(t, uint8(40), v.DirectColorFg.R)
+		expectEqual(t, uint8(44), v.DirectColorFg.G)
+		expectEqual(t, uint8(52), v.DirectColorFg.B)
 	}
 
 	expect(t, sgr_testParse(t, []uint16{38, 2, 44, 52}).Tag == SGRAttributeTagUnknown, "testParse(&[_]u16{ 38, 2, 44, 52 }) == .unknown")
@@ -82,9 +82,9 @@ func TestSGR_sgr_Parser(t *testing.T) {
 	{
 		v := sgr_testParse(t, []uint16{48, 2, 40, 44, 52})
 		expect(t, v.Tag == SGRAttributeTagDirectColorBg, "v == .direct_color_bg")
-		expectEqual(t, uint8(40), v.DirectColorBg.r)
-		expectEqual(t, uint8(44), v.DirectColorBg.g)
-		expectEqual(t, uint8(52), v.DirectColorBg.b)
+		expectEqual(t, uint8(40), v.DirectColorBg.R)
+		expectEqual(t, uint8(44), v.DirectColorBg.G)
+		expectEqual(t, uint8(52), v.DirectColorBg.B)
 	}
 
 	expect(t, sgr_testParse(t, []uint16{48, 2, 44, 52}).Tag == SGRAttributeTagUnknown, "testParse(&[_]u16{ 48, 2, 44, 52 }) == .unknown")
@@ -327,9 +327,9 @@ func TestSGR_sgr_24_bit_bg_color(t *testing.T) {
 	{
 		v := sgr_testParseColon(t, []uint16{48, 2, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagDirectColorBg, "v == .direct_color_bg")
-		expectEqual(t, uint8(1), v.DirectColorBg.r)
-		expectEqual(t, uint8(2), v.DirectColorBg.g)
-		expectEqual(t, uint8(3), v.DirectColorBg.b)
+		expectEqual(t, uint8(1), v.DirectColorBg.R)
+		expectEqual(t, uint8(2), v.DirectColorBg.G)
+		expectEqual(t, uint8(3), v.DirectColorBg.B)
 	}
 }
 
@@ -338,17 +338,17 @@ func TestSGR_sgr_underline_color(t *testing.T) {
 	{
 		v := sgr_testParseColon(t, []uint16{58, 2, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagUnderlineColor, "v == .underline_color")
-		expectEqual(t, uint8(1), v.UnderlineColor.r)
-		expectEqual(t, uint8(2), v.UnderlineColor.g)
-		expectEqual(t, uint8(3), v.UnderlineColor.b)
+		expectEqual(t, uint8(1), v.UnderlineColor.R)
+		expectEqual(t, uint8(2), v.UnderlineColor.G)
+		expectEqual(t, uint8(3), v.UnderlineColor.B)
 	}
 
 	{
 		v := sgr_testParseColon(t, []uint16{58, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagUnderlineColor, "v == .underline_color")
-		expectEqual(t, uint8(1), v.UnderlineColor.r)
-		expectEqual(t, uint8(2), v.UnderlineColor.g)
-		expectEqual(t, uint8(3), v.UnderlineColor.b)
+		expectEqual(t, uint8(1), v.UnderlineColor.R)
+		expectEqual(t, uint8(2), v.UnderlineColor.G)
+		expectEqual(t, uint8(3), v.UnderlineColor.B)
 	}
 }
 
@@ -378,16 +378,16 @@ func TestSGR_sgr_underline_bg_and_fg(t *testing.T) {
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(255), v.DirectColorFg.r)
-		expectEqual(t, uint8(247), v.DirectColorFg.g)
-		expectEqual(t, uint8(219), v.DirectColorFg.b)
+		expectEqual(t, uint8(255), v.DirectColorFg.R)
+		expectEqual(t, uint8(247), v.DirectColorFg.G)
+		expectEqual(t, uint8(219), v.DirectColorFg.B)
 	}
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorBg, "v == .direct_color_bg")
-		expectEqual(t, uint8(242), v.DirectColorBg.r)
-		expectEqual(t, uint8(93), v.DirectColorBg.g)
-		expectEqual(t, uint8(147), v.DirectColorBg.b)
+		expectEqual(t, uint8(242), v.DirectColorBg.R)
+		expectEqual(t, uint8(93), v.DirectColorBg.G)
+		expectEqual(t, uint8(147), v.DirectColorBg.B)
 	}
 	{
 		v := zigUnwrap(t, p.Next())
@@ -421,25 +421,25 @@ func TestSGR_sgr_direct_fg_bg_underline_ignore_optional_color_space(t *testing.T
 		// 3 8 : 2 : Pi : Pr : Pg : Pb
 		v := sgr_testParseColon(t, []uint16{38, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(1), v.DirectColorFg.r)
-		expectEqual(t, uint8(2), v.DirectColorFg.g)
-		expectEqual(t, uint8(3), v.DirectColorFg.b)
+		expectEqual(t, uint8(1), v.DirectColorFg.R)
+		expectEqual(t, uint8(2), v.DirectColorFg.G)
+		expectEqual(t, uint8(3), v.DirectColorFg.B)
 	}
 	{
 		// 4 8 : 2 : Pi : Pr : Pg : Pb
 		v := sgr_testParseColon(t, []uint16{48, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagDirectColorBg, "v == .direct_color_bg")
-		expectEqual(t, uint8(1), v.DirectColorBg.r)
-		expectEqual(t, uint8(2), v.DirectColorBg.g)
-		expectEqual(t, uint8(3), v.DirectColorBg.b)
+		expectEqual(t, uint8(1), v.DirectColorBg.R)
+		expectEqual(t, uint8(2), v.DirectColorBg.G)
+		expectEqual(t, uint8(3), v.DirectColorBg.B)
 	}
 	{
 		// 5 8 : 2 : Pi : Pr : Pg : Pb
 		v := sgr_testParseColon(t, []uint16{58, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagUnderlineColor, "v == .underline_color")
-		expectEqual(t, uint8(1), v.UnderlineColor.r)
-		expectEqual(t, uint8(2), v.UnderlineColor.g)
-		expectEqual(t, uint8(3), v.UnderlineColor.b)
+		expectEqual(t, uint8(1), v.UnderlineColor.R)
+		expectEqual(t, uint8(2), v.UnderlineColor.G)
+		expectEqual(t, uint8(3), v.UnderlineColor.B)
 	}
 
 	// Semicolon version should not parse optional color space identifier
@@ -447,25 +447,25 @@ func TestSGR_sgr_direct_fg_bg_underline_ignore_optional_color_space(t *testing.T
 		// 3 8 ; 2 ; Pr ; Pg ; Pb
 		v := sgr_testParse(t, []uint16{38, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(0), v.DirectColorFg.r)
-		expectEqual(t, uint8(1), v.DirectColorFg.g)
-		expectEqual(t, uint8(2), v.DirectColorFg.b)
+		expectEqual(t, uint8(0), v.DirectColorFg.R)
+		expectEqual(t, uint8(1), v.DirectColorFg.G)
+		expectEqual(t, uint8(2), v.DirectColorFg.B)
 	}
 	{
 		// 4 8 ; 2 ; Pr ; Pg ; Pb
 		v := sgr_testParse(t, []uint16{48, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagDirectColorBg, "v == .direct_color_bg")
-		expectEqual(t, uint8(0), v.DirectColorBg.r)
-		expectEqual(t, uint8(1), v.DirectColorBg.g)
-		expectEqual(t, uint8(2), v.DirectColorBg.b)
+		expectEqual(t, uint8(0), v.DirectColorBg.R)
+		expectEqual(t, uint8(1), v.DirectColorBg.G)
+		expectEqual(t, uint8(2), v.DirectColorBg.B)
 	}
 	{
 		// 5 8 ; 2 ; Pr ; Pg ; Pb
 		v := sgr_testParse(t, []uint16{58, 2, 0, 1, 2, 3})
 		expect(t, v.Tag == SGRAttributeTagUnderlineColor, "v == .underline_color")
-		expectEqual(t, uint8(0), v.UnderlineColor.r)
-		expectEqual(t, uint8(1), v.UnderlineColor.g)
-		expectEqual(t, uint8(2), v.UnderlineColor.b)
+		expectEqual(t, uint8(0), v.UnderlineColor.R)
+		expectEqual(t, uint8(1), v.UnderlineColor.G)
+		expectEqual(t, uint8(2), v.UnderlineColor.B)
 	}
 }
 
@@ -499,9 +499,9 @@ func TestSGR_sgr_direct_fg_colon_with_colorspace_and_extra_param(t *testing.T) {
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(1), v.DirectColorFg.r)
-		expectEqual(t, uint8(2), v.DirectColorFg.g)
-		expectEqual(t, uint8(3), v.DirectColorFg.b)
+		expectEqual(t, uint8(1), v.DirectColorFg.R)
+		expectEqual(t, uint8(2), v.DirectColorFg.G)
+		expectEqual(t, uint8(3), v.DirectColorFg.B)
 	}
 
 	expect(t, zigUnwrap(t, p.Next()).Tag == SGRAttributeTagBold, "p.next().? == .bold")
@@ -522,9 +522,9 @@ func TestSGR_sgr_direct_fg_colon_no_colorspace_and_extra_param(t *testing.T) {
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(1), v.DirectColorFg.r)
-		expectEqual(t, uint8(2), v.DirectColorFg.g)
-		expectEqual(t, uint8(3), v.DirectColorFg.b)
+		expectEqual(t, uint8(1), v.DirectColorFg.R)
+		expectEqual(t, uint8(2), v.DirectColorFg.G)
+		expectEqual(t, uint8(3), v.DirectColorFg.B)
 	}
 
 	expect(t, zigUnwrap(t, p.Next()).Tag == SGRAttributeTagBold, "p.next().? == .bold")
@@ -560,16 +560,16 @@ func TestSGR_sgr_kakoune_input(t *testing.T) {
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(175), v.DirectColorFg.r)
-		expectEqual(t, uint8(175), v.DirectColorFg.g)
-		expectEqual(t, uint8(215), v.DirectColorFg.b)
+		expectEqual(t, uint8(175), v.DirectColorFg.R)
+		expectEqual(t, uint8(175), v.DirectColorFg.G)
+		expectEqual(t, uint8(215), v.DirectColorFg.B)
 	}
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagUnderlineColor, "v == .underline_color")
-		expectEqual(t, uint8(190), v.UnderlineColor.r)
-		expectEqual(t, uint8(80), v.UnderlineColor.g)
-		expectEqual(t, uint8(70), v.UnderlineColor.b)
+		expectEqual(t, uint8(190), v.UnderlineColor.R)
+		expectEqual(t, uint8(80), v.UnderlineColor.G)
+		expectEqual(t, uint8(70), v.UnderlineColor.B)
 	}
 
 	//try testing.expect(p.next() == null);
@@ -598,25 +598,25 @@ func TestSGR_sgr_kakoune_input_issue_underline_fg_and_bg(t *testing.T) {
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorFg, "v == .direct_color_fg")
-		expectEqual(t, uint8(51), v.DirectColorFg.r)
-		expectEqual(t, uint8(51), v.DirectColorFg.g)
-		expectEqual(t, uint8(51), v.DirectColorFg.b)
+		expectEqual(t, uint8(51), v.DirectColorFg.R)
+		expectEqual(t, uint8(51), v.DirectColorFg.G)
+		expectEqual(t, uint8(51), v.DirectColorFg.B)
 	}
 
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagDirectColorBg, "v == .direct_color_bg")
-		expectEqual(t, uint8(170), v.DirectColorBg.r)
-		expectEqual(t, uint8(170), v.DirectColorBg.g)
-		expectEqual(t, uint8(170), v.DirectColorBg.b)
+		expectEqual(t, uint8(170), v.DirectColorBg.R)
+		expectEqual(t, uint8(170), v.DirectColorBg.G)
+		expectEqual(t, uint8(170), v.DirectColorBg.B)
 	}
 
 	{
 		v := zigUnwrap(t, p.Next())
 		expect(t, v.Tag == SGRAttributeTagUnderlineColor, "v == .underline_color")
-		expectEqual(t, uint8(255), v.UnderlineColor.r)
-		expectEqual(t, uint8(97), v.UnderlineColor.g)
-		expectEqual(t, uint8(136), v.UnderlineColor.b)
+		expectEqual(t, uint8(255), v.UnderlineColor.R)
+		expectEqual(t, uint8(97), v.UnderlineColor.G)
+		expectEqual(t, uint8(136), v.UnderlineColor.B)
 	}
 
 	expect(t, !p.Next().Valid, "p.next() == null")
@@ -746,9 +746,9 @@ func TestSGR_term51_Parser_next_unknown_parameters_report_the_full_list_and_the_
 	expect(t, zigUnwrap(t, p.Next()).Tag == SGRAttributeTagBold, "p.next().? == .bold")
 	u := zigUnwrap(t, p.Next())
 	expect(t, u.Tag == SGRAttributeTagUnknown, "u == .unknown")
-	expectEqualSlices(t, []uint16{1, 26, 3}, u.Unknown.full)
+	expectEqualSlices(t, []uint16{1, 26, 3}, u.Unknown.Full)
 	// partial is everything from the unknown parameter on
-	expectEqualSlices(t, []uint16{26, 3}, u.Unknown.partial)
+	expectEqualSlices(t, []uint16{26, 3}, u.Unknown.Partial)
 	// parsing continues with the next parameter
 	expect(t, zigUnwrap(t, p.Next()).Tag == SGRAttributeTagItalic, "p.next().? == .italic")
 	expect(t, !p.Next().Valid, "p.next() == null")
@@ -760,7 +760,7 @@ func TestSGR_term51_Parser_next_large_and_boundary_parameter_values_are_unknown(
 		p := SGRParser{params: []uint16{v}}
 		a := zigUnwrap(t, p.Next())
 		expect(t, a.Tag == SGRAttributeTagUnknown, "a == .unknown")
-		expectEqualSlices(t, []uint16{v}, a.Unknown.partial)
+		expectEqualSlices(t, []uint16{v}, a.Unknown.Partial)
 	}
 }
 
@@ -813,7 +813,7 @@ func TestSGR_term51_Parser_next_extended_colour_with_missing_parts_is_unknown(t 
 		p := SGRParser{params: params}
 		a := zigUnwrap(t, p.Next())
 		expect(t, a.Tag == SGRAttributeTagUnknown, "a == .unknown")
-		expectEqualSlices(t, params, a.Unknown.partial)
+		expectEqualSlices(t, params, a.Unknown.Partial)
 	}
 }
 
@@ -859,7 +859,7 @@ func TestSGR_term51_Parser_next_underline_colon_with_nothing_after_it_is_unknown
 	p := sgr_term51Parser([]uint16{4}, []uint{0})
 	a := zigUnwrap(t, p.Next())
 	expect(t, a.Tag == SGRAttributeTagUnknown, "a == .unknown")
-	expectEqualSlices(t, []uint16{4}, a.Unknown.partial)
+	expectEqualSlices(t, []uint16{4}, a.Unknown.Partial)
 	expect(t, !p.Next().Valid, "p.next() == null")
 }
 
@@ -869,8 +869,8 @@ func TestSGR_term51_Parser_next_a_colon_after_a_parameter_that_takes_none_makes_
 	p := sgr_term51Parser([]uint16{1, 2, 3}, []uint{0})
 	a := zigUnwrap(t, p.Next())
 	expect(t, a.Tag == SGRAttributeTagUnknown, "a == .unknown")
-	expectEqualSlices(t, []uint16{1, 2, 3}, a.Unknown.full)
-	expectEqualSlices(t, []uint16{1, 2}, a.Unknown.partial)
+	expectEqualSlices(t, []uint16{1, 2, 3}, a.Unknown.Full)
+	expectEqualSlices(t, []uint16{1, 2}, a.Unknown.Partial)
 	// the colon group is skipped as a whole
 	expect(t, zigUnwrap(t, p.Next()).Tag == SGRAttributeTagItalic, "p.next().? == .italic")
 	expect(t, !p.Next().Valid, "p.next() == null")
@@ -882,7 +882,7 @@ func TestSGR_term51_Parser_next_colon_group_on_an_unsupported_parameter_is_skipp
 	p := sgr_term51Parser([]uint16{1, 2, 3, 4, 9}, []uint{0, 1, 2})
 	a := zigUnwrap(t, p.Next())
 	expect(t, a.Tag == SGRAttributeTagUnknown, "a == .unknown")
-	expectEqualSlices(t, []uint16{1, 2, 3, 4}, a.Unknown.partial)
+	expectEqualSlices(t, []uint16{1, 2, 3, 4}, a.Unknown.Partial)
 	expect(t, zigUnwrap(t, p.Next()).Tag == SGRAttributeTagStrikethrough, "p.next().? == .strikethrough")
 	expect(t, !p.Next().Valid, "p.next() == null")
 }
@@ -892,9 +892,9 @@ func TestSGR_term51_Parser_parseDirectColor_semicolon_form_takes_the_next_three_
 	p := SGRParser{params: []uint16{38, 2, 1, 2, 3, 4}}
 	p.idx = 1 // as next() leaves it after reading 38
 	a := zigUnwrap(t, p.parseDirectColor(SGRAttributeTagDirectColorFg, p.params, false))
-	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.r)
-	expectEqual(t, uint8(2), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.g)
-	expectEqual(t, uint8(3), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.b)
+	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.R)
+	expectEqual(t, uint8(2), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.G)
+	expectEqual(t, uint8(3), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.B)
 	expectEqual(t, uint(5), p.idx)
 }
 
@@ -905,14 +905,14 @@ func TestSGR_term51_Parser_parseDirectColor_each_target_tag(t *testing.T) {
 		p.idx = 1
 		a := zigUnwrap(t, p.parseDirectColor(SGRAttributeTagDirectColorBg, p.params, false))
 		expect(t, a.Tag == SGRAttributeTagDirectColorBg, "a == .direct_color_bg")
-		expectEqual(t, uint8(30), a.DirectColorBg.b)
+		expectEqual(t, uint8(30), a.DirectColorBg.B)
 	}
 	{
 		p := SGRParser{params: []uint16{58, 2, 10, 20, 30}}
 		p.idx = 1
 		a := zigUnwrap(t, p.parseDirectColor(SGRAttributeTagUnderlineColor, p.params, false))
 		expect(t, a.Tag == SGRAttributeTagUnderlineColor, "a == .underline_color")
-		expectEqual(t, uint8(10), a.UnderlineColor.r)
+		expectEqual(t, uint8(10), a.UnderlineColor.R)
 	}
 }
 
@@ -932,9 +932,9 @@ func TestSGR_term51_Parser_parseDirectColor_components_are_truncated_to_8_bits(t
 	p := SGRParser{params: []uint16{38, 2, 256, 257, 65535}}
 	p.idx = 1
 	a := zigUnwrap(t, p.parseDirectColor(SGRAttributeTagDirectColorFg, p.params, false))
-	expectEqual(t, uint8(0), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.r)
-	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.g)
-	expectEqual(t, uint8(255), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.b)
+	expectEqual(t, uint8(0), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.R)
+	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.G)
+	expectEqual(t, uint8(255), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.B)
 }
 
 // Zig: test "term51: Parser.parseDirectColor: colon form without a colour space"
@@ -943,9 +943,9 @@ func TestSGR_term51_Parser_parseDirectColor_colon_form_without_a_colour_space(t 
 	p := sgr_term51Parser([]uint16{38, 2, 1, 2, 3}, []uint{0, 1, 2, 3})
 	p.idx = 1
 	a := zigUnwrap(t, p.parseDirectColor(SGRAttributeTagDirectColorFg, p.params, true))
-	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.r)
-	expectEqual(t, uint8(2), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.g)
-	expectEqual(t, uint8(3), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.b)
+	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.R)
+	expectEqual(t, uint8(2), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.G)
+	expectEqual(t, uint8(3), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.B)
 	expectEqual(t, uint(5), p.idx)
 }
 
@@ -955,9 +955,9 @@ func TestSGR_term51_Parser_parseDirectColor_colon_form_with_a_colour_space_skips
 	p := sgr_term51Parser([]uint16{38, 2, 99, 1, 2, 3}, []uint{0, 1, 2, 3, 4})
 	p.idx = 1
 	a := zigUnwrap(t, p.parseDirectColor(SGRAttributeTagDirectColorFg, p.params, true))
-	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.r)
-	expectEqual(t, uint8(2), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.g)
-	expectEqual(t, uint8(3), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.b)
+	expectEqual(t, uint8(1), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.R)
+	expectEqual(t, uint8(2), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.G)
+	expectEqual(t, uint8(3), sgr_field(t, a, SGRAttributeTagDirectColorFg).DirectColorFg.B)
 	expectEqual(t, uint(6), p.idx)
 }
 

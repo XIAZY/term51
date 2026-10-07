@@ -48,8 +48,8 @@ var ErrDecodeError = errors.New("DecodeError")
 // the spec does also say to ignore unknown options. So, I think this is a
 // fair interpretation.
 type OSCParsersSemanticPromptCommand struct {
-	action              OSCParsersSemanticPromptCommandAction
-	options_unvalidated []uint8
+	Action             OSCParsersSemanticPromptCommandAction
+	OptionsUnvalidated []uint8
 }
 
 // OSCParsersSemanticPromptCommandAction is
@@ -92,8 +92,8 @@ func (self OSCParsersSemanticPromptCommandAction) String() string {
 // options.
 func OSCParsersSemanticPromptCommandInit(action OSCParsersSemanticPromptCommandAction) OSCParsersSemanticPromptCommand {
 	return OSCParsersSemanticPromptCommand{
-		action:              action,
-		options_unvalidated: []uint8(""),
+		Action:             action,
+		OptionsUnvalidated: []uint8(""),
 	}
 }
 
@@ -106,7 +106,7 @@ func OSCParsersSemanticPromptCommandInit(action OSCParsersSemanticPromptCommandA
 func (self OSCParsersSemanticPromptCommand) ReadOption(
 	option OSCParsersSemanticPromptOption,
 ) OSCParsersSemanticPromptOptionValue {
-	return option.Read(self.options_unvalidated)
+	return option.Read(self.OptionsUnvalidated)
 }
 
 // WriteCommandLine is osc.parsers.semantic_prompt.Command.writeCommandLine:
@@ -116,7 +116,7 @@ func (self OSCParsersSemanticPromptCommand) ReadOption(
 // Zig: the error set is std.Io.Writer.Error || error{DecodeError}, i.e.
 // ErrWriteFailed (osc.go) or ErrDecodeError. The writer is a
 // *std.Io.Writer; see oscWriter in osc.go.
-func (self OSCParsersSemanticPromptCommand) WriteCommandLine(writer *oscWriter) error {
+func (self OSCParsersSemanticPromptCommand) writeCommandLine(writer *oscWriter) error {
 	if command_line := self.ReadOption(OSCParsersSemanticPromptOptionCmdline).Cmdline; command_line.Valid {
 		if err := OsStringEncodingPrintfQDecode(writer, command_line.Value); err != nil {
 			return err
@@ -541,7 +541,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		case 'B': // end_prompt:
 			parser.command = OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionEndPromptStartInput)}
@@ -551,7 +551,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		case 'I': // end_prompt_line:
 			parser.command = OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol)}
@@ -561,7 +561,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		case 'C': // end_input:
 			parser.command = OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionEndInputStartOutput)}
@@ -571,7 +571,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		case 'D': // end_command:
 			parser.command = OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionEndCommand)}
@@ -581,7 +581,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		case 'L':
 			if len(data) > 1 {
@@ -597,7 +597,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		case 'P': // prompt_start:
 			parser.command = OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionPromptStart)}
@@ -607,7 +607,7 @@ func OSCParsersSemanticPromptParse(parser *OSCParser, _ Optional[uint8]) *OSCCom
 			if data[1] != ';' {
 				goto valid
 			}
-			parser.command.SemanticPrompt.options_unvalidated = data[2:]
+			parser.command.SemanticPrompt.OptionsUnvalidated = data[2:]
 
 		default:
 			goto valid

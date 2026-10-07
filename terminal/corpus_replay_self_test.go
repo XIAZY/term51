@@ -1070,13 +1070,13 @@ func TestCorpusReplaySelfDumpAgainstGolden(t *testing.T) {
 		}
 		switch name {
 		case "top":
-			sr.top = SizeCellCountInt(n)
+			sr.Top = SizeCellCountInt(n)
 		case "bottom":
-			sr.bottom = SizeCellCountInt(n)
+			sr.Bottom = SizeCellCountInt(n)
 		case "left":
-			sr.left = SizeCellCountInt(n)
+			sr.Left = SizeCellCountInt(n)
 		case "right":
-			sr.right = SizeCellCountInt(n)
+			sr.Right = SizeCellCountInt(n)
 		default:
 			t.Fatalf("recorded line %q", l)
 		}
@@ -1120,7 +1120,7 @@ func TestCorpusReplaySelfDumpAgainstGolden(t *testing.T) {
 			if lines[i+3] != prefix+".default=null" {
 				t.Fatalf("recorded color: %q after the override", lines[i+3])
 			}
-			got := dumpSelfText(prefix, ColorDynamicRGB{override: Some(ColorRGB{r: rgb[0], g: rgb[1], b: rgb[2]})})
+			got := dumpSelfText(prefix, ColorDynamicRGB{Override: Some(ColorRGB{R: rgb[0], G: rgb[1], B: rgb[2]})})
 			if got != recorded {
 				t.Errorf("set color %q, recorded %q", got, recorded)
 			}
@@ -1447,7 +1447,14 @@ func dumpStateRootTypes(t *testing.T) []reflect.Type {
 	field := func(rt reflect.Type, names ...string) []reflect.Type {
 		var out []reflect.Type
 		for _, n := range names {
+			// n is the Zig name; the field may be exported under its
+			// Go name (docs/public-api.md).
 			f, ok := rt.FieldByName(n)
+			for i := 0; !ok && i < rt.NumField(); i++ {
+				if zigName(rt.Field(i).Name) == n {
+					f, ok = rt.Field(i), true
+				}
+			}
 			if !ok {
 				t.Fatalf("%s has no field %s", rt, n)
 			}
@@ -1563,7 +1570,7 @@ func dumpSelfParseColor(s string) (StyleColor, bool) {
 		return StyleColor{Tag: StyleColorPalette, Palette: uint8(n)}, err == nil
 	case strings.HasPrefix(s, "rgb:") && len(s) == len("rgb:")+6:
 		v, err := strconv.ParseUint(s[len("rgb:"):], 16, 32)
-		return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: uint8(v >> 16), g: uint8(v >> 8), b: uint8(v)}}, err == nil
+		return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v)}}, err == nil
 	}
 	return StyleColor{}, false
 }
@@ -1584,8 +1591,8 @@ func dumpSelfParseStyle(s string) (Style, bool) {
 	}
 	var st Style
 	var good [3]bool
-	st.fg_color, good[0] = dumpSelfParseColor(fg)
-	st.bg_color, good[1] = dumpSelfParseColor(bg)
+	st.FgColor, good[0] = dumpSelfParseColor(fg)
+	st.BgColor, good[1] = dumpSelfParseColor(bg)
 	st.underline_color, good[2] = dumpSelfParseColor(ul)
 	if !good[0] || !good[1] || !good[2] {
 		return Style{}, false
@@ -1594,21 +1601,21 @@ func dumpSelfParseStyle(s string) (Style, bool) {
 		for _, f := range strings.Split(flags, "|") {
 			switch f {
 			case "bold":
-				st.flags.bold = true
+				st.Flags.Bold = true
 			case "italic":
-				st.flags.italic = true
+				st.Flags.Italic = true
 			case "faint":
-				st.flags.faint = true
+				st.Flags.Faint = true
 			case "blink":
-				st.flags.blink = true
+				st.Flags.Blink = true
 			case "inverse":
-				st.flags.inverse = true
+				st.Flags.Inverse = true
 			case "invisible":
-				st.flags.invisible = true
+				st.Flags.Invisible = true
 			case "strikethrough":
-				st.flags.strikethrough = true
+				st.Flags.Strikethrough = true
 			case "overline":
-				st.flags.overline = true
+				st.Flags.Overline = true
 			default:
 				return Style{}, false
 			}

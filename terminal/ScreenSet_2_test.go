@@ -16,10 +16,10 @@ import "testing"
 // 0 }` with the Zig default kitty_image_storage_limit.
 func scaSetOpts() ScreenOptions {
 	return ScreenOptions{
-		cols:                      10,
-		rows:                      5,
-		max_scrollback:            0,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   10,
+		Rows:                   5,
+		MaxScrollback:          0,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	}
 }
 
@@ -45,21 +45,21 @@ func TestScaSet_get_the_lookup_does_not_depend_on_the_active_screen(t *testing.T
 	testStdCapacity(t)
 	set := scaSetInit(t, scaSetOpts())
 	defer set.Deinit()
-	primary := set.active
+	primary := set.Active
 	alt := scaSetGetInit(t, set, ScreenSetKeyAlternate, scaSetOpts())
 
 	// Primary is active.
 	expect(t, set.Get(ScreenSetKeyPrimary) == primary, "set.get(.primary) == primary")
 	expect(t, set.Get(ScreenSetKeyAlternate) == alt, "set.get(.alternate) == alt")
-	expectEqual[ScreenSetKey](t, ScreenSetKeyPrimary, set.active_key)
-	expect(t, set.active == primary, "set.active == primary")
+	expectEqual[ScreenSetKey](t, ScreenSetKeyPrimary, set.ActiveKey)
+	expect(t, set.Active == primary, "set.active == primary")
 
 	// Alternate is active: both are still found and nothing is switched.
 	set.SwitchTo(ScreenSetKeyAlternate)
 	expect(t, set.Get(ScreenSetKeyPrimary) == primary, "set.get(.primary) == primary")
 	expect(t, set.Get(ScreenSetKeyAlternate) == alt, "set.get(.alternate) == alt")
-	expectEqual[ScreenSetKey](t, ScreenSetKeyAlternate, set.active_key)
-	expect(t, set.active == alt, "set.active == alt")
+	expectEqual[ScreenSetKey](t, ScreenSetKeyAlternate, set.ActiveKey)
+	expect(t, set.Active == alt, "set.active == alt")
 }
 
 // Zig: test "term51: get: every key, repeated lookups and the key values"
@@ -106,14 +106,14 @@ func TestScaSet_get_returns_the_live_screen_not_a_copy(t *testing.T) {
 	alt := set.Get(ScreenSetKeyAlternate)
 	expect(t, alt != nil, "set.get(.alternate) != null")
 	alt.CursorAbsolute(3, 2)
-	expectEqual[uint](t, 3, uint(set.Get(ScreenSetKeyAlternate).cursor.x))
-	expectEqual[uint](t, 2, uint(set.Get(ScreenSetKeyAlternate).cursor.y))
+	expectEqual[uint](t, 3, uint(set.Get(ScreenSetKeyAlternate).Cursor.X))
+	expectEqual[uint](t, 2, uint(set.Get(ScreenSetKeyAlternate).Cursor.Y))
 	// The other screen is not affected.
-	expectEqual[uint](t, 0, uint(set.Get(ScreenSetKeyPrimary).cursor.x))
-	expectEqual[uint](t, 0, uint(set.Get(ScreenSetKeyPrimary).cursor.y))
+	expectEqual[uint](t, 0, uint(set.Get(ScreenSetKeyPrimary).Cursor.X))
+	expectEqual[uint](t, 0, uint(set.Get(ScreenSetKeyPrimary).Cursor.Y))
 
 	set.SwitchTo(ScreenSetKeyAlternate)
-	expectEqual[uint](t, 3, uint(set.active.cursor.x))
+	expectEqual[uint](t, 3, uint(set.Active.Cursor.X))
 }
 
 // Zig: test "term51: get: a removed screen is gone and a re-created one is found"
@@ -128,12 +128,12 @@ func TestScaSet_get_a_removed_screen_is_gone_and_a_re_created_one_is_found(t *te
 	expect(t, set.Get(ScreenSetKeyPrimary) != nil, "set.get(.primary) != null")
 
 	again := scaSetGetInit(t, set, ScreenSetKeyAlternate, ScreenOptions{
-		cols:                      3,
-		rows:                      2,
-		max_scrollback:            0,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   3,
+		Rows:                   2,
+		MaxScrollback:          0,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	})
 	expect(t, set.Get(ScreenSetKeyAlternate) == again, "set.get(.alternate) == again")
-	expectEqual[uint](t, 3, uint(set.Get(ScreenSetKeyAlternate).pages.cols))
-	expectEqual[uint](t, 2, uint(set.Get(ScreenSetKeyAlternate).pages.rows))
+	expectEqual[uint](t, 3, uint(set.Get(ScreenSetKeyAlternate).Pages.cols))
+	expectEqual[uint](t, 2, uint(set.Get(ScreenSetKeyAlternate).Pages.rows))
 }

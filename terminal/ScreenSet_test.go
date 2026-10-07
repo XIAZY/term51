@@ -42,10 +42,10 @@ func ssExpectPanic(t *testing.T, f func()) {
 // .max_scrollback = 0 }` with the Zig default kitty_image_storage_limit.
 func ssSetOpts(cols SizeCellCountInt, rows SizeCellCountInt) ScreenOptions {
 	return ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            0,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          0,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	}
 }
 
@@ -72,10 +72,10 @@ func ssSetGetInit(t *testing.T, set *ScreenSet, key ScreenSetKey, opts ScreenOpt
 func ssScreenInit(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Screen {
 	t.Helper()
 	s, err := ScreenInit(ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            max_scrollback,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          max_scrollback,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	})
 	zigTry(t, err)
 	return &s
@@ -84,25 +84,25 @@ func ssScreenInit(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, ma
 // ssActive, ssScreen, ssHistory and ssViewport are the Zig literals
 // `.{ .active = .{ .x = x, .y = y } }` and so on.
 func ssActive(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 func ssScreen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 func ssHistory(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: x, Y: y}}
 }
 
 func ssViewport(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: x, Y: y}}
 }
 
 // ssPin is `s.pages.pin(pt).?`.
 func ssPin(t *testing.T, s *Screen, pt Point) PageListPin {
 	t.Helper()
-	return zigUnwrap(t, s.pages.Pin(pt))
+	return zigUnwrap(t, s.Pages.Pin(pt))
 }
 
 // ssYPin is term51YPin: the pin at a screen coordinate (history rows
@@ -115,13 +115,13 @@ func ssYPin(t *testing.T, s *Screen, x SizeCellCountInt, y uint32) PageListPin {
 // ssYCoord is term51YCoord.
 func ssYCoord(t *testing.T, s *Screen, p PageListPin) PointCoordinate {
 	t.Helper()
-	return zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p)).Screen
+	return zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, p)).Screen
 }
 
 // ssYExpectPin is term51YExpectPin.
 func ssYExpectPin(t *testing.T, s *Screen, p PageListPin, x SizeCellCountInt, y uint32) {
 	t.Helper()
-	expectEqual(t, PointCoordinate{x: x, y: y}, ssYCoord(t, s, p))
+	expectEqual(t, PointCoordinate{X: x, Y: y}, ssYCoord(t, s, p))
 }
 
 // ssYPages is term51YPages: a screen with exactly `pages` pages (200
@@ -130,12 +130,12 @@ func ssYExpectPin(t *testing.T, s *Screen, p PageListPin, x SizeCellCountInt, y 
 func ssYPages(t *testing.T, pages uint) *Screen {
 	t.Helper()
 	s := ssScreenInit(t, 200, 5, 100*1024*1024)
-	for s.pages.TotalPages() < pages {
-		_, err := s.pages.Grow()
+	for s.Pages.TotalPages() < pages {
+		_, err := s.Pages.Grow()
 		zigTry(t, err)
 	}
 	for i := 0; i < 4; i++ {
-		_, err := s.pages.Grow()
+		_, err := s.Pages.Grow()
 		zigTry(t, err)
 	}
 	return s
@@ -143,7 +143,7 @@ func ssYPages(t *testing.T, pages uint) *Screen {
 
 // ssYFirstRows is term51YFirstRows: the row count of the (full) first page.
 func ssYFirstRows(s *Screen) uint32 {
-	return uint32(s.pages.pages.first.data.size.rows)
+	return uint32(s.Pages.pages.first.data.size.rows)
 }
 
 // ssDumpScreen is `try s.dumpStringAlloc(alloc, .{ .screen = .{} })`.
@@ -160,12 +160,12 @@ func TestScreenSet_ScreenSet(t *testing.T) {
 	// Zig-only: const alloc = testing.allocator;
 	set := ssSetInit(t, ScreenOptionsDefault)
 	defer set.Deinit()
-	expectEqual(t, ScreenSetKeyPrimary, set.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, set.ActiveKey)
 
 	// Initialize a secondary screen
 	_ = ssSetGetInit(t, set, ScreenSetKeyAlternate, ScreenOptionsDefault)
 	set.SwitchTo(ScreenSetKeyAlternate)
-	expectEqual(t, ScreenSetKeyAlternate, set.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, set.ActiveKey)
 }
 
 // Zig: test "term51: init: only the primary screen exists and is active"
@@ -175,9 +175,9 @@ func TestScreenSet_term51_init_only_the_primary_screen_exists_and_is_active(t *t
 	set := ssSetInit(t, ssSetOpts(10, 5))
 	defer set.Deinit()
 
-	expectEqual(t, ScreenSetKeyPrimary, set.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, set.ActiveKey)
 	expect(t, set.Get(ScreenSetKeyPrimary) != nil, "set.get(.primary) != null")
-	expect(t, set.active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
+	expect(t, set.Active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
 	expect(t, set.Get(ScreenSetKeyAlternate) == nil, "set.get(.alternate) == null")
 	expectEqual(t, uint(1), set.all.Count())
 }
@@ -186,21 +186,21 @@ func TestScreenSet_term51_init_only_the_primary_screen_exists_and_is_active(t *t
 func TestScreenSet_term51_init_screen_uses_the_given_options(t *testing.T) {
 	testStdCapacity(t)
 	// Zig-only: const alloc = std.testing.allocator;
-	set := ssSetInit(t, ScreenOptions{cols: 17, rows: 9, max_scrollback: 0, kitty_image_storage_limit: 320 * 1000 * 1000})
+	set := ssSetInit(t, ScreenOptions{Cols: 17, Rows: 9, MaxScrollback: 0, KittyImageStorageLimit: 320 * 1000 * 1000})
 	defer set.Deinit()
 
-	expectEqual(t, SizeCellCountInt(17), set.active.pages.cols)
-	expectEqual(t, SizeCellCountInt(9), set.active.pages.rows)
+	expectEqual(t, SizeCellCountInt(17), set.Active.Pages.cols)
+	expectEqual(t, SizeCellCountInt(9), set.Active.Pages.rows)
 	// Zig-only: try std.testing.expect(set.active.alloc.ptr == alloc.ptr);
-	expect(t, !set.active.selection.Valid, "set.active.selection == null")
-	expectEqual(t, SizeCellCountInt(0), set.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(0), set.active.cursor.y)
+	expect(t, !set.Active.Selection.Valid, "set.active.selection == null")
+	expectEqual(t, SizeCellCountInt(0), set.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(0), set.Active.Cursor.Y)
 
 	// The default options work as well.
 	def := ssSetInit(t, ScreenOptionsDefault)
 	defer def.Deinit()
-	expectEqual(t, SizeCellCountInt(80), def.active.pages.cols)
-	expectEqual(t, SizeCellCountInt(24), def.active.pages.rows)
+	expectEqual(t, SizeCellCountInt(80), def.Active.Pages.cols)
+	expectEqual(t, SizeCellCountInt(24), def.Active.Pages.rows)
 }
 
 // Zig: test "term51: deinit: frees every initialized screen"
@@ -249,7 +249,7 @@ func TestScreenSet_term51_get_reports_initialized_screens_only(t *testing.T) {
 	// Works through a const pointer.
 	const_set := set
 	expect(t, const_set.Get(ScreenSetKeyAlternate) == alt, "const_set.get(.alternate) == alt")
-	expect(t, const_set.Get(ScreenSetKeyPrimary) == set.active, "const_set.get(.primary) == set.active")
+	expect(t, const_set.Get(ScreenSetKeyPrimary) == set.Active, "const_set.get(.primary) == set.active")
 
 	set.Remove(ScreenSetKeyAlternate)
 	expect(t, set.Get(ScreenSetKeyAlternate) == nil, "set.get(.alternate) == null")
@@ -264,15 +264,15 @@ func TestScreenSet_term51_getInit_creates_the_screen_with_the_given_options(t *t
 	defer set.Deinit()
 
 	alt := ssSetGetInit(t, set, ScreenSetKeyAlternate, ssSetOpts(4, 3))
-	expectEqual(t, SizeCellCountInt(4), alt.pages.cols)
-	expectEqual(t, SizeCellCountInt(3), alt.pages.rows)
+	expectEqual(t, SizeCellCountInt(4), alt.Pages.cols)
+	expectEqual(t, SizeCellCountInt(3), alt.Pages.rows)
 	expect(t, alt != set.Get(ScreenSetKeyPrimary), "alt != set.get(.primary).?")
 	expectEqual(t, uint(2), set.all.Count())
 
 	// The primary is untouched and the active screen does not change.
-	expectEqual(t, SizeCellCountInt(10), set.Get(ScreenSetKeyPrimary).pages.cols)
-	expectEqual(t, ScreenSetKeyPrimary, set.active_key)
-	expect(t, set.active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
+	expectEqual(t, SizeCellCountInt(10), set.Get(ScreenSetKeyPrimary).Pages.cols)
+	expectEqual(t, ScreenSetKeyPrimary, set.ActiveKey)
+	expect(t, set.Active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
 }
 
 // Zig: test "term51: getInit: existing screens are returned and options ignored"
@@ -285,14 +285,14 @@ func TestScreenSet_term51_getInit_existing_screens_are_returned_and_options_igno
 	// The primary already exists: its options are not replaced.
 	primary := ssSetGetInit(t, set, ScreenSetKeyPrimary, ssSetOpts(3, 2))
 	expect(t, primary == set.Get(ScreenSetKeyPrimary), "primary == set.get(.primary).?")
-	expectEqual(t, SizeCellCountInt(10), primary.pages.cols)
+	expectEqual(t, SizeCellCountInt(10), primary.Pages.cols)
 
 	alt := ssSetGetInit(t, set, ScreenSetKeyAlternate, ssSetOpts(4, 3))
 	zigTry(t, alt.TestWriteString([]uint8("keep")))
 	again := ssSetGetInit(t, set, ScreenSetKeyAlternate, ssSetOpts(8, 8))
 	expect(t, again == alt, "again == alt")
-	expectEqual(t, SizeCellCountInt(4), again.pages.cols)
-	expectEqual(t, SizeCellCountInt(3), again.pages.rows)
+	expectEqual(t, SizeCellCountInt(4), again.Pages.cols)
+	expectEqual(t, SizeCellCountInt(3), again.Pages.rows)
 	expectEqual(t, uint(2), set.all.Count())
 
 	// Content survives the repeated call.
@@ -316,12 +316,12 @@ func TestScreenSet_term51_remove_removes_and_frees_the_alternate_screen(t *testi
 	expect(t, set.Get(ScreenSetKeyAlternate) == nil, "set.get(.alternate) == null")
 	expectEqual(t, uint(1), set.all.Count())
 	expect(t, set.Get(ScreenSetKeyPrimary) != nil, "set.get(.primary) != null")
-	expectEqual(t, ScreenSetKeyPrimary, set.active_key)
-	expect(t, set.active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
+	expectEqual(t, ScreenSetKeyPrimary, set.ActiveKey)
+	expect(t, set.Active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
 
 	// A fresh alternate is a new empty screen.
 	alt2 := ssSetGetInit(t, set, ScreenSetKeyAlternate, ssSetOpts(6, 2))
-	expectEqual(t, SizeCellCountInt(6), alt2.pages.cols)
+	expectEqual(t, SizeCellCountInt(6), alt2.Pages.cols)
 	out := ssDumpScreen(t, alt2)
 	// Zig-only: defer alloc.free(out);
 	expectEqualStrings(t, "", out)
@@ -355,13 +355,13 @@ func TestScreenSet_term51_remove_does_not_update_the_active_screen(t *testing.T)
 	set.SwitchTo(ScreenSetKeyAlternate)
 	set.Remove(ScreenSetKeyAlternate)
 
-	expectEqual(t, ScreenSetKeyAlternate, set.active_key)
-	expect(t, set.active == alt, "set.active == alt")
+	expectEqual(t, ScreenSetKeyAlternate, set.ActiveKey)
+	expect(t, set.Active == alt, "set.active == alt")
 	expect(t, set.Get(ScreenSetKeyAlternate) == nil, "set.get(.alternate) == null")
 
 	// Switching back repairs the set.
 	set.SwitchTo(ScreenSetKeyPrimary)
-	expect(t, set.active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
+	expect(t, set.Active == set.Get(ScreenSetKeyPrimary), "set.active == set.get(.primary).?")
 }
 
 // Zig: test "term51: switchTo: switches the active screen and key"
@@ -376,33 +376,33 @@ func TestScreenSet_term51_switchTo_switches_the_active_screen_and_key(t *testing
 	alt := ssSetGetInit(t, set, ScreenSetKeyAlternate, ssSetOpts(4, 3))
 
 	set.SwitchTo(ScreenSetKeyAlternate)
-	expectEqual(t, ScreenSetKeyAlternate, set.active_key)
-	expect(t, set.active == alt, "set.active == alt")
+	expectEqual(t, ScreenSetKeyAlternate, set.ActiveKey)
+	expect(t, set.Active == alt, "set.active == alt")
 
 	// Switching to the already active screen is idempotent.
 	set.SwitchTo(ScreenSetKeyAlternate)
-	expectEqual(t, ScreenSetKeyAlternate, set.active_key)
-	expect(t, set.active == alt, "set.active == alt")
+	expectEqual(t, ScreenSetKeyAlternate, set.ActiveKey)
+	expect(t, set.Active == alt, "set.active == alt")
 
 	set.SwitchTo(ScreenSetKeyPrimary)
-	expectEqual(t, ScreenSetKeyPrimary, set.active_key)
-	expect(t, set.active == primary, "set.active == primary")
+	expectEqual(t, ScreenSetKeyPrimary, set.ActiveKey)
+	expect(t, set.Active == primary, "set.active == primary")
 	set.SwitchTo(ScreenSetKeyPrimary)
-	expect(t, set.active == primary, "set.active == primary")
+	expect(t, set.Active == primary, "set.active == primary")
 
 	// Each screen keeps its own content while switching.
-	zigTry(t, set.active.TestWriteString([]uint8("one")))
+	zigTry(t, set.Active.TestWriteString([]uint8("one")))
 	set.SwitchTo(ScreenSetKeyAlternate)
-	zigTry(t, set.active.TestWriteString([]uint8("two")))
+	zigTry(t, set.Active.TestWriteString([]uint8("two")))
 	set.SwitchTo(ScreenSetKeyPrimary)
 	{
-		out := ssDumpScreen(t, set.active)
+		out := ssDumpScreen(t, set.Active)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "one", out)
 	}
 	set.SwitchTo(ScreenSetKeyAlternate)
 	{
-		out := ssDumpScreen(t, set.active)
+		out := ssDumpScreen(t, set.Active)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "two", out)
 	}

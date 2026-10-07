@@ -56,8 +56,8 @@ func TestOSCParsersRxvtExtension_OSC_OSC_777_show_desktop_notification_with_titl
 
 	cmd := oscB_rxvt_unwrap(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, string(cmd.ShowDesktopNotification.title), "Title")
-	expectEqualStrings(t, string(cmd.ShowDesktopNotification.body), "Body")
+	expectEqualStrings(t, string(cmd.ShowDesktopNotification.Title), "Title")
+	expectEqualStrings(t, string(cmd.ShowDesktopNotification.Body), "Body")
 }
 
 // Zig: test "term51: parse: notify with title and body"
@@ -67,10 +67,10 @@ func TestOSCParsersRxvtExtension_term51_parse_notify_with_title_and_body(t *test
 		oscB_rxvt_term51Feed(&p, []uint8("777;notify;Title;Body"))
 		cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-		expectEqualStrings(t, "Title", string(cmd.ShowDesktopNotification.title))
-		expectEqualStrings(t, "Body", string(cmd.ShowDesktopNotification.body))
-		expectEqual(t, uint8(0), oscB_rxvt_at(cmd.ShowDesktopNotification.title, 5))
-		expectEqual(t, uint8(0), oscB_rxvt_at(cmd.ShowDesktopNotification.body, 4))
+		expectEqualStrings(t, "Title", string(cmd.ShowDesktopNotification.Title))
+		expectEqualStrings(t, "Body", string(cmd.ShowDesktopNotification.Body))
+		expectEqual(t, uint8(0), oscB_rxvt_at(cmd.ShowDesktopNotification.Title, 5))
+		expectEqual(t, uint8(0), oscB_rxvt_at(cmd.ShowDesktopNotification.Body, 4))
 	}
 }
 
@@ -125,22 +125,22 @@ func TestOSCParsersRxvtExtension_term51_parse_empty_title_and_body(t *testing.T)
 		oscB_rxvt_term51Feed(&p, []uint8("777;notify;;"))
 		cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-		expectEqual(t, 0, len(cmd.ShowDesktopNotification.title))
-		expectEqual(t, 0, len(cmd.ShowDesktopNotification.body))
+		expectEqual(t, 0, len(cmd.ShowDesktopNotification.Title))
+		expectEqual(t, 0, len(cmd.ShowDesktopNotification.Body))
 	}
 	{
 		p := OSCParserInit(nil)
 		oscB_rxvt_term51Feed(&p, []uint8("777;notify;T;"))
 		cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, None[uint8]()))
-		expectEqualStrings(t, "T", string(cmd.ShowDesktopNotification.title))
-		expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.body))
+		expectEqualStrings(t, "T", string(cmd.ShowDesktopNotification.Title))
+		expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.Body))
 	}
 	{
 		p := OSCParserInit(nil)
 		oscB_rxvt_term51Feed(&p, []uint8("777;notify;;B"))
 		cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, None[uint8]()))
-		expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.title))
-		expectEqualStrings(t, "B", string(cmd.ShowDesktopNotification.body))
+		expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.Title))
+		expectEqualStrings(t, "B", string(cmd.ShowDesktopNotification.Body))
 	}
 }
 
@@ -149,8 +149,8 @@ func TestOSCParsersRxvtExtension_term51_parse_further_semicolons_belong_to_the_b
 	p := OSCParserInit(nil)
 	oscB_rxvt_term51Feed(&p, []uint8("777;notify;T;a;b;;c"))
 	cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, None[uint8]()))
-	expectEqualStrings(t, "T", string(cmd.ShowDesktopNotification.title))
-	expectEqualStrings(t, "a;b;;c", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "T", string(cmd.ShowDesktopNotification.Title))
+	expectEqualStrings(t, "a;b;;c", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "term51: parse: title and body bytes are not validated"
@@ -158,8 +158,8 @@ func TestOSCParsersRxvtExtension_term51_parse_title_and_body_bytes_are_not_valid
 	p := OSCParserInit(nil)
 	oscB_rxvt_term51Feed(&p, []uint8("777;notify;T\x01\xff;B\x00\x80"))
 	cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, None[uint8]()))
-	expectEqualSlices(t, []uint8("T\x01\xff"), cmd.ShowDesktopNotification.title)
-	expectEqualSlices(t, []uint8("B\x00\x80"), cmd.ShowDesktopNotification.body)
+	expectEqualSlices(t, []uint8("T\x01\xff"), cmd.ShowDesktopNotification.Title)
+	expectEqualSlices(t, []uint8("B\x00\x80"), cmd.ShowDesktopNotification.Body)
 }
 
 // Zig: test "term51: parse: buffer limit"
@@ -171,8 +171,8 @@ func TestOSCParsersRxvtExtension_term51_parse_buffer_limit(t *testing.T) {
 		p := OSCParserInit(nil)
 		oscB_rxvt_term51Feed(&p, []uint8("777;"+prefix+body))
 		cmd := oscB_rxvt_unwrap(t, OSCParsersRxvtExtensionParse(&p, None[uint8]()))
-		expectEqualStrings(t, "T", string(cmd.ShowDesktopNotification.title))
-		expectEqualStrings(t, body, string(cmd.ShowDesktopNotification.body))
+		expectEqualStrings(t, "T", string(cmd.ShowDesktopNotification.Title))
+		expectEqualStrings(t, body, string(cmd.ShowDesktopNotification.Body))
 	}
 	{
 		body := strings.Repeat("b", OSCParserMAX_BUF-len(prefix))

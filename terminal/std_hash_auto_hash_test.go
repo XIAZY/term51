@@ -208,12 +208,12 @@ func ah_bindingResults(seed uint64, key int32, cp uint32, mods uint16, action In
 	stdHashAutoHashAutoHashEnumCInt(&h, key)
 	out[3] = h.final()
 	ev := InputKeyKeyEvent{
-		action:              action,
-		key:                 InputKeyKey(key),
-		mods:                InputKeyModsModsFromInt(mods),
-		consumed_mods:       InputKeyModsModsFromInt(consumed),
-		unshifted_codepoint: cp,
-		utf8:                []uint8("x"),
+		Action:             action,
+		Key:                InputKeyKey(key),
+		Mods:               InputKeyModsModsFromInt(mods),
+		ConsumedMods:       InputKeyModsModsFromInt(consumed),
+		UnshiftedCodepoint: cp,
+		UTF8:               []uint8("x"),
 	}
 	out[4] = ev.BindingHash()
 	return out
@@ -228,11 +228,11 @@ func TestStdHashAutoHash_go_only_bindingHash_matches_zig(t *testing.T) {
 	expectEqual(t, int32(175), int32(InputKeyKeyPaste))
 	expectEqual(t, int32(20), int32(InputKeyKeyKeyA))
 
-	ev := InputKeyKeyEvent{key: InputKeyKeyUnidentified, unshifted_codepoint: 0, mods: InputKeyModsModsFromInt(0)}
+	ev := InputKeyKeyEvent{Key: InputKeyKeyUnidentified, UnshiftedCodepoint: 0, Mods: InputKeyModsModsFromInt(0)}
 	expectEqual(t, uint64(0xda83d4271fcd766d), ev.BindingHash())
-	ev = InputKeyKeyEvent{key: InputKeyKeyPaste, unshifted_codepoint: 0x1FFFFF, mods: InputKeyModsModsFromInt(0xffff)}
+	ev = InputKeyKeyEvent{Key: InputKeyKeyPaste, UnshiftedCodepoint: 0x1FFFFF, Mods: InputKeyModsModsFromInt(0xffff)}
 	expectEqual(t, uint64(0x812652d9327a7a50), ev.BindingHash())
-	ev = InputKeyKeyEvent{key: InputKeyKeyKeyA, unshifted_codepoint: 0x41, mods: InputKeyModsModsFromInt(0x24f3)}
+	ev = InputKeyKeyEvent{Key: InputKeyKeyKeyA, UnshiftedCodepoint: 0x41, Mods: InputKeyModsModsFromInt(0x24f3)}
 	expectEqual(t, uint64(0x5d10bb1a32970b2f), ev.BindingHash())
 
 	// The same as the autoHash sequence bindingHash is made of: the key's 4

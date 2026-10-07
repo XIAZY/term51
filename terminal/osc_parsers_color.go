@@ -176,9 +176,9 @@ func OSCParsersColorParse(parser *OSCParser, terminator_ch Optional[uint8]) *OSC
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyColorOperation,
 		ColorOperation: OSCCommandColorOperationPayload{
-			op:         op,
-			requests:   requests,
-			terminator: OSCTerminatorInit(terminator_ch),
+			Op:         op,
+			Requests:   requests,
+			Terminator: OSCTerminatorInit(terminator_ch),
 		},
 	}
 	return &parser.command
@@ -403,8 +403,8 @@ func oscParsersColorParseGetSetAnsiColor(
 			return OSCParsersColorList{}, err
 		}
 		*req = OSCParsersColorRequest{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{
-			target: target,
-			color:  rgb,
+			Target: target,
+			Color:  rgb,
 		}}
 	}
 }
@@ -640,8 +640,8 @@ func oscParsersColorParseGetSetDynamicColor(
 				return OSCParsersColorList{}, err
 			}
 			*req = OSCParsersColorRequest{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{
-				target: OSCParsersColorTarget{Tag: OSCParsersColorTargetDynamic, Dynamic: color},
-				color:  rgb,
+				Target: OSCParsersColorTarget{Tag: OSCParsersColorTargetDynamic, Dynamic: color},
+				Color:  rgb,
 			}}
 		}
 
@@ -832,6 +832,6 @@ type OSCParsersColorTarget struct {
 
 // OSCParsersColorColoredTarget is osc.parsers.color.ColoredTarget.
 type OSCParsersColorColoredTarget struct {
-	target OSCParsersColorTarget
-	color  ColorRGB
+	Target OSCParsersColorTarget
+	Color  ColorRGB
 }

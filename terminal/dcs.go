@@ -158,7 +158,7 @@ func (self *DCSHandler) Unhook() Optional[DCSCommand] {
 				items[i] = b - 'a' + 'A'
 			}
 		}
-		return Some(DCSCommand{tag: DCSCommandXtgettcap, xtgettcap: DCSCommandXTGETTCAP{data: list}})
+		return Some(DCSCommand{Tag: DCSCommandXtgettcap, Xtgettcap: DCSCommandXTGETTCAP{data: list}})
 
 	case DCSStateDecrqss:
 		buffer := self.state.decrqss
@@ -192,7 +192,7 @@ func (self *DCSHandler) Unhook() Optional[DCSCommand] {
 		default:
 			panic("unreachable")
 		}
-		return Some(DCSCommand{tag: DCSCommandDecrqss, decrqss: d})
+		return Some(DCSCommand{Tag: DCSCommandDecrqss, Decrqss: d})
 	}
 	panic("unreachable")
 }
@@ -214,16 +214,16 @@ const (
 // DCSCommand is Command. Zig: a tagged union; only the field named by tag
 // is meaningful. The tmux variant is compiled out.
 type DCSCommand struct {
-	tag       DCSCommandTag
-	xtgettcap DCSCommandXTGETTCAP
-	decrqss   DCSCommandDECRQSS
+	Tag       DCSCommandTag
+	Xtgettcap DCSCommandXTGETTCAP
+	Decrqss   DCSCommandDECRQSS
 }
 
 // Deinit is Command.deinit.
 func (self *DCSCommand) Deinit() {
-	switch self.tag {
+	switch self.Tag {
 	case DCSCommandXtgettcap:
-		self.xtgettcap.data.deinit()
+		self.Xtgettcap.data.deinit()
 	case DCSCommandDecrqss:
 	}
 }
@@ -231,7 +231,7 @@ func (self *DCSCommand) Deinit() {
 // DCSCommandXTGETTCAP is Command.XTGETTCAP.
 type DCSCommandXTGETTCAP struct {
 	data *dcsWriterAllocating
-	i    uint
+	I    uint
 }
 
 // Next returns the next terminfo key being requested and null when there
@@ -241,10 +241,10 @@ type DCSCommandXTGETTCAP struct {
 // Zig: XTGETTCAP.next.
 func (self *DCSCommandXTGETTCAP) Next() Optional[[]uint8] {
 	items := self.data.written()
-	if self.i >= uint(len(items)) {
+	if self.I >= uint(len(items)) {
 		return None[[]uint8]()
 	}
-	rem := items[self.i:]
+	rem := items[self.I:]
 	idx := uint(len(rem))
 	for j, b := range rem {
 		if b == ';' {
@@ -256,7 +256,7 @@ func (self *DCSCommandXTGETTCAP) Next() Optional[[]uint8] {
 	// Note that if we're at the end, idx + 1 is len + 1 so we're over
 	// the end but that's okay because our check above is >= so we'll
 	// never read.
-	self.i += idx + 1
+	self.I += idx + 1
 
 	return Some(rem[0:idx])
 }

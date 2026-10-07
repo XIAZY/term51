@@ -37,13 +37,13 @@ func sm3_pal(idx uint8) StyleColor {
 // sm3_rgb is the Zig literal `.{ .rgb = .{ .r = r, .g = g, .b = b } }` of a
 // Style.Color.
 func sm3_rgb(r uint8, g uint8, b uint8) StyleColor {
-	return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: r, g: g, b: b}}
+	return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{R: r, G: g, B: b}}
 }
 
 // sm3_bold is the Zig literal `.{ .color = .{ .r = r, .g = g, .b = b } }` of a
 // config.BoldColor, as an optional.
 func sm3_bold(r uint8, g uint8, b uint8) Optional[ConfigBoldColor] {
-	return Some(ConfigBoldColor{Tag: ConfigBoldColorColor, Color: ConfigColor{r: r, g: g, b: b}})
+	return Some(ConfigBoldColor{Tag: ConfigBoldColorColor, Color: ConfigColor{R: r, G: g, B: b}})
 }
 
 // sm3_bright is the Zig literal `.bright` of a config.BoldColor, as an
@@ -97,12 +97,12 @@ func sm3_or128(a [2]uint64, b [2]uint64) [2]uint64 {
 }
 
 // sm3_newSet is `Set.init(.init(buf), layout, .{})`.
-func sm3_newSet(layout RefCountedSetLayout[StyleId]) StyleSet {
-	return RefCountedSetInit[Style, StyleId, SizeCellCountInt, StyleSetContext](layout, StyleSetContext{})
+func sm3_newSet(layout RefCountedSetLayout[StyleID]) StyleSet {
+	return RefCountedSetInit[Style, StyleID, SizeCellCountInt, StyleSetContext](layout, StyleSetContext{})
 }
 
 // sm3_add is `try set.add(buf, value)`.
-func sm3_add(t *testing.T, set *StyleSet, value Style) StyleId {
+func sm3_add(t *testing.T, set *StyleSet, value Style) StyleID {
 	t.Helper()
 	id, err := set.Add(value)
 	zigTry(t, err)
@@ -110,7 +110,7 @@ func sm3_add(t *testing.T, set *StyleSet, value Style) StyleId {
 }
 
 // sm3_addWithId is `try set.addWithId(buf, value, id)`.
-func sm3_addWithId(t *testing.T, set *StyleSet, value Style, id StyleId) Optional[StyleId] {
+func sm3_addWithId(t *testing.T, set *StyleSet, value Style, id StyleID) Optional[StyleID] {
 	t.Helper()
 	r, err := set.AddWithId(value, id)
 	zigTry(t, err)
@@ -123,9 +123,9 @@ func sm3_palette() ColorPalette {
 	var p ColorPalette
 	for i := range p {
 		p[i] = ColorRGB{
-			r: uint8(i),
-			g: uint8(255 - i),
-			b: 100,
+			R: uint8(i),
+			G: uint8(255 - i),
+			B: 100,
 		}
 	}
 	return p
@@ -134,7 +134,7 @@ func sm3_palette() ColorPalette {
 // sm3_rgbStyle is term51FRgbStyle: a style with an rgb foreground that is
 // unique for every u16.
 func sm3_rgbStyle(i uint16) Style {
-	return Style{fg_color: sm3_rgb(uint8(i), uint8(i>>8), 0)}
+	return Style{FgColor: sm3_rgb(uint8(i), uint8(i>>8), 0)}
 }
 
 // sm3_variants is term51FVariants: every style that differs from the default
@@ -153,25 +153,25 @@ func sm3_variants() []Style {
 		sm3_rgb(0, 0, 1),
 	}
 	for _, c := range colors {
-		list = append(list, Style{fg_color: c})
-		list = append(list, Style{bg_color: c})
+		list = append(list, Style{FgColor: c})
+		list = append(list, Style{BgColor: c})
 		list = append(list, Style{underline_color: c})
 	}
 
-	list = append(list, Style{flags: styleFlags{bold: true}})
-	list = append(list, Style{flags: styleFlags{italic: true}})
-	list = append(list, Style{flags: styleFlags{faint: true}})
-	list = append(list, Style{flags: styleFlags{blink: true}})
-	list = append(list, Style{flags: styleFlags{inverse: true}})
-	list = append(list, Style{flags: styleFlags{invisible: true}})
-	list = append(list, Style{flags: styleFlags{strikethrough: true}})
-	list = append(list, Style{flags: styleFlags{overline: true}})
-	list = append(list, Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}})
-	list = append(list, Style{flags: styleFlags{underline: SGRAttributeUnderlineDouble}})
-	list = append(list, Style{flags: styleFlags{underline: SGRAttributeUnderlineCurly}})
-	list = append(list, Style{flags: styleFlags{underline: SGRAttributeUnderlineDotted}})
-	list = append(list, Style{flags: styleFlags{underline: SGRAttributeUnderlineDashed}})
-	list = append(list, Style{flags: styleFlags{_padding: 1}})
+	list = append(list, Style{Flags: StyleFlags{Bold: true}})
+	list = append(list, Style{Flags: StyleFlags{Italic: true}})
+	list = append(list, Style{Flags: StyleFlags{Faint: true}})
+	list = append(list, Style{Flags: StyleFlags{Blink: true}})
+	list = append(list, Style{Flags: StyleFlags{Inverse: true}})
+	list = append(list, Style{Flags: StyleFlags{Invisible: true}})
+	list = append(list, Style{Flags: StyleFlags{Strikethrough: true}})
+	list = append(list, Style{Flags: StyleFlags{Overline: true}})
+	list = append(list, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}})
+	list = append(list, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDouble}})
+	list = append(list, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly}})
+	list = append(list, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDotted}})
+	list = append(list, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDashed}})
+	list = append(list, Style{Flags: StyleFlags{_padding: 1}})
 	return list
 }
 
@@ -183,103 +183,103 @@ func TestStyle_Style_VT_formatting_empty(t *testing.T) {
 
 // Zig: test "Style VT formatting bold"
 func TestStyle_Style_VT_formatting_bold(t *testing.T) {
-	style := Style{flags: styleFlags{bold: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[1m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting faint"
 func TestStyle_Style_VT_formatting_faint(t *testing.T) {
-	style := Style{flags: styleFlags{faint: true}}
+	style := Style{Flags: StyleFlags{Faint: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[2m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting italic"
 func TestStyle_Style_VT_formatting_italic(t *testing.T) {
-	style := Style{flags: styleFlags{italic: true}}
+	style := Style{Flags: StyleFlags{Italic: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[3m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting blink"
 func TestStyle_Style_VT_formatting_blink(t *testing.T) {
-	style := Style{flags: styleFlags{blink: true}}
+	style := Style{Flags: StyleFlags{Blink: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[5m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting inverse"
 func TestStyle_Style_VT_formatting_inverse(t *testing.T) {
-	style := Style{flags: styleFlags{inverse: true}}
+	style := Style{Flags: StyleFlags{Inverse: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[7m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting invisible"
 func TestStyle_Style_VT_formatting_invisible(t *testing.T) {
-	style := Style{flags: styleFlags{invisible: true}}
+	style := Style{Flags: StyleFlags{Invisible: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[8m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting strikethrough"
 func TestStyle_Style_VT_formatting_strikethrough(t *testing.T) {
-	style := Style{flags: styleFlags{strikethrough: true}}
+	style := Style{Flags: StyleFlags{Strikethrough: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[9m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting overline"
 func TestStyle_Style_VT_formatting_overline(t *testing.T) {
-	style := Style{flags: styleFlags{overline: true}}
+	style := Style{Flags: StyleFlags{Overline: true}}
 	expectEqualStrings(t, "\x1b[0m\x1b[53m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting underline single"
 func TestStyle_Style_VT_formatting_underline_single(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}}
 	expectEqualStrings(t, "\x1b[0m\x1b[4m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting underline double"
 func TestStyle_Style_VT_formatting_underline_double(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineDouble}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDouble}}
 	expectEqualStrings(t, "\x1b[0m\x1b[4:2m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting underline curly"
 func TestStyle_Style_VT_formatting_underline_curly(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineCurly}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly}}
 	expectEqualStrings(t, "\x1b[0m\x1b[4:3m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting underline dotted"
 func TestStyle_Style_VT_formatting_underline_dotted(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineDotted}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDotted}}
 	expectEqualStrings(t, "\x1b[0m\x1b[4:4m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting underline dashed"
 func TestStyle_Style_VT_formatting_underline_dashed(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineDashed}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDashed}}
 	expectEqualStrings(t, "\x1b[0m\x1b[4:5m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting fg palette"
 func TestStyle_Style_VT_formatting_fg_palette(t *testing.T) {
-	style := Style{fg_color: sm3_pal(42)}
+	style := Style{FgColor: sm3_pal(42)}
 	expectEqualStrings(t, "\x1b[0m\x1b[38;5;42m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting fg rgb"
 func TestStyle_Style_VT_formatting_fg_rgb(t *testing.T) {
-	style := Style{fg_color: sm3_rgb(255, 128, 64)}
+	style := Style{FgColor: sm3_rgb(255, 128, 64)}
 	expectEqualStrings(t, "\x1b[0m\x1b[38;2;255;128;64m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting bg palette"
 func TestStyle_Style_VT_formatting_bg_palette(t *testing.T) {
-	style := Style{bg_color: sm3_pal(7)}
+	style := Style{BgColor: sm3_pal(7)}
 	expectEqualStrings(t, "\x1b[0m\x1b[48;5;7m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting bg rgb"
 func TestStyle_Style_VT_formatting_bg_rgb(t *testing.T) {
-	style := Style{bg_color: sm3_rgb(32, 64, 96)}
+	style := Style{BgColor: sm3_rgb(32, 64, 96)}
 	expectEqualStrings(t, "\x1b[0m\x1b[48;2;32;64;96m", style.FormatterVt().Format())
 }
 
@@ -297,22 +297,22 @@ func TestStyle_Style_VT_formatting_underline_color_rgb(t *testing.T) {
 
 // Zig: test "Style VT formatting multiple flags"
 func TestStyle_Style_VT_formatting_multiple_flags(t *testing.T) {
-	style := Style{flags: styleFlags{bold: true, italic: true, underline: SGRAttributeUnderlineSingle}}
+	style := Style{Flags: StyleFlags{Bold: true, Italic: true, Underline: SGRAttributeUnderlineSingle}}
 	expectEqualStrings(t, "\x1b[0m\x1b[1m\x1b[3m\x1b[4m", style.FormatterVt().Format())
 }
 
 // Zig: test "Style VT formatting all flags"
 func TestStyle_Style_VT_formatting_all_flags(t *testing.T) {
-	style := Style{flags: styleFlags{
-		bold:          true,
-		faint:         true,
-		italic:        true,
-		blink:         true,
-		inverse:       true,
-		invisible:     true,
-		strikethrough: true,
-		overline:      true,
-		underline:     SGRAttributeUnderlineCurly,
+	style := Style{Flags: StyleFlags{
+		Bold:          true,
+		Faint:         true,
+		Italic:        true,
+		Blink:         true,
+		Inverse:       true,
+		Invisible:     true,
+		Strikethrough: true,
+		Overline:      true,
+		Underline:     SGRAttributeUnderlineCurly,
 	}}
 	expectEqualStrings(t,
 		"\x1b[0m\x1b[1m\x1b[2m\x1b[3m\x1b[5m\x1b[7m\x1b[8m\x1b[9m\x1b[53m\x1b[4:3m",
@@ -323,10 +323,10 @@ func TestStyle_Style_VT_formatting_all_flags(t *testing.T) {
 // Zig: test "Style VT formatting combined colors and flags"
 func TestStyle_Style_VT_formatting_combined_colors_and_flags(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_rgb(255, 0, 0),
-		bg_color:        sm3_pal(8),
+		FgColor:         sm3_rgb(255, 0, 0),
+		BgColor:         sm3_pal(8),
 		underline_color: sm3_rgb(0, 255, 0),
-		flags:           styleFlags{bold: true, italic: true, underline: SGRAttributeUnderlineDouble},
+		Flags:           StyleFlags{Bold: true, Italic: true, Underline: SGRAttributeUnderlineDouble},
 	}
 	expectEqualStrings(t,
 		"\x1b[0m\x1b[1m\x1b[3m\x1b[4:2m\x1b[38;2;255;0;0m\x1b[48;5;8m\x1b[58;2;0;255;0m",
@@ -337,8 +337,8 @@ func TestStyle_Style_VT_formatting_combined_colors_and_flags(t *testing.T) {
 // Zig: test "Style VT formatting all colors rgb"
 func TestStyle_Style_VT_formatting_all_colors_rgb(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_rgb(10, 20, 30),
-		bg_color:        sm3_rgb(40, 50, 60),
+		FgColor:         sm3_rgb(10, 20, 30),
+		BgColor:         sm3_rgb(40, 50, 60),
 		underline_color: sm3_rgb(70, 80, 90),
 	}
 	expectEqualStrings(t,
@@ -350,8 +350,8 @@ func TestStyle_Style_VT_formatting_all_colors_rgb(t *testing.T) {
 // Zig: test "Style VT formatting all colors palette"
 func TestStyle_Style_VT_formatting_all_colors_palette(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_pal(1),
-		bg_color:        sm3_pal(2),
+		FgColor:         sm3_pal(1),
+		BgColor:         sm3_pal(2),
 		underline_color: sm3_pal(3),
 	}
 	expectEqualStrings(t,
@@ -362,7 +362,7 @@ func TestStyle_Style_VT_formatting_all_colors_palette(t *testing.T) {
 
 // Zig: test "Style VT formatting palette with palette set emits rgb"
 func TestStyle_Style_VT_formatting_palette_with_palette_set_emits_rgb(t *testing.T) {
-	style := Style{fg_color: sm3_pal(1)}
+	style := Style{FgColor: sm3_pal(1)}
 	formatter := style.FormatterVt()
 	formatter.palette = &ColorDefault
 	expectEqualStrings(t, "\x1b[0m\x1b[38;2;204;102;102m", formatter.Format())
@@ -371,8 +371,8 @@ func TestStyle_Style_VT_formatting_palette_with_palette_set_emits_rgb(t *testing
 // Zig: test "Style VT formatting all palette colors with palette set"
 func TestStyle_Style_VT_formatting_all_palette_colors_with_palette_set(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_pal(1),
-		bg_color:        sm3_pal(2),
+		FgColor:         sm3_pal(1),
+		BgColor:         sm3_pal(2),
 		underline_color: sm3_pal(3),
 	}
 	formatter := style.FormatterVt()
@@ -385,11 +385,11 @@ func TestStyle_Style_VT_formatting_all_palette_colors_with_palette_set(t *testin
 
 // Zig: test "Set basic usage"
 func TestStyle_Set_basic_usage(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 
-	style := Style{flags: styleFlags{bold: true}}
-	style2 := Style{flags: styleFlags{italic: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
+	style2 := Style{Flags: StyleFlags{Italic: true}}
 
 	set := sm3_newSet(layout)
 
@@ -406,7 +406,7 @@ func TestStyle_Set_basic_usage(t *testing.T) {
 	// Look it up
 	{
 		v := set.Get(id)
-		expect(t, v.flags.bold, "v.flags.bold")
+		expect(t, v.Flags.Bold, "v.flags.bold")
 
 		v2 := set.Get(id)
 		expectEqual(t, v, v2)
@@ -418,7 +418,7 @@ func TestStyle_Set_basic_usage(t *testing.T) {
 	// Look it up
 	{
 		v := set.Get(id2)
-		expect(t, v.flags.italic, "v.flags.italic")
+		expect(t, v.Flags.Italic, "v.flags.italic")
 	}
 
 	// Ref count
@@ -439,33 +439,33 @@ func TestStyle_Set_basic_usage(t *testing.T) {
 // Zig: test "Set capacities"
 func TestStyle_Set_capacities(t *testing.T) {
 	// We want to support at least this many styles without overflowing.
-	_ = RefCountedSetLayoutInit[StyleId](16384, styleSetItemSizes)
+	_ = RefCountedSetLayoutInit[StyleID](16384, styleSetItemSizes)
 }
 
 // Zig: test "Style HTML formatting basic bold"
 func TestStyle_Style_HTML_formatting_basic_bold(t *testing.T) {
-	style := Style{flags: styleFlags{bold: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
 	expectEqualStrings(t, "font-weight: bold;", style.FormatterHtml().Format())
 }
 
 // Zig: test "Style HTML formatting fg color rgb"
 func TestStyle_Style_HTML_formatting_fg_color_rgb(t *testing.T) {
-	style := Style{fg_color: sm3_rgb(255, 128, 64)}
+	style := Style{FgColor: sm3_rgb(255, 128, 64)}
 	expectEqualStrings(t, "color: rgb(255, 128, 64);", style.FormatterHtml().Format())
 }
 
 // Zig: test "Style HTML formatting bg color palette"
 func TestStyle_Style_HTML_formatting_bg_color_palette(t *testing.T) {
-	style := Style{bg_color: sm3_pal(7)}
+	style := Style{BgColor: sm3_pal(7)}
 	expectEqualStrings(t, "background-color: var(--vt-palette-7);", style.FormatterHtml().Format())
 }
 
 // Zig: test "Style HTML formatting combined colors and flags"
 func TestStyle_Style_HTML_formatting_combined_colors_and_flags(t *testing.T) {
 	style := Style{
-		fg_color: sm3_rgb(255, 0, 0),
-		bg_color: sm3_rgb(0, 0, 255),
-		flags:    styleFlags{bold: true, italic: true},
+		FgColor: sm3_rgb(255, 0, 0),
+		BgColor: sm3_rgb(0, 0, 255),
+		Flags:   StyleFlags{Bold: true, Italic: true},
 	}
 	result := style.FormatterHtml().Format()
 	expect(t, strings.Contains(result, "color: rgb(255, 0, 0);"), `std.mem.indexOf(u8, result, "color: rgb(255, 0, 0);") != null`)
@@ -476,7 +476,7 @@ func TestStyle_Style_HTML_formatting_combined_colors_and_flags(t *testing.T) {
 
 // Zig: test "Style HTML formatting single decoration line"
 func TestStyle_Style_HTML_formatting_single_decoration_line(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}}
 	result := style.FormatterHtml().Format()
 	expect(t, strings.Contains(result, "text-decoration-line: underline;"), `std.mem.indexOf(u8, result, "text-decoration-line: underline;") != null`)
 	expect(t, strings.Contains(result, "text-decoration-style: solid;"), `std.mem.indexOf(u8, result, "text-decoration-style: solid;") != null`)
@@ -484,7 +484,7 @@ func TestStyle_Style_HTML_formatting_single_decoration_line(t *testing.T) {
 
 // Zig: test "Style HTML formatting multiple decoration lines"
 func TestStyle_Style_HTML_formatting_multiple_decoration_lines(t *testing.T) {
-	style := Style{flags: styleFlags{underline: SGRAttributeUnderlineCurly, strikethrough: true, overline: true}}
+	style := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly, Strikethrough: true, Overline: true}}
 	result := style.FormatterHtml().Format()
 	expect(t, strings.Contains(result, "text-decoration-line: underline line-through overline;"), `std.mem.indexOf(u8, result, "text-decoration-line: underline line-through overline;") != null`)
 	expect(t, strings.Contains(result, "text-decoration-style: wavy;"), `std.mem.indexOf(u8, result, "text-decoration-style: wavy;") != null`)
@@ -492,7 +492,7 @@ func TestStyle_Style_HTML_formatting_multiple_decoration_lines(t *testing.T) {
 
 // Zig: test "Style HTML formatting palette with palette set emits rgb"
 func TestStyle_Style_HTML_formatting_palette_with_palette_set_emits_rgb(t *testing.T) {
-	style := Style{bg_color: sm3_pal(7)}
+	style := Style{BgColor: sm3_pal(7)}
 	formatter := style.FormatterHtml()
 	formatter.palette = &ColorDefault
 	expectEqualStrings(t, "background-color: rgb(197, 200, 198);", formatter.Format())
@@ -501,8 +501,8 @@ func TestStyle_Style_HTML_formatting_palette_with_palette_set_emits_rgb(t *testi
 // Zig: test "Style HTML formatting all palette colors with palette set"
 func TestStyle_Style_HTML_formatting_all_palette_colors_with_palette_set(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_pal(1),
-		bg_color:        sm3_pal(2),
+		FgColor:         sm3_pal(1),
+		BgColor:         sm3_pal(2),
 		underline_color: sm3_pal(3),
 	}
 	formatter := style.FormatterHtml()
@@ -599,9 +599,9 @@ func TestStyle_term51_Style_default_default_style_and_one_field_variants(t *test
 
 // Zig: test "term51: Style.default: default id and id type"
 func TestStyle_term51_Style_default_default_id_and_id_type(t *testing.T) {
-	expectEqual(t, StyleId(0), StyleDefaultId)
-	expect(t, reflect.TypeOf(StyleId(0)) == reflect.TypeOf(uint16(0)), "Id == u16")
-	expect(t, reflect.TypeOf(StyleId(0)) == reflect.TypeOf(SizeStyleCountInt(0)), "Id == size.StyleCountInt")
+	expectEqual(t, StyleID(0), StyleDefaultID)
+	expect(t, reflect.TypeOf(StyleID(0)) == reflect.TypeOf(uint16(0)), "Id == u16")
+	expect(t, reflect.TypeOf(StyleID(0)) == reflect.TypeOf(SizeStyleCountInt(0)), "Id == size.StyleCountInt")
 }
 
 // Zig: test "term51: Style.eql: equal styles"
@@ -610,25 +610,25 @@ func TestStyle_term51_Style_eql_equal_styles(t *testing.T) {
 	expect(t, a.Eql(Style{}), "a.eql(.{})")
 
 	full := Style{
-		fg_color:        sm3_rgb(1, 2, 3),
-		bg_color:        sm3_pal(4),
+		FgColor:         sm3_rgb(1, 2, 3),
+		BgColor:         sm3_pal(4),
 		underline_color: sm3_rgb(5, 6, 7),
-		flags: styleFlags{
-			bold:          true,
-			italic:        true,
-			faint:         true,
-			blink:         true,
-			inverse:       true,
-			invisible:     true,
-			strikethrough: true,
-			overline:      true,
-			underline:     SGRAttributeUnderlineDashed,
+		Flags: StyleFlags{
+			Bold:          true,
+			Italic:        true,
+			Faint:         true,
+			Blink:         true,
+			Inverse:       true,
+			Invisible:     true,
+			Strikethrough: true,
+			Overline:      true,
+			Underline:     SGRAttributeUnderlineDashed,
 		},
 	}
 	copy := full
 	expect(t, full.Eql(copy), "full.eql(copy)")
 	expect(t, copy.Eql(full), "copy.eql(full)")
-	copy.flags.underline = SGRAttributeUnderlineDotted
+	copy.Flags.Underline = SGRAttributeUnderlineDotted
 	expect(t, !full.Eql(copy), "!full.eql(copy)")
 }
 
@@ -651,8 +651,8 @@ func TestStyle_term51_Style_eql_every_one_field_difference_is_unequal(t *testing
 // Zig: test "term51: Style.eql: same colors in different slots are unequal"
 func TestStyle_term51_Style_eql_same_colors_in_different_slots_are_unequal(t *testing.T) {
 	c := sm3_pal(7)
-	fg := Style{fg_color: c}
-	bg := Style{bg_color: c}
+	fg := Style{FgColor: c}
+	bg := Style{BgColor: c}
 	ul := Style{underline_color: c}
 	expect(t, !fg.Eql(bg), "!fg.eql(bg)")
 	expect(t, !fg.Eql(ul), "!fg.eql(ul)")
@@ -662,7 +662,7 @@ func TestStyle_term51_Style_eql_same_colors_in_different_slots_are_unequal(t *te
 // Zig: test "term51: Style.eql: flag padding participates"
 func TestStyle_term51_Style_eql_flag_padding_participates(t *testing.T) {
 	a := Style{}
-	b := Style{flags: styleFlags{_padding: 0b10000}}
+	b := Style{Flags: StyleFlags{_padding: 0b10000}}
 	expect(t, !a.Eql(b), "!a.eql(b)")
 	expect(t, !a.Default() || a.Default(), "!a.default() or a.default()")
 	expect(t, !b.Default(), "!b.default()")
@@ -687,15 +687,15 @@ func TestStyle_term51_Style_underlineColor_each_tag(t *testing.T) {
 
 	rgb := Style{underline_color: sm3_rgb(4, 5, 6)}
 	expectEqual(t,
-		Some(ColorRGB{r: 4, g: 5, b: 6}),
+		Some(ColorRGB{R: 4, G: 5, B: 6}),
 		rgb.UnderlineColor(&pal),
 	)
 
 	// Other fields do not matter.
 	other := Style{
-		fg_color: sm3_pal(1),
-		bg_color: sm3_pal(2),
-		flags:    styleFlags{underline: SGRAttributeUnderlineCurly},
+		FgColor: sm3_pal(1),
+		BgColor: sm3_pal(2),
+		Flags:   StyleFlags{Underline: SGRAttributeUnderlineCurly},
 	}
 	expectEqual(t, None[ColorRGB](), other.UnderlineColor(&pal))
 }
@@ -711,43 +711,43 @@ func TestStyle_term51_Style_format_default_and_flags(t *testing.T) {
 	d := Style{}
 	expectEqualStrings(t, "Style{ flags={  } }", d.Format())
 
-	bold := Style{flags: styleFlags{bold: true}}
+	bold := Style{Flags: StyleFlags{Bold: true}}
 	expectEqualStrings(t, "Style{ flags={ bold } }", bold.Format())
 
-	all := Style{flags: styleFlags{
-		bold:          true,
-		italic:        true,
-		faint:         true,
-		blink:         true,
-		inverse:       true,
-		invisible:     true,
-		strikethrough: true,
-		overline:      true,
-		underline:     SGRAttributeUnderlineDouble,
+	all := Style{Flags: StyleFlags{
+		Bold:          true,
+		Italic:        true,
+		Faint:         true,
+		Blink:         true,
+		Inverse:       true,
+		Invisible:     true,
+		Strikethrough: true,
+		Overline:      true,
+		Underline:     SGRAttributeUnderlineDouble,
 	}}
 	expectEqualStrings(t,
 		"Style{ flags={ bold, italic, faint, blink, inverse, invisible, strikethrough, overline, underline=.double } }",
 		all.Format(),
 	)
 
-	ul := Style{flags: styleFlags{underline: SGRAttributeUnderlineDashed}}
+	ul := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDashed}}
 	expectEqualStrings(t, "Style{ flags={ underline=.dashed } }", ul.Format())
 }
 
 // Zig: test "term51: Style.format: colors"
 func TestStyle_term51_Style_format_colors(t *testing.T) {
 	// Zig-only: var builder: std.Io.Writer.Allocating = .init(alloc); defer builder.deinit(); builder.writer.end = 0 (Format returns the string)
-	fg := Style{fg_color: sm3_pal(5)}
+	fg := Style{FgColor: sm3_pal(5)}
 	expectEqualStrings(t,
 		"Style{ fg_color=.{ .palette = 5 }, flags={  } }",
 		fg.Format(),
 	)
 
 	all := Style{
-		fg_color:        sm3_rgb(1, 2, 3),
-		bg_color:        sm3_pal(0),
+		FgColor:         sm3_rgb(1, 2, 3),
+		BgColor:         sm3_pal(0),
 		underline_color: sm3_rgb(0, 0, 0),
-		flags:           styleFlags{italic: true},
+		Flags:           StyleFlags{Italic: true},
 	}
 	expectEqualStrings(t,
 		"Style{ fg_color=.{ .rgb = .{ .r = 1, .g = 2, .b = 3 } }, "+
@@ -760,7 +760,7 @@ func TestStyle_term51_Style_format_colors(t *testing.T) {
 
 // Zig: test "term51: Style.formatterVt: references the style and has no palette"
 func TestStyle_term51_Style_formatterVt_references_the_style_and_has_no_palette(t *testing.T) {
-	style := Style{flags: styleFlags{bold: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
 	f := style.FormatterVt()
 	expect(t, f.style == &style, "f.style == &style")
 	expect(t, f.palette == nil, "f.palette == null")
@@ -768,7 +768,7 @@ func TestStyle_term51_Style_formatterVt_references_the_style_and_has_no_palette(
 
 // Zig: test "term51: Style.formatterHtml: references the style and has no palette"
 func TestStyle_term51_Style_formatterHtml_references_the_style_and_has_no_palette(t *testing.T) {
-	style := Style{flags: styleFlags{bold: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
 	f := style.FormatterHtml()
 	expect(t, f.style == &style, "f.style == &style")
 	expect(t, f.palette == nil, "f.palette == null")
@@ -786,8 +786,8 @@ func TestStyle_term51_Style_VTFormatter_format_empty_style_with_palette_still_re
 func TestStyle_term51_Style_VTFormatter_format_palette_leaves_rgb_and_none_alone(t *testing.T) {
 	pal := sm3_palette()
 	style := Style{
-		fg_color:        sm3_rgb(1, 2, 3),
-		bg_color:        StyleColor{},
+		FgColor:         sm3_rgb(1, 2, 3),
+		BgColor:         StyleColor{},
 		underline_color: sm3_pal(0),
 	}
 	f := style.FormatterVt()
@@ -801,19 +801,19 @@ func TestStyle_term51_Style_VTFormatter_format_palette_leaves_rgb_and_none_alone
 // Zig: test "term51: Style.VTFormatter.format: full ordering without palette"
 func TestStyle_term51_Style_VTFormatter_format_full_ordering_without_palette(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_pal(0),
-		bg_color:        sm3_pal(255),
+		FgColor:         sm3_pal(0),
+		BgColor:         sm3_pal(255),
 		underline_color: sm3_rgb(255, 255, 255),
-		flags: styleFlags{
-			bold:          true,
-			faint:         true,
-			italic:        true,
-			blink:         true,
-			inverse:       true,
-			invisible:     true,
-			strikethrough: true,
-			overline:      true,
-			underline:     SGRAttributeUnderlineDashed,
+		Flags: StyleFlags{
+			Bold:          true,
+			Faint:         true,
+			Italic:        true,
+			Blink:         true,
+			Inverse:       true,
+			Invisible:     true,
+			Strikethrough: true,
+			Overline:      true,
+			Underline:     SGRAttributeUnderlineDashed,
 		},
 	}
 	expectEqualStrings(t,
@@ -827,10 +827,10 @@ func TestStyle_term51_Style_VTFormatter_format_full_ordering_without_palette(t *
 func TestStyle_term51_Style_VTFormatter_format_full_ordering_with_palette(t *testing.T) {
 	pal := sm3_palette()
 	style := Style{
-		fg_color:        sm3_pal(0),
-		bg_color:        sm3_pal(255),
+		FgColor:         sm3_pal(0),
+		BgColor:         sm3_pal(255),
 		underline_color: sm3_pal(128),
-		flags:           styleFlags{underline: SGRAttributeUnderlineSingle},
+		Flags:           StyleFlags{Underline: SGRAttributeUnderlineSingle},
 	}
 	f := style.FormatterVt()
 	f.palette = &pal
@@ -854,7 +854,7 @@ func TestStyle_term51_Style_VTFormatter_format_each_underline_style_alone(t *tes
 		{u: SGRAttributeUnderlineDashed, want: "\x1b[0m\x1b[4:5m"},
 	}
 	for _, c := range cases {
-		style := Style{flags: styleFlags{underline: c.u}}
+		style := Style{Flags: StyleFlags{Underline: c.u}}
 		expectEqualStrings(t, c.want, style.FormatterVt().Format())
 	}
 }
@@ -939,20 +939,20 @@ func TestStyle_term51_Style_HtmlFormatter_format_empty_style(t *testing.T) {
 // Zig: test "term51: Style.HtmlFormatter.format: each flag alone"
 func TestStyle_term51_Style_HtmlFormatter_format_each_flag_alone(t *testing.T) {
 	cases := []struct {
-		flags styleFlags
+		flags StyleFlags
 		want  string
 	}{
-		{flags: styleFlags{bold: true}, want: "font-weight: bold;"},
-		{flags: styleFlags{italic: true}, want: "font-style: italic;"},
-		{flags: styleFlags{faint: true}, want: "opacity: 0.5;"},
-		{flags: styleFlags{invisible: true}, want: "visibility: hidden;"},
-		{flags: styleFlags{inverse: true}, want: "filter: invert(100%);"},
-		{flags: styleFlags{blink: true}, want: "text-decoration-line: blink;"},
-		{flags: styleFlags{strikethrough: true}, want: "text-decoration-line: line-through;"},
-		{flags: styleFlags{overline: true}, want: "text-decoration-line: overline;"},
+		{flags: StyleFlags{Bold: true}, want: "font-weight: bold;"},
+		{flags: StyleFlags{Italic: true}, want: "font-style: italic;"},
+		{flags: StyleFlags{Faint: true}, want: "opacity: 0.5;"},
+		{flags: StyleFlags{Invisible: true}, want: "visibility: hidden;"},
+		{flags: StyleFlags{Inverse: true}, want: "filter: invert(100%);"},
+		{flags: StyleFlags{Blink: true}, want: "text-decoration-line: blink;"},
+		{flags: StyleFlags{Strikethrough: true}, want: "text-decoration-line: line-through;"},
+		{flags: StyleFlags{Overline: true}, want: "text-decoration-line: overline;"},
 	}
 	for _, c := range cases {
-		style := Style{flags: c.flags}
+		style := Style{Flags: c.flags}
 		expectEqualStrings(t, c.want, style.FormatterHtml().Format())
 	}
 }
@@ -971,7 +971,7 @@ func TestStyle_term51_Style_HtmlFormatter_format_each_underline_style_alone(t *t
 		{u: SGRAttributeUnderlineDashed, want: "text-decoration-line: underline;text-decoration-style: dashed;"},
 	}
 	for _, c := range cases {
-		style := Style{flags: styleFlags{underline: c.u}}
+		style := Style{Flags: StyleFlags{Underline: c.u}}
 		expectEqualStrings(t, c.want, style.FormatterHtml().Format())
 	}
 }
@@ -979,30 +979,30 @@ func TestStyle_term51_Style_HtmlFormatter_format_each_underline_style_alone(t *t
 // Zig: test "term51: Style.HtmlFormatter.format: decoration line combinations"
 func TestStyle_term51_Style_HtmlFormatter_format_decoration_line_combinations(t *testing.T) {
 	// All four decoration lines, in fixed order.
-	all := Style{flags: styleFlags{
-		underline:     SGRAttributeUnderlineSingle,
-		strikethrough: true,
-		overline:      true,
-		blink:         true,
+	all := Style{Flags: StyleFlags{
+		Underline:     SGRAttributeUnderlineSingle,
+		Strikethrough: true,
+		Overline:      true,
+		Blink:         true,
 	}}
 	expectEqualStrings(t,
 		"text-decoration-line: underline line-through overline blink;text-decoration-style: solid;",
 		all.FormatterHtml().Format(),
 	)
 
-	sb := Style{flags: styleFlags{strikethrough: true, blink: true}}
+	sb := Style{Flags: StyleFlags{Strikethrough: true, Blink: true}}
 	expectEqualStrings(t,
 		"text-decoration-line: line-through blink;",
 		sb.FormatterHtml().Format(),
 	)
 
-	ob := Style{flags: styleFlags{overline: true, blink: true}}
+	ob := Style{Flags: StyleFlags{Overline: true, Blink: true}}
 	expectEqualStrings(t,
 		"text-decoration-line: overline blink;",
 		ob.FormatterHtml().Format(),
 	)
 
-	us := Style{flags: styleFlags{underline: SGRAttributeUnderlineCurly, strikethrough: true}}
+	us := Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly, Strikethrough: true}}
 	expectEqualStrings(t,
 		"text-decoration-line: underline line-through;text-decoration-style: wavy;",
 		us.FormatterHtml().Format(),
@@ -1012,19 +1012,19 @@ func TestStyle_term51_Style_HtmlFormatter_format_decoration_line_combinations(t 
 // Zig: test "term51: Style.HtmlFormatter.format: full ordering without palette"
 func TestStyle_term51_Style_HtmlFormatter_format_full_ordering_without_palette(t *testing.T) {
 	style := Style{
-		fg_color:        sm3_pal(1),
-		bg_color:        sm3_rgb(2, 3, 4),
+		FgColor:         sm3_pal(1),
+		BgColor:         sm3_rgb(2, 3, 4),
 		underline_color: sm3_pal(255),
-		flags: styleFlags{
-			bold:          true,
-			italic:        true,
-			faint:         true,
-			blink:         true,
-			inverse:       true,
-			invisible:     true,
-			strikethrough: true,
-			overline:      true,
-			underline:     SGRAttributeUnderlineDotted,
+		Flags: StyleFlags{
+			Bold:          true,
+			Italic:        true,
+			Faint:         true,
+			Blink:         true,
+			Inverse:       true,
+			Invisible:     true,
+			Strikethrough: true,
+			Overline:      true,
+			Underline:     SGRAttributeUnderlineDotted,
 		},
 	}
 	expectEqualStrings(t,
@@ -1046,8 +1046,8 @@ func TestStyle_term51_Style_HtmlFormatter_format_full_ordering_without_palette(t
 func TestStyle_term51_Style_HtmlFormatter_format_palette_set_leaves_rgb_alone(t *testing.T) {
 	pal := sm3_palette()
 	style := Style{
-		fg_color:        sm3_pal(0),
-		bg_color:        sm3_rgb(2, 3, 4),
+		FgColor:         sm3_pal(0),
+		BgColor:         sm3_rgb(2, 3, 4),
 		underline_color: sm3_pal(255),
 	}
 	f := style.FormatterHtml()
@@ -1145,13 +1145,13 @@ func TestStyle_term51_Style_PackedStyle_fromStyle_layout_bit_positions(t *testin
 	}
 
 	{
-		s := Style{fg_color: sm3_pal(5)}
+		s := Style{FgColor: sm3_pal(5)}
 		bits := stylePackedStyleFromStyle(s).bitCast()
 		expectEqual(t, sm3_or128(sm3_u128(1, 0), sm3_u128(5, 24)), bits)
 	}
 
 	{
-		s := Style{bg_color: sm3_rgb(0x11, 0x22, 0x33)}
+		s := Style{BgColor: sm3_rgb(0x11, 0x22, 0x33)}
 		bits := stylePackedStyleFromStyle(s).bitCast()
 		expectEqual(t,
 			sm3_or128(sm3_u128(2, 8), sm3_u128(0x332211, 48)),
@@ -1170,23 +1170,23 @@ func TestStyle_term51_Style_PackedStyle_fromStyle_layout_bit_positions(t *testin
 
 	{
 		// bold = bit 0, underline curly = 3 in bits 8..10 of the flags.
-		s := Style{flags: styleFlags{bold: true, underline: SGRAttributeUnderlineCurly}}
+		s := Style{Flags: StyleFlags{Bold: true, Underline: SGRAttributeUnderlineCurly}}
 		bits := stylePackedStyleFromStyle(s).bitCast()
 		expectEqual(t, sm3_u128(0x301, 96), bits)
 	}
 
 	{
 		// Every flag bit, in declaration order.
-		s := Style{flags: styleFlags{
-			bold:          true,
-			italic:        true,
-			faint:         true,
-			blink:         true,
-			inverse:       true,
-			invisible:     true,
-			strikethrough: true,
-			overline:      true,
-			underline:     SGRAttributeUnderlineDashed,
+		s := Style{Flags: StyleFlags{
+			Bold:          true,
+			Italic:        true,
+			Faint:         true,
+			Blink:         true,
+			Inverse:       true,
+			Invisible:     true,
+			Strikethrough: true,
+			Overline:      true,
+			Underline:     SGRAttributeUnderlineDashed,
 		}}
 		bits := stylePackedStyleFromStyle(s).bitCast()
 		expectEqual(t, sm3_u128(0x5FF, 96), bits)
@@ -1194,7 +1194,7 @@ func TestStyle_term51_Style_PackedStyle_fromStyle_layout_bit_positions(t *testin
 
 	{
 		// Padding bits of the flags are carried over; the trailing 16 are 0.
-		s := Style{flags: styleFlags{_padding: 0b11111}}
+		s := Style{Flags: StyleFlags{_padding: 0b11111}}
 		bits := stylePackedStyleFromStyle(s).bitCast()
 		expectEqual(t, sm3_u128(0xF800, 96), bits)
 	}
@@ -1209,10 +1209,10 @@ func TestStyle_term51_Style_hash_pinned_values(t *testing.T) {
 
 	// wide[0] holds bits 0..63, wide[1] holds bits 64..127; the hash is
 	// std.hash.int(wide[0] ^ wide[1]).
-	fg := Style{fg_color: sm3_pal(5)}
+	fg := Style{FgColor: sm3_pal(5)}
 	expectEqual(t, h(uint64(1)|(uint64(5)<<24)), fg.Hash())
 
-	bg := Style{bg_color: sm3_rgb(0x11, 0x22, 0x33)}
+	bg := Style{BgColor: sm3_rgb(0x11, 0x22, 0x33)}
 	expectEqual(t,
 		h(((uint64(2)<<8)|(uint64(0x11)<<48)|(uint64(0x22)<<56))^0x33),
 		bg.Hash(),
@@ -1224,22 +1224,22 @@ func TestStyle_term51_Style_hash_pinned_values(t *testing.T) {
 		ul.Hash(),
 	)
 
-	fl := Style{flags: styleFlags{bold: true, underline: SGRAttributeUnderlineCurly}}
+	fl := Style{Flags: StyleFlags{Bold: true, Underline: SGRAttributeUnderlineCurly}}
 	expectEqual(t, h(uint64(0x301)<<32), fl.Hash())
 }
 
 // Zig: test "term51: Style.hash: equal styles hash equal"
 func TestStyle_term51_Style_hash_equal_styles_hash_equal(t *testing.T) {
 	a := Style{
-		fg_color: sm3_rgb(1, 2, 3),
-		bg_color: sm3_pal(9),
-		flags:    styleFlags{italic: true, underline: SGRAttributeUnderlineSingle},
+		FgColor: sm3_rgb(1, 2, 3),
+		BgColor: sm3_pal(9),
+		Flags:   StyleFlags{Italic: true, Underline: SGRAttributeUnderlineSingle},
 	}
 	b := Style{}
-	b.flags.underline = SGRAttributeUnderlineSingle
-	b.flags.italic = true
-	b.bg_color = sm3_pal(9)
-	b.fg_color = sm3_rgb(1, 2, 3)
+	b.Flags.Underline = SGRAttributeUnderlineSingle
+	b.Flags.Italic = true
+	b.BgColor = sm3_pal(9)
+	b.FgColor = sm3_rgb(1, 2, 3)
 	expect(t, a.Eql(b), "a.eql(b)")
 	expectEqual(t, a.Hash(), b.Hash())
 	expectEqual(t, a.Hash(), a.Hash())
@@ -1263,10 +1263,10 @@ func TestStyle_term51_Style_hash_folding_128_to_64_bits_can_collide(t *testing.T
 	// Pins a weakness: the hash XORs the two halves, so bit 96 (bold)
 	// cancels against bit 32 (the low bit of the fg rgb green channel).
 	// The styles are distinct, only the set's eql tells them apart.
-	a := Style{fg_color: sm3_rgb(0, 1, 0)}
+	a := Style{FgColor: sm3_rgb(0, 1, 0)}
 	b := Style{
-		fg_color: sm3_rgb(0, 0, 0),
-		flags:    styleFlags{bold: true},
+		FgColor: sm3_rgb(0, 0, 0),
+		Flags:   StyleFlags{Bold: true},
 	}
 	expect(t, !a.Eql(b), "!a.eql(b)")
 	expectEqual(t, a.Hash(), b.Hash())
@@ -1277,9 +1277,9 @@ func TestStyle_term51_hash_set_context_hash_is_Style_hash(t *testing.T) {
 	ctx := StyleSetContext{}
 	styles := []Style{
 		{},
-		{flags: styleFlags{bold: true}},
-		{fg_color: sm3_pal(3)},
-		{bg_color: sm3_rgb(1, 2, 3)},
+		{Flags: StyleFlags{Bold: true}},
+		{FgColor: sm3_pal(3)},
+		{BgColor: sm3_rgb(1, 2, 3)},
 	}
 	for _, s := range styles {
 		expectEqual(t, s.Hash(), ctx.Hash(s))
@@ -1305,7 +1305,7 @@ func TestStyle_term51_eql_set_instantiation_types_and_layout(t *testing.T) {
 	// Set.Id is the third type argument of StyleSet; the field next_id has
 	// that type.
 	var inst StyleSet
-	expect(t, reflect.TypeOf(inst.next_id) == reflect.TypeOf(StyleId(0)), "Set.Id == Id")
+	expect(t, reflect.TypeOf(inst.next_id) == reflect.TypeOf(StyleID(0)), "Set.Id == Id")
 	expect(t, reflect.TypeOf(inst.next_id) == reflect.TypeOf(uint16(0)), "Set.Id == u16")
 	expectEqual(t, float64(0.8125), float64(RefCountedSetLoadFactor))
 	expectEqual(t, uint(0), RefCountedSetCapacityForCount(0))
@@ -1316,10 +1316,10 @@ func TestStyle_term51_eql_set_instantiation_types_and_layout(t *testing.T) {
 
 	// Zero capacity.
 	{
-		l := RefCountedSetLayoutInit[StyleId](0, styleSetItemSizes)
+		l := RefCountedSetLayoutInit[StyleID](0, styleSetItemSizes)
 		expectEqual(t, uint(0), l.cap)
 		expectEqual(t, uint(0), l.table_cap)
-		expectEqual(t, StyleId(0), l.table_mask)
+		expectEqual(t, StyleID(0), l.table_mask)
 		expectEqual(t, uint64(0), l.total_size)
 	}
 
@@ -1345,10 +1345,10 @@ func TestStyle_term51_eql_set_instantiation_types_and_layout(t *testing.T) {
 		{req: 65536, table: 65536, cap: 53248},
 	}
 	for _, c := range cases {
-		l := RefCountedSetLayoutInit[StyleId](c.req, styleSetItemSizes)
+		l := RefCountedSetLayoutInit[StyleID](c.req, styleSetItemSizes)
 		expectEqual(t, c.table, l.table_cap)
 		expectEqual(t, c.cap, l.cap)
-		expectEqual(t, StyleId(c.table-1), l.table_mask)
+		expectEqual(t, StyleID(c.table-1), l.table_mask)
 		expectEqual(t, uint64(0), l.table_start)
 		expect(t, l.items_start >= uint64(l.table_cap)*2, "l.items_start >= l.table_cap * @sizeOf(Id)")
 		expect(t, l.items_start%styleSetItemSizes.item_align == 0, "l.items_start % @alignOf(Set.Item) == 0")
@@ -1358,23 +1358,23 @@ func TestStyle_term51_eql_set_instantiation_types_and_layout(t *testing.T) {
 
 // Zig: test "term51: eql: set first id is 1 and default style is storable"
 func TestStyle_term51_eql_set_first_id_is_1_and_default_style_is_storable(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
 	expectEqual(t, uint(0), set.Count())
-	expectEqual(t, StyleId(1), set.next_id)
+	expectEqual(t, StyleID(1), set.next_id)
 
 	// The set does not special-case the default style: it is just a
 	// value that gets id 1 (id 0 is reserved and never assigned).
 	id := sm3_add(t, &set, Style{})
-	expectEqual(t, StyleId(1), id)
+	expectEqual(t, StyleID(1), id)
 	expectEqual(t, uint(1), set.Count())
 	expect(t, set.Get(id).Default(), "set.get(buf, id).default()")
-	expectEqual(t, StyleId(1), zigUnwrap(t, set.Lookup(Style{})))
+	expectEqual(t, StyleID(1), zigUnwrap(t, set.Lookup(Style{})))
 
-	id2 := sm3_add(t, &set, Style{flags: styleFlags{bold: true}})
-	expectEqual(t, StyleId(2), id2)
+	id2 := sm3_add(t, &set, Style{Flags: StyleFlags{Bold: true}})
+	expectEqual(t, StyleID(2), id2)
 }
 
 // Zig: test "term51: eql: set lookup and add distinguish every one-field difference"
@@ -1384,19 +1384,19 @@ func TestStyle_term51_eql_set_lookup_and_add_distinguish_every_one_field_differe
 	variants = append(variants, Style{})
 
 	// 36 variants: table of 64 gives cap 52, so 51 usable ids.
-	layout := RefCountedSetLayoutInit[StyleId](64, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](64, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
 	for _, v := range variants {
-		expectEqual(t, None[StyleId](), set.Lookup(v))
+		expectEqual(t, None[StyleID](), set.Lookup(v))
 	}
 
-	var ids []StyleId
+	var ids []StyleID
 	// Zig-only: defer ids.deinit(alloc)
 	for i, v := range variants {
 		id := sm3_add(t, &set, v)
-		expectEqual(t, StyleId(i+1), id)
+		expectEqual(t, StyleID(i+1), id)
 		ids = append(ids, id)
 	}
 	expectEqual(t, uint(len(variants)), set.Count())
@@ -1411,14 +1411,14 @@ func TestStyle_term51_eql_set_lookup_and_add_distinguish_every_one_field_differe
 
 // Zig: test "term51: eql: set add of a hash-colliding but unequal style"
 func TestStyle_term51_eql_set_add_of_a_hash_colliding_but_unequal_style(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
-	a := Style{fg_color: sm3_rgb(0, 1, 0)}
+	a := Style{FgColor: sm3_rgb(0, 1, 0)}
 	b := Style{
-		fg_color: sm3_rgb(0, 0, 0),
-		flags:    styleFlags{bold: true},
+		FgColor: sm3_rgb(0, 0, 0),
+		Flags:   StyleFlags{Bold: true},
 	}
 	expectEqual(t, a.Hash(), b.Hash())
 
@@ -1433,14 +1433,14 @@ func TestStyle_term51_eql_set_add_of_a_hash_colliding_but_unequal_style(t *testi
 // Zig: test "term51: eql: set fills to capacity then reports OutOfMemory"
 func TestStyle_term51_eql_set_fills_to_capacity_then_reports_OutOfMemory(t *testing.T) {
 	// Layout.init(16): table 16, cap 13, so ids 1..12 are usable.
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	expectEqual(t, uint(13), layout.cap)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
 	for i := 1; i < 13; i++ {
 		id := sm3_add(t, &set, sm3_rgbStyle(uint16(i)))
-		expectEqual(t, StyleId(i), id)
+		expectEqual(t, StyleID(i), id)
 	}
 	expectEqual(t, uint(12), set.Count())
 
@@ -1448,17 +1448,17 @@ func TestStyle_term51_eql_set_fills_to_capacity_then_reports_OutOfMemory(t *test
 	_, err := set.Add(sm3_rgbStyle(13))
 	sm3_expectError(t, ErrOutOfMemory, err)
 	expectEqual(t, uint(12), set.Count())
-	expectEqual(t, None[StyleId](), set.Lookup(sm3_rgbStyle(13)))
+	expectEqual(t, None[StyleID](), set.Lookup(sm3_rgbStyle(13)))
 
 	// Re-adding an existing style still works at capacity and bumps the ref.
-	expectEqual(t, StyleId(5), sm3_add(t, &set, sm3_rgbStyle(5)))
+	expectEqual(t, StyleID(5), sm3_add(t, &set, sm3_rgbStyle(5)))
 	expectEqual(t, uint16(2), set.RefCount(5))
 	expectEqual(t, uint(12), set.Count())
 }
 
 // Zig: test "term51: eql: set full with dead items reports NeedsRehash"
 func TestStyle_term51_eql_set_full_with_dead_items_reports_NeedsRehash(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1479,12 +1479,12 @@ func TestStyle_term51_eql_set_full_with_dead_items_reports_NeedsRehash(t *testin
 	sm3_expectError(t, ErrNeedsRehash, err)
 
 	// Dead items stay in the set, so no new ids become available.
-	expectEqual(t, StyleId(13), set.next_id)
+	expectEqual(t, StyleID(13), set.next_id)
 }
 
 // Zig: test "term51: eql: set release of the last id frees its id for reuse"
 func TestStyle_term51_eql_set_release_of_the_last_id_frees_its_id_for_reuse(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1496,15 +1496,15 @@ func TestStyle_term51_eql_set_release_of_the_last_id_frees_its_id_for_reuse(t *t
 
 	// The trailing dead item is trimmed, which frees id 12 again.
 	id := sm3_add(t, &set, sm3_rgbStyle(500))
-	expectEqual(t, StyleId(12), id)
+	expectEqual(t, StyleID(12), id)
 	expectEqual(t, uint(12), set.Count())
-	expectEqual(t, None[StyleId](), set.Lookup(sm3_rgbStyle(12)))
+	expectEqual(t, None[StyleID](), set.Lookup(sm3_rgbStyle(12)))
 }
 
 // Zig: test "term51: eql: set tiny layouts have no usable ids"
 func TestStyle_term51_eql_set_tiny_layouts_have_no_usable_ids(t *testing.T) {
 	for _, req := range []uint{1, 2} {
-		layout := RefCountedSetLayoutInit[StyleId](req, styleSetItemSizes)
+		layout := RefCountedSetLayoutInit[StyleID](req, styleSetItemSizes)
 		// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 		set := sm3_newSet(layout)
 		_, err := set.Add(Style{})
@@ -1514,11 +1514,11 @@ func TestStyle_term51_eql_set_tiny_layouts_have_no_usable_ids(t *testing.T) {
 
 	// table 4: cap 3, two usable ids.
 	{
-		layout := RefCountedSetLayoutInit[StyleId](4, styleSetItemSizes)
+		layout := RefCountedSetLayoutInit[StyleID](4, styleSetItemSizes)
 		// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 		set := sm3_newSet(layout)
-		expectEqual(t, StyleId(1), sm3_add(t, &set, sm3_rgbStyle(1)))
-		expectEqual(t, StyleId(2), sm3_add(t, &set, sm3_rgbStyle(2)))
+		expectEqual(t, StyleID(1), sm3_add(t, &set, sm3_rgbStyle(1)))
+		expectEqual(t, StyleID(2), sm3_add(t, &set, sm3_rgbStyle(2)))
 		_, err := set.Add(sm3_rgbStyle(3))
 		sm3_expectError(t, ErrOutOfMemory, err)
 	}
@@ -1526,7 +1526,7 @@ func TestStyle_term51_eql_set_tiny_layouts_have_no_usable_ids(t *testing.T) {
 
 // Zig: test "term51: eql: set release and resurrect a dead item"
 func TestStyle_term51_eql_set_release_and_resurrect_a_dead_item(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1540,23 +1540,23 @@ func TestStyle_term51_eql_set_release_and_resurrect_a_dead_item(t *testing.T) {
 	set.Release(ia)
 	expectEqual(t, uint16(0), set.RefCount(ia))
 	expectEqual(t, uint(1), set.Count())
-	expectEqual(t, None[StyleId](), set.Lookup(a))
+	expectEqual(t, None[StyleID](), set.Lookup(a))
 	expectEqual(t, Some(ib), set.Lookup(b))
 
 	// Adding it again resurrects it under the same id.
 	expectEqual(t, ia, sm3_add(t, &set, a))
 	expectEqual(t, uint16(1), set.RefCount(ia))
 	expectEqual(t, uint(2), set.Count())
-	expectEqual(t, StyleId(3), set.next_id)
+	expectEqual(t, StyleID(3), set.next_id)
 }
 
 // Zig: test "term51: eql: set use, useMultiple, release, releaseMultiple"
 func TestStyle_term51_eql_set_use_useMultiple_release_releaseMultiple(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
-	id := sm3_add(t, &set, Style{flags: styleFlags{bold: true}})
+	id := sm3_add(t, &set, Style{Flags: StyleFlags{Bold: true}})
 	expectEqual(t, uint16(1), set.RefCount(id))
 	set.Use(id)
 	expectEqual(t, uint16(2), set.RefCount(id))
@@ -1576,22 +1576,22 @@ func TestStyle_term51_eql_set_use_useMultiple_release_releaseMultiple(t *testing
 
 // Zig: test "term51: eql: set get returns a pointer to the stored style"
 func TestStyle_term51_eql_set_get_returns_a_pointer_to_the_stored_style(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
-	id := sm3_add(t, &set, Style{fg_color: sm3_pal(4)})
+	id := sm3_add(t, &set, Style{FgColor: sm3_pal(4)})
 	p1 := set.Get(id)
 	p2 := set.Get(id)
 	expect(t, p1 == p2, "p1 == p2")
 	// Zig compares the u16 ref count with a usize literal.
 	expectEqual(t, uint16(1), set.RefCount(id))
-	expect(t, p1.Eql(Style{fg_color: sm3_pal(4)}), "p1.eql(.{ .fg_color = .{ .palette = 4 } })")
+	expect(t, p1.Eql(Style{FgColor: sm3_pal(4)}), "p1.eql(.{ .fg_color = .{ .palette = 4 } })")
 }
 
 // Zig: test "term51: eql: set addWithId"
 func TestStyle_term51_eql_set_addWithId(t *testing.T) {
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
@@ -1602,26 +1602,26 @@ func TestStyle_term51_eql_set_addWithId(t *testing.T) {
 	// An id beyond next_id is ignored: falls back to a plain add. The
 	// add path returns the id it assigned, which is returned as non-null
 	// even when it equals the requested id.
-	expectEqual(t, Some(StyleId(1)), sm3_addWithId(t, &set, a, 1))
-	expectEqual(t, Some(StyleId(2)), sm3_addWithId(t, &set, b, 9))
+	expectEqual(t, Some(StyleID(1)), sm3_addWithId(t, &set, a, 1))
+	expectEqual(t, Some(StyleID(2)), sm3_addWithId(t, &set, b, 9))
 	expectEqual(t, uint(2), set.Count())
 
 	// Existing live item with an equal value: ref bumped, null returned.
-	expectEqual(t, None[StyleId](), sm3_addWithId(t, &set, a, 1))
+	expectEqual(t, None[StyleID](), sm3_addWithId(t, &set, a, 1))
 	expectEqual(t, uint16(2), set.RefCount(1))
 
 	// Existing live item at that id with a different value: plain add.
-	expectEqual(t, Some(StyleId(3)), sm3_addWithId(t, &set, c, 1))
+	expectEqual(t, Some(StyleID(3)), sm3_addWithId(t, &set, c, 1))
 	expectEqual(t, uint16(2), set.RefCount(1))
 	expectEqual(t, uint(3), set.Count())
 
 	// Dead item at that id: it is replaced and null is returned.
 	set.Release(2)
 	d := sm3_rgbStyle(4)
-	expectEqual(t, None[StyleId](), sm3_addWithId(t, &set, d, 2))
+	expectEqual(t, None[StyleID](), sm3_addWithId(t, &set, d, 2))
 	expect(t, set.Get(2).Eql(d), "set.get(buf, 2).eql(d)")
 	expectEqual(t, uint16(1), set.RefCount(2))
-	expectEqual(t, None[StyleId](), set.Lookup(b))
+	expectEqual(t, None[StyleID](), set.Lookup(b))
 	expectEqual(t, uint(3), set.Count())
 }
 
@@ -1631,19 +1631,19 @@ func TestStyle_term51_eql_set_addWithId_reusing_a_dead_id_for_an_existing_value_
 	// already lives under another id, upsert returns that other id but
 	// `living` is still incremented, so count() drifts above the number
 	// of items that are alive.
-	layout := RefCountedSetLayoutInit[StyleId](16, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](16, styleSetItemSizes)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
 	a := sm3_rgbStyle(1)
 	b := sm3_rgbStyle(2)
-	expectEqual(t, StyleId(1), sm3_add(t, &set, a))
-	expectEqual(t, StyleId(2), sm3_add(t, &set, b))
+	expectEqual(t, StyleID(1), sm3_add(t, &set, a))
+	expectEqual(t, StyleID(2), sm3_add(t, &set, b))
 	set.Release(2)
 	expectEqual(t, uint(1), set.Count())
 
 	// `a` already lives at id 1, so the result is id 1, not null.
-	expectEqual(t, Some(StyleId(1)), sm3_addWithId(t, &set, a, 2))
+	expectEqual(t, Some(StyleID(1)), sm3_addWithId(t, &set, a, 2))
 	expectEqual(t, uint16(2), set.RefCount(1))
 	expectEqual(t, uint(2), set.Count())
 
@@ -1658,18 +1658,18 @@ func TestStyle_term51_eql_set_addWithId_reusing_a_dead_id_for_an_existing_value_
 func TestStyle_term51_eql_set_of_16_bit_ids_holds_53247_styles(t *testing.T) {
 	// The largest layout a u16 id can address: table 65536, cap 53248.
 	// Id 0 is reserved so 53247 styles fit, which is short of 65535.
-	layout := RefCountedSetLayoutInit[StyleId](65535, styleSetItemSizes)
+	layout := RefCountedSetLayoutInit[StyleID](65535, styleSetItemSizes)
 	expectEqual(t, uint(53248), layout.cap)
 	// Zig-only: const buf = try alloc.alignedAlloc(u8, Set.base_align, layout.total_size); defer alloc.free(buf);
 	set := sm3_newSet(layout)
 
 	var n uint
-	var last StyleId
+	var last StyleID
 	for n < 53247 {
 		last = sm3_add(t, &set, sm3_rgbStyle(uint16(n)))
 		n++
 	}
-	expectEqual(t, StyleId(53247), last)
+	expectEqual(t, StyleID(53247), last)
 	expectEqual(t, uint(53247), set.Count())
 	_, err := set.Add(sm3_rgbStyle(60000))
 	sm3_expectError(t, ErrOutOfMemory, err)
@@ -1683,35 +1683,35 @@ func TestStyle_term51_eql_set_of_16_bit_ids_holds_53247_styles(t *testing.T) {
 // Zig: test "term51: Style.fg: none color without bold"
 func TestStyle_term51_Style_fg_none_color_without_bold(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
 	s := Style{}
 
-	expectEqual(t, dflt, s.Fg(StyleFg{default_: dflt, palette: &pal}))
-	expectEqual(t, dflt, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
+	expectEqual(t, dflt, s.Fg(StyleFg{Default: dflt, Palette: &pal}))
+	expectEqual(t, dflt, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
 	expectEqual(t, dflt, s.Fg(StyleFg{
-		default_: dflt,
-		palette:  &pal,
-		bold:     sm3_bold(9, 8, 7),
+		Default: dflt,
+		Palette: &pal,
+		Bold:    sm3_bold(9, 8, 7),
 	}))
 }
 
 // Zig: test "term51: Style.fg: none color with bold"
 func TestStyle_term51_Style_fg_none_color_with_bold(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
-	s := Style{flags: styleFlags{bold: true}}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
+	s := Style{Flags: StyleFlags{Bold: true}}
 
 	// No bold config, and bright, both leave the default untouched.
-	expectEqual(t, dflt, s.Fg(StyleFg{default_: dflt, palette: &pal}))
-	expectEqual(t, dflt, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
+	expectEqual(t, dflt, s.Fg(StyleFg{Default: dflt, Palette: &pal}))
+	expectEqual(t, dflt, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
 
 	// A bold color replaces the default.
 	expectEqual(t,
-		ColorRGB{r: 9, g: 8, b: 7},
+		ColorRGB{R: 9, G: 8, B: 7},
 		s.Fg(StyleFg{
-			default_: dflt,
-			palette:  &pal,
-			bold:     sm3_bold(9, 8, 7),
+			Default: dflt,
+			Palette: &pal,
+			Bold:    sm3_bold(9, 8, 7),
 		}),
 	)
 }
@@ -1719,16 +1719,16 @@ func TestStyle_term51_Style_fg_none_color_with_bold(t *testing.T) {
 // Zig: test "term51: Style.fg: palette color without bold"
 func TestStyle_term51_Style_fg_palette_color_without_bold(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
 
 	for _, idx := range []uint8{0, 7, 8, 15, 16, 255} {
-		s := Style{fg_color: sm3_pal(idx)}
-		expectEqual(t, pal[idx], s.Fg(StyleFg{default_: dflt, palette: &pal}))
-		expectEqual(t, pal[idx], s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
+		s := Style{FgColor: sm3_pal(idx)}
+		expectEqual(t, pal[idx], s.Fg(StyleFg{Default: dflt, Palette: &pal}))
+		expectEqual(t, pal[idx], s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
 		expectEqual(t, pal[idx], s.Fg(StyleFg{
-			default_: dflt,
-			palette:  &pal,
-			bold:     sm3_bold(9, 8, 7),
+			Default: dflt,
+			Palette: &pal,
+			Bold:    sm3_bold(9, 8, 7),
 		}))
 	}
 }
@@ -1736,32 +1736,32 @@ func TestStyle_term51_Style_fg_palette_color_without_bold(t *testing.T) {
 // Zig: test "term51: Style.fg: palette color with bold and no bold config"
 func TestStyle_term51_Style_fg_palette_color_with_bold_and_no_bold_config(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
 
 	for _, idx := range []uint8{0, 7, 8, 15, 16, 255} {
 		s := Style{
-			fg_color: sm3_pal(idx),
-			flags:    styleFlags{bold: true},
+			FgColor: sm3_pal(idx),
+			Flags:   StyleFlags{Bold: true},
 		}
-		expectEqual(t, pal[idx], s.Fg(StyleFg{default_: dflt, palette: &pal}))
+		expectEqual(t, pal[idx], s.Fg(StyleFg{Default: dflt, Palette: &pal}))
 	}
 }
 
 // Zig: test "term51: Style.fg: palette color with bold and bright"
 func TestStyle_term51_Style_fg_palette_color_with_bold_and_bright(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
 
 	// 0..7 are promoted to 8..15.
 	var idx uint8 = 0
 	for idx < 8 {
 		s := Style{
-			fg_color: sm3_pal(idx),
-			flags:    styleFlags{bold: true},
+			FgColor: sm3_pal(idx),
+			Flags:   StyleFlags{Bold: true},
 		}
 		expectEqual(t,
 			pal[idx+8],
-			s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}),
+			s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}),
 		)
 		idx++
 	}
@@ -1769,12 +1769,12 @@ func TestStyle_term51_Style_fg_palette_color_with_bold_and_bright(t *testing.T) 
 	// 8 and above are not promoted.
 	for _, i := range []uint8{8, 9, 15, 16, 100, 255} {
 		s := Style{
-			fg_color: sm3_pal(i),
-			flags:    styleFlags{bold: true},
+			FgColor: sm3_pal(i),
+			Flags:   StyleFlags{Bold: true},
 		}
 		expectEqual(t,
 			pal[i],
-			s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}),
+			s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}),
 		)
 	}
 }
@@ -1785,84 +1785,84 @@ func TestStyle_term51_Style_fg_palette_color_with_bold_and_bold_color_config(t *
 	// `.color`) promotes palette 0..7 to the bright variant; the color is
 	// only used for the default and exact-default-rgb cases.
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
 
 	s := Style{
-		fg_color: sm3_pal(3),
-		flags:    styleFlags{bold: true},
+		FgColor: sm3_pal(3),
+		Flags:   StyleFlags{Bold: true},
 	}
 	expectEqual(t, pal[11], s.Fg(StyleFg{
-		default_: dflt,
-		palette:  &pal,
-		bold:     sm3_bold(9, 8, 7),
+		Default: dflt,
+		Palette: &pal,
+		Bold:    sm3_bold(9, 8, 7),
 	}))
 
 	s8 := Style{
-		fg_color: sm3_pal(8),
-		flags:    styleFlags{bold: true},
+		FgColor: sm3_pal(8),
+		Flags:   StyleFlags{Bold: true},
 	}
 	expectEqual(t, pal[8], s8.Fg(StyleFg{
-		default_: dflt,
-		palette:  &pal,
-		bold:     sm3_bold(9, 8, 7),
+		Default: dflt,
+		Palette: &pal,
+		Bold:    sm3_bold(9, 8, 7),
 	}))
 }
 
 // Zig: test "term51: Style.fg: non-bold palette color ignores bright"
 func TestStyle_term51_Style_fg_non_bold_palette_color_ignores_bright(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
-	s := Style{fg_color: sm3_pal(2), flags: styleFlags{italic: true}}
-	expectEqual(t, pal[2], s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
+	s := Style{FgColor: sm3_pal(2), Flags: StyleFlags{Italic: true}}
+	expectEqual(t, pal[2], s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
 }
 
 // Zig: test "term51: Style.fg: rgb color"
 func TestStyle_term51_Style_fg_rgb_color(t *testing.T) {
 	pal := sm3_palette()
-	dflt := ColorRGB{r: 1, g: 2, b: 3}
-	other := ColorRGB{r: 50, g: 60, b: 70}
+	dflt := ColorRGB{R: 1, G: 2, B: 3}
+	other := ColorRGB{R: 50, G: 60, B: 70}
 	boldColor := sm3_bold(9, 8, 7)
 
 	// Not bold: always the rgb value, even when equal to the default.
 	{
-		s := Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: other}}
-		expectEqual(t, other, s.Fg(StyleFg{default_: dflt, palette: &pal}))
-		expectEqual(t, other, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
-		expectEqual(t, other, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: boldColor}))
+		s := Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: other}}
+		expectEqual(t, other, s.Fg(StyleFg{Default: dflt, Palette: &pal}))
+		expectEqual(t, other, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
+		expectEqual(t, other, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: boldColor}))
 
-		same := Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: dflt}}
-		expectEqual(t, dflt, same.Fg(StyleFg{default_: dflt, palette: &pal, bold: boldColor}))
+		same := Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: dflt}}
+		expectEqual(t, dflt, same.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: boldColor}))
 	}
 
 	// Bold, rgb differing from the default: unchanged.
 	{
-		s := Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: other}, flags: styleFlags{bold: true}}
-		expectEqual(t, other, s.Fg(StyleFg{default_: dflt, palette: &pal}))
-		expectEqual(t, other, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
-		expectEqual(t, other, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: boldColor}))
+		s := Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: other}, Flags: StyleFlags{Bold: true}}
+		expectEqual(t, other, s.Fg(StyleFg{Default: dflt, Palette: &pal}))
+		expectEqual(t, other, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
+		expectEqual(t, other, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: boldColor}))
 	}
 
 	// Bold, rgb equal to the default: replaced only by a bold color.
 	{
-		s := Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: dflt}, flags: styleFlags{bold: true}}
-		expectEqual(t, dflt, s.Fg(StyleFg{default_: dflt, palette: &pal}))
-		expectEqual(t, dflt, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: sm3_bright()}))
+		s := Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: dflt}, Flags: StyleFlags{Bold: true}}
+		expectEqual(t, dflt, s.Fg(StyleFg{Default: dflt, Palette: &pal}))
+		expectEqual(t, dflt, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: sm3_bright()}))
 		expectEqual(t,
-			ColorRGB{r: 9, g: 8, b: 7},
-			s.Fg(StyleFg{default_: dflt, palette: &pal, bold: boldColor}),
+			ColorRGB{R: 9, G: 8, B: 7},
+			s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: boldColor}),
 		)
 	}
 
 	// Each channel of the default matters for the equality check.
 	{
 		channels := []ColorRGB{
-			{r: 0, g: 2, b: 3},
-			{r: 1, g: 0, b: 3},
-			{r: 1, g: 2, b: 0},
+			{R: 0, G: 2, B: 3},
+			{R: 1, G: 0, B: 3},
+			{R: 1, G: 2, B: 0},
 		}
 		for _, c := range channels {
-			s := Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: c}, flags: styleFlags{bold: true}}
-			expectEqual(t, c, s.Fg(StyleFg{default_: dflt, palette: &pal, bold: boldColor}))
+			s := Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: c}, Flags: StyleFlags{Bold: true}}
+			expectEqual(t, c, s.Fg(StyleFg{Default: dflt, Palette: &pal, Bold: boldColor}))
 		}
 	}
 }
@@ -1877,19 +1877,19 @@ func TestStyle_go_only_flags_out_of_range_bits_are_masked(t *testing.T) {
 	// value with bits above those widths is the Zig value of its low bits
 	// for Eql, Default and Hash alike.
 	var dflt Style
-	pad := Style{flags: styleFlags{_padding: 32}}
+	pad := Style{Flags: StyleFlags{_padding: 32}}
 	expect(t, pad.Default(), "pad.Default()")
 	expect(t, pad.Eql(dflt), "pad.Eql(default)")
 	expectEqual(t, pad.Hash(), dflt.Hash())
 
-	ul := Style{flags: styleFlags{underline: SGRAttributeUnderline(8 | 1)}}
-	ul1 := Style{flags: styleFlags{underline: SGRAttributeUnderline(1)}}
+	ul := Style{Flags: StyleFlags{Underline: SGRAttributeUnderline(8 | 1)}}
+	ul1 := Style{Flags: StyleFlags{Underline: SGRAttributeUnderline(1)}}
 	expect(t, ul.Eql(ul1), "ul.Eql(ul1)")
 	expect(t, !ul.Default(), "!ul.Default()")
 	expectEqual(t, ul.Hash(), ul1.Hash())
 
-	pad33 := Style{flags: styleFlags{_padding: 33}}
-	pad1 := Style{flags: styleFlags{_padding: 1}}
+	pad33 := Style{Flags: StyleFlags{_padding: 33}}
+	pad1 := Style{Flags: StyleFlags{_padding: 1}}
 	expect(t, pad33.Eql(pad1), "pad33.Eql(pad1)")
 	expect(t, !pad33.Default(), "!pad33.Default()")
 	expectEqual(t, pad33.Hash(), pad1.Hash())

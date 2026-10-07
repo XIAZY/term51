@@ -77,7 +77,7 @@ func tm4ExpectOptional[T comparable](t *testing.T, want Optional[T], got Optiona
 // tm4Primary is `t.screens.get(.primary).?`: Get returns nil for null.
 func tm4Primary(t *testing.T, term *Terminal) *Screen {
 	t.Helper()
-	s := term.screens.Get(ScreenSetKeyPrimary)
+	s := term.Screens.Get(ScreenSetKeyPrimary)
 	if s == nil {
 		t.Fatalf("unwrapped a null optional")
 	}
@@ -87,11 +87,11 @@ func tm4Primary(t *testing.T, term *Terminal) *Screen {
 // tm4SAt is term51SAt: the page list cell at the given active-area position.
 func tm4SAt(t *testing.T, term *Terminal, x uint, y uint) PageListCell {
 	t.Helper()
-	return zigUnwrap(t, term.screens.active.pages.GetCell(Point{
+	return zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{
 		Tag: PointTagActive,
 		Active: PointCoordinate{
-			x: SizeCellCountInt(x),
-			y: uint32(y),
+			X: SizeCellCountInt(x),
+			Y: uint32(y),
 		},
 	}))
 }
@@ -101,8 +101,8 @@ func tm4SAt(t *testing.T, term *Terminal, x uint, y uint) PageListCell {
 func tm4SExpectCell(t *testing.T, term *Terminal, x uint, y uint, cp uint32, wide PageCellWide) {
 	t.Helper()
 	lc := tm4SAt(t, term, x, y)
-	expectEqual(t, cp, lc.cell.Codepoint())
-	expectEqual(t, wide, lc.cell.wide)
+	expectEqual(t, cp, lc.Cell.Codepoint())
+	expectEqual(t, wide, lc.Cell.wide)
 }
 
 // tm4SExpectGrapheme is term51SExpectGrapheme: expect the cell at (x, y) to
@@ -110,9 +110,9 @@ func tm4SExpectCell(t *testing.T, term *Terminal, x uint, y uint, cp uint32, wid
 func tm4SExpectGrapheme(t *testing.T, term *Terminal, x uint, y uint, expected []uint32) {
 	t.Helper()
 	lc := tm4SAt(t, term, x, y)
-	expect(t, lc.cell.HasGrapheme(), "lc.cell.hasGrapheme()")
-	expect(t, lc.row.grapheme, "lc.row.grapheme")
-	expectEqualSlices(t, expected, zigUnwrap(t, lc.node.data.LookupGrapheme(lc.cell)))
+	expect(t, lc.Cell.HasGrapheme(), "lc.cell.hasGrapheme()")
+	expect(t, lc.Row.grapheme, "lc.row.grapheme")
+	expectEqualSlices(t, expected, zigUnwrap(t, lc.Node.data.LookupGrapheme(lc.Cell)))
 }
 
 // tm4SExpectNoGrapheme is term51SExpectNoGrapheme: expect the cell at
@@ -120,17 +120,17 @@ func tm4SExpectGrapheme(t *testing.T, term *Terminal, x uint, y uint, expected [
 func tm4SExpectNoGrapheme(t *testing.T, term *Terminal, x uint, y uint) {
 	t.Helper()
 	lc := tm4SAt(t, term, x, y)
-	expect(t, !lc.cell.HasGrapheme(), "!lc.cell.hasGrapheme()")
-	expect(t, !lc.node.data.LookupGrapheme(lc.cell).Valid, "lc.node.data.lookupGrapheme(lc.cell) == null")
+	expect(t, !lc.Cell.HasGrapheme(), "!lc.cell.hasGrapheme()")
+	expect(t, !lc.Node.data.LookupGrapheme(lc.Cell).Valid, "lc.node.data.lookupGrapheme(lc.cell) == null")
 }
 
 // tm4SExpectCursor is term51SExpectCursor: expect the cursor position and
 // pending wrap state.
 func tm4SExpectCursor(t *testing.T, term *Terminal, x uint, y uint, pending_wrap bool) {
 	t.Helper()
-	expectEqual(t, x, uint(term.screens.active.cursor.x))
-	expectEqual(t, y, uint(term.screens.active.cursor.y))
-	expectEqual(t, pending_wrap, term.screens.active.cursor.pending_wrap)
+	expectEqual(t, x, uint(term.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(term.Screens.Active.Cursor.Y))
+	expectEqual(t, pending_wrap, term.Screens.Active.Cursor.PendingWrap)
 }
 
 // tm4SExpectPlain is term51SExpectPlain: expect the plain string of the
@@ -156,7 +156,7 @@ func tm4SExpectRowDirty(t *testing.T, term *Terminal, y uint, dirty bool) {
 	t.Helper()
 	expectEqual(t, dirty, term.isDirty(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: 0, y: uint32(y)},
+		Active: PointCoordinate{X: 0, Y: uint32(y)},
 	}))
 }
 
@@ -164,7 +164,7 @@ func tm4SExpectRowDirty(t *testing.T, term *Terminal, y uint, dirty bool) {
 func TestTm4_printRepeat_huge_count_is_bounded_by_the_caller_repeats_print(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(3, 2)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term := tm4Init(t, opts)
 	defer term.Deinit()
 
@@ -182,17 +182,17 @@ func TestTm4_print_ignored_while_the_status_line_display_is_selected(t *testing.
 	defer term.Deinit()
 	term.clearDirty()
 
-	term.status_display = ANSIStatusDisplayStatusLine
+	term.StatusDisplay = ANSIStatusDisplayStatusLine
 	zigTry(t, term.Print('a'))
 	zigTry(t, term.Print(0x4E2D))
 	zigTry(t, term.Print(0x301))
 	zigTry(t, term.Print(0xFE0F))
 	tm4SExpectCursor(t, term, 0, 0, false)
-	tm4ExpectOptional(t, None[uint32](), term.previous_char)
+	tm4ExpectOptional(t, None[uint32](), term.PreviousChar)
 	tm4SExpectPlain(t, term, "")
 	tm4SExpectRowDirty(t, term, 0, false)
 
-	term.status_display = ANSIStatusDisplayMain
+	term.StatusDisplay = ANSIStatusDisplayMain
 	zigTry(t, term.Print('b'))
 	tm4SExpectPlain(t, term, "b")
 	tm4SExpectRowDirty(t, term, 0, true)
@@ -212,17 +212,17 @@ func TestTm4_print_ascii_fast_path_writes_narrow_cells_and_advances(t *testing.T
 	for i := uint(0); i < 95; i++ {
 		tm4SExpectCell(t, term, i, 0, uint32(0x20+i), PageCellWideNarrow)
 	}
-	tm4ExpectOptional(t, Some[uint32](0x7E), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x7E), term.PreviousChar)
 	tm4SExpectRowDirty(t, term, 0, true)
 	tm4SExpectRowDirty(t, term, 1, false)
 
 	// Cells carry the default style and no extras.
 	lc := tm4SAt(t, term, 3, 0)
-	expectEqual(t, StyleDefaultId, lc.cell.style_id)
-	expect(t, !lc.cell.protected, "!lc.cell.protected")
-	expect(t, !lc.cell.hyperlink, "!lc.cell.hyperlink")
-	expect(t, !lc.row.wrap, "!lc.row.wrap")
-	expect(t, !lc.row.styled, "!lc.row.styled")
+	expectEqual(t, StyleDefaultID, lc.Cell.style_id)
+	expect(t, !lc.Cell.protected, "!lc.cell.protected")
+	expect(t, !lc.Cell.hyperlink, "!lc.cell.hyperlink")
+	expect(t, !lc.Row.wrap, "!lc.row.wrap")
+	expect(t, !lc.Row.styled, "!lc.row.styled")
 }
 
 // Zig: test "term51: print: codepoints up to 0xFF take the one-cell path"
@@ -241,17 +241,17 @@ func TestTm4_print_codepoints_up_to_0xFF_take_the_one_cell_path(t *testing.T) {
 	for i, cp := range cps {
 		tm4SExpectCell(t, term, uint(i), 0, cp, PageCellWideNarrow)
 	}
-	tm4ExpectOptional(t, Some[uint32](0x100), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x100), term.PreviousChar)
 
 	// NUL consumed a cell but has no text.
-	expect(t, !tm4SAt(t, term, 0, 0).cell.HasText(), "!term51SAt(&t, 0, 0).cell.hasText()")
-	expect(t, tm4SAt(t, term, 0, 0).cell.IsEmpty(), "term51SAt(&t, 0, 0).cell.isEmpty()")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.HasText(), "!term51SAt(&t, 0, 0).cell.hasText()")
+	expect(t, tm4SAt(t, term, 0, 0).Cell.IsEmpty(), "term51SAt(&t, 0, 0).cell.isEmpty()")
 
 	// A NUL is remembered as the previous char and repeats as a NUL.
 	term2 := tm4Init(t, terminalOptionsDefault(4, 2))
 	defer term2.Deinit()
 	zigTry(t, term2.Print(0))
-	tm4ExpectOptional(t, Some[uint32](0), term2.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0), term2.PreviousChar)
 	zigTry(t, term2.PrintRepeat(2))
 	tm4SExpectCursor(t, term2, 3, 0, false)
 }
@@ -281,7 +281,7 @@ func TestTm4_print_wide_character_occupies_head_and_spacer_tail(t *testing.T) {
 	tm4SExpectCell(t, term, 0, 0, 0x4E2D, PageCellWideWide)
 	tm4SExpectCell(t, term, 1, 0, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, 0, false)
-	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.PreviousChar)
 	tm4SExpectRowDirty(t, term, 0, true)
 
 	zigTry(t, term.Print('a'))
@@ -304,8 +304,8 @@ func TestTm4_print_wide_character_exactly_fitting_the_last_two_columns(t *testin
 	tm4SExpectCell(t, term, 4, 0, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 4, 0, true)
 	// No wrap has happened yet.
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: print: wide character at the last column wraps with a spacer head"
@@ -320,12 +320,12 @@ func TestTm4_print_wide_character_at_the_last_column_wraps_with_a_spacer_head(t 
 
 	tm4SExpectCell(t, term, 3, 0, 'd', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 4, 0, 0, PageCellWideSpacerHead)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 	tm4SExpectCell(t, term, 0, 1, 0x4E2D, PageCellWideWide)
 	tm4SExpectCell(t, term, 1, 1, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, 1, false)
-	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.PreviousChar)
 }
 
 // Zig: test "term51: print: wide character at the last column replaces existing text with the spacer head"
@@ -353,8 +353,8 @@ func TestTm4_print_wide_character_with_pending_wrap_wraps_first(t *testing.T) {
 	zigTry(t, term.Print(0x4E2D))
 	// The pending wrap was honoured, so no spacer head: 'e' stays.
 	tm4SExpectCell(t, term, 4, 0, 'e', PageCellWideNarrow)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 	tm4SExpectCell(t, term, 0, 1, 0x4E2D, PageCellWideWide)
 	tm4SExpectCell(t, term, 1, 1, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, 1, false)
@@ -365,7 +365,7 @@ func TestTm4_print_wide_character_at_the_last_column_without_wraparound_is_dropp
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	zigTry(t, term.PrintString([]uint8("abcd")))
 	tm4SExpectCursor(t, term, 4, 0, false)
@@ -374,8 +374,8 @@ func TestTm4_print_wide_character_at_the_last_column_without_wraparound_is_dropp
 	// still recorded because it is set before the width check.
 	tm4SExpectCell(t, term, 4, 0, 0, PageCellWideNarrow)
 	tm4SExpectCursor(t, term, 4, 0, false)
-	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.previous_char)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.PreviousChar)
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 
 	// A narrow character is still printed there, which also pends a wrap.
 	zigTry(t, term.Print('e'))
@@ -399,13 +399,13 @@ func TestTm4_print_wide_character_in_a_one_column_terminal_prints_a_blank(t *tes
 	zigTry(t, term.Print(0x4E2D))
 	tm4SExpectCell(t, term, 0, 0, 0, PageCellWideNarrow)
 	tm4SExpectCursor(t, term, 0, 0, true)
-	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.PreviousChar)
 
 	// Next one wraps first and again prints a blank.
 	zigTry(t, term.Print(0x4E2D))
 	tm4SExpectCursor(t, term, 0, 1, true)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 
 	// A narrow char wraps first (pending) and prints on the next row.
 	zigTry(t, term.Print('x'))
@@ -467,13 +467,13 @@ func TestTm4_print_wraparound_writes_a_soft_wrap_and_continuation(t *testing.T) 
 	zigTry(t, term.Print('c'))
 	// The last column stays and a wrap is pending.
 	tm4SExpectCursor(t, term, 2, 0, true)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 	zigTry(t, term.Print('d'))
 	tm4SExpectCursor(t, term, 1, 1, false)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap_continuation, "!term51SAt(&t, 0, 0).row.wrap_continuation")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap, "!term51SAt(&t, 0, 1).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap_continuation, "!term51SAt(&t, 0, 0).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap, "!term51SAt(&t, 0, 1).row.wrap")
 	tm4SExpectPlain(t, term, "abc\nd")
 }
 
@@ -482,14 +482,14 @@ func TestTm4_print_without_wraparound_the_last_cell_is_overwritten(t *testing.T)
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(3, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	zigTry(t, term.PrintString([]uint8("abcdef")))
 	tm4SExpectPlain(t, term, "abf")
 	// The pending wrap flag is still raised even though it does nothing.
 	tm4SExpectCursor(t, term, 2, 0, true)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
-	tm4ExpectOptional(t, Some[uint32]('f'), term.previous_char)
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	tm4ExpectOptional(t, Some[uint32]('f'), term.PreviousChar)
 }
 
 // Zig: test "term51: print: pending wrap at the bottom scrolls and creates scrollback"
@@ -504,13 +504,13 @@ func TestTm4_print_pending_wrap_at_the_bottom_scrolls_and_creates_scrollback(t *
 
 	// "ab" is in scrollback, soft wrapped into "cd" which wraps into "e".
 	func() {
-		lc := zigUnwrap(t, term.screens.active.pages.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 0, y: 0}}))
-		expectEqual(t, uint32('a'), lc.cell.Codepoint())
-		expect(t, lc.row.wrap, "lc.row.wrap")
+		lc := zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 0, Y: 0}}))
+		expectEqual(t, uint32('a'), lc.Cell.Codepoint())
+		expect(t, lc.Row.wrap, "lc.row.wrap")
 	}()
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap_continuation, "term51SAt(&t, 0, 0).row.wrap_continuation")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap_continuation, "term51SAt(&t, 0, 0).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: print: insert mode shifts the rest of the line right"
@@ -520,7 +520,7 @@ func TestTm4_print_insert_mode_shifts_the_rest_of_the_line_right(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("abcd")))
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	term.SetCursorPos(1, 2)
 	zigTry(t, term.Print('X'))
 	tm4SExpectPlain(t, term, "aXbcd")
@@ -540,7 +540,7 @@ func TestTm4_print_insert_mode_boundary_one_column_before_the_end_shifts(t *test
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("abcdef")))
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	// x + width < cols: 4 + 1 < 6 so we insert.
 	term.SetCursorPos(1, 5)
 	zigTry(t, term.Print('X'))
@@ -555,7 +555,7 @@ func TestTm4_print_insert_mode_boundary_at_the_last_column_overwrites(t *testing
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("abcdef")))
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	// x + width < cols: 5 + 1 < 6 is false so no insert, just overwrite.
 	term.SetCursorPos(1, 6)
 	zigTry(t, term.Print('X'))
@@ -571,7 +571,7 @@ func TestTm4_print_insert_mode_with_a_wide_character(t *testing.T) {
 		term := tm4Init(t, terminalOptionsDefault(6, 2))
 		defer term.Deinit()
 		zigTry(t, term.PrintString([]uint8("abcdef")))
-		term.modes.Set(ModesModeInsert, true)
+		term.Modes.Set(ModesModeInsert, true)
 		term.SetCursorPos(1, 5)
 		zigTry(t, term.Print(0x4E2D))
 		tm4SExpectCell(t, term, 3, 0, 'd', PageCellWideNarrow)
@@ -585,7 +585,7 @@ func TestTm4_print_insert_mode_with_a_wide_character(t *testing.T) {
 		term := tm4Init(t, terminalOptionsDefault(6, 2))
 		defer term.Deinit()
 		zigTry(t, term.PrintString([]uint8("abcdef")))
-		term.modes.Set(ModesModeInsert, true)
+		term.Modes.Set(ModesModeInsert, true)
 		term.SetCursorPos(1, 4)
 		zigTry(t, term.Print(0x4E2D))
 		tm4SExpectCell(t, term, 2, 0, 'c', PageCellWideNarrow)
@@ -603,7 +603,7 @@ func TestTm4_print_insert_mode_with_pending_wrap_inserts_on_the_next_line(t *tes
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("abc")))
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	tm4SExpectCursor(t, term, 2, 0, true)
 	zigTry(t, term.Print('X'))
 	tm4SExpectPlain(t, term, "abc\nX")
@@ -617,9 +617,9 @@ func TestTm4_print_insert_mode_respects_the_right_margin(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("0123456789")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 6)
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	term.SetCursorPos(1, 4)
 	zigTry(t, term.Print('X'))
 	// Only columns 3..5 shifted; column 6.. untouched.
@@ -640,7 +640,7 @@ func TestTm4_print_right_margin_wraps_to_the_left_margin_without_marking_a_soft_
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 3)
 	zigTry(t, term.PrintString([]uint8("abcd")))
@@ -649,8 +649,8 @@ func TestTm4_print_right_margin_wraps_to_the_left_margin_without_marking_a_soft_
 	tm4SExpectCell(t, term, 4, 0, 'c', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 2, 1, 'd', PageCellWideNarrow)
 	tm4SExpectCursor(t, term, 3, 1, false)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: print: cursor right of the right margin uses the screen edge and wraps to the left margin"
@@ -659,7 +659,7 @@ func TestTm4_print_cursor_right_of_the_right_margin_uses_the_screen_edge_and_wra
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 9)
 	zigTry(t, term.PrintString([]uint8("abc")))
@@ -669,8 +669,8 @@ func TestTm4_print_cursor_right_of_the_right_margin_uses_the_screen_edge_and_wra
 	// the old column was the last of the screen.
 	tm4SExpectCell(t, term, 2, 1, 'c', PageCellWideNarrow)
 	tm4SExpectCursor(t, term, 3, 1, false)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: print: cursor left of the left margin prints until the right margin"
@@ -679,7 +679,7 @@ func TestTm4_print_cursor_left_of_the_left_margin_prints_until_the_right_margin(
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.PrintString([]uint8("abcde")))
@@ -697,18 +697,18 @@ func TestTm4_print_wide_character_at_the_right_margin_wraps_with_a_narrow_blank(
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 6)
 	term.SetCursorPos(1, 6)
 	zigTry(t, term.Print('X'))
 	term.SetCursorPos(1, 6)
 	zigTry(t, term.Print(0x4E2D))
 	tm4SExpectCell(t, term, 5, 0, 0, PageCellWideNarrow)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 	tm4SExpectCell(t, term, 2, 1, 0x4E2D, PageCellWideWide)
 	tm4SExpectCell(t, term, 3, 1, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 4, 1, false)
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: print: wide character ending exactly on the right margin pends a wrap"
@@ -717,7 +717,7 @@ func TestTm4_print_wide_character_ending_exactly_on_the_right_margin_pends_a_wra
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 6)
 	term.SetCursorPos(1, 5)
 	zigTry(t, term.Print(0x4E2D))
@@ -738,17 +738,17 @@ func TestTm4_print_protected_mode_marks_printed_cells(t *testing.T) {
 	zigTry(t, term.Print(0x4E2D))
 	term.SetProtectedMode(ANSIProtectedModeOff)
 	zigTry(t, term.Print('c'))
-	expect(t, !tm4SAt(t, term, 0, 0).cell.protected, "!term51SAt(&t, 0, 0).cell.protected")
-	expect(t, tm4SAt(t, term, 1, 0).cell.protected, "term51SAt(&t, 1, 0).cell.protected")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.protected, "!term51SAt(&t, 0, 0).cell.protected")
+	expect(t, tm4SAt(t, term, 1, 0).Cell.protected, "term51SAt(&t, 1, 0).cell.protected")
 	// Both halves of a wide character are protected.
-	expect(t, tm4SAt(t, term, 2, 0).cell.protected, "term51SAt(&t, 2, 0).cell.protected")
-	expect(t, tm4SAt(t, term, 3, 0).cell.protected, "term51SAt(&t, 3, 0).cell.protected")
-	expect(t, !tm4SAt(t, term, 4, 0).cell.protected, "!term51SAt(&t, 4, 0).cell.protected")
+	expect(t, tm4SAt(t, term, 2, 0).Cell.protected, "term51SAt(&t, 2, 0).cell.protected")
+	expect(t, tm4SAt(t, term, 3, 0).Cell.protected, "term51SAt(&t, 3, 0).cell.protected")
+	expect(t, !tm4SAt(t, term, 4, 0).Cell.protected, "!term51SAt(&t, 4, 0).cell.protected")
 
 	// Printing again unprotected over protected cells clears the flag.
 	term.SetCursorPos(1, 2)
 	zigTry(t, term.Print('z'))
-	expect(t, !tm4SAt(t, term, 1, 0).cell.protected, "!term51SAt(&t, 1, 0).cell.protected")
+	expect(t, !tm4SAt(t, term, 1, 0).Cell.protected, "!term51SAt(&t, 1, 0).cell.protected")
 }
 
 // Zig: test "term51: print: cells take the cursor style and track style reference counts"
@@ -757,18 +757,18 @@ func TestTm4_print_cells_take_the_cursor_style_and_track_style_reference_counts(
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
 	zigTry(t, term.Print('a'))
 	zigTry(t, term.Print('b'))
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
-		page := &lc.node.data
-		expect(t, lc.cell.style_id != StyleDefaultId, "lc.cell.style_id != style.default_id")
-		expect(t, lc.row.styled, "lc.row.styled")
-		expect(t, page.styles.Get(lc.cell.style_id).flags.bold, "page.styles.get(page.memory, lc.cell.style_id).flags.bold")
-		expectEqual(t, lc.cell.style_id, tm4SAt(t, term, 1, 0).cell.style_id)
+		page := &lc.Node.data
+		expect(t, lc.Cell.style_id != StyleDefaultID, "lc.cell.style_id != style.default_id")
+		expect(t, lc.Row.styled, "lc.row.styled")
+		expect(t, page.styles.Get(lc.Cell.style_id).Flags.Bold, "page.styles.get(page.memory, lc.cell.style_id).flags.bold")
+		expectEqual(t, lc.Cell.style_id, tm4SAt(t, term, 1, 0).Cell.style_id)
 		// One ref for the cursor plus the two cells.
-		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.cell.style_id))
+		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.Cell.style_id))
 	}()
 
 	// Overwriting with the same style does not change the reference count.
@@ -776,31 +776,31 @@ func TestTm4_print_cells_take_the_cursor_style_and_track_style_reference_counts(
 	zigTry(t, term.Print('c'))
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
-		page := &lc.node.data
-		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.cell.style_id))
+		page := &lc.Node.data
+		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.Cell.style_id))
 	}()
 
 	// Overwriting with the default style releases a reference.
-	bold_id := tm4SAt(t, term, 0, 0).cell.style_id
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
+	bold_id := tm4SAt(t, term, 0, 0).Cell.style_id
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('d'))
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
-		page := &lc.node.data
-		expectEqual(t, StyleDefaultId, lc.cell.style_id)
+		page := &lc.Node.data
+		expectEqual(t, StyleDefaultID, lc.Cell.style_id)
 		expectEqual(t, SizeCellCountInt(1), page.styles.RefCount(bold_id))
 	}()
 
 	// Overwriting a styled cell with another style swaps the references.
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagItalic}))
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagItalic}))
 	zigTry(t, term.Print('e'))
 	func() {
 		lc := tm4SAt(t, term, 1, 0)
-		page := &lc.node.data
-		expect(t, page.styles.Get(lc.cell.style_id).flags.italic, "page.styles.get(page.memory, lc.cell.style_id).flags.italic")
+		page := &lc.Node.data
+		expect(t, page.styles.Get(lc.Cell.style_id).Flags.Italic, "page.styles.get(page.memory, lc.cell.style_id).flags.italic")
 		// cursor + this cell
-		expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(lc.cell.style_id))
+		expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(lc.Cell.style_id))
 	}()
 }
 
@@ -810,16 +810,16 @@ func TestTm4_print_wide_character_with_a_style_styles_both_cells(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnderline, Underline: SGRAttributeUnderlineSingle}))
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnderline, Underline: SGRAttributeUnderlineSingle}))
 	zigTry(t, term.Print(0x4E2D))
 	head := tm4SAt(t, term, 0, 0)
 	tail := tm4SAt(t, term, 1, 0)
-	expect(t, head.cell.style_id != StyleDefaultId, "head.cell.style_id != style.default_id")
-	expectEqual(t, head.cell.style_id, tail.cell.style_id)
-	expect(t, head.row.styled, "head.row.styled")
-	page := &head.node.data
+	expect(t, head.Cell.style_id != StyleDefaultID, "head.cell.style_id != style.default_id")
+	expectEqual(t, head.Cell.style_id, tail.Cell.style_id)
+	expect(t, head.Row.styled, "head.row.styled")
+	page := &head.Node.data
 	// cursor + head + tail
-	expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(head.cell.style_id))
+	expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(head.Cell.style_id))
 }
 
 // Zig: test "term51: print: hyperlink applies to both halves of a wide character"
@@ -828,16 +828,16 @@ func TestTm4_print_hyperlink_applies_to_both_halves_of_a_wide_character(t *testi
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.Print(0x4E2D))
 	zigTry(t, term.Print('a'))
 	for x := uint(0); x < 3; x++ {
 		lc := tm4SAt(t, term, x, 0)
-		expect(t, lc.cell.hyperlink, "lc.cell.hyperlink")
-		expectEqual(t, HyperlinkId(1), zigUnwrap(t, lc.node.data.LookupHyperlink(lc.cell)))
+		expect(t, lc.Cell.hyperlink, "lc.cell.hyperlink")
+		expectEqual(t, HyperlinkID(1), zigUnwrap(t, lc.Node.data.LookupHyperlink(lc.Cell)))
 	}
-	expect(t, tm4SAt(t, term, 0, 0).row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
-	expectEqual(t, uint(1), tm4SAt(t, term, 0, 0).node.data.hyperlink_set.Count())
+	expect(t, tm4SAt(t, term, 0, 0).Row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
+	expectEqual(t, uint(1), tm4SAt(t, term, 0, 0).Node.data.hyperlink_set.Count())
 }
 
 // Zig: test "term51: print: overwriting hyperlink cells keeps the row flag while any link remains"
@@ -846,22 +846,22 @@ func TestTm4_print_overwriting_hyperlink_cells_keeps_the_row_flag_while_any_link
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("ab")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 
 	// Overwrite the first cell with a plain char: the second still has a link.
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('x'))
-	expect(t, !tm4SAt(t, term, 0, 0).cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
-	expect(t, tm4SAt(t, term, 1, 0).cell.hyperlink, "term51SAt(&t, 1, 0).cell.hyperlink")
-	expect(t, tm4SAt(t, term, 0, 0).row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, tm4SAt(t, term, 1, 0).Cell.hyperlink, "term51SAt(&t, 1, 0).cell.hyperlink")
+	expect(t, tm4SAt(t, term, 0, 0).Row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
 
 	// Overwrite the second too: the row flag clears and the page set empties.
 	zigTry(t, term.Print('y'))
-	expect(t, !tm4SAt(t, term, 1, 0).cell.hyperlink, "!term51SAt(&t, 1, 0).cell.hyperlink")
-	expect(t, !tm4SAt(t, term, 0, 0).row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
-	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).node.data.hyperlink_set.Count())
+	expect(t, !tm4SAt(t, term, 1, 0).Cell.hyperlink, "!term51SAt(&t, 1, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
+	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).Node.data.hyperlink_set.Count())
 }
 
 // Zig: test "term51: print: overwriting a hyperlink with a different one swaps ids"
@@ -870,18 +870,18 @@ func TestTm4_print_overwriting_a_hyperlink_with_a_different_one_swaps_ids(t *tes
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://one.example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://one.example.com"), None[[]uint8]()))
 	zigTry(t, term.Print('a'))
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://two.example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://two.example.com"), None[[]uint8]()))
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('b'))
 	lc := tm4SAt(t, term, 0, 0)
-	expect(t, lc.cell.hyperlink, "lc.cell.hyperlink")
-	id := zigUnwrap(t, lc.node.data.LookupHyperlink(lc.cell))
-	entry := lc.node.data.hyperlink_set.Get(id)
+	expect(t, lc.Cell.hyperlink, "lc.cell.hyperlink")
+	id := zigUnwrap(t, lc.Node.data.LookupHyperlink(lc.Cell))
+	entry := lc.Node.data.hyperlink_set.Get(id)
 	expectEqualStrings(t, "http://two.example.com", string(entry.uri))
 	// The first link is no longer referenced by any cell.
-	expectEqual(t, uint(1), lc.node.data.hyperlink_set.Count())
+	expectEqual(t, uint(1), lc.Node.data.hyperlink_set.Count())
 }
 
 // Zig: test "term51: print: cells take the cursor semantic content"
@@ -891,17 +891,17 @@ func TestTm4_print_cells_take_the_cursor_semantic_content(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.Print('a'))
-	term.screens.active.cursor.semantic_content = PageCellSemanticContentPrompt
+	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentPrompt
 	zigTry(t, term.Print('b'))
-	term.screens.active.cursor.semantic_content = PageCellSemanticContentInput
+	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
 	zigTry(t, term.Print(0x4E2D))
-	term.screens.active.cursor.semantic_content = PageCellSemanticContentOutput
+	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentOutput
 	zigTry(t, term.Print('c'))
-	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 0, 0).cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentPrompt, tm4SAt(t, term, 1, 0).cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 2, 0).cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 3, 0).cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 4, 0).cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 0, 0).Cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, tm4SAt(t, term, 1, 0).Cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 2, 0).Cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 3, 0).Cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 4, 0).Cell.semantic_content)
 }
 
 // Zig: test "term51: print: charset maps ascii through the active GL table"
@@ -944,7 +944,7 @@ func TestTm4_print_previous_char_is_the_unmapped_character(t *testing.T) {
 
 	term.ConfigureCharset(CharsetsSlotsG0, CharsetsCharsetDecSpecial)
 	zigTry(t, term.Print('q'))
-	tm4ExpectOptional(t, Some[uint32]('q'), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32]('q'), term.PreviousChar)
 	zigTry(t, term.PrintRepeat(1))
 	tm4SExpectCell(t, term, 1, 0, 0x2500, PageCellWideNarrow)
 }
@@ -982,7 +982,7 @@ func TestTm4_print_wide_character_with_a_mapping_charset_becomes_a_wide_space(t 
 	tm4SExpectCell(t, term, 0, 0, ' ', PageCellWideWide)
 	tm4SExpectCell(t, term, 1, 0, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, 0, false)
-	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x4E2D), term.PreviousChar)
 
 	// The spacer tail's zero goes through the table identically.
 	term.ConfigureCharset(CharsetsSlotsG0, CharsetsCharsetBritish)
@@ -999,12 +999,12 @@ func TestTm4_print_single_shift_is_consumed_by_exactly_one_printed_character(t *
 
 	term.ConfigureCharset(CharsetsSlotsG2, CharsetsCharsetDecSpecial)
 	term.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG2, true)
-	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG2), term.screens.active.charset.single_shift)
+	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG2), term.Screens.Active.Charset.SingleShift)
 	zigTry(t, term.PrintString([]uint8("qqq")))
 	tm4SExpectCell(t, term, 0, 0, 0x2500, PageCellWideNarrow)
 	tm4SExpectCell(t, term, 1, 0, 'q', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 2, 0, 'q', PageCellWideNarrow)
-	tm4ExpectOptional(t, None[CharsetsSlots](), term.screens.active.charset.single_shift)
+	tm4ExpectOptional(t, None[CharsetsSlots](), term.Screens.Active.Charset.SingleShift)
 }
 
 // Zig: test "term51: print: single shift takes priority over GL and keeps GL"
@@ -1020,7 +1020,7 @@ func TestTm4_print_single_shift_takes_priority_over_GL_and_keeps_GL(t *testing.T
 	// First char: G3 (dec special leaves '#'), second: G0 british.
 	tm4SExpectCell(t, term, 0, 0, '#', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 1, 0, 0xA3, PageCellWideNarrow)
-	expectEqual(t, CharsetsSlotsG0, term.screens.active.charset.gl)
+	expectEqual(t, CharsetsSlotsG0, term.Screens.Active.Charset.Gl)
 }
 
 // Zig: test "term51: print: single shift on a wide character is spent on the head"
@@ -1035,7 +1035,7 @@ func TestTm4_print_single_shift_on_a_wide_character_is_spent_on_the_head(t *test
 	zigTry(t, term.Print(0x4E2D))
 	tm4SExpectCell(t, term, 0, 0, ' ', PageCellWideWide)
 	tm4SExpectCell(t, term, 1, 0, 0, PageCellWideSpacerTail)
-	tm4ExpectOptional(t, None[CharsetsSlots](), term.screens.active.charset.single_shift)
+	tm4ExpectOptional(t, None[CharsetsSlots](), term.Screens.Active.Charset.SingleShift)
 }
 
 // Zig: test "term51: print: zero-width attach does not consume a single shift"
@@ -1048,7 +1048,7 @@ func TestTm4_print_zero_width_attach_does_not_consume_a_single_shift(t *testing.
 	term.ConfigureCharset(CharsetsSlotsG1, CharsetsCharsetDecSpecial)
 	term.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG1, true)
 	zigTry(t, term.Print(0x301))
-	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG1), term.screens.active.charset.single_shift)
+	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG1), term.Screens.Active.Charset.SingleShift)
 	zigTry(t, term.Print('q'))
 	tm4SExpectCell(t, term, 1, 0, 0x2500, PageCellWideNarrow)
 }
@@ -1087,13 +1087,13 @@ func TestTm4_print_overwriting_grapheme_cells_clears_grapheme_data_and_the_row_f
 	zigTry(t, term.Print('x'))
 	tm4SExpectNoGrapheme(t, term, 0, 0)
 	// The other cell still has one, so the row flag remains.
-	expect(t, tm4SAt(t, term, 0, 0).row.grapheme, "term51SAt(&t, 0, 0).row.grapheme")
+	expect(t, tm4SAt(t, term, 0, 0).Row.grapheme, "term51SAt(&t, 0, 0).row.grapheme")
 	tm4SExpectGrapheme(t, term, 1, 0, []uint32{0x302})
 
 	zigTry(t, term.Print('y'))
 	tm4SExpectNoGrapheme(t, term, 1, 0)
-	expect(t, !tm4SAt(t, term, 0, 0).row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
-	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).node.data.GraphemeCount())
+	expect(t, !tm4SAt(t, term, 0, 0).Row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
+	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).Node.data.GraphemeCount())
 }
 
 // Zig: test "term51: print: combining mark without clustering attaches to the previous cell"
@@ -1112,7 +1112,7 @@ func TestTm4_print_combining_mark_without_clustering_attaches_to_the_previous_ce
 	// The cursor does not move and the zero-width char is not the previous
 	// char for repeat.
 	tm4SExpectCursor(t, term, 1, 0, false)
-	tm4ExpectOptional(t, Some[uint32]('e'), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32]('e'), term.PreviousChar)
 
 	// A second mark is appended to the same cell.
 	zigTry(t, term.Print(0x302))
@@ -1132,7 +1132,7 @@ func TestTm4_print_zero_width_character_at_column_zero_is_ignored(t *testing.T) 
 	zigTry(t, term.Print(0xFE0F))
 	tm4SExpectCursor(t, term, 0, 0, false)
 	tm4SExpectPlain(t, term, "")
-	tm4ExpectOptional(t, None[uint32](), term.previous_char)
+	tm4ExpectOptional(t, None[uint32](), term.PreviousChar)
 	tm4SExpectNoGrapheme(t, term, 0, 0)
 }
 
@@ -1243,7 +1243,7 @@ func TestTm4_print_many_zero_width_characters_grow_the_grapheme_storage(t *testi
 		}
 	}
 	lc := tm4SAt(t, term, 0, 0)
-	cps := zigUnwrap(t, lc.node.data.LookupGrapheme(lc.cell))
+	cps := zigUnwrap(t, lc.Node.data.LookupGrapheme(lc.Cell))
 	expectEqual(t, uint(count), uint(len(cps)))
 	for i, cp := range cps {
 		if i%2 == 0 {
@@ -1260,7 +1260,7 @@ func TestTm4_print_clustering_attaches_combining_marks_and_marks_the_row_dirty(t
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('e'))
 	term.clearDirty()
@@ -1269,7 +1269,7 @@ func TestTm4_print_clustering_attaches_combining_marks_and_marks_the_row_dirty(t
 	tm4SExpectGrapheme(t, term, 0, 0, []uint32{0x301})
 	tm4SExpectCursor(t, term, 1, 0, false)
 	tm4SExpectRowDirty(t, term, 0, true)
-	tm4ExpectOptional(t, Some[uint32]('e'), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32]('e'), term.PreviousChar)
 }
 
 // Zig: test "term51: print: clustering skips the grapheme path at column zero and for bytes"
@@ -1277,12 +1277,12 @@ func TestTm4_print_clustering_skips_the_grapheme_path_at_column_zero_and_for_byt
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// Zero-width at x == 0 is dropped (width 0 with 2027 returns).
 	zigTry(t, term.Print(0x301))
 	tm4SExpectCursor(t, term, 0, 0, false)
-	tm4ExpectOptional(t, None[uint32](), term.previous_char)
+	tm4ExpectOptional(t, None[uint32](), term.PreviousChar)
 
 	// Bytes (c <= 255) never cluster even when they could extend something.
 	zigTry(t, term.Print('a'))
@@ -1299,7 +1299,7 @@ func TestTm4_print_clustering_a_character_after_a_grapheme_break_starts_a_new_ce
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('a'))
 	zigTry(t, term.Print(0x4E2D))
@@ -1311,7 +1311,7 @@ func TestTm4_print_clustering_a_character_after_a_grapheme_break_starts_a_new_ce
 	tm4SExpectCell(t, term, 3, 0, 'b', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 4, 0, 0x100, PageCellWideNarrow)
 	tm4SExpectCursor(t, term, 5, 0, false)
-	tm4ExpectOptional(t, Some[uint32](0x100), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32](0x100), term.PreviousChar)
 }
 
 // Zig: test "term51: print: clustering ignores zero-width characters that do not join"
@@ -1319,7 +1319,7 @@ func TestTm4_print_clustering_ignores_zero_width_characters_that_do_not_join(t *
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('a'))
 	// ZERO WIDTH SPACE is a break after 'a' and has width zero: dropped, not
@@ -1333,7 +1333,7 @@ func TestTm4_print_clustering_ignores_zero_width_characters_that_do_not_join(t *
 	zigTry(t, term.Print(0x301))
 	tm4SExpectNoGrapheme(t, term, 2, 0)
 	tm4SExpectCursor(t, term, 3, 0, false)
-	tm4ExpectOptional(t, Some[uint32]('a'), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32]('a'), term.PreviousChar)
 }
 
 // Zig: test "term51: print: clustering attaches to a wide character"
@@ -1341,7 +1341,7 @@ func TestTm4_print_clustering_attaches_to_a_wide_character(t *testing.T) {
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print(0x4E2D))
 	zigTry(t, term.Print(0x301))
@@ -1356,7 +1356,7 @@ func TestTm4_print_clustering_attaches_to_the_head_of_a_wide_character_with_pend
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(4, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.SetCursorPos(1, 3)
 	zigTry(t, term.Print(0x4E2D))
@@ -1374,7 +1374,7 @@ func TestTm4_print_clustering_with_pending_wrap_attaches_to_the_last_glyph(t *te
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(3, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.PrintString([]uint8("abc")))
 	tm4SExpectCursor(t, term, 2, 0, true)
@@ -1395,8 +1395,8 @@ func TestTm4_print_clustering_without_wraparound_at_the_last_column_attaches_by_
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(3, 2))
 		defer term.Deinit()
-		term.modes.Set(ModesModeGraphemeCluster, true)
-		term.modes.Set(ModesModeWraparound, false)
+		term.Modes.Set(ModesModeGraphemeCluster, true)
+		term.Modes.Set(ModesModeWraparound, false)
 		zigTry(t, term.PrintString([]uint8("abc")))
 		zigTry(t, term.Print(0x301))
 		tm4SExpectGrapheme(t, term, 2, 0, []uint32{0x301})
@@ -1407,8 +1407,8 @@ func TestTm4_print_clustering_without_wraparound_at_the_last_column_attaches_by_
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(3, 2))
 		defer term.Deinit()
-		term.modes.Set(ModesModeGraphemeCluster, true)
-		term.modes.Set(ModesModeWraparound, false)
+		term.Modes.Set(ModesModeGraphemeCluster, true)
+		term.Modes.Set(ModesModeWraparound, false)
 		zigTry(t, term.PrintString([]uint8("ab")))
 		tm4SExpectCursor(t, term, 2, 0, false)
 		zigTry(t, term.Print(0x301))
@@ -1420,8 +1420,8 @@ func TestTm4_print_clustering_without_wraparound_at_the_last_column_attaches_by_
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(5, 2))
 		defer term.Deinit()
-		term.modes.Set(ModesModeGraphemeCluster, true)
-		term.modes.Set(ModesModeWraparound, false)
+		term.Modes.Set(ModesModeGraphemeCluster, true)
+		term.Modes.Set(ModesModeWraparound, false)
 		zigTry(t, term.PrintString([]uint8("ab")))
 		zigTry(t, term.Print(0x301))
 		tm4SExpectGrapheme(t, term, 1, 0, []uint32{0x301})
@@ -1433,7 +1433,7 @@ func TestTm4_print_clustering_uses_the_cell_left_of_the_cursor_when_moved_onto_t
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.PrintString([]uint8("abc")))
 	term.SetCursorPos(1, 3)
@@ -1449,7 +1449,7 @@ func TestTm4_print_clustering_ZWJ_sequences_stay_in_one_wide_cell(t *testing.T) 
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	tm4SPrintAll(t, term, []uint32{0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F467})
 	tm4SExpectCell(t, term, 0, 0, 0x1F468, PageCellWideWide)
@@ -1469,7 +1469,7 @@ func TestTm4_print_clustering_regional_indicators_pair_into_flags(t *testing.T) 
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// US and GB flags.
 	tm4SPrintAll(t, term, []uint32{0x1F1FA, 0x1F1F8, 0x1F1EC, 0x1F1E7})
@@ -1487,7 +1487,7 @@ func TestTm4_print_clustering_emoji_modifier_joins_its_base(t *testing.T) {
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	tm4SPrintAll(t, term, []uint32{0x1F44D, 0x1F3FB})
 	tm4SExpectCell(t, term, 0, 0, 0x1F44D, PageCellWideWide)
@@ -1500,7 +1500,7 @@ func TestTm4_print_clustering_a_width_contributing_codepoint_makes_the_cell_wide
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// Devanagari conjunct: KA + VIRAMA + SSA.
 	tm4SPrintAll(t, term, []uint32{0x915, 0x94D})
@@ -1519,7 +1519,7 @@ func TestTm4_print_clustering_VS16_widens_a_narrow_base_mid_line(t *testing.T) {
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('a'))
 	zigTry(t, term.Print('#'))
@@ -1531,7 +1531,7 @@ func TestTm4_print_clustering_VS16_widens_a_narrow_base_mid_line(t *testing.T) {
 	tm4SExpectCursor(t, term, 3, 0, false)
 	tm4SExpectRowDirty(t, term, 0, true)
 	// previous_char is not updated by the selector.
-	tm4ExpectOptional(t, Some[uint32]('#'), term.previous_char)
+	tm4ExpectOptional(t, Some[uint32]('#'), term.PreviousChar)
 }
 
 // Zig: test "term51: print: clustering VS16 widening to the exact end of the line pends a wrap"
@@ -1539,7 +1539,7 @@ func TestTm4_print_clustering_VS16_widening_to_the_exact_end_of_the_line_pends_a
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(3, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.SetCursorPos(1, 2)
 	zigTry(t, term.Print('#'))
@@ -1549,7 +1549,7 @@ func TestTm4_print_clustering_VS16_widening_to_the_exact_end_of_the_line_pends_a
 	tm4SExpectCell(t, term, 1, 0, '#', PageCellWideWide)
 	tm4SExpectCell(t, term, 2, 0, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, 0, true)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 }
 
 // Zig: test "term51: print: clustering VS16 on a base in the last column wraps it to the next line"
@@ -1557,15 +1557,15 @@ func TestTm4_print_clustering_VS16_on_a_base_in_the_last_column_wraps_it_to_the_
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(4, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.SetCursorPos(1, 4)
 	zigTry(t, term.Print('#'))
 	tm4SExpectCursor(t, term, 3, 0, true)
 	zigTry(t, term.Print(0xFE0F))
 	tm4SExpectCell(t, term, 3, 0, 0, PageCellWideSpacerHead)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 	tm4SExpectCell(t, term, 0, 1, '#', PageCellWideWide)
 	tm4SExpectGrapheme(t, term, 0, 1, []uint32{0xFE0F})
 	tm4SExpectCell(t, term, 1, 1, 0, PageCellWideSpacerTail)
@@ -1577,8 +1577,8 @@ func TestTm4_print_clustering_VS16_at_a_right_margin_wraps_without_a_spacer_head
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 
 	term.SetCursorPos(1, 5)
@@ -1586,12 +1586,12 @@ func TestTm4_print_clustering_VS16_at_a_right_margin_wraps_without_a_spacer_head
 	tm4SExpectCursor(t, term, 4, 0, true)
 	zigTry(t, term.Print(0xFE0F))
 	tm4SExpectCell(t, term, 4, 0, 0, PageCellWideNarrow)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 	tm4SExpectCell(t, term, 2, 1, '#', PageCellWideWide)
 	tm4SExpectGrapheme(t, term, 2, 1, []uint32{0xFE0F})
 	tm4SExpectCell(t, term, 3, 1, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 4, 1, false)
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: print: clustering VS16 on a last column base without wraparound does nothing"
@@ -1599,8 +1599,8 @@ func TestTm4_print_clustering_VS16_on_a_last_column_base_without_wraparound_does
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(3, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	term.SetCursorPos(1, 3)
 	zigTry(t, term.Print('#'))
@@ -1617,8 +1617,8 @@ func TestTm4_print_clustering_VS16_without_wraparound_widens_when_there_is_room(
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(4, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	term.SetCursorPos(1, 2)
 	zigTry(t, term.Print('#'))
@@ -1630,8 +1630,8 @@ func TestTm4_print_clustering_VS16_without_wraparound_widens_when_there_is_room(
 	// Parked on the last (empty) column: uses the previous cell.
 	term2 := tm4Init(t, terminalOptionsDefault(3, 2))
 	defer term2.Deinit()
-	term2.modes.Set(ModesModeGraphemeCluster, true)
-	term2.modes.Set(ModesModeWraparound, false)
+	term2.Modes.Set(ModesModeGraphemeCluster, true)
+	term2.Modes.Set(ModesModeWraparound, false)
 	term2.SetCursorPos(1, 2)
 	zigTry(t, term2.Print('#'))
 	tm4SExpectCursor(t, term2, 2, 0, false)
@@ -1646,7 +1646,7 @@ func TestTm4_print_clustering_VS16_repeated_on_an_already_wide_base_only_appends
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('#'))
 	zigTry(t, term.Print(0xFE0F))
@@ -1661,7 +1661,7 @@ func TestTm4_print_clustering_variation_selectors_on_non_emoji_bases_are_dropped
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('a'))
 	term.clearDirty()
@@ -1684,7 +1684,7 @@ func TestTm4_print_clustering_VS15_narrows_a_wide_base_and_moves_the_cursor_back
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('a'))
 	zigTry(t, term.Print(0x2614))
@@ -1702,7 +1702,7 @@ func TestTm4_print_clustering_VS15_on_a_wide_base_at_the_end_of_the_line_stays_a
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.SetCursorPos(1, 4)
 	zigTry(t, term.Print(0x2614))
@@ -1719,7 +1719,7 @@ func TestTm4_print_clustering_VS15_on_a_narrow_base_only_appends(t *testing.T) {
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(8, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('#'))
 	zigTry(t, term.Print(0xFE0E))
@@ -1733,7 +1733,7 @@ func TestTm4_print_clustering_VS16_transfers_existing_grapheme_data_when_wrappin
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(3, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.SetCursorPos(1, 3)
 	zigTry(t, term.Print('#'))
@@ -1745,14 +1745,14 @@ func TestTm4_print_clustering_VS16_transfers_existing_grapheme_data_when_wrappin
 	// was recomputed.
 	tm4SExpectCell(t, term, 2, 0, 0, PageCellWideSpacerHead)
 	tm4SExpectNoGrapheme(t, term, 2, 0)
-	expect(t, !tm4SAt(t, term, 0, 0).row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
 
 	tm4SExpectCell(t, term, 0, 1, '#', PageCellWideWide)
 	tm4SExpectGrapheme(t, term, 0, 1, []uint32{0x301, 0xFE0F})
 	tm4SExpectCell(t, term, 1, 1, 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, 1, false)
-	expectEqual(t, uint(1), tm4SAt(t, term, 0, 0).node.data.GraphemeCount())
+	expectEqual(t, uint(1), tm4SAt(t, term, 0, 0).Node.data.GraphemeCount())
 }
 
 // Zig: test "term51: print: clustering VS16 transfers grapheme data across a page boundary"
@@ -1762,11 +1762,11 @@ func TestTm4_print_clustering_VS16_transfers_grapheme_data_across_a_page_boundar
 	cols := PageStdCapacity.cols
 	term := tm4Init(t, terminalOptionsDefault(cols, rows))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.CursorDown(uint(rows - 1))
 	// Zig: for (rows..n) evaluates n once.
-	n := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	n := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 	for i := uint(rows); i < n; i++ {
 		zigTry(t, term.Index())
 	}
@@ -1774,7 +1774,7 @@ func TestTm4_print_clustering_VS16_transfers_grapheme_data_across_a_page_boundar
 
 	zigTry(t, term.Print('#'))
 	zigTry(t, term.Print(0x301))
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print(0xFE0F))
 
 	tm4SExpectCell(t, term, uint(cols-1), uint(rows-2), 0, PageCellWideSpacerHead)
@@ -1784,7 +1784,7 @@ func TestTm4_print_clustering_VS16_transfers_grapheme_data_across_a_page_boundar
 	tm4SExpectCell(t, term, 1, uint(rows-1), 0, PageCellWideSpacerTail)
 	tm4SExpectCursor(t, term, 2, uint(rows-1), false)
 	// The old page no longer has any grapheme data.
-	expectEqual(t, uint(0), tm4SAt(t, term, 0, uint(rows-2)).node.data.GraphemeCount())
+	expectEqual(t, uint(0), tm4SAt(t, term, 0, uint(rows-2)).Node.data.GraphemeCount())
 }
 
 // Zig: test "term51: print: clustering VS16 widening keeps style and hyperlink on the spacer tail"
@@ -1792,20 +1792,20 @@ func TestTm4_print_clustering_VS16_widening_keeps_style_and_hyperlink_on_the_spa
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.Print('#'))
 	zigTry(t, term.Print(0xFE0F))
 	head := tm4SAt(t, term, 0, 0)
 	tail := tm4SAt(t, term, 1, 0)
-	expectEqual(t, PageCellWideWide, head.cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, tail.cell.wide)
-	expect(t, head.cell.hyperlink, "head.cell.hyperlink")
-	expect(t, tail.cell.hyperlink, "tail.cell.hyperlink")
-	expectEqual(t, head.cell.style_id, tail.cell.style_id)
-	expect(t, head.cell.style_id != StyleDefaultId, "head.cell.style_id != style.default_id")
+	expectEqual(t, PageCellWideWide, head.Cell.wide)
+	expectEqual(t, PageCellWideSpacerTail, tail.Cell.wide)
+	expect(t, head.Cell.hyperlink, "head.cell.hyperlink")
+	expect(t, tail.Cell.hyperlink, "tail.cell.hyperlink")
+	expectEqual(t, head.Cell.style_id, tail.Cell.style_id)
+	expect(t, head.Cell.style_id != StyleDefaultID, "head.cell.style_id != style.default_id")
 }
 
 // Zig: test "term51: print: many cells with grapheme data grow the page capacity"
@@ -1818,7 +1818,7 @@ func TestTm4_print_many_cells_with_grapheme_data_grow_the_page_capacity(t *testi
 			// One spare column so the last cell is not left with a pending wrap.
 			term := tm4Init(t, terminalOptionsDefault(151, 2))
 			defer term.Deinit()
-			term.modes.Set(ModesModeGraphemeCluster, clustering)
+			term.Modes.Set(ModesModeGraphemeCluster, clustering)
 
 			for i := 0; i < 150; i++ {
 				tm4SPrintAll(t, term, []uint32{'e', 0x301})
@@ -1827,7 +1827,7 @@ func TestTm4_print_many_cells_with_grapheme_data_grow_the_page_capacity(t *testi
 				tm4SExpectCell(t, term, x, 0, 'e', PageCellWideNarrow)
 				tm4SExpectGrapheme(t, term, x, 0, []uint32{0x301})
 			}
-			expectEqual(t, uint(150), tm4SAt(t, term, 0, 0).node.data.GraphemeCount())
+			expectEqual(t, uint(150), tm4SAt(t, term, 0, 0).Node.data.GraphemeCount())
 		}()
 	}
 }
@@ -1837,7 +1837,7 @@ func TestTm4_print_clustering_many_combining_marks_grow_the_grapheme_storage(t *
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 2))
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('e'))
 	count := 200
@@ -1845,7 +1845,7 @@ func TestTm4_print_clustering_many_combining_marks_grow_the_grapheme_storage(t *
 		zigTry(t, term.Print(0x301))
 	}
 	lc := tm4SAt(t, term, 0, 0)
-	expectEqual(t, uint(count), uint(len(zigUnwrap(t, lc.node.data.LookupGrapheme(lc.cell)))))
+	expectEqual(t, uint(count), uint(len(zigUnwrap(t, lc.Node.data.LookupGrapheme(lc.Cell)))))
 }
 
 // Zig: test "term51: printCell: writes at the cursor without moving it or marking dirty"
@@ -1860,8 +1860,8 @@ func TestTm4_printCell_writes_at_the_cursor_without_moving_it_or_marking_dirty(t
 	tm4SExpectCell(t, term, 2, 1, 'A', PageCellWideNarrow)
 	tm4SExpectCursor(t, term, 2, 1, false)
 	tm4SExpectRowDirty(t, term, 1, false)
-	tm4ExpectOptional(t, None[uint32](), term.previous_char)
-	expectEqual(t, PageCellContentTagCodepoint, tm4SAt(t, term, 2, 1).cell.content_tag)
+	tm4ExpectOptional(t, None[uint32](), term.PreviousChar)
+	expectEqual(t, PageCellContentTagCodepoint, tm4SAt(t, term, 2, 1).Cell.content_tag)
 
 	// A zero codepoint with narrow writes an empty-looking cell.
 	term.printCell(0, PageCellWideNarrow)
@@ -1897,15 +1897,15 @@ func TestTm4_printCell_replaces_non_text_cell_content_and_takes_pen_attributes(t
 
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
-		*lc.cell = PageCell{
+		*lc.Cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
 		}
 	}()
-	term.screens.active.cursor.protected = true
-	term.screens.active.cursor.semantic_content = PageCellSemanticContentInput
+	term.Screens.Active.Cursor.Protected = true
+	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
 	term.printCell('Z', PageCellWideNarrow)
-	cell := tm4SAt(t, term, 0, 0).cell
+	cell := tm4SAt(t, term, 0, 0).Cell
 	expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
 	expectEqual(t, uint32('Z'), cell.content.codepoint)
 	expect(t, cell.protected, "cell.protected")
@@ -1952,11 +1952,11 @@ func TestTm4_printCell_single_shift_is_used_once_even_for_the_utf8_slot(t *testi
 
 	term.ConfigureCharset(CharsetsSlotsG0, CharsetsCharsetDecSpecial)
 	term.ConfigureCharset(CharsetsSlotsG2, CharsetsCharsetUtf8)
-	term.screens.active.charset.single_shift = Some(CharsetsSlotsG2)
+	term.Screens.Active.Charset.SingleShift = Some(CharsetsSlotsG2)
 	term.printCell('q', PageCellWideNarrow)
 	// The single shift slot is utf8 so no mapping happened.
 	tm4SExpectCell(t, term, 0, 0, 'q', PageCellWideNarrow)
-	tm4ExpectOptional(t, None[CharsetsSlots](), term.screens.active.charset.single_shift)
+	tm4ExpectOptional(t, None[CharsetsSlots](), term.Screens.Active.Charset.SingleShift)
 	term.printCell('q', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 0, 0, 0x2500, PageCellWideNarrow)
 }
@@ -1972,7 +1972,7 @@ func TestTm4_printCell_overwriting_a_wide_head_clears_its_tail(t *testing.T) {
 	term.printCell('a', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 0, 0, 'a', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 1, 0, 0, PageCellWideNarrow)
-	expect(t, tm4SAt(t, term, 1, 0).cell.IsEmpty(), "term51SAt(&t, 1, 0).cell.isEmpty()")
+	expect(t, tm4SAt(t, term, 1, 0).Cell.IsEmpty(), "term51SAt(&t, 1, 0).cell.isEmpty()")
 }
 
 // Zig: test "term51: printCell: overwriting a spacer tail clears its head"
@@ -2069,7 +2069,7 @@ func TestTm4_printCell_clears_grapheme_data_of_the_overwritten_cell(t *testing.T
 	term.printCell('x', PageCellWideNarrow)
 	tm4SExpectCell(t, term, 0, 0, 'x', PageCellWideNarrow)
 	tm4SExpectNoGrapheme(t, term, 0, 0)
-	expect(t, !tm4SAt(t, term, 0, 0).row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.grapheme, "!term51SAt(&t, 0, 0).row.grapheme")
 }
 
 // Zig: test "term51: printCell: style reference counting only changes when the style id differs"
@@ -2078,29 +2078,29 @@ func TestTm4_printCell_style_reference_counting_only_changes_when_the_style_id_d
 	term := tm4Init(t, terminalOptionsDefault(6, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
-	id := term.screens.active.cursor.style_id
-	page := &term.screens.active.cursor.page_pin.node.data
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
+	id := term.Screens.Active.Cursor.StyleID
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, SizeCellCountInt(1), page.styles.RefCount(id))
 
 	term.printCell('a', PageCellWideNarrow)
 	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(id))
-	expect(t, term.screens.active.cursor.page_row.styled, "t.screens.active.cursor.page_row.styled")
+	expect(t, term.Screens.Active.Cursor.PageRow.styled, "t.screens.active.cursor.page_row.styled")
 
 	// Same style again: unchanged.
 	term.printCell('b', PageCellWideNarrow)
 	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(id))
 
 	// Default style over styled: released.
-	zigTry(t, term.screens.active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
+	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	expectEqual(t, SizeCellCountInt(1), page.styles.RefCount(id))
 	term.printCell('c', PageCellWideNarrow)
 	expectEqual(t, SizeCellCountInt(0), page.styles.RefCount(id))
-	expectEqual(t, StyleDefaultId, tm4SAt(t, term, 0, 0).cell.style_id)
+	expectEqual(t, StyleDefaultID, tm4SAt(t, term, 0, 0).Cell.style_id)
 
 	// Default over default: nothing to do.
 	term.printCell('d', PageCellWideNarrow)
-	expectEqual(t, StyleDefaultId, tm4SAt(t, term, 0, 0).cell.style_id)
+	expectEqual(t, StyleDefaultID, tm4SAt(t, term, 0, 0).Cell.style_id)
 }
 
 // Zig: test "term51: printCell: hyperlink set, replaced and cleared"
@@ -2111,21 +2111,21 @@ func TestTm4_printCell_hyperlink_set_replaced_and_cleared(t *testing.T) {
 
 	// No link on a cell without a link: nothing happens.
 	term.printCell('a', PageCellWideNarrow)
-	expect(t, !tm4SAt(t, term, 0, 0).cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
-	expect(t, !tm4SAt(t, term, 0, 0).row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
 
 	// Active link is attached.
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	term.printCell('b', PageCellWideNarrow)
-	expect(t, tm4SAt(t, term, 0, 0).cell.hyperlink, "term51SAt(&t, 0, 0).cell.hyperlink")
-	expect(t, tm4SAt(t, term, 0, 0).row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
+	expect(t, tm4SAt(t, term, 0, 0).Cell.hyperlink, "term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, tm4SAt(t, term, 0, 0).Row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
 
 	// Writing with no active link clears the old one and the row flag.
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.printCell('c', PageCellWideNarrow)
-	expect(t, !tm4SAt(t, term, 0, 0).cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
-	expect(t, !tm4SAt(t, term, 0, 0).row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
-	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).node.data.hyperlink_set.Count())
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
+	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).Node.data.hyperlink_set.Count())
 }
 
 // Zig: test "term51: printWrap: soft wraps at the screen edge"
@@ -2137,10 +2137,10 @@ func TestTm4_printWrap_soft_wraps_at_the_screen_edge(t *testing.T) {
 	term.SetCursorPos(1, 4)
 	zigTry(t, term.printWrap())
 	tm4SExpectCursor(t, term, 0, 1, false)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap, "!term51SAt(&t, 0, 1).row.wrap")
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap_continuation, "!term51SAt(&t, 0, 0).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap, "!term51SAt(&t, 0, 1).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap_continuation, "!term51SAt(&t, 0, 0).row.wrap_continuation")
 }
 
 // Zig: test "term51: printWrap: not at the screen edge there is no soft wrap"
@@ -2150,11 +2150,11 @@ func TestTm4_printWrap_not_at_the_screen_edge_there_is_no_soft_wrap(t *testing.T
 	defer term.Deinit()
 
 	term.SetCursorPos(1, 3)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, term.printWrap())
 	tm4SExpectCursor(t, term, 0, 1, false)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: printWrap: goes to the left margin"
@@ -2163,21 +2163,21 @@ func TestTm4_printWrap_goes_to_the_left_margin(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(4, 8)
 	term.SetCursorPos(1, 8)
 	zigTry(t, term.printWrap())
 	tm4SExpectCursor(t, term, 3, 1, false)
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
-	expect(t, !tm4SAt(t, term, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 
 	// At the screen edge outside the margins it still marks the wrap and
 	// returns to the left margin.
 	term.SetCursorPos(1, 10)
 	zigTry(t, term.printWrap())
 	tm4SExpectCursor(t, term, 3, 1, false)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: printWrap: scrolls at the bottom of the region"
@@ -2194,8 +2194,8 @@ func TestTm4_printWrap_scrolls_at_the_bottom_of_the_region(t *testing.T) {
 	tm4SExpectCursor(t, term, 0, 1, false)
 	// "abc" scrolled into history and the row with the 'x' moved up.
 	tm4SExpectCell(t, term, 2, 0, 'x', PageCellWideNarrow)
-	expect(t, tm4SAt(t, term, 0, 0).row.wrap, "term51SAt(&t, 0, 0).row.wrap")
-	expect(t, tm4SAt(t, term, 0, 1).row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, tm4SAt(t, term, 0, 0).Row.wrap, "term51SAt(&t, 0, 0).row.wrap")
+	expect(t, tm4SAt(t, term, 0, 1).Row.wrap_continuation, "term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: printWrap: semantic prompt state is carried to the new row"
@@ -2205,12 +2205,12 @@ func TestTm4_printWrap_semantic_prompt_state_is_carried_to_the_new_row(t *testin
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(3, 3))
 		defer term.Deinit()
-		term.screens.active.cursor.semantic_content = PageCellSemanticContentPrompt
+		term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentPrompt
 		term.SetCursorPos(1, 3)
 		zigTry(t, term.printWrap())
-		expectEqual(t, PageCellSemanticContentPrompt, term.screens.active.cursor.semantic_content)
-		expect(t, !term.screens.active.cursor.semantic_content_clear_eol, "!t.screens.active.cursor.semantic_content_clear_eol")
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, tm4SAt(t, term, 0, 1).row.semantic_prompt)
+		expectEqual(t, PageCellSemanticContentPrompt, term.Screens.Active.Cursor.SemanticContent)
+		expect(t, !term.Screens.Active.Cursor.SemanticContentClearEol, "!t.screens.active.cursor.semantic_content_clear_eol")
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, tm4SAt(t, term, 0, 1).Row.semantic_prompt)
 	}()
 
 	// Prompt with clear-eol: the index() inside resets the state but
@@ -2218,37 +2218,37 @@ func TestTm4_printWrap_semantic_prompt_state_is_carried_to_the_new_row(t *testin
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(3, 3))
 		defer term.Deinit()
-		term.screens.active.cursor.semantic_content = PageCellSemanticContentPrompt
-		term.screens.active.cursor.semantic_content_clear_eol = true
+		term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentPrompt
+		term.Screens.Active.Cursor.SemanticContentClearEol = true
 		term.SetCursorPos(1, 3)
 		zigTry(t, term.printWrap())
-		expectEqual(t, PageCellSemanticContentPrompt, term.screens.active.cursor.semantic_content)
-		expect(t, term.screens.active.cursor.semantic_content_clear_eol, "t.screens.active.cursor.semantic_content_clear_eol")
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, tm4SAt(t, term, 0, 1).row.semantic_prompt)
+		expectEqual(t, PageCellSemanticContentPrompt, term.Screens.Active.Cursor.SemanticContent)
+		expect(t, term.Screens.Active.Cursor.SemanticContentClearEol, "t.screens.active.cursor.semantic_content_clear_eol")
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, tm4SAt(t, term, 0, 1).Row.semantic_prompt)
 	}()
 
 	// Input: state kept, and index() marks the continuation.
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(3, 3))
 		defer term.Deinit()
-		term.screens.active.cursor.semantic_content = PageCellSemanticContentInput
+		term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
 		term.SetCursorPos(1, 3)
 		zigTry(t, term.printWrap())
-		expectEqual(t, PageCellSemanticContentInput, term.screens.active.cursor.semantic_content)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, tm4SAt(t, term, 0, 1).row.semantic_prompt)
+		expectEqual(t, PageCellSemanticContentInput, term.Screens.Active.Cursor.SemanticContent)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, tm4SAt(t, term, 0, 1).Row.semantic_prompt)
 	}()
 
 	// Input with clear-eol: no continuation mark, state restored.
 	func() {
 		term := tm4Init(t, terminalOptionsDefault(3, 3))
 		defer term.Deinit()
-		term.screens.active.cursor.semantic_content = PageCellSemanticContentInput
-		term.screens.active.cursor.semantic_content_clear_eol = true
+		term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
+		term.Screens.Active.Cursor.SemanticContentClearEol = true
 		term.SetCursorPos(1, 3)
 		zigTry(t, term.printWrap())
-		expectEqual(t, PageCellSemanticContentInput, term.screens.active.cursor.semantic_content)
-		expect(t, term.screens.active.cursor.semantic_content_clear_eol, "t.screens.active.cursor.semantic_content_clear_eol")
-		expectEqual(t, PageRowSemanticPromptNone, tm4SAt(t, term, 0, 1).row.semantic_prompt)
+		expectEqual(t, PageCellSemanticContentInput, term.Screens.Active.Cursor.SemanticContent)
+		expect(t, term.Screens.Active.Cursor.SemanticContentClearEol, "t.screens.active.cursor.semantic_content_clear_eol")
+		expectEqual(t, PageRowSemanticPromptNone, tm4SAt(t, term, 0, 1).Row.semantic_prompt)
 	}()
 
 	// Output: nothing is marked.
@@ -2257,8 +2257,8 @@ func TestTm4_printWrap_semantic_prompt_state_is_carried_to_the_new_row(t *testin
 		defer term.Deinit()
 		term.SetCursorPos(1, 3)
 		zigTry(t, term.printWrap())
-		expectEqual(t, PageCellSemanticContentOutput, term.screens.active.cursor.semantic_content)
-		expectEqual(t, PageRowSemanticPromptNone, tm4SAt(t, term, 0, 1).row.semantic_prompt)
+		expectEqual(t, PageCellSemanticContentOutput, term.Screens.Active.Cursor.SemanticContent)
+		expectEqual(t, PageRowSemanticPromptNone, tm4SAt(t, term, 0, 1).Row.semantic_prompt)
 	}()
 }
 
@@ -2269,15 +2269,15 @@ func TestTm4_configureCharset_every_slot_takes_every_charset_independently(t *te
 	defer term.Deinit()
 	term.clearDirty()
 
-	cs := &term.screens.active.charset
+	cs := &term.Screens.Active.Charset
 	// Initial state: all utf8, GL = G0, GR = G2, no single shift.
 	expectEqual(t, CharsetsCharsetUtf8, cs.charsets.Get(CharsetsSlotsG0))
 	expectEqual(t, CharsetsCharsetUtf8, cs.charsets.Get(CharsetsSlotsG1))
 	expectEqual(t, CharsetsCharsetUtf8, cs.charsets.Get(CharsetsSlotsG2))
 	expectEqual(t, CharsetsCharsetUtf8, cs.charsets.Get(CharsetsSlotsG3))
-	expectEqual(t, CharsetsSlotsG0, cs.gl)
-	expectEqual(t, CharsetsSlotsG2, cs.gr)
-	tm4ExpectOptional(t, None[CharsetsSlots](), cs.single_shift)
+	expectEqual(t, CharsetsSlotsG0, cs.Gl)
+	expectEqual(t, CharsetsSlotsG2, cs.Gr)
+	tm4ExpectOptional(t, None[CharsetsSlots](), cs.SingleShift)
 
 	slots := [...]CharsetsSlots{CharsetsSlotsG0, CharsetsSlotsG1, CharsetsSlotsG2, CharsetsSlotsG3}
 	sets := [...]CharsetsCharset{CharsetsCharsetUtf8, CharsetsCharsetAscii, CharsetsCharsetBritish, CharsetsCharsetDecSpecial}
@@ -2300,9 +2300,9 @@ func TestTm4_configureCharset_every_slot_takes_every_charset_independently(t *te
 	}
 
 	// No selection or single shift was touched and nothing became dirty.
-	expectEqual(t, CharsetsSlotsG0, cs.gl)
-	expectEqual(t, CharsetsSlotsG2, cs.gr)
-	tm4ExpectOptional(t, None[CharsetsSlots](), cs.single_shift)
+	expectEqual(t, CharsetsSlotsG0, cs.Gl)
+	expectEqual(t, CharsetsSlotsG2, cs.Gr)
+	tm4ExpectOptional(t, None[CharsetsSlots](), cs.SingleShift)
 	tm4SExpectRowDirty(t, term, 0, false)
 	tm4SExpectCursor(t, term, 0, 0, false)
 }
@@ -2317,17 +2317,17 @@ func TestTm4_configureCharset_state_is_per_screen_but_copied_on_a_screen_switch(
 	_, err := term.SwitchScreen(ScreenSetKeyAlternate)
 	zigTry(t, err)
 	// The alternate screen inherits the charset state.
-	expectEqual(t, CharsetsCharsetBritish, term.screens.active.charset.charsets.Get(CharsetsSlotsG1))
+	expectEqual(t, CharsetsCharsetBritish, term.Screens.Active.Charset.charsets.Get(CharsetsSlotsG1))
 
 	term.ConfigureCharset(CharsetsSlotsG1, CharsetsCharsetDecSpecial)
-	alt_set := term.screens.active.charset.charsets.Get(CharsetsSlotsG1)
+	alt_set := term.Screens.Active.Charset.charsets.Get(CharsetsSlotsG1)
 	expectEqual(t, CharsetsCharsetDecSpecial, alt_set)
 	// The primary screen's own copy is unchanged until we switch back...
-	expectEqual(t, CharsetsCharsetBritish, tm4Primary(t, term).charset.charsets.Get(CharsetsSlotsG1))
+	expectEqual(t, CharsetsCharsetBritish, tm4Primary(t, term).Charset.charsets.Get(CharsetsSlotsG1))
 	// ...at which point the state of the screen we leave is carried over.
 	_, err = term.SwitchScreen(ScreenSetKeyPrimary)
 	zigTry(t, err)
-	expectEqual(t, CharsetsCharsetDecSpecial, term.screens.active.charset.charsets.Get(CharsetsSlotsG1))
+	expectEqual(t, CharsetsCharsetDecSpecial, term.Screens.Active.Charset.charsets.Get(CharsetsSlotsG1))
 }
 
 // Zig: test "term51: invokeCharset: locking shifts select GL and GR"
@@ -2336,22 +2336,22 @@ func TestTm4_invokeCharset_locking_shifts_select_GL_and_GR(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(4, 2))
 	defer term.Deinit()
 
-	cs := &term.screens.active.charset
+	cs := &term.Screens.Active.Charset
 	slots := [...]CharsetsSlots{CharsetsSlotsG0, CharsetsSlotsG1, CharsetsSlotsG2, CharsetsSlotsG3}
 	for _, slot := range slots {
 		term.InvokeCharset(CharsetsActiveSlotGL, slot, false)
-		expectEqual(t, slot, cs.gl)
+		expectEqual(t, slot, cs.Gl)
 		// GR untouched.
-		expectEqual(t, CharsetsSlotsG2, cs.gr)
+		expectEqual(t, CharsetsSlotsG2, cs.Gr)
 	}
 	term.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG0, false)
 	for _, slot := range slots {
 		term.InvokeCharset(CharsetsActiveSlotGR, slot, false)
-		expectEqual(t, slot, cs.gr)
+		expectEqual(t, slot, cs.Gr)
 		// GL untouched.
-		expectEqual(t, CharsetsSlotsG0, cs.gl)
+		expectEqual(t, CharsetsSlotsG0, cs.Gl)
 	}
-	tm4ExpectOptional(t, None[CharsetsSlots](), cs.single_shift)
+	tm4ExpectOptional(t, None[CharsetsSlots](), cs.SingleShift)
 }
 
 // Zig: test "term51: invokeCharset: single shift only records the slot"
@@ -2360,22 +2360,22 @@ func TestTm4_invokeCharset_single_shift_only_records_the_slot(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(4, 2))
 	defer term.Deinit()
 
-	cs := &term.screens.active.charset
+	cs := &term.Screens.Active.Charset
 	slots := [...]CharsetsSlots{CharsetsSlotsG0, CharsetsSlotsG1, CharsetsSlotsG2, CharsetsSlotsG3}
 	for _, slot := range slots {
 		term.InvokeCharset(CharsetsActiveSlotGL, slot, true)
-		tm4ExpectOptional(t, Some[CharsetsSlots](slot), cs.single_shift)
+		tm4ExpectOptional(t, Some[CharsetsSlots](slot), cs.SingleShift)
 		// GL and GR remain at their defaults.
-		expectEqual(t, CharsetsSlotsG0, cs.gl)
-		expectEqual(t, CharsetsSlotsG2, cs.gr)
+		expectEqual(t, CharsetsSlotsG0, cs.Gl)
+		expectEqual(t, CharsetsSlotsG2, cs.Gr)
 	}
 
 	// A locking shift does not clear a pending single shift.
 	term.InvokeCharset(CharsetsActiveSlotGL, CharsetsSlotsG1, false)
-	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG3), cs.single_shift)
-	expectEqual(t, CharsetsSlotsG1, cs.gl)
+	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG3), cs.SingleShift)
+	expectEqual(t, CharsetsSlotsG1, cs.Gl)
 	term.InvokeCharset(CharsetsActiveSlotGR, CharsetsSlotsG3, false)
-	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG3), cs.single_shift)
+	tm4ExpectOptional(t, Some[CharsetsSlots](CharsetsSlotsG3), cs.SingleShift)
 }
 
 // Zig: test "term51: carriageReturn: at or right of the left margin goes to the left margin"
@@ -2383,11 +2383,11 @@ func TestTm4_carriageReturn_at_or_right_of_the_left_margin_goes_to_the_left_marg
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 5))
 	defer term.Deinit()
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 7
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 7
 
 	for _, x := range []uint{2, 3, 5, 7, 8, 9} {
-		term.screens.active.CursorAbsolute(SizeCellCountInt(x), 3)
+		term.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 3)
 		term.CarriageReturn()
 		tm4SExpectCursor(t, term, 2, 3, false)
 	}
@@ -2398,11 +2398,11 @@ func TestTm4_carriageReturn_left_of_the_left_margin_goes_to_column_zero(t *testi
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 5))
 	defer term.Deinit()
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 7
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 7
 
 	for _, x := range []uint{0, 1} {
-		term.screens.active.CursorAbsolute(SizeCellCountInt(x), 1)
+		term.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 1)
 		term.CarriageReturn()
 		tm4SExpectCursor(t, term, 0, 1, false)
 	}
@@ -2413,12 +2413,12 @@ func TestTm4_carriageReturn_origin_mode_always_uses_the_left_margin(t *testing.T
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 5))
 	defer term.Deinit()
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 7
-	term.modes.Set(ModesModeOrigin, true)
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 7
+	term.Modes.Set(ModesModeOrigin, true)
 
 	for _, x := range []uint{0, 1, 2, 5, 9} {
-		term.screens.active.CursorAbsolute(SizeCellCountInt(x), 2)
+		term.Screens.Active.CursorAbsolute(SizeCellCountInt(x), 2)
 		term.CarriageReturn()
 		tm4SExpectCursor(t, term, 2, 2, false)
 	}
@@ -2430,15 +2430,15 @@ func TestTm4_carriageReturn_without_margins_goes_to_column_zero(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(10, 5))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(6, 4)
+	term.Screens.Active.CursorAbsolute(6, 4)
 	term.CarriageReturn()
 	tm4SExpectCursor(t, term, 0, 4, false)
 	// Already at zero is a no-op.
 	term.CarriageReturn()
 	tm4SExpectCursor(t, term, 0, 4, false)
 
-	term.modes.Set(ModesModeOrigin, true)
-	term.screens.active.CursorAbsolute(3, 1)
+	term.Modes.Set(ModesModeOrigin, true)
+	term.Screens.Active.CursorAbsolute(3, 1)
 	term.CarriageReturn()
 	tm4SExpectCursor(t, term, 0, 1, false)
 }
@@ -2455,7 +2455,7 @@ func TestTm4_carriageReturn_clears_pending_wrap_without_wrapping(t *testing.T) {
 	tm4SExpectCursor(t, term, 0, 0, false)
 	zigTry(t, term.Print('X'))
 	tm4SExpectPlain(t, term, "Xbcde")
-	expect(t, !tm4SAt(t, term, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm4SAt(t, term, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
 }
 
 // Zig: test "term51: carriageReturn: uses the margin values even when mode 69 is off"
@@ -2464,10 +2464,10 @@ func TestTm4_carriageReturn_uses_the_margin_values_even_when_mode_69_is_off(t *t
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(4, 8)
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, false)
-	term.screens.active.CursorAbsolute(6, 1)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, false)
+	term.Screens.Active.CursorAbsolute(6, 1)
 	term.CarriageReturn()
 	tm4SExpectCursor(t, term, 3, 1, false)
 }
@@ -2478,12 +2478,12 @@ func TestTm4_linefeed_moves_down_keeping_the_column_and_clearing_pending_wrap(t 
 	term := tm4Init(t, terminalOptionsDefault(5, 4))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(3, 1)
+	term.Screens.Active.CursorAbsolute(3, 1)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 3, 2, false)
 
-	term.screens.active.CursorAbsolute(4, 2)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.CursorAbsolute(4, 2)
+	term.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 4, 3, false)
 }
@@ -2493,20 +2493,20 @@ func TestTm4_linefeed_with_linefeed_mode_also_returns_the_carriage(t *testing.T)
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 4))
 	defer term.Deinit()
-	term.modes.Set(ModesModeLinefeed, true)
+	term.Modes.Set(ModesModeLinefeed, true)
 
-	term.screens.active.CursorAbsolute(6, 0)
+	term.Screens.Active.CursorAbsolute(6, 0)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 0, 1, false)
 
 	// With a left margin the carriage returns to the margin when at or
 	// right of it, otherwise to column zero.
-	term.scrolling_region.left = 3
-	term.scrolling_region.right = 8
-	term.screens.active.CursorAbsolute(6, 1)
+	term.ScrollingRegion.Left = 3
+	term.ScrollingRegion.Right = 8
+	term.Screens.Active.CursorAbsolute(6, 1)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 3, 2, false)
-	term.screens.active.CursorAbsolute(1, 2)
+	term.Screens.Active.CursorAbsolute(1, 2)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 0, 3, false)
 }
@@ -2534,9 +2534,9 @@ func TestTm4_linefeed_at_the_bottom_of_a_scroll_region_scrolls_only_the_region(t
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("a\nb\nc\nd\ne")))
-	term.scrolling_region.top = 1
-	term.scrolling_region.bottom = 3
-	term.screens.active.CursorAbsolute(0, 3)
+	term.ScrollingRegion.Top = 1
+	term.ScrollingRegion.Bottom = 3
+	term.Screens.Active.CursorAbsolute(0, 3)
 	zigTry(t, term.Linefeed())
 	tm4SExpectPlain(t, term, "a\nc\nd\n\ne")
 	tm4SExpectCursor(t, term, 0, 3, false)
@@ -2547,16 +2547,16 @@ func TestTm4_linefeed_outside_the_scroll_region_moves_down_without_scrolling(t *
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(3, 6))
 	defer term.Deinit()
-	term.scrolling_region.top = 1
-	term.scrolling_region.bottom = 3
+	term.ScrollingRegion.Top = 1
+	term.ScrollingRegion.Bottom = 3
 
 	// Above the region.
-	term.screens.active.CursorAbsolute(1, 0)
+	term.Screens.Active.CursorAbsolute(1, 0)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 1, 1, false)
 
 	// Below the region.
-	term.screens.active.CursorAbsolute(1, 4)
+	term.Screens.Active.CursorAbsolute(1, 4)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 1, 5, false)
 
@@ -2572,12 +2572,12 @@ func TestTm4_linefeed_cursor_right_of_the_margins_at_the_region_bottom_does_not_
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 7
-	term.scrolling_region.top = 0
-	term.scrolling_region.bottom = 1
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 7
+	term.ScrollingRegion.Top = 0
+	term.ScrollingRegion.Bottom = 1
 
-	term.screens.active.CursorAbsolute(9, 1)
+	term.Screens.Active.CursorAbsolute(9, 1)
 	zigTry(t, term.Linefeed())
 	tm4SExpectCursor(t, term, 9, 1, false)
 }
@@ -2589,9 +2589,9 @@ func TestTm4_linefeed_left_and_right_margins_scroll_only_the_columns_between_the
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("abcdef\nghijkl\nmnopqr")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 4
-	term.screens.active.CursorAbsolute(2, 2)
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 4
+	term.Screens.Active.CursorAbsolute(2, 2)
 	zigTry(t, term.Linefeed())
 	tm4SExpectPlain(t, term, "ahijkf\ngnopql\nm    r")
 	tm4SExpectCursor(t, term, 2, 2, false)
@@ -2603,7 +2603,7 @@ func TestTm4_backspace_moves_left_one_column_and_stops_at_column_zero(t *testing
 	term := tm4Init(t, terminalOptionsDefault(5, 3))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(2, 1)
+	term.Screens.Active.CursorAbsolute(2, 1)
 	term.Backspace()
 	tm4SExpectCursor(t, term, 1, 1, false)
 	term.Backspace()
@@ -2618,18 +2618,18 @@ func TestTm4_backspace_ignores_margins_and_clears_pending_wrap(t *testing.T) {
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
-	term.scrolling_region.left = 4
-	term.scrolling_region.right = 8
+	term.ScrollingRegion.Left = 4
+	term.ScrollingRegion.Right = 8
 
 	// Moves across the left margin without stopping.
-	term.screens.active.CursorAbsolute(4, 0)
+	term.Screens.Active.CursorAbsolute(4, 0)
 	term.Backspace()
 	tm4SExpectCursor(t, term, 3, 0, false)
 
 	// Pending wrap: moves from the last column (not decremented) in the
 	// default mode.
-	term.screens.active.CursorAbsolute(9, 1)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.CursorAbsolute(9, 1)
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.Backspace()
 	tm4SExpectCursor(t, term, 8, 1, false)
 }
@@ -2639,7 +2639,7 @@ func TestTm4_backspace_with_reverse_wrap_and_pending_wrap_only_clears_the_pendin
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 
 	zigTry(t, term.PrintString([]uint8("abcde")))
 	tm4SExpectCursor(t, term, 4, 0, true)
@@ -2654,7 +2654,7 @@ func TestTm4_backspace_reverse_wrap_goes_to_the_end_of_a_soft_wrapped_previous_l
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 3))
 	defer term.Deinit()
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 
 	zigTry(t, term.PrintString([]uint8("abcdefg")))
 	tm4SExpectCursor(t, term, 2, 1, false)
@@ -2670,7 +2670,7 @@ func TestTm4_cursorUp_moves_up_and_treats_zero_as_one(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(3, 8)
+	term.Screens.Active.CursorAbsolute(3, 8)
 	term.CursorUp(2)
 	tm4SExpectCursor(t, term, 3, 6, false)
 	term.CursorUp(0)
@@ -2682,13 +2682,13 @@ func TestTm4_cursorUp_moves_up_and_treats_zero_as_one(t *testing.T) {
 	tm4SExpectCursor(t, term, 3, 0, false)
 	term.CursorUp(1)
 	tm4SExpectCursor(t, term, 3, 0, false)
-	term.screens.active.CursorAbsolute(3, 9)
+	term.Screens.Active.CursorAbsolute(3, 9)
 	term.CursorUp(math.MaxUint)
 	tm4SExpectCursor(t, term, 3, 0, false)
-	term.screens.active.CursorAbsolute(3, 9)
+	term.Screens.Active.CursorAbsolute(3, 9)
 	term.CursorUp(9)
 	tm4SExpectCursor(t, term, 3, 0, false)
-	term.screens.active.CursorAbsolute(3, 9)
+	term.Screens.Active.CursorAbsolute(3, 9)
 	term.CursorUp(10)
 	tm4SExpectCursor(t, term, 3, 0, false)
 }
@@ -2698,10 +2698,10 @@ func TestTm4_cursorUp_stops_at_the_top_margin_when_inside_the_region(t *testing.
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 6
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 6
 
-	term.screens.active.CursorAbsolute(1, 5)
+	term.Screens.Active.CursorAbsolute(1, 5)
 	term.CursorUp(2)
 	tm4SExpectCursor(t, term, 1, 3, false)
 	term.CursorUp(100)
@@ -2711,7 +2711,7 @@ func TestTm4_cursorUp_stops_at_the_top_margin_when_inside_the_region(t *testing.
 	tm4SExpectCursor(t, term, 1, 2, false)
 
 	// Exactly the distance to the margin.
-	term.screens.active.CursorAbsolute(1, 6)
+	term.Screens.Active.CursorAbsolute(1, 6)
 	term.CursorUp(4)
 	tm4SExpectCursor(t, term, 1, 2, false)
 }
@@ -2721,10 +2721,10 @@ func TestTm4_cursorUp_above_the_top_margin_goes_to_the_top_of_the_screen(t *test
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
-	term.scrolling_region.top = 3
-	term.scrolling_region.bottom = 6
+	term.ScrollingRegion.Top = 3
+	term.ScrollingRegion.Bottom = 6
 
-	term.screens.active.CursorAbsolute(1, 2)
+	term.Screens.Active.CursorAbsolute(1, 2)
 	term.CursorUp(1)
 	tm4SExpectCursor(t, term, 1, 1, false)
 	term.CursorUp(50)
@@ -2739,17 +2739,17 @@ func TestTm4_cursorUp_always_clears_pending_wrap_and_ignores_origin_mode(t *test
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(4, 0)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.CursorAbsolute(4, 0)
+	term.Screens.Active.Cursor.PendingWrap = true
 	// No movement possible, still clears.
 	term.CursorUp(1)
 	tm4SExpectCursor(t, term, 4, 0, false)
 
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 6
-	term.modes.Set(ModesModeOrigin, true)
-	term.screens.active.CursorAbsolute(4, 5)
-	term.screens.active.cursor.pending_wrap = true
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 6
+	term.Modes.Set(ModesModeOrigin, true)
+	term.Screens.Active.CursorAbsolute(4, 5)
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.CursorUp(1)
 	tm4SExpectCursor(t, term, 4, 4, false)
 }
@@ -2760,7 +2760,7 @@ func TestTm4_cursorDown_moves_down_and_treats_zero_as_one(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(2, 1)
+	term.Screens.Active.CursorAbsolute(2, 1)
 	term.CursorDown(2)
 	tm4SExpectCursor(t, term, 2, 3, false)
 	term.CursorDown(0)
@@ -2771,13 +2771,13 @@ func TestTm4_cursorDown_moves_down_and_treats_zero_as_one(t *testing.T) {
 	tm4SExpectCursor(t, term, 2, 9, false)
 	term.CursorDown(1)
 	tm4SExpectCursor(t, term, 2, 9, false)
-	term.screens.active.CursorAbsolute(2, 0)
+	term.Screens.Active.CursorAbsolute(2, 0)
 	term.CursorDown(math.MaxUint)
 	tm4SExpectCursor(t, term, 2, 9, false)
-	term.screens.active.CursorAbsolute(2, 0)
+	term.Screens.Active.CursorAbsolute(2, 0)
 	term.CursorDown(9)
 	tm4SExpectCursor(t, term, 2, 9, false)
-	term.screens.active.CursorAbsolute(2, 0)
+	term.Screens.Active.CursorAbsolute(2, 0)
 	term.CursorDown(10)
 	tm4SExpectCursor(t, term, 2, 9, false)
 }
@@ -2787,10 +2787,10 @@ func TestTm4_cursorDown_stops_at_the_bottom_margin_when_inside_the_region(t *tes
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 6
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 6
 
-	term.screens.active.CursorAbsolute(1, 3)
+	term.Screens.Active.CursorAbsolute(1, 3)
 	term.CursorDown(2)
 	tm4SExpectCursor(t, term, 1, 5, false)
 	term.CursorDown(100)
@@ -2800,12 +2800,12 @@ func TestTm4_cursorDown_stops_at_the_bottom_margin_when_inside_the_region(t *tes
 	tm4SExpectCursor(t, term, 1, 6, false)
 
 	// Exactly the distance to the margin.
-	term.screens.active.CursorAbsolute(1, 2)
+	term.Screens.Active.CursorAbsolute(1, 2)
 	term.CursorDown(4)
 	tm4SExpectCursor(t, term, 1, 6, false)
 
 	// Above the region, inside the check y <= bottom applies.
-	term.screens.active.CursorAbsolute(1, 0)
+	term.Screens.Active.CursorAbsolute(1, 0)
 	term.CursorDown(100)
 	tm4SExpectCursor(t, term, 1, 6, false)
 }
@@ -2815,10 +2815,10 @@ func TestTm4_cursorDown_below_the_bottom_margin_goes_to_the_last_row(t *testing.
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 6
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 6
 
-	term.screens.active.CursorAbsolute(1, 7)
+	term.Screens.Active.CursorAbsolute(1, 7)
 	term.CursorDown(1)
 	tm4SExpectCursor(t, term, 1, 8, false)
 	term.CursorDown(50)
@@ -2833,16 +2833,16 @@ func TestTm4_cursorDown_always_clears_pending_wrap_and_ignores_origin_mode(t *te
 	term := tm4Init(t, terminalOptionsDefault(5, 10))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(4, 9)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.CursorAbsolute(4, 9)
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.CursorDown(1)
 	tm4SExpectCursor(t, term, 4, 9, false)
 
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 6
-	term.modes.Set(ModesModeOrigin, true)
-	term.screens.active.CursorAbsolute(4, 3)
-	term.screens.active.cursor.pending_wrap = true
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 6
+	term.Modes.Set(ModesModeOrigin, true)
+	term.Screens.Active.CursorAbsolute(4, 3)
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.CursorDown(1)
 	tm4SExpectCursor(t, term, 4, 4, false)
 }
@@ -2853,7 +2853,7 @@ func TestTm4_cursorRight_moves_right_and_treats_zero_as_one(t *testing.T) {
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
 
-	term.screens.active.CursorAbsolute(1, 1)
+	term.Screens.Active.CursorAbsolute(1, 1)
 	term.CursorRight(2)
 	tm4SExpectCursor(t, term, 3, 1, false)
 	term.CursorRight(0)
@@ -2864,13 +2864,13 @@ func TestTm4_cursorRight_moves_right_and_treats_zero_as_one(t *testing.T) {
 	tm4SExpectCursor(t, term, 9, 1, false)
 	term.CursorRight(1)
 	tm4SExpectCursor(t, term, 9, 1, false)
-	term.screens.active.CursorAbsolute(0, 1)
+	term.Screens.Active.CursorAbsolute(0, 1)
 	term.CursorRight(math.MaxUint)
 	tm4SExpectCursor(t, term, 9, 1, false)
-	term.screens.active.CursorAbsolute(0, 1)
+	term.Screens.Active.CursorAbsolute(0, 1)
 	term.CursorRight(9)
 	tm4SExpectCursor(t, term, 9, 1, false)
-	term.screens.active.CursorAbsolute(0, 1)
+	term.Screens.Active.CursorAbsolute(0, 1)
 	term.CursorRight(10)
 	tm4SExpectCursor(t, term, 9, 1, false)
 }
@@ -2880,10 +2880,10 @@ func TestTm4_cursorRight_stops_at_the_right_margin_when_at_or_left_of_it(t *test
 	testStdCapacity(t)
 	term := tm4Init(t, terminalOptionsDefault(10, 3))
 	defer term.Deinit()
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 6
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 6
 
-	term.screens.active.CursorAbsolute(3, 1)
+	term.Screens.Active.CursorAbsolute(3, 1)
 	term.CursorRight(2)
 	tm4SExpectCursor(t, term, 5, 1, false)
 	term.CursorRight(100)
@@ -2892,12 +2892,12 @@ func TestTm4_cursorRight_stops_at_the_right_margin_when_at_or_left_of_it(t *test
 	tm4SExpectCursor(t, term, 6, 1, false)
 
 	// Left of the left margin also stops at the right margin.
-	term.screens.active.CursorAbsolute(0, 1)
+	term.Screens.Active.CursorAbsolute(0, 1)
 	term.CursorRight(100)
 	tm4SExpectCursor(t, term, 6, 1, false)
 
 	// Exactly the distance.
-	term.screens.active.CursorAbsolute(2, 1)
+	term.Screens.Active.CursorAbsolute(2, 1)
 	term.CursorRight(4)
 	tm4SExpectCursor(t, term, 6, 1, false)
 }
@@ -2923,7 +2923,7 @@ func TestTm4_panic_printCell_spacer_tail_at_column_zero(t *testing.T) {
 	// Zig: in the `.spacer_tail` branch, `assert(self.screens.active.cursor.x > 0)`.
 	// A spacer tail in column zero is an invalid state that a test makes by
 	// hand.
-	term.screens.active.cursor.page_cell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
 	tm4ExpectPanic(t, func() {
 		term.printCell('a', PageCellWideNarrow)
 	})
@@ -2939,8 +2939,8 @@ func TestTm4_panic_printCell_styled_cell_in_unstyled_row(t *testing.T) {
 	// self.screens.active.cursor.page_row.styled); ... }` when the style of
 	// the cell differs from the cursor's. The cell is given a style id by
 	// hand while the row has no styled flag.
-	term.screens.active.cursor.page_cell.style_id = 1
-	expect(t, !term.screens.active.cursor.page_row.styled, "!t.screens.active.cursor.page_row.styled")
+	term.Screens.Active.Cursor.PageCell.style_id = 1
+	expect(t, !term.Screens.Active.Cursor.PageRow.styled, "!t.screens.active.cursor.page_row.styled")
 	tm4ExpectPanic(t, func() {
 		term.printCell('a', PageCellWideNarrow)
 	})

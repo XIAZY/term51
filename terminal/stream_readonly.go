@@ -116,7 +116,7 @@ func (self *StreamReadonlyHandler) Deinit() {
 func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyPrint:
-		if err := self.terminal.Print(value.Print.cp); err != nil {
+		if err := self.terminal.Print(value.Print.Cp); err != nil {
 			return err
 		}
 	case StreamActionKeyPrintRepeat:
@@ -143,31 +143,31 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 	case StreamActionKeyReverseIndex:
 		self.terminal.ReverseIndex()
 	case StreamActionKeyCursorUp:
-		self.terminal.CursorUp(uint(value.CursorUp.value))
+		self.terminal.CursorUp(uint(value.CursorUp.Value))
 	case StreamActionKeyCursorDown:
-		self.terminal.CursorDown(uint(value.CursorDown.value))
+		self.terminal.CursorDown(uint(value.CursorDown.Value))
 	case StreamActionKeyCursorLeft:
-		self.terminal.CursorLeft(uint(value.CursorLeft.value))
+		self.terminal.CursorLeft(uint(value.CursorLeft.Value))
 	case StreamActionKeyCursorRight:
-		self.terminal.CursorRight(uint(value.CursorRight.value))
+		self.terminal.CursorRight(uint(value.CursorRight.Value))
 	case StreamActionKeyCursorPos:
-		self.terminal.SetCursorPos(uint(value.CursorPos.row), uint(value.CursorPos.col))
+		self.terminal.SetCursorPos(uint(value.CursorPos.Row), uint(value.CursorPos.Col))
 	case StreamActionKeyCursorCol:
 		// Zig: `cursor.y + 1` is a u16 addition; y < rows <= maxInt(u16),
 		// so it cannot overflow.
-		self.terminal.SetCursorPos(uint(self.terminal.screens.active.cursor.y+1), uint(value.CursorCol.value))
+		self.terminal.SetCursorPos(uint(self.terminal.Screens.Active.Cursor.Y+1), uint(value.CursorCol.Value))
 	case StreamActionKeyCursorRow:
-		self.terminal.SetCursorPos(uint(value.CursorRow.value), uint(self.terminal.screens.active.cursor.x+1))
+		self.terminal.SetCursorPos(uint(value.CursorRow.Value), uint(self.terminal.Screens.Active.Cursor.X+1))
 	case StreamActionKeyCursorColRelative:
 		// Zig: `cursor.x + 1 +| value.value` is `(x + 1) +| value`, all u16.
 		self.terminal.SetCursorPos(
-			uint(self.terminal.screens.active.cursor.y+1),
-			uint(saturatingAddU16(self.terminal.screens.active.cursor.x+1, value.CursorColRelative.value)),
+			uint(self.terminal.Screens.Active.Cursor.Y+1),
+			uint(saturatingAddU16(self.terminal.Screens.Active.Cursor.X+1, value.CursorColRelative.Value)),
 		)
 	case StreamActionKeyCursorRowRelative:
 		self.terminal.SetCursorPos(
-			uint(saturatingAddU16(self.terminal.screens.active.cursor.y+1, value.CursorRowRelative.value)),
-			uint(self.terminal.screens.active.cursor.x+1),
+			uint(saturatingAddU16(self.terminal.Screens.Active.Cursor.Y+1, value.CursorRowRelative.Value)),
+			uint(self.terminal.Screens.Active.Cursor.X+1),
 		)
 	case StreamActionKeyCursorStyle:
 		var blink bool
@@ -190,8 +190,8 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 		default:
 			panic("unreachable")
 		}
-		self.terminal.modes.Set(ModesModeCursorBlinking, blink)
-		self.terminal.screens.active.cursor.cursor_style = style
+		self.terminal.Modes.Set(ModesModeCursorBlinking, blink)
+		self.terminal.Screens.Active.Cursor.CursorStyle = style
 	case StreamActionKeyEraseDisplayBelow:
 		self.terminal.EraseDisplay(CSIEraseDisplayBelow, value.EraseDisplayBelow)
 	case StreamActionKeyEraseDisplayAbove:
@@ -239,26 +239,26 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 	case StreamActionKeyTabReset:
 		self.terminal.TabReset()
 	case StreamActionKeySetMode:
-		if err := self.setMode(value.SetMode.mode, true); err != nil {
+		if err := self.setMode(value.SetMode.Mode, true); err != nil {
 			return err
 		}
 	case StreamActionKeyResetMode:
-		if err := self.setMode(value.ResetMode.mode, false); err != nil {
+		if err := self.setMode(value.ResetMode.Mode, false); err != nil {
 			return err
 		}
 	case StreamActionKeySaveMode:
-		self.terminal.modes.Save(value.SaveMode.mode)
+		self.terminal.Modes.Save(value.SaveMode.Mode)
 	case StreamActionKeyRestoreMode:
-		v := self.terminal.modes.Restore(value.RestoreMode.mode)
-		if err := self.setMode(value.RestoreMode.mode, v); err != nil {
+		v := self.terminal.Modes.Restore(value.RestoreMode.Mode)
+		if err := self.setMode(value.RestoreMode.Mode, v); err != nil {
 			return err
 		}
 	case StreamActionKeyTopAndBottomMargin:
-		self.terminal.SetTopAndBottomMargin(uint(value.TopAndBottomMargin.top_left), uint(value.TopAndBottomMargin.bottom_right))
+		self.terminal.SetTopAndBottomMargin(uint(value.TopAndBottomMargin.TopLeft), uint(value.TopAndBottomMargin.BottomRight))
 	case StreamActionKeyLeftAndRightMargin:
-		self.terminal.SetLeftAndRightMargin(uint(value.LeftAndRightMargin.top_left), uint(value.LeftAndRightMargin.bottom_right))
+		self.terminal.SetLeftAndRightMargin(uint(value.LeftAndRightMargin.TopLeft), uint(value.LeftAndRightMargin.BottomRight))
 	case StreamActionKeyLeftAndRightMarginAmbiguous:
-		if self.terminal.modes.Get(ModesModeEnableLeftAndRightMargin) {
+		if self.terminal.Modes.Get(ModesModeEnableLeftAndRightMargin) {
 			self.terminal.SetLeftAndRightMargin(0, 0)
 		} else {
 			self.terminal.SaveCursor()
@@ -268,9 +268,9 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 	case StreamActionKeyRestoreCursor:
 		self.terminal.RestoreCursor()
 	case StreamActionKeyInvokeCharset:
-		self.terminal.InvokeCharset(value.InvokeCharset.bank, value.InvokeCharset.charset, value.InvokeCharset.locking)
+		self.terminal.InvokeCharset(value.InvokeCharset.Bank, value.InvokeCharset.Charset, value.InvokeCharset.Locking)
 	case StreamActionKeyConfigureCharset:
-		self.terminal.ConfigureCharset(value.ConfigureCharset.slot, value.ConfigureCharset.charset)
+		self.terminal.ConfigureCharset(value.ConfigureCharset.Slot, value.ConfigureCharset.Charset)
 	case StreamActionKeySetAttribute:
 		switch value.SetAttribute.Tag {
 		case SGRAttributeTagUnknown:
@@ -286,30 +286,30 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 		self.terminal.SetProtectedMode(ANSIProtectedModeDec)
 	case StreamActionKeyMouseShiftCapture:
 		if value.MouseShiftCapture {
-			self.terminal.flags.mouse_shift_capture = TerminalFlagsMouseShiftCaptureTrue
+			self.terminal.Flags.MouseShiftCapture = TerminalFlagsMouseShiftCaptureTrue
 		} else {
-			self.terminal.flags.mouse_shift_capture = TerminalFlagsMouseShiftCaptureFalse
+			self.terminal.Flags.MouseShiftCapture = TerminalFlagsMouseShiftCaptureFalse
 		}
 	case StreamActionKeyKittyKeyboardPush:
-		self.terminal.screens.active.kitty_keyboard.Push(value.KittyKeyboardPush.flags)
+		self.terminal.Screens.Active.KittyKeyboard.Push(value.KittyKeyboardPush.Flags)
 	case StreamActionKeyKittyKeyboardPop:
 		// Zig: @intCast(value), u16 to usize, which always fits.
-		self.terminal.screens.active.kitty_keyboard.Pop(uint(value.KittyKeyboardPop))
+		self.terminal.Screens.Active.KittyKeyboard.Pop(uint(value.KittyKeyboardPop))
 	case StreamActionKeyKittyKeyboardSet:
-		self.terminal.screens.active.kitty_keyboard.Set(KittyKeySetModeSet, value.KittyKeyboardSet.flags)
+		self.terminal.Screens.Active.KittyKeyboard.Set(KittyKeySetModeSet, value.KittyKeyboardSet.Flags)
 	case StreamActionKeyKittyKeyboardSetOr:
-		self.terminal.screens.active.kitty_keyboard.Set(KittyKeySetModeOr, value.KittyKeyboardSetOr.flags)
+		self.terminal.Screens.Active.KittyKeyboard.Set(KittyKeySetModeOr, value.KittyKeyboardSetOr.Flags)
 	case StreamActionKeyKittyKeyboardSetNot:
-		self.terminal.screens.active.kitty_keyboard.Set(KittyKeySetModeNot, value.KittyKeyboardSetNot.flags)
+		self.terminal.Screens.Active.KittyKeyboard.Set(KittyKeySetModeNot, value.KittyKeyboardSetNot.Flags)
 	case StreamActionKeyModifyKeyFormat:
-		self.terminal.flags.modify_other_keys_2 = false
+		self.terminal.Flags.ModifyOtherKeys2 = false
 		switch value.ModifyKeyFormat {
 		case ANSIModifyKeyFormatOtherKeysNumeric:
-			self.terminal.flags.modify_other_keys_2 = true
+			self.terminal.Flags.ModifyOtherKeys2 = true
 		default:
 		}
 	case StreamActionKeyActiveStatusDisplay:
-		self.terminal.status_display = value.ActiveStatusDisplay
+		self.terminal.StatusDisplay = value.ActiveStatusDisplay
 	case StreamActionKeyDecaln:
 		if err := self.terminal.Decaln(); err != nil {
 			return err
@@ -317,19 +317,19 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 	case StreamActionKeyFullReset:
 		self.terminal.FullReset()
 	case StreamActionKeyStartHyperlink:
-		if err := self.terminal.screens.active.StartHyperlink(value.StartHyperlink.uri, value.StartHyperlink.id); err != nil {
+		if err := self.terminal.Screens.Active.StartHyperlink(value.StartHyperlink.URI, value.StartHyperlink.ID); err != nil {
 			return err
 		}
 	case StreamActionKeyEndHyperlink:
-		self.terminal.screens.active.EndHyperlink()
+		self.terminal.Screens.Active.EndHyperlink()
 	case StreamActionKeySemanticPrompt:
 		if err := self.terminal.SemanticPrompt(value.SemanticPrompt); err != nil {
 			return err
 		}
 	case StreamActionKeyMouseShape:
-		self.terminal.mouse_shape = value.MouseShape
+		self.terminal.MouseShape = value.MouseShape
 	case StreamActionKeyColorOperation:
-		if err := self.colorOperation(value.ColorOperation.op, &value.ColorOperation.requests); err != nil {
+		if err := self.colorOperation(value.ColorOperation.Op, &value.ColorOperation.Requests); err != nil {
 			return err
 		}
 	case StreamActionKeyKittyColorReport:
@@ -379,9 +379,9 @@ func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamActio
 // Zig: inline fn horizontalTab(self: *Handler, count: u16) void.
 func (self *StreamReadonlyHandler) horizontalTab(count uint16) {
 	for range count {
-		x := self.terminal.screens.active.cursor.x
+		x := self.terminal.Screens.Active.Cursor.X
 		self.terminal.HorizontalTab()
-		if x == self.terminal.screens.active.cursor.x {
+		if x == self.terminal.Screens.Active.Cursor.X {
 			break
 		}
 	}
@@ -392,9 +392,9 @@ func (self *StreamReadonlyHandler) horizontalTab(count uint16) {
 // Zig: inline fn horizontalTabBack(self: *Handler, count: u16) void.
 func (self *StreamReadonlyHandler) horizontalTabBack(count uint16) {
 	for range count {
-		x := self.terminal.screens.active.cursor.x
+		x := self.terminal.Screens.Active.Cursor.X
 		self.terminal.HorizontalTabBack()
-		if x == self.terminal.screens.active.cursor.x {
+		if x == self.terminal.Screens.Active.Cursor.X {
 			break
 		}
 	}
@@ -407,7 +407,7 @@ func (self *StreamReadonlyHandler) horizontalTabBack(count uint16) {
 // Terminal.deccolm.
 func (self *StreamReadonlyHandler) setMode(mode ModesMode, enabled bool) error {
 	// Set the mode on the terminal
-	self.terminal.modes.Set(mode, enabled)
+	self.terminal.Modes.Set(mode, enabled)
 
 	// Some modes require additional processing
 	switch mode {
@@ -419,10 +419,10 @@ func (self *StreamReadonlyHandler) setMode(mode ModesMode, enabled bool) error {
 
 	case ModesModeEnableLeftAndRightMargin:
 		if !enabled {
-			self.terminal.scrolling_region.left = 0
+			self.terminal.ScrollingRegion.Left = 0
 			// Zig: `cols - 1` on u16 traps when cols is 0; Terminal.init
 			// asserts cols > 0.
-			self.terminal.scrolling_region.right = self.terminal.cols - 1
+			self.terminal.ScrollingRegion.Right = self.terminal.Cols - 1
 		}
 
 	case ModesModeAltScreenLegacy:
@@ -467,52 +467,52 @@ func (self *StreamReadonlyHandler) setMode(mode ModesMode, enabled bool) error {
 
 	case ModesModeMouseEventX10:
 		if enabled {
-			self.terminal.flags.mouse_event = TerminalMouseEventsX10
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsX10
 		} else {
-			self.terminal.flags.mouse_event = TerminalMouseEventsNone
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsNone
 		}
 	case ModesModeMouseEventNormal:
 		if enabled {
-			self.terminal.flags.mouse_event = TerminalMouseEventsNormal
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsNormal
 		} else {
-			self.terminal.flags.mouse_event = TerminalMouseEventsNone
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsNone
 		}
 	case ModesModeMouseEventButton:
 		if enabled {
-			self.terminal.flags.mouse_event = TerminalMouseEventsButton
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsButton
 		} else {
-			self.terminal.flags.mouse_event = TerminalMouseEventsNone
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsNone
 		}
 	case ModesModeMouseEventAny:
 		if enabled {
-			self.terminal.flags.mouse_event = TerminalMouseEventsAny
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsAny
 		} else {
-			self.terminal.flags.mouse_event = TerminalMouseEventsNone
+			self.terminal.Flags.MouseEvent = TerminalMouseEventsNone
 		}
 
 	case ModesModeMouseFormatUtf8:
 		if enabled {
-			self.terminal.flags.mouse_format = TerminalMouseFormatUtf8
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatUtf8
 		} else {
-			self.terminal.flags.mouse_format = TerminalMouseFormatX10
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatX10
 		}
 	case ModesModeMouseFormatSgr:
 		if enabled {
-			self.terminal.flags.mouse_format = TerminalMouseFormatSgr
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatSgr
 		} else {
-			self.terminal.flags.mouse_format = TerminalMouseFormatX10
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatX10
 		}
 	case ModesModeMouseFormatUrxvt:
 		if enabled {
-			self.terminal.flags.mouse_format = TerminalMouseFormatUrxvt
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatUrxvt
 		} else {
-			self.terminal.flags.mouse_format = TerminalMouseFormatX10
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatX10
 		}
 	case ModesModeMouseFormatSgrPixels:
 		if enabled {
-			self.terminal.flags.mouse_format = TerminalMouseFormatSgrPixels
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatSgrPixels
 		} else {
-			self.terminal.flags.mouse_format = TerminalMouseFormatX10
+			self.terminal.Flags.MouseFormat = TerminalMouseFormatX10
 		}
 
 	default:
@@ -539,19 +539,19 @@ func (self *StreamReadonlyHandler) colorOperation(
 		switch req.Tag {
 		case OSCParsersColorRequestSet:
 			set := req.Set
-			switch set.target.Tag {
+			switch set.Target.Tag {
 			case OSCParsersColorTargetPalette:
-				i := set.target.Palette
-				self.terminal.flags.dirty.palette = true
-				self.terminal.colors.palette.Set(i, set.color)
+				i := set.Target.Palette
+				self.terminal.Flags.Dirty.Palette = true
+				self.terminal.Colors.Palette.Set(i, set.Color)
 			case OSCParsersColorTargetDynamic:
-				switch set.target.Dynamic {
+				switch set.Target.Dynamic {
 				case ColorDynamicForeground:
-					self.terminal.colors.foreground.Set(set.color)
+					self.terminal.Colors.Foreground.Set(set.Color)
 				case ColorDynamicBackground:
-					self.terminal.colors.background.Set(set.color)
+					self.terminal.Colors.Background.Set(set.Color)
 				case ColorDynamicCursor:
-					self.terminal.colors.cursor.Set(set.color)
+					self.terminal.Colors.Cursor.Set(set.Color)
 				case ColorDynamicPointerForeground,
 					ColorDynamicPointerBackground,
 					ColorDynamicTektronixForeground,
@@ -572,16 +572,16 @@ func (self *StreamReadonlyHandler) colorOperation(
 			switch target.Tag {
 			case OSCParsersColorTargetPalette:
 				i := target.Palette
-				self.terminal.flags.dirty.palette = true
-				self.terminal.colors.palette.Reset(i)
+				self.terminal.Flags.Dirty.Palette = true
+				self.terminal.Colors.Palette.Reset(i)
 			case OSCParsersColorTargetDynamic:
 				switch target.Dynamic {
 				case ColorDynamicForeground:
-					self.terminal.colors.foreground.Reset()
+					self.terminal.Colors.Foreground.Reset()
 				case ColorDynamicBackground:
-					self.terminal.colors.background.Reset()
+					self.terminal.Colors.Background.Reset()
 				case ColorDynamicCursor:
-					self.terminal.colors.cursor.Reset()
+					self.terminal.Colors.Cursor.Reset()
 				case ColorDynamicPointerForeground,
 					ColorDynamicPointerBackground,
 					ColorDynamicTektronixForeground,
@@ -598,12 +598,12 @@ func (self *StreamReadonlyHandler) colorOperation(
 			}
 
 		case OSCParsersColorRequestResetPalette:
-			mask := &self.terminal.colors.palette.mask
+			mask := &self.terminal.Colors.Palette.Mask
 			mask_it := mask.iterator()
 			for i := mask_it.Next(); i.Valid; i = mask_it.Next() {
-				self.terminal.flags.dirty.palette = true
+				self.terminal.Flags.Dirty.Palette = true
 				// Zig: @intCast(i), usize to u8; i < 256.
-				self.terminal.colors.palette.Reset(uint8(i.Value))
+				self.terminal.Colors.Palette.Reset(uint8(i.Value))
 			}
 			*mask = StaticBitSet256InitEmpty()
 
@@ -623,23 +623,23 @@ func (self *StreamReadonlyHandler) colorOperation(
 // !void. Nothing in the body can fail; the inferred error set is empty and
 // the Go result is always nil.
 func (self *StreamReadonlyHandler) kittyColorOperation(request KittyColorOSC) error {
-	for _, item := range request.list {
+	for _, item := range request.List {
 		switch item.Tag {
 		case KittyColorOSCRequestSet:
 			v := item.Set
-			switch v.key.Tag {
+			switch v.Key.Tag {
 			case KittyColorKindPalette:
-				palette := v.key.Palette
-				self.terminal.flags.dirty.palette = true
-				self.terminal.colors.palette.Set(palette, v.color)
+				palette := v.Key.Palette
+				self.terminal.Flags.Dirty.Palette = true
+				self.terminal.Colors.Palette.Set(palette, v.Color)
 			case KittyColorKindSpecial:
-				switch v.key.Special {
+				switch v.Key.Special {
 				case KittyColorSpecialForeground:
-					self.terminal.colors.foreground.Set(v.color)
+					self.terminal.Colors.Foreground.Set(v.Color)
 				case KittyColorSpecialBackground:
-					self.terminal.colors.background.Set(v.color)
+					self.terminal.Colors.Background.Set(v.Color)
 				case KittyColorSpecialCursor:
-					self.terminal.colors.cursor.Set(v.color)
+					self.terminal.Colors.Cursor.Set(v.Color)
 				default:
 				}
 			default:
@@ -650,16 +650,16 @@ func (self *StreamReadonlyHandler) kittyColorOperation(request KittyColorOSC) er
 			switch key.Tag {
 			case KittyColorKindPalette:
 				palette := key.Palette
-				self.terminal.flags.dirty.palette = true
-				self.terminal.colors.palette.Reset(palette)
+				self.terminal.Flags.Dirty.Palette = true
+				self.terminal.Colors.Palette.Reset(palette)
 			case KittyColorKindSpecial:
 				switch key.Special {
 				case KittyColorSpecialForeground:
-					self.terminal.colors.foreground.Reset()
+					self.terminal.Colors.Foreground.Reset()
 				case KittyColorSpecialBackground:
-					self.terminal.colors.background.Reset()
+					self.terminal.Colors.Background.Reset()
 				case KittyColorSpecialCursor:
-					self.terminal.colors.cursor.Reset()
+					self.terminal.Colors.Cursor.Reset()
 				default:
 				}
 			default:

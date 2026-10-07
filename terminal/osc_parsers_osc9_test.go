@@ -90,8 +90,8 @@ func TestOSCParsersOsc9_OSC_9_show_desktop_notification(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.title))
-	expectEqualStrings(t, "Hello world", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.Title))
+	expectEqualStrings(t, "Hello world", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9: show single character desktop notification"
@@ -103,8 +103,8 @@ func TestOSCParsersOsc9_OSC_9_show_single_character_desktop_notification(t *test
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.title))
-	expectEqualStrings(t, "H", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.Title))
+	expectEqualStrings(t, "H", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;1: ConEmu sleep"
@@ -116,7 +116,7 @@ func TestOSCParsersOsc9_OSC_9_1_ConEmu_sleep(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuSleep, "cmd == .conemu_sleep")
-	expectEqual(t, uint16(420), cmd.ConemuSleep.duration_ms)
+	expectEqual(t, uint16(420), cmd.ConemuSleep.DurationMs)
 }
 
 // Zig: test "OSC 9;1: ConEmu sleep with no value default to 100ms"
@@ -128,7 +128,7 @@ func TestOSCParsersOsc9_OSC_9_1_ConEmu_sleep_with_no_value_default_to_100ms(t *t
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuSleep, "cmd == .conemu_sleep")
-	expectEqual(t, uint16(100), cmd.ConemuSleep.duration_ms)
+	expectEqual(t, uint16(100), cmd.ConemuSleep.DurationMs)
 }
 
 // Zig: test "OSC 9;1: conemu sleep cannot exceed 10000ms"
@@ -140,7 +140,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_cannot_exceed_10000ms(t *testing.T)
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuSleep, "cmd == .conemu_sleep")
-	expectEqual(t, uint16(10000), cmd.ConemuSleep.duration_ms)
+	expectEqual(t, uint16(10000), cmd.ConemuSleep.DurationMs)
 }
 
 // Zig: test "OSC 9;1: conemu sleep invalid input"
@@ -152,7 +152,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_invalid_input(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuSleep, "cmd == .conemu_sleep")
-	expectEqual(t, uint16(100), cmd.ConemuSleep.duration_ms)
+	expectEqual(t, uint16(100), cmd.ConemuSleep.DurationMs)
 }
 
 // Zig: test "OSC 9;1: conemu sleep -> desktop notification 1"
@@ -164,7 +164,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_desktop_notification_1(t *testing.T
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "1", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "1", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;1: conemu sleep -> desktop notification 2"
@@ -176,7 +176,7 @@ func TestOSCParsersOsc9_OSC_9_1_conemu_sleep_desktop_notification_2(t *testing.T
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "1a", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "1a", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;2: ConEmu message box"
@@ -200,7 +200,7 @@ func TestOSCParsersOsc9_OSC_9_2_ConEmu_message_box_invalid_input(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "2", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "2", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;2: ConEmu message box empty message"
@@ -236,7 +236,7 @@ func TestOSCParsersOsc9_OSC_9_2_message_box_desktop_notification_1(t *testing.T)
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "2", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "2", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;2: message box -> desktop notification 2"
@@ -248,7 +248,7 @@ func TestOSCParsersOsc9_OSC_9_2_message_box_desktop_notification_2(t *testing.T)
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "2a", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "2a", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;3: ConEmu change tab title"
@@ -296,7 +296,7 @@ func TestOSCParsersOsc9_OSC_9_3_change_tab_title_desktop_notification_1(t *testi
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "3", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "3", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;3: message box -> desktop notification 2"
@@ -308,7 +308,7 @@ func TestOSCParsersOsc9_OSC_9_3_message_box_desktop_notification_2(t *testing.T)
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "3a", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "3a", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;4: ConEmu progress set"
@@ -320,8 +320,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
-	expect(t, cmd.ConemuProgressReport.progress == Some[uint8](100), "cmd.conemu_progress_report.progress == 100")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
+	expect(t, cmd.ConemuProgressReport.Progress == Some[uint8](100), "cmd.conemu_progress_report.progress == 100")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress set overflow"
@@ -333,8 +333,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_overflow(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
-	expectEqual(t, Some[uint8](100), cmd.ConemuProgressReport.progress)
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
+	expectEqual(t, Some[uint8](100), cmd.ConemuProgressReport.Progress)
 }
 
 // Zig: test "OSC 9;4: ConEmu progress set single digit"
@@ -346,8 +346,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_single_digit(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
-	expect(t, cmd.ConemuProgressReport.progress == Some[uint8](9), "cmd.conemu_progress_report.progress == 9")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
+	expect(t, cmd.ConemuProgressReport.Progress == Some[uint8](9), "cmd.conemu_progress_report.progress == 9")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress set double digit"
@@ -359,8 +359,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_double_digit(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
-	expectEqual(t, Some[uint8](94), cmd.ConemuProgressReport.progress)
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
+	expectEqual(t, Some[uint8](94), cmd.ConemuProgressReport.Progress)
 }
 
 // Zig: test "OSC 9;4: ConEmu progress set extra semicolon ignored"
@@ -372,8 +372,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_set_extra_semicolon_ignored(t *t
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
-	expectEqual(t, Some[uint8](100), cmd.ConemuProgressReport.progress)
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
+	expectEqual(t, Some[uint8](100), cmd.ConemuProgressReport.Progress)
 }
 
 // Zig: test "OSC 9;4: ConEmu progress remove with no progress"
@@ -385,8 +385,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_with_no_progress(t *testi
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
-	expect(t, !cmd.ConemuProgressReport.progress.Valid, "cmd.conemu_progress_report.progress == null")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
+	expect(t, !cmd.ConemuProgressReport.Progress.Valid, "cmd.conemu_progress_report.progress == null")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress remove with double semicolon"
@@ -398,8 +398,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_with_double_semicolon(t *
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
-	expect(t, !cmd.ConemuProgressReport.progress.Valid, "cmd.conemu_progress_report.progress == null")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
+	expect(t, !cmd.ConemuProgressReport.Progress.Valid, "cmd.conemu_progress_report.progress == null")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress remove ignores progress"
@@ -411,8 +411,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_ignores_progress(t *testi
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
-	expect(t, !cmd.ConemuProgressReport.progress.Valid, "cmd.conemu_progress_report.progress == null")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
+	expect(t, !cmd.ConemuProgressReport.Progress.Valid, "cmd.conemu_progress_report.progress == null")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress remove extra semicolon"
@@ -424,7 +424,7 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_remove_extra_semicolon(t *testin
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateRemove, "cmd.conemu_progress_report.state == .remove")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress error"
@@ -436,8 +436,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_error(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateError, "cmd.conemu_progress_report.state == .@\"error\"")
-	expect(t, !cmd.ConemuProgressReport.progress.Valid, "cmd.conemu_progress_report.progress == null")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateError, "cmd.conemu_progress_report.state == .@\"error\"")
+	expect(t, !cmd.ConemuProgressReport.Progress.Valid, "cmd.conemu_progress_report.progress == null")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress error with progress"
@@ -449,8 +449,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_error_with_progress(t *testing.T
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateError, "cmd.conemu_progress_report.state == .@\"error\"")
-	expect(t, cmd.ConemuProgressReport.progress == Some[uint8](100), "cmd.conemu_progress_report.progress == 100")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateError, "cmd.conemu_progress_report.state == .@\"error\"")
+	expect(t, cmd.ConemuProgressReport.Progress == Some[uint8](100), "cmd.conemu_progress_report.progress == 100")
 }
 
 // Zig: test "OSC 9;4: progress pause"
@@ -462,8 +462,8 @@ func TestOSCParsersOsc9_OSC_9_4_progress_pause(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStatePause, "cmd.conemu_progress_report.state == .pause")
-	expect(t, !cmd.ConemuProgressReport.progress.Valid, "cmd.conemu_progress_report.progress == null")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStatePause, "cmd.conemu_progress_report.state == .pause")
+	expect(t, !cmd.ConemuProgressReport.Progress.Valid, "cmd.conemu_progress_report.progress == null")
 }
 
 // Zig: test "OSC 9;4: ConEmu progress pause with progress"
@@ -475,8 +475,8 @@ func TestOSCParsersOsc9_OSC_9_4_ConEmu_progress_pause_with_progress(t *testing.T
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-	expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStatePause, "cmd.conemu_progress_report.state == .pause")
-	expect(t, cmd.ConemuProgressReport.progress == Some[uint8](100), "cmd.conemu_progress_report.progress == 100")
+	expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStatePause, "cmd.conemu_progress_report.state == .pause")
+	expect(t, cmd.ConemuProgressReport.Progress == Some[uint8](100), "cmd.conemu_progress_report.progress == 100")
 }
 
 // Zig: test "OSC 9;4: progress -> desktop notification 1"
@@ -488,7 +488,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_1(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "4", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "4", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;4: progress -> desktop notification 2"
@@ -500,7 +500,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_2(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "4;", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "4;", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;4: progress -> desktop notification 3"
@@ -512,7 +512,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_3(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "4;5", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "4;5", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;4: progress -> desktop notification 4"
@@ -524,7 +524,7 @@ func TestOSCParsersOsc9_OSC_9_4_progress_desktop_notification_4(t *testing.T) {
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "4;5a", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "4;5a", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC 9;5: ConEmu wait input"
@@ -585,7 +585,7 @@ func TestOSCParsersOsc9_OSC_9_6_ConEmu_guimacro_3_incomplete_desktop_notificatio
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "6", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "6", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;7: ConEmu run process 1"
@@ -624,7 +624,7 @@ func TestOSCParsersOsc9_OSC_9_7_ConEmu_run_process_incomplete_desktop_notificati
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "7", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "7", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;8: ConEmu output environment variable 1"
@@ -663,7 +663,7 @@ func TestOSCParsersOsc9_OSC_9_8_ConEmu_output_environment_variable_incomplete_de
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "8", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "8", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;9: ConEmu set current working directory"
@@ -676,7 +676,7 @@ func TestOSCParsersOsc9_OSC_9_9_ConEmu_set_current_working_directory(t *testing.
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-	expectEqualStrings(t, "ab", string(cmd.ReportPwd.value))
+	expectEqualStrings(t, "ab", string(cmd.ReportPwd.Value))
 }
 
 // Zig: test "OSC: 9;9: ConEmu set current working directory incomplete -> desktop notification"
@@ -689,7 +689,7 @@ func TestOSCParsersOsc9_OSC_9_9_ConEmu_set_current_working_directory_incomplete_
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "9", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "9", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 1"
@@ -702,10 +702,10 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_1(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
-	expect(t, cmd.ConemuXtermEmulation.keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard != null")
-	expect(t, cmd.ConemuXtermEmulation.keyboard.Value == true, "cmd.conemu_xterm_emulation.keyboard.? == true")
-	expect(t, cmd.ConemuXtermEmulation.output.Valid, "cmd.conemu_xterm_emulation.output != null")
-	expect(t, cmd.ConemuXtermEmulation.output.Value == true, "cmd.conemu_xterm_emulation.output.? == true")
+	expect(t, cmd.ConemuXtermEmulation.Keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard != null")
+	expect(t, cmd.ConemuXtermEmulation.Keyboard.Value == true, "cmd.conemu_xterm_emulation.keyboard.? == true")
+	expect(t, cmd.ConemuXtermEmulation.Output.Valid, "cmd.conemu_xterm_emulation.output != null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Value == true, "cmd.conemu_xterm_emulation.output.? == true")
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 2"
@@ -718,10 +718,10 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_2(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
-	expect(t, cmd.ConemuXtermEmulation.keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard != null")
-	expect(t, cmd.ConemuXtermEmulation.keyboard.Value == false, "cmd.conemu_xterm_emulation.keyboard.? == false")
-	expect(t, cmd.ConemuXtermEmulation.output.Valid, "cmd.conemu_xterm_emulation.output != null")
-	expect(t, cmd.ConemuXtermEmulation.output.Value == false, "cmd.conemu_xterm_emulation.output.? == false")
+	expect(t, cmd.ConemuXtermEmulation.Keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard != null")
+	expect(t, cmd.ConemuXtermEmulation.Keyboard.Value == false, "cmd.conemu_xterm_emulation.keyboard.? == false")
+	expect(t, cmd.ConemuXtermEmulation.Output.Valid, "cmd.conemu_xterm_emulation.output != null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Value == false, "cmd.conemu_xterm_emulation.output.? == false")
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 3"
@@ -734,10 +734,10 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_3(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
-	expect(t, cmd.ConemuXtermEmulation.keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard != null")
-	expect(t, cmd.ConemuXtermEmulation.keyboard.Value == true, "cmd.conemu_xterm_emulation.keyboard.? == true")
-	expect(t, cmd.ConemuXtermEmulation.output.Valid, "cmd.conemu_xterm_emulation.output != null")
-	expect(t, cmd.ConemuXtermEmulation.output.Value == true, "cmd.conemu_xterm_emulation.output.? == true")
+	expect(t, cmd.ConemuXtermEmulation.Keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard != null")
+	expect(t, cmd.ConemuXtermEmulation.Keyboard.Value == true, "cmd.conemu_xterm_emulation.keyboard.? == true")
+	expect(t, cmd.ConemuXtermEmulation.Output.Valid, "cmd.conemu_xterm_emulation.output != null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Value == true, "cmd.conemu_xterm_emulation.output.? == true")
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 4"
@@ -750,9 +750,9 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_4(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
-	expect(t, !cmd.ConemuXtermEmulation.keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard == null")
-	expect(t, cmd.ConemuXtermEmulation.output.Valid, "cmd.conemu_xterm_emulation.output != null")
-	expect(t, cmd.ConemuXtermEmulation.output.Value == false, "cmd.conemu_xterm_emulation.output.? == false")
+	expect(t, !cmd.ConemuXtermEmulation.Keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard == null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Valid, "cmd.conemu_xterm_emulation.output != null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Value == false, "cmd.conemu_xterm_emulation.output.? == false")
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 5"
@@ -765,9 +765,9 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_5(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
-	expect(t, !cmd.ConemuXtermEmulation.keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard == null")
-	expect(t, cmd.ConemuXtermEmulation.output.Valid, "cmd.conemu_xterm_emulation.output != null")
-	expect(t, cmd.ConemuXtermEmulation.output.Value == true, "cmd.conemu_xterm_emulation.output.? == true")
+	expect(t, !cmd.ConemuXtermEmulation.Keyboard.Valid, "cmd.conemu_xterm_emulation.keyboard == null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Valid, "cmd.conemu_xterm_emulation.output != null")
+	expect(t, cmd.ConemuXtermEmulation.Output.Value == true, "cmd.conemu_xterm_emulation.output.? == true")
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 6"
@@ -780,7 +780,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_6(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "10;4", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "10;4", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 7"
@@ -793,7 +793,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_7(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "10;", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "10;", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;10: ConEmu xterm keyboard and output emulation 8"
@@ -806,7 +806,7 @@ func TestOSCParsersOsc9_OSC_9_10_ConEmu_xterm_keyboard_and_output_emulation_8(t 
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "10;abc", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "10;abc", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;11: ConEmu comment"
@@ -832,7 +832,7 @@ func TestOSCParsersOsc9_OSC_9_11_ConEmu_comment_incomplete_desktop_notification(
 
 	cmd := oscB_osc9_end(t, &p, '\x1b')
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "11", string(cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "11", string(cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "OSC: 9;12: ConEmu mark prompt start 1"
@@ -877,9 +877,9 @@ func oscB_osc9_term51ExpectNotification(t *testing.T, input string, body string)
 	oscB_osc9_term51Feed(&p, input)
 	cmd := oscB_osc9_parse(t, &p)
 	expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-	expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.title))
-	expectEqualSlices(t, []uint8(body), cmd.ShowDesktopNotification.body)
-	expectEqual(t, uint8(0), oscB_osc9_sentinel(t, cmd.ShowDesktopNotification.body))
+	expectEqualStrings(t, "", string(cmd.ShowDesktopNotification.Title))
+	expectEqualSlices(t, []uint8(body), cmd.ShowDesktopNotification.Body)
+	expectEqual(t, uint8(0), oscB_osc9_sentinel(t, cmd.ShowDesktopNotification.Body))
 }
 
 // Zig: test "term51: parse: missing separator after 9 is invalid"
@@ -912,7 +912,7 @@ func TestOSCParsersOsc9_term51_parse_terminator_is_ignored(t *testing.T) {
 		oscB_osc9_term51Feed(&p, "9;Hello")
 		cmd := oscB_osc9_deref(t, OSCParsersOsc9Parse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyShowDesktopNotification, "cmd == .show_desktop_notification")
-		expectEqualStrings(t, "Hello", string(cmd.ShowDesktopNotification.body))
+		expectEqualStrings(t, "Hello", string(cmd.ShowDesktopNotification.Body))
 	}
 }
 
@@ -951,7 +951,7 @@ func TestOSCParsersOsc9_term51_parse_sleep_duration(t *testing.T) {
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuSleep, "cmd == .conemu_sleep")
-		expectEqual(t, c.want, cmd.ConemuSleep.duration_ms)
+		expectEqual(t, c.want, cmd.ConemuSleep.DurationMs)
 	}
 }
 
@@ -985,8 +985,8 @@ func TestOSCParsersOsc9_term51_parse_xterm_emulation(t *testing.T) {
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuXtermEmulation, "cmd == .conemu_xterm_emulation")
-		expectEqual(t, c.keyboard, cmd.ConemuXtermEmulation.keyboard)
-		expectEqual(t, c.output, cmd.ConemuXtermEmulation.output)
+		expectEqual(t, c.keyboard, cmd.ConemuXtermEmulation.Keyboard)
+		expectEqual(t, c.output, cmd.ConemuXtermEmulation.Output)
 	}
 
 	oscB_osc9_term51ExpectNotification(t, "9;10;", "10;")
@@ -1030,8 +1030,8 @@ func TestOSCParsersOsc9_term51_parse_12_followed_by_anything_is_a_prompt_mark(t 
 		oscB_osc9_term51Feed(&p, input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-		expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
-		expectEqualStrings(t, "", string(cmd.SemanticPrompt.options_unvalidated))
+		expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+		expectEqualStrings(t, "", string(cmd.SemanticPrompt.OptionsUnvalidated))
 	}
 }
 
@@ -1080,7 +1080,7 @@ func TestOSCParsersOsc9_term51_parse_message_box_guimacro_run_process_environmen
 			oscB_osc9_term51Feed(&p, "9;9"+c.input[3:])
 			cmd := oscB_osc9_parse(t, &p)
 			expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-			expectEqualSlices(t, []uint8(c.want), cmd.ReportPwd.value)
+			expectEqualSlices(t, []uint8(c.want), cmd.ReportPwd.Value)
 		}
 	}
 
@@ -1156,8 +1156,8 @@ func TestOSCParsersOsc9_term51_parse_progress_state(t *testing.T) {
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-		expect(t, cmd.ConemuProgressReport.state == c.state, "cmd.conemu_progress_report.state == case[1]")
-		expectEqual(t, c.progress, cmd.ConemuProgressReport.progress)
+		expect(t, cmd.ConemuProgressReport.State == c.state, "cmd.conemu_progress_report.state == case[1]")
+		expectEqual(t, c.progress, cmd.ConemuProgressReport.Progress)
 	}
 
 	oscB_osc9_term51ExpectNotification(t, "9;4", "4")
@@ -1206,8 +1206,8 @@ func TestOSCParsersOsc9_term51_parse_progress_value(t *testing.T) {
 		oscB_osc9_term51Feed(&p, c.input)
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-		expect(t, cmd.ConemuProgressReport.state == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
-		expectEqual(t, c.progress, cmd.ConemuProgressReport.progress)
+		expect(t, cmd.ConemuProgressReport.State == OSCCommandProgressReportStateSet, "cmd.conemu_progress_report.state == .set")
+		expectEqual(t, c.progress, cmd.ConemuProgressReport.Progress)
 	}
 }
 
@@ -1270,7 +1270,7 @@ func TestOSCParsersOsc9_term51_parse_buffer_limit(t *testing.T) {
 		expect(t, p.state == OSCParserState9, "p.state == .@\"9\"")
 		cmd := oscB_osc9_parse(t, &p)
 		expect(t, cmd.Tag == OSCCommandKeyConemuProgressReport, "cmd == .conemu_progress_report")
-		expectEqual(t, Some[uint8](42), cmd.ConemuProgressReport.progress)
+		expectEqual(t, Some[uint8](42), cmd.ConemuProgressReport.Progress)
 	}
 	{
 		// One byte more overflows while feeding.

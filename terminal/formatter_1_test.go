@@ -86,7 +86,7 @@ func fm1Next(t *testing.T, s *StreamReadonlyStream, input string) {
 //	const page = &pages.pages.last.?.data;
 func fm1SinglePage(t *testing.T, term *Terminal) *Page {
 	t.Helper()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	expect(t, pages.pages.first != nil, "pages.pages.first != null")
 	expect(t, pages.pages.first == pages.pages.last, "pages.pages.first == pages.pages.last")
 	return &fm1UnwrapPtr(t, pages.pages.last).data
@@ -95,7 +95,7 @@ func fm1SinglePage(t *testing.T, term *Terminal) *Page {
 // fm1LastPage is `const page = &pages.pages.last.?.data;`.
 func fm1LastPage(t *testing.T, term *Terminal) *Page {
 	t.Helper()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	return &fm1UnwrapPtr(t, pages.pages.last).data
 }
 
@@ -110,17 +110,17 @@ func fm1UnwrapPtr[T any](t *testing.T, p *T) *T {
 
 // fm1Coord is `Coordinate{ .x = x, .y = y }`.
 func fm1Coord(x int, y int) PointCoordinate {
-	return PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}
+	return PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}
 }
 
 // fm1PointScreen is `.{ .screen = .{ .x = x, .y = y } }`.
 func fm1PointScreen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 // fm1PointActive is `.{ .active = .{ .x = x, .y = y } }`.
 func fm1PointActive(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 // fm1ExpectMapLen checks `point_map.items.len == output.len`.
@@ -173,7 +173,7 @@ func TestFm1_Page_plain_single_line(t *testing.T) {
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
 	// Verify output
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello, world", string(output))
@@ -199,7 +199,7 @@ func TestFm1_Page_plain_single_line_soft_wrapped_unwrapped(t *testing.T) {
 	// Create the formatter
 	page := fm1SinglePage(t, term)
 	opts := FormatterOptionsPlain
-	opts.unwrap = true
+	opts.Unwrap = true
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	// Test our point map.
@@ -210,19 +210,19 @@ func TestFm1_Page_plain_single_line_soft_wrapped_unwrapped(t *testing.T) {
 	// Verify output
 	// Note: we don't test the trailing state, which may have bugs
 	// with unwrap...
-	_, err := formatter.FormatWithState(&builder.writer)
+	_, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello!", string(output))
 
 	// Verify our point map
 	fm1ExpectMapLen(t, output, point_map)
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[0])
-	expectEqual(t, PointCoordinate{x: 1, y: 0}, point_map[1])
-	expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[2])
-	expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[3])
-	expectEqual(t, PointCoordinate{x: 1, y: 1}, point_map[4])
-	expectEqual(t, PointCoordinate{x: 2, y: 1}, point_map[5])
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[0])
+	expectEqual(t, PointCoordinate{X: 1, Y: 0}, point_map[1])
+	expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[2])
+	expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[3])
+	expectEqual(t, PointCoordinate{X: 1, Y: 1}, point_map[4])
+	expectEqual(t, PointCoordinate{X: 2, Y: 1}, point_map[5])
 }
 
 // Zig: test "Page plain single wide char"
@@ -247,7 +247,7 @@ func TestFm1_Page_plain_single_wide_char(t *testing.T) {
 	{
 		fm1ClearRetainingCapacity(builder)
 		point_map = point_map[:0]
-		state, err := formatter.FormatWithState(&builder.writer)
+		state, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "1A⚡", string(output))
@@ -257,7 +257,7 @@ func TestFm1_Page_plain_single_wide_char(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 2; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[i])
 		}
 	}
 
@@ -267,7 +267,7 @@ func TestFm1_Page_plain_single_wide_char(t *testing.T) {
 		point_map = point_map[:0]
 
 		formatter.start_x = 2
-		state, err := formatter.FormatWithState(&builder.writer)
+		state, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "⚡", string(output))
@@ -277,7 +277,7 @@ func TestFm1_Page_plain_single_wide_char(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 0; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[i])
 		}
 	}
 
@@ -287,7 +287,7 @@ func TestFm1_Page_plain_single_wide_char(t *testing.T) {
 		point_map = point_map[:0]
 
 		formatter.start_x = 3
-		state, err := formatter.FormatWithState(&builder.writer)
+		state, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "⚡", string(output))
@@ -297,7 +297,7 @@ func TestFm1_Page_plain_single_wide_char(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 0; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[i])
 		}
 	}
 }
@@ -314,7 +314,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 	// Create the formatter
 	page := fm1SinglePage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsPlain)
-	formatter.opts.unwrap = true
+	formatter.opts.Unwrap = true
 
 	// Test our point map.
 	var point_map []PointCoordinate
@@ -325,7 +325,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 	{
 		fm1ClearRetainingCapacity(builder)
 		point_map = point_map[:0]
-		state, err := formatter.FormatWithState(&builder.writer)
+		state, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "1A⚡", string(output))
@@ -335,7 +335,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 2; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[i])
 		}
 	}
 
@@ -351,7 +351,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 			formatter.end_y = None[SizeCellCountInt]()
 		}()
 
-		_, err := formatter.FormatWithState(&builder.writer)
+		_, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "1A⚡", string(output))
@@ -359,7 +359,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 2; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[i])
 		}
 	}()
 
@@ -369,7 +369,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 		point_map = point_map[:0]
 
 		formatter.start_x = 2
-		state, err := formatter.FormatWithState(&builder.writer)
+		state, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "⚡", string(output))
@@ -379,7 +379,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 0; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[i])
 		}
 	}
 
@@ -390,7 +390,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 
 		formatter.start_y = 1
 		formatter.start_x = 1
-		state, err := formatter.FormatWithState(&builder.writer)
+		state, err := formatter.formatWithState(&builder.writer)
 		zigTry(t, err)
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "⚡", string(output))
@@ -400,7 +400,7 @@ func TestFm1_Page_plain_single_wide_char_soft_wrapped_unwrapped(t *testing.T) {
 		// Verify our point map
 		fm1ExpectMapLen(t, output, point_map)
 		for i := 0; i < len(output); i++ {
-			expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[i])
+			expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[i])
 		}
 	}
 }
@@ -423,7 +423,7 @@ func TestFm1_Page_plain_multiline(t *testing.T) {
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
 	// Verify output
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\nworld", string(output))
@@ -435,7 +435,7 @@ func TestFm1_Page_plain_multiline(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[5]) // \n
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[6+i])
 	}
@@ -462,7 +462,7 @@ func TestFm1_Page_plain_multiline_rectangle(t *testing.T) {
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
 	// Verify output
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "ell\norl", string(output))
@@ -474,7 +474,7 @@ func TestFm1_Page_plain_multiline_rectangle(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		expectEqual(t, fm1Coord(i+1, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 3, y: 0}, point_map[3]) // \n
+	expectEqual(t, PointCoordinate{X: 3, Y: 0}, point_map[3]) // \n
 	for i := 0; i < 3; i++ {
 		expectEqual(t, fm1Coord(i+1, 1), point_map[4+i])
 	}
@@ -498,7 +498,7 @@ func TestFm1_Page_plain_multi_blank_lines(t *testing.T) {
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
 	// Verify output
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\n\n\nworld", string(output))
@@ -510,9 +510,9 @@ func TestFm1_Page_plain_multi_blank_lines(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[5]) // \n after row 0
-	expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[6]) // \n after blank row 1
-	expectEqual(t, PointCoordinate{x: 0, y: 2}, point_map[7]) // \n after blank row 2
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[5]) // \n after row 0
+	expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[6]) // \n after blank row 1
+	expectEqual(t, PointCoordinate{X: 0, Y: 2}, point_map[7]) // \n after blank row 2
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 3), point_map[8+i])
 	}
@@ -538,7 +538,7 @@ func TestFm1_Page_plain_trailing_blank_lines(t *testing.T) {
 	// Verify output. We expect there to be no trailing newlines because
 	// we can't differentiate trailing blank lines as being meaningful because
 	// the page formatter can't see the cursor position.
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\nworld", string(output))
@@ -550,7 +550,7 @@ func TestFm1_Page_plain_trailing_blank_lines(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[5]) // \n
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[6+i])
 	}
@@ -576,7 +576,7 @@ func TestFm1_Page_plain_trailing_whitespace(t *testing.T) {
 	// Verify output. We expect there to be no trailing newlines because
 	// we can't differentiate trailing blank lines as being meaningful because
 	// the page formatter can't see the cursor position.
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\nworld", string(output))
@@ -588,7 +588,7 @@ func TestFm1_Page_plain_trailing_whitespace(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[5]) // \n
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[6+i])
 	}
@@ -606,7 +606,7 @@ func TestFm1_Page_plain_trailing_whitespace_no_trim(t *testing.T) {
 	// Create the formatter
 	page := fm1SinglePage(t, term)
 	opts := FormatterOptionsPlain
-	opts.trim = false
+	opts.Trim = false
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	var point_map []PointCoordinate
@@ -616,7 +616,7 @@ func TestFm1_Page_plain_trailing_whitespace_no_trim(t *testing.T) {
 	// Verify output. We expect there to be no trailing newlines because
 	// we can't differentiate trailing blank lines as being meaningful because
 	// the page formatter can't see the cursor position.
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello   \nworld  ", string(output))
@@ -628,7 +628,7 @@ func TestFm1_Page_plain_trailing_whitespace_no_trim(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 7, y: 0}, point_map[8]) // \n
+	expectEqual(t, PointCoordinate{X: 7, Y: 0}, point_map[8]) // \n
 	for i := 0; i < 7; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[9+i])
 	}
@@ -650,7 +650,7 @@ func TestFm1_Page_plain_with_prior_trailing_state_rows(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "\n\nhello", string(output))
@@ -659,8 +659,8 @@ func TestFm1_Page_plain_with_prior_trailing_state_rows(t *testing.T) {
 
 	// Verify point map
 	fm1ExpectMapLen(t, output, point_map)
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[0]) // \n first blank row
-	expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[1]) // \n second blank row
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[0]) // \n first blank row
+	expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[1]) // \n second blank row
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[2+i])
 	}
@@ -682,7 +682,7 @@ func TestFm1_Page_plain_with_prior_trailing_state_cells_no_wrapped_line(t *testi
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Blank cells are reset when row is not a wrap continuation
@@ -712,7 +712,7 @@ func TestFm1_Page_plain_with_prior_trailing_state_cells_with_wrap_continuation(t
 	row.wrap_continuation = true
 
 	opts := FormatterOptionsPlain
-	opts.unwrap = true
+	opts.Unwrap = true
 	formatter := FormatterPageFormatterInit(page, opts)
 	formatter.trailing_state = Some(FormatterPageFormatterTrailingState{rows: 0, cells: 3})
 
@@ -720,7 +720,7 @@ func TestFm1_Page_plain_with_prior_trailing_state_cells_with_wrap_continuation(t
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Blank cells are preserved when row is a wrap continuation with unwrap enabled
@@ -731,9 +731,9 @@ func TestFm1_Page_plain_with_prior_trailing_state_cells_with_wrap_continuation(t
 	// Verify point map - 3 spaces from prior trailing state + "world"
 	fm1ExpectMapLen(t, output, point_map)
 	// The 3 blank cells can't go back beyond (0,0) so they all map to (0,0)
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[0]) // space
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[1]) // space
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[2]) // space
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[0]) // space
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[1]) // space
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[2]) // space
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[3+i])
 	}
@@ -754,7 +754,7 @@ func TestFm1_Page_plain_soft_wrapped_without_unwrap(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Without unwrap, wrapped lines show as separate lines
@@ -767,7 +767,7 @@ func TestFm1_Page_plain_soft_wrapped_without_unwrap(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 9, y: 0}, point_map[10]) // \n
+	expectEqual(t, PointCoordinate{X: 9, Y: 0}, point_map[10]) // \n
 	for i := 0; i < 6; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[11+i])
 	}
@@ -783,14 +783,14 @@ func TestFm1_Page_plain_soft_wrapped_with_unwrap(t *testing.T) {
 
 	page := fm1SinglePage(t, term)
 	opts := FormatterOptionsPlain
-	opts.unwrap = true
+	opts.Unwrap = true
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	var point_map []PointCoordinate
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// With unwrap, wrapped lines are joined together
@@ -823,7 +823,7 @@ func TestFm1_Page_plain_soft_wrapped_3_lines_without_unwrap(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Without unwrap, wrapped lines show as separate lines
@@ -836,11 +836,11 @@ func TestFm1_Page_plain_soft_wrapped_3_lines_without_unwrap(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 9, y: 0}, point_map[10]) // \n
+	expectEqual(t, PointCoordinate{X: 9, Y: 0}, point_map[10]) // \n
 	for i := 0; i < 9; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[11+i])
 	}
-	expectEqual(t, PointCoordinate{x: 8, y: 1}, point_map[20]) // \n
+	expectEqual(t, PointCoordinate{X: 8, Y: 1}, point_map[20]) // \n
 	for i := 0; i < 6; i++ {
 		expectEqual(t, fm1Coord(i, 2), point_map[21+i])
 	}
@@ -856,14 +856,14 @@ func TestFm1_Page_plain_soft_wrapped_3_lines_with_unwrap(t *testing.T) {
 
 	page := fm1SinglePage(t, term)
 	opts := FormatterOptionsPlain
-	opts.unwrap = true
+	opts.Unwrap = true
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	var point_map []PointCoordinate
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// With unwrap, wrapped lines are joined together
@@ -901,7 +901,7 @@ func TestFm1_Page_plain_start_y_subset(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "world\ntest", string(output))
@@ -913,7 +913,7 @@ func TestFm1_Page_plain_start_y_subset(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 1}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 4, Y: 1}, point_map[5]) // \n
 	for i := 0; i < 4; i++ {
 		expectEqual(t, fm1Coord(i, 2), point_map[6+i])
 	}
@@ -936,7 +936,7 @@ func TestFm1_Page_plain_end_y_subset(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\nworld", string(output))
@@ -948,7 +948,7 @@ func TestFm1_Page_plain_end_y_subset(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[5]) // \n
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[6+i])
 	}
@@ -972,7 +972,7 @@ func TestFm1_Page_plain_start_y_and_end_y_range(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "world\ntest", string(output))
@@ -984,7 +984,7 @@ func TestFm1_Page_plain_start_y_and_end_y_range(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 4, y: 1}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 4, Y: 1}, point_map[5]) // \n
 	for i := 0; i < 4; i++ {
 		expectEqual(t, fm1Coord(i, 2), point_map[6+i])
 	}
@@ -1007,7 +1007,7 @@ func TestFm1_Page_plain_start_y_out_of_bounds(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "", string(output))
@@ -1035,7 +1035,7 @@ func TestFm1_Page_plain_end_y_greater_than_rows(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Should clamp to page.size.rows and work normally
@@ -1068,7 +1068,7 @@ func TestFm1_Page_plain_end_y_less_than_start_y(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "", string(output))
@@ -1096,7 +1096,7 @@ func TestFm1_Page_plain_start_x_on_first_row_only(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "world", string(output))
@@ -1128,7 +1128,7 @@ func TestFm1_Page_plain_end_x_on_last_row_only(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "first line\nsecond line\nthird", string(output))
@@ -1140,11 +1140,11 @@ func TestFm1_Page_plain_end_x_on_last_row_only(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 9, y: 0}, point_map[10]) // \n
+	expectEqual(t, PointCoordinate{X: 9, Y: 0}, point_map[10]) // \n
 	for i := 0; i < 11; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[11+i])
 	}
-	expectEqual(t, PointCoordinate{x: 10, y: 1}, point_map[22]) // \n
+	expectEqual(t, PointCoordinate{X: 10, Y: 1}, point_map[22]) // \n
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 2), point_map[23+i])
 	}
@@ -1169,7 +1169,7 @@ func TestFm1_Page_plain_start_x_and_end_x_multiline(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// First row: "world" (start_x=6 to end of row)
@@ -1184,11 +1184,11 @@ func TestFm1_Page_plain_start_x_and_end_x_multiline(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i+6, 0), point_map[i])
 	}
-	expectEqual(t, PointCoordinate{x: 10, y: 0}, point_map[5]) // \n
+	expectEqual(t, PointCoordinate{X: 10, Y: 0}, point_map[5]) // \n
 	for i := 0; i < 9; i++ {
 		expectEqual(t, fm1Coord(i, 1), point_map[6+i])
 	}
-	expectEqual(t, PointCoordinate{x: 8, y: 1}, point_map[15]) // \n
+	expectEqual(t, PointCoordinate{X: 8, Y: 1}, point_map[15]) // \n
 	for i := 0; i < 3; i++ {
 		expectEqual(t, fm1Coord(i, 2), point_map[16+i])
 	}
@@ -1211,7 +1211,7 @@ func TestFm1_Page_plain_start_x_out_of_bounds(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "", string(output))
@@ -1239,7 +1239,7 @@ func TestFm1_Page_plain_end_x_greater_than_cols(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello", string(output))
@@ -1272,7 +1272,7 @@ func TestFm1_Page_plain_end_x_less_than_start_x_single_row(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "", string(output))
@@ -1301,7 +1301,7 @@ func TestFm1_Page_plain_start_y_non_zero_ignores_trailing_state(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Should NOT output the 5 newlines from trailing_state because start_y is non-zero
@@ -1334,7 +1334,7 @@ func TestFm1_Page_plain_start_x_non_zero_ignores_trailing_state(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// Should NOT output the 2 newlines or 8 spaces from trailing_state because start_x is non-zero
@@ -1368,7 +1368,7 @@ func TestFm1_Page_plain_start_y_and_start_x_zero_uses_trailing_state(t *testing.
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	// SHOULD output the 2 newlines from trailing_state because both start_y and start_x are 0
@@ -1378,8 +1378,8 @@ func TestFm1_Page_plain_start_y_and_start_x_zero_uses_trailing_state(t *testing.
 
 	// Verify point map
 	fm1ExpectMapLen(t, output, point_map)
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[0]) // \n first blank row
-	expectEqual(t, PointCoordinate{x: 0, y: 1}, point_map[1]) // \n second blank row
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[0]) // \n first blank row
+	expectEqual(t, PointCoordinate{X: 0, Y: 1}, point_map[1]) // \n second blank row
 	for i := 0; i < 5; i++ {
 		expectEqual(t, fm1Coord(i, 0), point_map[2+i])
 	}
@@ -1403,7 +1403,7 @@ func TestFm1_Page_plain_single_line_with_styling(t *testing.T) {
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
 	// Verify output
-	state, err := formatter.FormatWithState(&builder.writer)
+	state, err := formatter.formatWithState(&builder.writer)
 	zigTry(t, err)
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello, world", string(output))
@@ -1433,7 +1433,7 @@ func TestFm1_Page_VT_single_line_plain_text(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello", string(output))
 
@@ -1460,7 +1460,7 @@ func TestFm1_Page_VT_single_line_with_bold(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "\x1b[0m\x1b[1mhello\x1b[0m", string(output))
 
@@ -1469,7 +1469,7 @@ func TestFm1_Page_VT_single_line_with_bold(t *testing.T) {
 	// \x1b[0m = 4 bytes, \x1b[1m = 4 bytes, total 8 bytes of style sequences
 	// All style bytes should map to the first styled character at (0, 0)
 	for i := 0; i < 8; i++ {
-		expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[i])
+		expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[i])
 	}
 	// Then "hello" maps to its respective positions
 	for i := 0; i < 5; i++ {
@@ -1493,7 +1493,7 @@ func TestFm1_Page_VT_multiple_styles(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "\x1b[0m\x1b[1mhello \x1b[0m\x1b[1m\x1b[3mworld\x1b[0m", string(output))
 
@@ -1517,7 +1517,7 @@ func TestFm1_Page_VT_with_foreground_color(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "\x1b[0m\x1b[38;5;1mred\x1b[0m", string(output))
 
@@ -1526,7 +1526,7 @@ func TestFm1_Page_VT_with_foreground_color(t *testing.T) {
 	// \x1b[0m = 4 bytes, \x1b[38;5;1m = 9 bytes, total 13 bytes of style sequences
 	// All style bytes should map to the first styled character at (0, 0)
 	for i := 0; i < 13; i++ {
-		expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[i])
+		expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[i])
 	}
 	// Then "red" maps to its respective positions
 	for i := 0; i < 3; i++ {
@@ -1545,11 +1545,11 @@ func TestFm1_Page_VT_with_background_and_foreground_colors(t *testing.T) {
 	page := fm1LastPage(t, term)
 
 	opts := FormatterOptionsVt
-	opts.background = Some(ColorRGB{r: 0x12, g: 0x34, b: 0x56})
-	opts.foreground = Some(ColorRGB{r: 0xab, g: 0xcd, b: 0xef})
+	opts.Background = Some(ColorRGB{R: 0x12, G: 0x34, B: 0x56})
+	opts.Foreground = Some(ColorRGB{R: 0xab, G: 0xcd, B: 0xef})
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Should emit OSC 10 for foreground, OSC 11 for background, then the text
@@ -1575,7 +1575,7 @@ func TestFm1_Page_VT_multi_line_with_styles(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	// Note: style is reset before newline to prevent background colors from
 	// bleeding to the next line's leading cells.
@@ -1601,7 +1601,7 @@ func TestFm1_Page_VT_duplicate_style_not_emitted_twice(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "\x1b[0m\x1b[1mhello\x1b[0m", string(output))
 
@@ -1620,17 +1620,17 @@ func TestFm1_PageList_plain_single_line(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterPageListFormatterInit(&term.screens.active.pages, FormatterOptionsPlain)
+	formatter := FormatterPageListFormatterInit(&term.Screens.Active.Pages, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello, world", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, PageListPin{node: node, x: SizeCellCountInt(i), y: 0}, pin_map[i])
+		expectEqual(t, PageListPin{Node: node, X: SizeCellCountInt(i), Y: 0}, pin_map[i])
 	}
 }
 
@@ -1640,7 +1640,7 @@ func TestFm1_PageList_plain_spanning_two_pages(t *testing.T) {
 	builder := fm1Builder(t)
 	term, s := fm1Terminal(t, 80, 24)
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_rows := fm1UnwrapPtr(t, pages.pages.first).data.capacity.rows
 
 	// Fill the first page almost completely
@@ -1665,7 +1665,7 @@ func TestFm1_PageList_plain_spanning_two_pages(t *testing.T) {
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	full_output := builder.writer.buffered()
 	output := bytes.TrimLeft(full_output, "\n")
 	expectEqualStrings(t, "page one\npage two", string(output))
@@ -1678,24 +1678,24 @@ func TestFm1_PageList_plain_spanning_two_pages(t *testing.T) {
 
 	// First part (trimmed blank lines) maps to first node
 	for i := 0; i < trimmed_count; i++ {
-		expectEqual(t, first_node, pin_map[i].node)
+		expectEqual(t, first_node, pin_map[i].Node)
 	}
 
 	// "page one" (8 chars) maps to first node
 	for i := 0; i < 8; i++ {
 		idx := trimmed_count + i
-		expectEqual(t, first_node, pin_map[idx].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[idx].x)
+		expectEqual(t, first_node, pin_map[idx].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[idx].X)
 	}
 
 	// \n - maps to last node as it represents the transition to new page
-	expectEqual(t, last_node, pin_map[trimmed_count+8].node)
+	expectEqual(t, last_node, pin_map[trimmed_count+8].Node)
 
 	// "page two" (8 chars) maps to last node
 	for i := 0; i < 8; i++ {
 		idx := trimmed_count + 9 + i
-		expectEqual(t, last_node, pin_map[idx].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[idx].x)
+		expectEqual(t, last_node, pin_map[idx].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[idx].X)
 	}
 }
 
@@ -1705,7 +1705,7 @@ func TestFm1_PageList_soft_wrapped_line_spanning_two_pages_without_unwrap(t *tes
 	builder := fm1Builder(t)
 	term, s := fm1Terminal(t, 10, 3)
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_rows := fm1UnwrapPtr(t, pages.pages.first).data.capacity.rows
 
 	// Fill the first page with soft-wrapped content
@@ -1723,7 +1723,7 @@ func TestFm1_PageList_soft_wrapped_line_spanning_two_pages_without_unwrap(t *tes
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	full_output := builder.writer.buffered()
 	output := bytes.TrimLeft(full_output, "\n")
 	expectEqualStrings(t, "hello worl\nd test", string(output))
@@ -1736,22 +1736,22 @@ func TestFm1_PageList_soft_wrapped_line_spanning_two_pages_without_unwrap(t *tes
 
 	// First part (trimmed blank lines) maps to first node
 	for i := 0; i < trimmed_count; i++ {
-		expectEqual(t, first_node, pin_map[i].node)
+		expectEqual(t, first_node, pin_map[i].Node)
 	}
 
 	// First line maps to first node
 	for i := 0; i < 10; i++ {
 		idx := trimmed_count + i
-		expectEqual(t, first_node, pin_map[idx].node)
+		expectEqual(t, first_node, pin_map[idx].Node)
 	}
 
 	// \n - maps to last node as it represents the transition to new page
-	expectEqual(t, last_node, pin_map[trimmed_count+10].node)
+	expectEqual(t, last_node, pin_map[trimmed_count+10].Node)
 
 	// "d test" (6 chars) maps to last node
 	for i := 0; i < 6; i++ {
 		idx := trimmed_count + 11 + i
-		expectEqual(t, last_node, pin_map[idx].node)
+		expectEqual(t, last_node, pin_map[idx].Node)
 	}
 }
 
@@ -1761,7 +1761,7 @@ func TestFm1_PageList_soft_wrapped_line_spanning_two_pages_with_unwrap(t *testin
 	builder := fm1Builder(t)
 	term, s := fm1Terminal(t, 10, 3)
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_rows := fm1UnwrapPtr(t, pages.pages.first).data.capacity.rows
 
 	// Fill the first page with soft-wrapped content
@@ -1778,10 +1778,10 @@ func TestFm1_PageList_soft_wrapped_line_spanning_two_pages_with_unwrap(t *testin
 	// Zig-only: defer pin_map.deinit(alloc);
 
 	opts := FormatterOptionsPlain
-	opts.unwrap = true
+	opts.Unwrap = true
 	formatter := FormatterPageListFormatterInit(pages, opts)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	full_output := builder.writer.buffered()
 	output := bytes.TrimLeft(full_output, "\r\n")
 	expectEqualStrings(t, "hello world test", string(output))
@@ -1794,19 +1794,19 @@ func TestFm1_PageList_soft_wrapped_line_spanning_two_pages_with_unwrap(t *testin
 
 	// First part (trimmed blank lines) maps to first node
 	for i := 0; i < trimmed_count; i++ {
-		expectEqual(t, first_node, pin_map[i].node)
+		expectEqual(t, first_node, pin_map[i].Node)
 	}
 
 	// First line from first page
 	for i := 0; i < 10; i++ {
 		idx := trimmed_count + i
-		expectEqual(t, first_node, pin_map[idx].node)
+		expectEqual(t, first_node, pin_map[idx].Node)
 	}
 
 	// "d test" (6 chars) from last page
 	for i := 0; i < 6; i++ {
 		idx := trimmed_count + 10 + i
-		expectEqual(t, last_node, pin_map[idx].node)
+		expectEqual(t, last_node, pin_map[idx].Node)
 	}
 }
 
@@ -1816,7 +1816,7 @@ func TestFm1_PageList_VT_spanning_two_pages(t *testing.T) {
 	builder := fm1Builder(t)
 	term, s := fm1Terminal(t, 80, 24)
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_rows := fm1UnwrapPtr(t, pages.pages.first).data.capacity.rows
 
 	// Fill the first page almost completely
@@ -1841,7 +1841,7 @@ func TestFm1_PageList_VT_spanning_two_pages(t *testing.T) {
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsVt)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	full_output := builder.writer.buffered()
 	output := bytes.TrimLeft(full_output, "\r\n")
 	expectEqualStrings(t, "\x1b[0m\x1b[1mpage one\x1b[0m\r\n\x1b[0m\x1b[1mpage two\x1b[0m", string(output))
@@ -1855,10 +1855,10 @@ func TestFm1_PageList_VT_spanning_two_pages(t *testing.T) {
 	var first_count uint = 0
 	var last_count uint = 0
 	for _, pin := range pin_map {
-		if pin.node == first_node {
+		if pin.Node == first_node {
 			first_count += 1
 		}
-		if pin.node == last_node {
+		if pin.Node == last_node {
 			last_count += 1
 		}
 	}
@@ -1874,31 +1874,31 @@ func TestFm1_PageList_plain_with_x_offset_on_single_page(t *testing.T) {
 
 	fm1Next(t, s, "hello world\r\ntest case\r\nfoo bar")
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	node := fm1UnwrapPtr(t, pages.pages.first)
 
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
-	formatter.top_left = Some(PageListPin{node: node, y: 0, x: 6})
-	formatter.bottom_right = Some(PageListPin{node: node, y: 2, x: 2})
+	formatter.top_left = Some(PageListPin{Node: node, Y: 0, X: 6})
+	formatter.bottom_right = Some(PageListPin{Node: node, Y: 2, X: 2})
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "world\ntest case\nfoo", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	for _, pin := range pin_map {
-		expectEqual(t, node, pin.node)
+		expectEqual(t, node, pin.Node)
 	}
 
 	// "world" starts at x=6, y=0
 	for i := 0; i < 5; i++ {
-		expectEqual(t, SizeCellCountInt(6+i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(0), pin_map[i].y)
+		expectEqual(t, SizeCellCountInt(6+i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(0), pin_map[i].Y)
 	}
 }
 
@@ -1908,7 +1908,7 @@ func TestFm1_PageList_plain_with_x_offset_spanning_two_pages(t *testing.T) {
 	builder := fm1Builder(t)
 	term, s := fm1Terminal(t, 80, 24)
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_rows := fm1UnwrapPtr(t, pages.pages.first).data.capacity.rows
 
 	// Fill first page almost completely
@@ -1933,11 +1933,11 @@ func TestFm1_PageList_plain_with_x_offset_spanning_two_pages(t *testing.T) {
 	// Zig-only: defer pin_map.deinit(alloc);
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
-	formatter.top_left = Some(PageListPin{node: first_node, y: first_node.data.size.rows - 1, x: 6})
-	formatter.bottom_right = Some(PageListPin{node: last_node, y: 1, x: 2})
+	formatter.top_left = Some(PageListPin{Node: first_node, Y: first_node.data.size.rows - 1, X: 6})
+	formatter.bottom_right = Some(PageListPin{Node: last_node, Y: 1, X: 2})
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	full_output := builder.writer.buffered()
 	output := bytes.TrimLeft(full_output, "\n")
 	expectEqualStrings(t, "world\nfoo", string(output))
@@ -1949,18 +1949,18 @@ func TestFm1_PageList_plain_with_x_offset_spanning_two_pages(t *testing.T) {
 	// "world" (5 chars) from first page
 	for i := 0; i < 5; i++ {
 		idx := trimmed_count + i
-		expectEqual(t, first_node, pin_map[idx].node)
-		expectEqual(t, SizeCellCountInt(6+i), pin_map[idx].x)
+		expectEqual(t, first_node, pin_map[idx].Node)
+		expectEqual(t, SizeCellCountInt(6+i), pin_map[idx].X)
 	}
 
 	// \n - maps to last node as it represents the transition to new page
-	expectEqual(t, last_node, pin_map[trimmed_count+5].node)
+	expectEqual(t, last_node, pin_map[trimmed_count+5].Node)
 
 	// "foo" (3 chars) from last page
 	for i := 0; i < 3; i++ {
 		idx := trimmed_count + 6 + i
-		expectEqual(t, last_node, pin_map[idx].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[idx].x)
+		expectEqual(t, last_node, pin_map[idx].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[idx].X)
 	}
 }
 
@@ -1972,26 +1972,26 @@ func TestFm1_PageList_plain_with_start_x_only(t *testing.T) {
 
 	fm1Next(t, s, "hello world")
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	node := fm1UnwrapPtr(t, pages.pages.first)
 
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
-	formatter.top_left = Some(PageListPin{node: node, y: 0, x: 6})
+	formatter.top_left = Some(PageListPin{Node: node, Y: 0, X: 6})
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "world", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	for i := 0; i < 5; i++ {
-		expectEqual(t, node, pin_map[i].node)
-		expectEqual(t, SizeCellCountInt(6+i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(0), pin_map[i].y)
+		expectEqual(t, node, pin_map[i].Node)
+		expectEqual(t, SizeCellCountInt(6+i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(0), pin_map[i].Y)
 	}
 }
 
@@ -2003,17 +2003,17 @@ func TestFm1_PageList_plain_with_end_x_only(t *testing.T) {
 
 	fm1Next(t, s, "hello world\r\ntest")
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	node := fm1UnwrapPtr(t, pages.pages.first)
 
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
-	formatter.bottom_right = Some(PageListPin{node: node, y: 1, x: 2})
+	formatter.bottom_right = Some(PageListPin{Node: node, Y: 1, X: 2})
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello world\ntes", string(output))
 
@@ -2022,19 +2022,19 @@ func TestFm1_PageList_plain_with_end_x_only(t *testing.T) {
 
 	// "hello world" (11 chars) on y=0
 	for i := 0; i < 11; i++ {
-		expectEqual(t, node, pin_map[i].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(0), pin_map[i].y)
+		expectEqual(t, node, pin_map[i].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(0), pin_map[i].Y)
 	}
 
 	// \n
-	expectEqual(t, node, pin_map[11].node)
+	expectEqual(t, node, pin_map[11].Node)
 
 	// "tes" (3 chars) on y=1
 	for i := 0; i < 3; i++ {
-		expectEqual(t, node, pin_map[12+i].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[12+i].x)
-		expectEqual(t, SizeCellCountInt(1), pin_map[12+i].y)
+		expectEqual(t, node, pin_map[12+i].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[12+i].X)
+		expectEqual(t, SizeCellCountInt(1), pin_map[12+i].Y)
 	}
 }
 
@@ -2050,14 +2050,14 @@ func TestFm1_PageList_plain_rectangle_basic(t *testing.T) {
 	fm1Next(t, s, "eiusmod tempor incididunt\r\n")
 	fm1Next(t, s, "ut labore et dolore")
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
 	formatter.top_left = Some(zigUnwrap(t, pages.Pin(fm1PointScreen(2, 1))))
 	formatter.bottom_right = Some(zigUnwrap(t, pages.Pin(fm1PointScreen(6, 3))))
 	formatter.rectangle = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expected := fm1Lines(
@@ -2080,14 +2080,14 @@ func TestFm1_PageList_plain_rectangle_with_EOL(t *testing.T) {
 	fm1Next(t, s, "eiusmod tempor incididunt\r\n")
 	fm1Next(t, s, "ut labore et dolore")
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
 	formatter.top_left = Some(zigUnwrap(t, pages.Pin(fm1PointScreen(12, 0))))
 	formatter.bottom_right = Some(zigUnwrap(t, pages.Pin(fm1PointScreen(26, 4))))
 	formatter.rectangle = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expected := fm1Lines(
@@ -2115,14 +2115,14 @@ func TestFm1_PageList_plain_rectangle_more_complex_with_breaks(t *testing.T) {
 	fm1Next(t, s, "magna aliqua. Ut enim\r\n")
 	fm1Next(t, s, "ad minim veniam, quis")
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 
 	formatter := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
 	formatter.top_left = Some(zigUnwrap(t, pages.Pin(fm1PointScreen(11, 2))))
 	formatter.bottom_right = Some(zigUnwrap(t, pages.Pin(fm1PointScreen(26, 7))))
 	formatter.rectangle = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expected := fm1Lines(
@@ -2146,7 +2146,7 @@ func TestFm1_TerminalFormatter_plain_no_selection(t *testing.T) {
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsPlain)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	expectEqualStrings(t, "hello\nworld", string(builder.writer.buffered()))
 }
 
@@ -2164,7 +2164,7 @@ func TestFm1_TerminalFormatter_vt_with_palette(t *testing.T) {
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -2173,9 +2173,9 @@ func TestFm1_TerminalFormatter_vt_with_palette(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify the palettes match
-	expectEqual(t, term.colors.palette.current[0], t2.colors.palette.current[0])
-	expectEqual(t, term.colors.palette.current[1], t2.colors.palette.current[1])
-	expectEqual(t, term.colors.palette.current[255], t2.colors.palette.current[255])
+	expectEqual(t, term.Colors.Palette.Current[0], t2.Colors.Palette.Current[0])
+	expectEqual(t, term.Colors.Palette.Current[1], t2.Colors.Palette.Current[1])
+	expectEqual(t, term.Colors.Palette.Current[255], t2.Colors.Palette.Current[255])
 }
 
 // Zig: test "TerminalFormatter with selection"
@@ -2190,13 +2190,13 @@ func TestFm1_TerminalFormatter_with_selection(t *testing.T) {
 	formatter.content = FormatterScreenFormatterContent{
 		Tag: FormatterScreenFormatterContentSelection,
 		Selection: Some(SelectionInit(
-			zigUnwrap(t, term.screens.active.pages.Pin(fm1PointActive(0, 1))),
-			zigUnwrap(t, term.screens.active.pages.Pin(fm1PointActive(4, 1))),
+			zigUnwrap(t, term.Screens.Active.Pages.Pin(fm1PointActive(0, 1))),
+			zigUnwrap(t, term.Screens.Active.Pages.Pin(fm1PointActive(4, 1))),
 			false,
 		)),
 	}
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	expectEqualStrings(t, "line2", string(builder.writer.buffered()))
 }
 
@@ -2214,15 +2214,15 @@ func TestFm1_TerminalFormatter_plain_with_pin_map(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello, world", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, PageListPin{node: node, x: SizeCellCountInt(i), y: 0}, pin_map[i])
+		expectEqual(t, PageListPin{Node: node, X: SizeCellCountInt(i), Y: 0}, pin_map[i])
 	}
 }
 
@@ -2240,27 +2240,27 @@ func TestFm1_TerminalFormatter_plain_multiline_with_pin_map(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\nworld", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	// "hello" (5 chars)
 	for i := 0; i < 5; i++ {
-		expectEqual(t, node, pin_map[i].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(0), pin_map[i].y)
+		expectEqual(t, node, pin_map[i].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(0), pin_map[i].Y)
 	}
 	// "\n" maps to end of first line
-	expectEqual(t, node, pin_map[5].node)
+	expectEqual(t, node, pin_map[5].Node)
 	// "world" (5 chars)
 	for i := 0; i < 5; i++ {
 		idx := 6 + i
-		expectEqual(t, node, pin_map[idx].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[idx].x)
-		expectEqual(t, SizeCellCountInt(1), pin_map[idx].y)
+		expectEqual(t, node, pin_map[idx].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[idx].X)
+		expectEqual(t, SizeCellCountInt(1), pin_map[idx].Y)
 	}
 }
 
@@ -2280,14 +2280,14 @@ func TestFm1_TerminalFormatter_vt_with_palette_and_pin_map(t *testing.T) {
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Verify pin map - palette bytes should be mapped to top left
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -2306,25 +2306,25 @@ func TestFm1_TerminalFormatter_with_selection_and_pin_map(t *testing.T) {
 	formatter.content = FormatterScreenFormatterContent{
 		Tag: FormatterScreenFormatterContentSelection,
 		Selection: Some(SelectionInit(
-			zigUnwrap(t, term.screens.active.pages.Pin(fm1PointActive(0, 1))),
-			zigUnwrap(t, term.screens.active.pages.Pin(fm1PointActive(4, 1))),
+			zigUnwrap(t, term.Screens.Active.Pages.Pin(fm1PointActive(0, 1))),
+			zigUnwrap(t, term.Screens.Active.Pages.Pin(fm1PointActive(4, 1))),
 			false,
 		)),
 	}
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "line2", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	// "line2" (5 chars) from row 1
 	for i := 0; i < 5; i++ {
-		expectEqual(t, node, pin_map[i].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(1), pin_map[i].y)
+		expectEqual(t, node, pin_map[i].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(1), pin_map[i].Y)
 	}
 }
 
@@ -2339,18 +2339,18 @@ func TestFm1_Screen_plain_single_line(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello, world", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, PageListPin{node: node, x: SizeCellCountInt(i), y: 0}, pin_map[i])
+		expectEqual(t, PageListPin{Node: node, X: SizeCellCountInt(i), Y: 0}, pin_map[i])
 	}
 }
 
@@ -2365,30 +2365,30 @@ func TestFm1_Screen_plain_multiline(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello\nworld", string(output))
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
-	node := fm1UnwrapPtr(t, term.screens.active.pages.pages.first)
+	node := fm1UnwrapPtr(t, term.Screens.Active.Pages.pages.first)
 	// "hello" (5 chars)
 	for i := 0; i < 5; i++ {
-		expectEqual(t, node, pin_map[i].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(0), pin_map[i].y)
+		expectEqual(t, node, pin_map[i].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(0), pin_map[i].Y)
 	}
 	// "\n" maps to end of first line
-	expectEqual(t, node, pin_map[5].node)
+	expectEqual(t, node, pin_map[5].Node)
 	// "world" (5 chars)
 	for i := 0; i < 5; i++ {
 		idx := 6 + i
-		expectEqual(t, node, pin_map[idx].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[idx].x)
-		expectEqual(t, SizeCellCountInt(1), pin_map[idx].y)
+		expectEqual(t, node, pin_map[idx].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[idx].X)
+		expectEqual(t, SizeCellCountInt(1), pin_map[idx].Y)
 	}
 }
 
@@ -2471,7 +2471,7 @@ func TestFm1_panic_PageFormatter_writeCodepointWithReplacement_invalid_utf8(t *t
 	page := fm1LastPage(t, term)
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some([]FormatterCodepointMap{{
+	opts.CodepointMap = Some([]FormatterCodepointMap{{
 		range_: [2]uint32{'a', 'a'},
 		replacement: FormatterCodepointMapReplacement{
 			Tag:    FormatterCodepointMapReplacementString,
@@ -2480,7 +2480,7 @@ func TestFm1_panic_PageFormatter_writeCodepointWithReplacement_invalid_utf8(t *t
 	}})
 	formatter := FormatterPageFormatterInit(page, opts)
 	fm1ExpectPanic(t, func() {
-		_ = formatter.Format(&builder.writer)
+		_ = formatter.format(&builder.writer)
 	})
 }
 
@@ -2513,7 +2513,7 @@ func TestFm1_panic_PageFormatter_formatWithState_rectangle_start_x_after_end_x(t
 	formatter.end_y = Some(SizeCellCountInt(1))
 	formatter.rectangle = true
 	fm1ExpectPanic(t, func() {
-		_, _ = formatter.FormatWithState(&builder.writer)
+		_, _ = formatter.formatWithState(&builder.writer)
 	})
 }
 
@@ -2523,10 +2523,10 @@ func TestFm1_panic_ScreenFormatter_format_charset_gr_G0(t *testing.T) {
 	builder := fm1Builder(t)
 	term, _ := fm1Terminal(t, 80, 24)
 
-	term.screens.active.charset.gr = CharsetsSlotsG0
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.charsets = true
+	term.Screens.Active.Charset.Gr = CharsetsSlotsG0
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Charsets = true
 	fm1ExpectPanic(t, func() {
-		_ = formatter.Format(&builder.writer)
+		_ = formatter.format(&builder.writer)
 	})
 }

@@ -43,8 +43,8 @@ func TestSaPagelist_simple_search(t *testing.T) {
 
 	search, err := SearchPagelistInit(
 		[]uint8("Fizz"),
-		&term.screens.active.pages,
-		term.screens.active.pages.pages.last,
+		&term.Screens.Active.Pages,
+		term.Screens.Active.Pages.pages.last,
 	)
 	zigTry(t, err)
 	defer search.Deinit()
@@ -52,14 +52,14 @@ func TestSaPagelist_simple_search(t *testing.T) {
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 
@@ -80,22 +80,22 @@ func TestSaPagelist_feed_multiple_pages_with_matches(t *testing.T) {
 	defer s.Deinit()
 
 	// Fill up first page
-	first_page_rows := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	first_page_rows := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 	for i := uint(0); i < first_page_rows-1; i++ {
 		zigTry(t, s.NextSlice([]uint8("\r\n")))
 	}
 	zigTry(t, s.NextSlice([]uint8("Fizz")))
-	expect(t, term.screens.active.pages.pages.first == term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first == term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
 
 	// Create second page
 	zigTry(t, s.NextSlice([]uint8("\r\n")))
-	expect(t, term.screens.active.pages.pages.first != term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first != term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
 	zigTry(t, s.NextSlice([]uint8("Buzz\r\nFizz")))
 
 	search, err := SearchPagelistInit(
 		[]uint8("Fizz"),
-		&term.screens.active.pages,
-		term.screens.active.pages.pages.last,
+		&term.Screens.Active.Pages,
+		term.Screens.Active.Pages.pages.last,
 	)
 	zigTry(t, err)
 	defer search.Deinit()
@@ -132,7 +132,7 @@ func TestSaPagelist_feed_multiple_pages_no_matches(t *testing.T) {
 	defer s.Deinit()
 
 	// Fill up first page
-	first_page_rows := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	first_page_rows := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 	for i := uint(0); i < first_page_rows-1; i++ {
 		zigTry(t, s.NextSlice([]uint8("\r\n")))
 	}
@@ -140,13 +140,13 @@ func TestSaPagelist_feed_multiple_pages_no_matches(t *testing.T) {
 
 	// Create second page
 	zigTry(t, s.NextSlice([]uint8("\r\n")))
-	expect(t, term.screens.active.pages.pages.first != term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first != term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
 	zigTry(t, s.NextSlice([]uint8("World")))
 
 	search, err := SearchPagelistInit(
 		[]uint8("Nope"),
-		&term.screens.active.pages,
-		term.screens.active.pages.pages.last,
+		&term.Screens.Active.Pages,
+		term.Screens.Active.Pages.pages.last,
 	)
 	zigTry(t, err)
 	defer search.Deinit()
@@ -178,24 +178,24 @@ func TestSaPagelist_feed_iteratively_through_multiple_matches(t *testing.T) {
 	s := term.VtStream()
 	defer s.Deinit()
 
-	first_page_rows := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	first_page_rows := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 
 	// Fill first page with a match at the end
 	for i := uint(0); i < first_page_rows-1; i++ {
 		zigTry(t, s.NextSlice([]uint8("\r\n")))
 	}
 	zigTry(t, s.NextSlice([]uint8("Page1Test")))
-	expect(t, term.screens.active.pages.pages.first == term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first == term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
 
 	// Create second page with a match
 	zigTry(t, s.NextSlice([]uint8("\r\n")))
-	expect(t, term.screens.active.pages.pages.first != term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first != term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
 	zigTry(t, s.NextSlice([]uint8("Page2Test")))
 
 	search, err := SearchPagelistInit(
 		[]uint8("Test"),
-		&term.screens.active.pages,
-		term.screens.active.pages.pages.last,
+		&term.Screens.Active.Pages,
+		term.Screens.Active.Pages.pages.last,
 	)
 	zigTry(t, err)
 	defer search.Deinit()
@@ -227,26 +227,26 @@ func TestSaPagelist_feed_with_match_spanning_page_boundary(t *testing.T) {
 	s := term.VtStream()
 	defer s.Deinit()
 
-	first_page_rows := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	first_page_rows := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 
 	// Fill first page ending with "Te"
 	for i := uint(0); i < first_page_rows-1; i++ {
 		zigTry(t, s.NextSlice([]uint8("\r\n")))
 	}
-	for i := uint(0); i < uint(term.screens.active.pages.cols)-2; i++ {
+	for i := uint(0); i < uint(term.Screens.Active.Pages.cols)-2; i++ {
 		zigTry(t, s.NextSlice([]uint8("x")))
 	}
 	zigTry(t, s.NextSlice([]uint8("Te")))
-	expect(t, term.screens.active.pages.pages.first == term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first == term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
 
 	// Second page starts with "st"
 	zigTry(t, s.NextSlice([]uint8("st")))
-	expect(t, term.screens.active.pages.pages.first != term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first != term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
 
 	search, err := SearchPagelistInit(
 		[]uint8("Test"),
-		&term.screens.active.pages,
-		term.screens.active.pages.pages.last,
+		&term.Screens.Active.Pages,
+		term.Screens.Active.Pages.pages.last,
 	)
 	zigTry(t, err)
 	defer search.Deinit()
@@ -262,9 +262,9 @@ func TestSaPagelist_feed_with_match_spanning_page_boundary(t *testing.T) {
 	// Should find the spanning match
 	h := zigUnwrap(t, search.Next())
 	sel := h.Untracked()
-	expect(t, sel.start.node != sel.end.node, "sel.start.node != sel.end.node")
+	expect(t, sel.Start.Node != sel.End.Node, "sel.start.node != sel.end.node")
 	{
-		str, err := term.screens.active.SelectionString(screenSelectionStringDefault(SelectionInit(sel.start, sel.end, false)))
+		str, err := term.Screens.Active.SelectionString(screenSelectionStringDefault(SelectionInit(sel.Start, sel.End, false)))
 		zigTry(t, err)
 		// Zig-only: defer alloc.free(str)
 		expectEqualStrings(t, string(str), "Test")
@@ -289,27 +289,27 @@ func TestSaPagelist_feed_with_match_spanning_page_boundary_with_newline(t *testi
 	s := term.VtStream()
 	defer s.Deinit()
 
-	first_page_rows := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	first_page_rows := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 
 	// Fill first page ending with "Te"
 	for i := uint(0); i < first_page_rows-1; i++ {
 		zigTry(t, s.NextSlice([]uint8("\r\n")))
 	}
-	for i := uint(0); i < uint(term.screens.active.pages.cols)-2; i++ {
+	for i := uint(0); i < uint(term.Screens.Active.Pages.cols)-2; i++ {
 		zigTry(t, s.NextSlice([]uint8("x")))
 	}
 	zigTry(t, s.NextSlice([]uint8("Te")))
-	expect(t, term.screens.active.pages.pages.first == term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first == term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
 
 	// Second page starts with "st"
 	zigTry(t, s.NextSlice([]uint8("\r\n")))
-	expect(t, term.screens.active.pages.pages.first != term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first != term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
 	zigTry(t, s.NextSlice([]uint8("st")))
 
 	search, err := SearchPagelistInit(
 		[]uint8("Test"),
-		&term.screens.active.pages,
-		term.screens.active.pages.pages.last,
+		&term.Screens.Active.Pages,
+		term.Screens.Active.Pages.pages.last,
 	)
 	zigTry(t, err)
 	defer search.Deinit()
@@ -386,7 +386,7 @@ func TestSaPagelist_term51_PageListSearch_init_tracks_a_pin_at_the_last_cell_of_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+2, nil)
 	p1 := pages.pages.first
@@ -400,10 +400,10 @@ func TestSaPagelist_term51_PageListSearch_init_tracks_a_pin_at_the_last_cell_of_
 	expectEqual(t, before+1, pages.CountTrackedPins())
 	expect(t, saHasPin(pages, search.pin), "term51ALHasPin(pages, search.pin)")
 	expect(t, search.list == pages, "search.list == pages")
-	expect(t, search.pin.node == p2, "search.pin.node == p2")
-	expectEqual(t, SizeCellCountInt(1), search.pin.y)
-	expectEqual(t, SizeCellCountInt(9), search.pin.x)
-	expect(t, !search.pin.garbage, "!search.pin.garbage")
+	expect(t, search.pin.Node == p2, "search.pin.node == p2")
+	expectEqual(t, SizeCellCountInt(1), search.pin.Y)
+	expectEqual(t, SizeCellCountInt(9), search.pin.X)
+	expect(t, !search.pin.Garbage, "!search.pin.garbage")
 	expectEqual(t, uint(1), search.window.meta.Len())
 	expect(t, saMetaNode(&search.window, 0) == p2, "term51ALMetaNode(&search.window, 0) == p2")
 	search.Deinit()
@@ -413,9 +413,9 @@ func TestSaPagelist_term51_PageListSearch_init_tracks_a_pin_at_the_last_cell_of_
 	search2, err := SearchPagelistInit([]uint8("Fizz"), pages, p1)
 	zigTry(t, err)
 	defer search2.Deinit()
-	expect(t, search2.pin.node == p1, "search2.pin.node == p1")
-	expectEqual(t, SizeCellCountInt(cap_-1), search2.pin.y)
-	expectEqual(t, SizeCellCountInt(9), search2.pin.x)
+	expect(t, search2.pin.Node == p1, "search2.pin.node == p1")
+	expectEqual(t, SizeCellCountInt(cap_-1), search2.pin.Y)
+	expectEqual(t, SizeCellCountInt(9), search2.pin.X)
 	expectEqual(t, uint(1), search2.window.meta.Len())
 	expect(t, saMetaNode(&search2.window, 0) == p1, "term51ALMetaNode(&search2.window, 0) == p1")
 }
@@ -426,7 +426,7 @@ func TestSaPagelist_term51_PageListSearch_init_reverse_window_with_a_reversed_co
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
 	buf := []uint8("Fizz")
-	search, err := SearchPagelistInit(buf, &term.screens.active.pages, term.screens.active.pages.pages.last)
+	search, err := SearchPagelistInit(buf, &term.Screens.Active.Pages, term.Screens.Active.Pages.pages.last)
 	zigTry(t, err)
 	defer search.Deinit()
 	expectEqual(t, true, search.window.direction == searchSlidingWindowDirectionReverse)
@@ -442,7 +442,7 @@ func TestSaPagelist_term51_PageListSearch_init_start_node_that_adds_no_bytes_lea
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	p := pages.pages.first
 	saWrapLast(p)
 	search, err := SearchPagelistInit([]uint8("Fizz"), pages, p)
@@ -450,7 +450,7 @@ func TestSaPagelist_term51_PageListSearch_init_start_node_that_adds_no_bytes_lea
 	defer search.Deinit()
 	expectEqual(t, uint(0), search.window.meta.Len())
 	expectEqual(t, uint(0), search.window.data.Len())
-	expect(t, search.pin.node == p, "search.pin.node == p")
+	expect(t, search.pin.Node == p, "search.pin.node == p")
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
 
@@ -459,7 +459,7 @@ func TestSaPagelist_term51_PageListSearch_init_empty_needle_is_accepted(t *testi
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	search, err := SearchPagelistInit([]uint8(""), &term.screens.active.pages, term.screens.active.pages.pages.last)
+	search, err := SearchPagelistInit([]uint8(""), &term.Screens.Active.Pages, term.Screens.Active.Pages.pages.last)
 	zigTry(t, err)
 	defer search.Deinit()
 	expectEqual(t, uint(0), uint(len(search.window.needle)))
@@ -471,7 +471,7 @@ func TestSaPagelist_term51_PageListSearch_deinit_untracks_the_pin_wherever_it_mo
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+2, []saMark{{y: 0, text: "Fizz"}})
 	before := pages.CountTrackedPins()
@@ -524,7 +524,7 @@ func TestSaPagelist_term51_PageListSearch_deinit_works_after_the_pin_became_garb
 	pruned, err := p.Grow()
 	zigTry(t, err)
 	expect(t, pruned != nil, "(try p.grow()).?")
-	expect(t, search.pin.garbage, "search.pin.garbage")
+	expect(t, search.pin.Garbage, "search.pin.garbage")
 	search.Deinit()
 	expectEqual(t, before, p.CountTrackedPins())
 }
@@ -534,7 +534,7 @@ func TestSaPagelist_term51_PageListSearch_next_returns_matches_bottom_to_top_wit
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz\r\nBuzz\r\nfizz\r\nBang")
 	p := pages.pages.first
 
@@ -552,7 +552,7 @@ func TestSaPagelist_term51_PageListSearch_next_needle_in_the_first_cell_and_in_t
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	p := pages.pages.first
 	saWrite(t, term, "Ab\x1b[10;9HAb")
 
@@ -578,7 +578,7 @@ func TestSaPagelist_term51_PageListSearch_next_overlapping_matches_come_last_to_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	p := pages.pages.first
 	// Row 0: "aaaa"; rows 1-2: soft wrapped "abcdefgFizz".
 	saWrite(t, term, "aaaa\r\nabcdefgFizz")
@@ -609,7 +609,7 @@ func TestSaPagelist_term51_PageListSearch_next_a_match_across_two_pages_is_found
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+1, []saMark{{y: cap_ - 1, text: "xxxxxxxxTestZ"}})
 	p1 := pages.pages.first
@@ -632,7 +632,7 @@ func TestSaPagelist_term51_PageListSearch_next_a_match_across_two_pages_is_found
 		{node: p1, start: SizeCellCountInt(cap_ - 1), end: SizeCellCountInt(cap_), serial: Some(p2.serial)},
 		{node: p2, start: 0, end: 1, serial: Some(p1.serial)},
 	})
-	expect(t, h.chunks[0].serial != h.chunks[0].node.serial, "h.chunks.items(.serial)[0] != h.chunks.items(.node)[0].serial")
+	expect(t, h.Chunks[0].Serial != h.Chunks[0].Node.serial, "h.chunks.items(.serial)[0] != h.chunks.items(.node)[0].serial")
 	expect(t, !search.Next().Valid, "search.next() == null")
 	fed, err = search.Feed()
 	zigTry(t, err)
@@ -644,7 +644,7 @@ func TestSaPagelist_term51_PageListSearch_next_reverse_order_across_pages_nothin
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+1, []saMark{
 		{y: 0, text: "Fizz"},
@@ -684,7 +684,7 @@ func TestSaPagelist_term51_PageListSearch_next_starting_at_a_middle_page_never_s
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+1, []saMark{
 		{y: 0, text: "Fizz"},
@@ -714,7 +714,7 @@ func TestSaPagelist_term51_PageListSearch_feed_feeds_one_page_per_call_when_it_h
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+1, []saMark{
 		{y: 0, text: "abcd"},
@@ -732,7 +732,7 @@ func TestSaPagelist_term51_PageListSearch_feed_feeds_one_page_per_call_when_it_h
 	fed, err := search.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try search.feed()")
-	expect(t, search.pin.node == p2, "search.pin.node == p2")
+	expect(t, search.pin.Node == p2, "search.pin.node == p2")
 	expectEqual(t, uint(2), search.window.meta.Len())
 	// The window is [p3, p2] in reverse search order.
 	expect(t, saMetaNode(&search.window, 1) == p2, "term51ALMetaNode(&search.window, 1) == p2")
@@ -740,18 +740,18 @@ func TestSaPagelist_term51_PageListSearch_feed_feeds_one_page_per_call_when_it_h
 	fed, err = search.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 	expectEqual(t, uint(3), search.window.meta.Len())
 	expect(t, saMetaNode(&search.window, 2) == p1, "term51ALMetaNode(&search.window, 2) == p1")
 
 	// The pin keeps its x/y from init and is still tracked.
-	expectEqual(t, SizeCellCountInt(9), search.pin.x)
+	expectEqual(t, SizeCellCountInt(9), search.pin.X)
 	expect(t, saHasPin(pages, search.pin), "term51ALHasPin(pages, search.pin)")
 
 	fed, err = search.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 	expectEqual(t, uint(3), search.window.meta.Len())
 }
 
@@ -760,7 +760,7 @@ func TestSaPagelist_term51_PageListSearch_feed_false_without_a_previous_page_and
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz")
 	p := pages.pages.first
 	search, err := SearchPagelistInit([]uint8("Fizz"), pages, p)
@@ -771,7 +771,7 @@ func TestSaPagelist_term51_PageListSearch_feed_false_without_a_previous_page_and
 		fed, err := search.Feed()
 		zigTry(t, err)
 		expect(t, !fed, "!try search.feed()")
-		expect(t, search.pin.node == p, "search.pin.node == p")
+		expect(t, search.pin.Node == p, "search.pin.node == p")
 		expectEqual(t, length, search.window.data.Len())
 		expectEqual(t, uint(1), search.window.meta.Len())
 	}
@@ -782,7 +782,7 @@ func TestSaPagelist_term51_PageListSearch_feed_keeps_appending_pages_until_needl
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	// Three blank pages: each adds one byte (its trailing newline).
 	saFill(t, term, 2*cap_+1, nil)
@@ -797,7 +797,7 @@ func TestSaPagelist_term51_PageListSearch_feed_keeps_appending_pages_until_needl
 	fed, err := four.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try four.feed()")
-	expect(t, four.pin.node == p1, "four.pin.node == p1")
+	expect(t, four.pin.Node == p1, "four.pin.node == p1")
 	expectEqual(t, uint(3), four.window.meta.Len())
 	fed, err = four.Feed()
 	zigTry(t, err)
@@ -810,7 +810,7 @@ func TestSaPagelist_term51_PageListSearch_feed_keeps_appending_pages_until_needl
 	fed, err = two.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try two.feed()")
-	expect(t, two.pin.node == p1, "two.pin.node == p1")
+	expect(t, two.pin.Node == p1, "two.pin.node == p1")
 	expectEqual(t, uint(3), two.window.meta.Len())
 
 	// Needle of 1: exactly one byte per page, so one page per call.
@@ -820,12 +820,12 @@ func TestSaPagelist_term51_PageListSearch_feed_keeps_appending_pages_until_needl
 	fed, err = one.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try one.feed()")
-	expect(t, one.pin.node == p2, "one.pin.node == p2")
+	expect(t, one.pin.Node == p2, "one.pin.node == p2")
 	expectEqual(t, uint(2), one.window.meta.Len())
 	fed, err = one.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try one.feed()")
-	expect(t, one.pin.node == p1, "one.pin.node == p1")
+	expect(t, one.pin.Node == p1, "one.pin.node == p1")
 	fed, err = one.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try one.feed()")
@@ -836,7 +836,7 @@ func TestSaPagelist_term51_PageListSearch_feed_a_page_of_exactly_needle_length_b
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	// Page two holds "abc" plus its newline: four bytes.
 	saFill(t, term, 2*cap_+1, []saMark{{y: cap_, text: "abc"}})
@@ -850,12 +850,12 @@ func TestSaPagelist_term51_PageListSearch_feed_a_page_of_exactly_needle_length_b
 	fed, err := search.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try search.feed()")
-	expect(t, search.pin.node == p2, "search.pin.node == p2")
+	expect(t, search.pin.Node == p2, "search.pin.node == p2")
 	expectEqual(t, uint(2), search.window.meta.Len())
 	fed, err = search.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 }
 
 // Zig: test "term51: PageListSearch.feed: pages that add no bytes are walked but reported as not fed"
@@ -863,7 +863,7 @@ func TestSaPagelist_term51_PageListSearch_feed_pages_that_add_no_bytes_are_walke
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+1, nil)
 	p1 := pages.pages.first
@@ -880,12 +880,12 @@ func TestSaPagelist_term51_PageListSearch_feed_pages_that_add_no_bytes_are_walke
 	fed, err := search.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 	expectEqual(t, uint(1), search.window.meta.Len())
 	fed, err = search.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 }
 
 // Zig: test "term51: PageListSearch.feed: skips an empty wrapped page and adds the next one"
@@ -893,7 +893,7 @@ func TestSaPagelist_term51_PageListSearch_feed_skips_an_empty_wrapped_page_and_a
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+1, []saMark{{y: 0, text: "Fizz"}})
 	p1 := pages.pages.first
@@ -907,7 +907,7 @@ func TestSaPagelist_term51_PageListSearch_feed_skips_an_empty_wrapped_page_and_a
 	fed, err := search.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 	// p2 has no meta of its own.
 	expectEqual(t, uint(2), search.window.meta.Len())
 	expect(t, saMetaNode(&search.window, 0) == p3, "term51ALMetaNode(&search.window, 0) == p3")
@@ -920,7 +920,7 @@ func TestSaPagelist_term51_PageListSearch_feed_empty_needle_feeds_one_page_but_a
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+1, nil)
 	p1 := pages.pages.first
@@ -933,12 +933,12 @@ func TestSaPagelist_term51_PageListSearch_feed_empty_needle_feeds_one_page_but_a
 	fed, err := search.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try search.feed()")
-	expect(t, search.pin.node == p2, "search.pin.node == p2")
+	expect(t, search.pin.Node == p2, "search.pin.node == p2")
 	expectEqual(t, uint(2), search.window.meta.Len())
 	fed, err = search.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try search.feed()")
-	expect(t, search.pin.node == p1, "search.pin.node == p1")
+	expect(t, search.pin.Node == p1, "search.pin.node == p1")
 	expectEqual(t, uint(3), search.window.meta.Len())
 	fed, err = search.Feed()
 	zigTry(t, err)
@@ -950,7 +950,7 @@ func TestSaPagelist_term51_PageListSearch_feed_garbage_pin_ends_the_search_witho
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+1, []saMark{{y: 0, text: "Fizz"}})
 	p2 := pages.pages.last
@@ -958,19 +958,19 @@ func TestSaPagelist_term51_PageListSearch_feed_garbage_pin_ends_the_search_witho
 	search, err := SearchPagelistInit([]uint8("Fizz"), pages, p2)
 	zigTry(t, err)
 	defer search.Deinit()
-	search.pin.garbage = true
+	search.pin.Garbage = true
 	for i := 0; i < 2; i++ {
 		fed, err := search.Feed()
 		zigTry(t, err)
 		expect(t, !fed, "!try search.feed()")
-		expect(t, search.pin.node == p2, "search.pin.node == p2")
+		expect(t, search.pin.Node == p2, "search.pin.node == p2")
 		expectEqual(t, uint(1), search.window.meta.Len())
 	}
 	// next() still works on what was already loaded.
 	expect(t, !search.Next().Valid, "search.next() == null")
 
 	// Without the flag the previous page is fed.
-	search.pin.garbage = false
+	search.pin.Garbage = false
 	fed, err := search.Feed()
 	zigTry(t, err)
 	expect(t, fed, "try search.feed()")
@@ -1006,8 +1006,8 @@ func TestSaPagelist_term51_PageListSearch_feed_pin_becomes_garbage_when_its_page
 	from_last, err := SearchPagelistInit([]uint8("Test"), &p, page2_node)
 	zigTry(t, err)
 	defer from_last.Deinit()
-	expect(t, !from_first.pin.garbage, "!from_first.pin.garbage")
-	expect(t, !from_last.pin.garbage, "!from_last.pin.garbage")
+	expect(t, !from_first.pin.Garbage, "!from_first.pin.garbage")
+	expect(t, !from_last.pin.Garbage, "!from_last.pin.garbage")
 
 	// The first page is reused as the new last page.
 	new_, err := p.Grow()
@@ -1017,17 +1017,17 @@ func TestSaPagelist_term51_PageListSearch_feed_pin_becomes_garbage_when_its_page
 	expect(t, p.pages.first == page2_node, "p.pages.first.? == page2_node")
 
 	// The pin in the pruned page moved to the top-left of the new first page.
-	expect(t, from_first.pin.garbage, "from_first.pin.garbage")
-	expect(t, from_first.pin.node == page2_node, "from_first.pin.node == page2_node")
-	expectEqual(t, SizeCellCountInt(0), from_first.pin.x)
-	expectEqual(t, SizeCellCountInt(0), from_first.pin.y)
+	expect(t, from_first.pin.Garbage, "from_first.pin.garbage")
+	expect(t, from_first.pin.Node == page2_node, "from_first.pin.node == page2_node")
+	expectEqual(t, SizeCellCountInt(0), from_first.pin.X)
+	expectEqual(t, SizeCellCountInt(0), from_first.pin.Y)
 	fed, err := from_first.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try from_first.feed()")
 
 	// The other pin is fine, but its previous page is gone.
-	expect(t, !from_last.pin.garbage, "!from_last.pin.garbage")
-	expect(t, from_last.pin.node == page2_node, "from_last.pin.node == page2_node")
+	expect(t, !from_last.pin.Garbage, "!from_last.pin.garbage")
+	expect(t, from_last.pin.Node == page2_node, "from_last.pin.node == page2_node")
 	fed, err = from_last.Feed()
 	zigTry(t, err)
 	expect(t, !fed, "!try from_last.feed()")
@@ -1038,7 +1038,7 @@ func TestSaPagelist_panic_PageListSearch_init_the_start_node_has_zero_rows_start
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	p := pages.pages.first
 
 	rows := p.data.size.rows
@@ -1054,7 +1054,7 @@ func TestSaPagelist_panic_PageListSearch_init_the_start_node_has_zero_columns_st
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	p := pages.pages.first
 
 	cols := p.data.size.cols

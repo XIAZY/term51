@@ -188,7 +188,7 @@ func srBuild(t *testing.T, st *srState) *Terminal {
 		}
 	}
 	var got []uint
-	for n := term.screens.active.pages.pages.first; n != nil; n = n.next {
+	for n := term.Screens.Active.Pages.pages.first; n != nil; n = n.next {
 		got = append(got, uint(n.data.size.rows))
 	}
 	expectEqualSlices(t, st.pageRows, got)
@@ -214,7 +214,7 @@ func srEachState(t *testing.T, f func(t *testing.T, st *srState, term *Terminal)
 
 // srList is the page list of the terminal's active screen.
 func srList(term *Terminal) *PageList {
-	return &term.screens.active.pages
+	return &term.Screens.Active.Pages
 }
 
 // srNodeIndex is the harness's pageIndex: the index of node in the list, -1
@@ -295,7 +295,7 @@ func srReverse(list *PageList) []*PageListNode {
 // srOpenScreen is `open screen -`: ScreenSearch.init with the empty needle.
 func srOpenScreen(t *testing.T, term *Terminal) *SearchScreen {
 	t.Helper()
-	search, err := SearchScreenInit(term.screens.active, []uint8(""))
+	search, err := SearchScreenInit(term.Screens.Active, []uint8(""))
 	zigTry(t, err)
 	return &search
 }
@@ -753,7 +753,7 @@ type srHL struct {
 }
 
 func srHLOf(h HighlightFlattened) srHL {
-	return srHL{top_x: h.top_x, bot_x: h.bot_x, chunks: append([]HighlightFlattenedChunk(nil), h.chunks...)}
+	return srHL{top_x: h.TopX, bot_x: h.BotX, chunks: append([]HighlightFlattenedChunk(nil), h.Chunks...)}
 }
 
 func srHLs(hs []HighlightFlattened) []srHL {
@@ -825,11 +825,11 @@ func srSnapshot(t *testing.T, search *SearchScreen) srSnap {
 	if search.selected.Valid {
 		m := &search.selected.Value
 		snap.selected = Some(srSel{
-			idx:      m.idx,
-			start:    m.highlight.start,
-			end:      m.highlight.end,
-			startVal: *m.highlight.start,
-			endVal:   *m.highlight.end,
+			idx:      m.Idx,
+			start:    m.Highlight.Start,
+			end:      m.Highlight.End,
+			startVal: *m.Highlight.Start,
+			endVal:   *m.Highlight.End,
 		})
 	}
 	if sm := search.SelectedMatch(); sm.Valid {
@@ -897,7 +897,7 @@ func srFeedComplete(t *testing.T, c srPrune) {
 	write(c.nl, "\r\n")
 	write(1, "fizz page 2")
 
-	search, err := SearchScreenInit(term.screens.active, []uint8(c.needle))
+	search, err := SearchScreenInit(term.Screens.Active, []uint8(c.needle))
 	zigTry(t, err)
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
@@ -913,8 +913,8 @@ func srFeedComplete(t *testing.T, c srPrune) {
 	expectEqual(t, searchScreenStateComplete, search.state)
 	expect(t, search.history.Valid, "search.history != null")
 	h := &search.history.Value
-	expect(t, !h.searcher.pin.garbage, "!history.searcher.pin.garbage")
-	expect(t, h.searcher.pin.node.prev != nil, "history.searcher.pin.node.prev != null (feed has a page to add)")
+	expect(t, !h.searcher.pin.Garbage, "!history.searcher.pin.garbage")
+	expect(t, h.searcher.pin.Node.prev != nil, "history.searcher.pin.node.prev != null (feed has a page to add)")
 
 	before := srSnapshot(t, &search)
 

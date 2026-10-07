@@ -113,15 +113,15 @@ func (self Point) Coord() PointCoordinate {
 type PointCoordinate struct {
 	// x can use size.CellCountInt because the number of columns
 	// can't ever be more than a valid number of columns in a Page.
-	x SizeCellCountInt
+	X SizeCellCountInt
 
 	// y does not use size.CellCountInt because certain coordinate
 	// usage such as screen/history can have more rows than are possible
 	// in a single page.
-	y uint32
+	Y uint32
 }
 
 // Eql is point.Coordinate.eql.
 func (self PointCoordinate) Eql(other PointCoordinate) bool {
-	return self.x == other.x && self.y == other.y
+	return self.X == other.X && self.Y == other.Y
 }

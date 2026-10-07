@@ -45,15 +45,15 @@ func TestKittyKey_unnamed_65(t *testing.T) {
 // Zig: test (unnamed, key.zig:109)
 func TestKittyKey_unnamed_109(t *testing.T) {
 	// Its easy to get packed struct ordering wrong so this test checks.
-	expectEqual(t, uint8(0b1), KittyKeyFlags{disambiguate: true}.Int())
-	expectEqual(t, uint8(0b10), KittyKeyFlags{report_events: true}.Int())
+	expectEqual(t, uint8(0b1), KittyKeyFlags{Disambiguate: true}.Int())
+	expectEqual(t, uint8(0b10), KittyKeyFlags{ReportEvents: true}.Int())
 }
 
 // Zig: test "FlagStack: push pop"
 func TestKittyKey_FlagStack_push_pop(t *testing.T) {
 	stack := KittyKeyFlagStack{}
-	stack.Push(KittyKeyFlags{disambiguate: true})
-	expectEqual(t, KittyKeyFlags{disambiguate: true}, stack.Current())
+	stack.Push(KittyKeyFlags{Disambiguate: true})
+	expectEqual(t, KittyKeyFlags{Disambiguate: true}, stack.Current())
 
 	stack.Pop(1)
 	expectEqual(t, KittyKeyFlags{}, stack.Current())
@@ -69,26 +69,26 @@ func TestKittyKey_FlagStack_pop_big_number(t *testing.T) {
 // Zig: test "FlagStack: set"
 func TestKittyKey_FlagStack_set(t *testing.T) {
 	stack := KittyKeyFlagStack{}
-	stack.Set(KittyKeySetModeSet, KittyKeyFlags{disambiguate: true})
-	expectEqual(t, KittyKeyFlags{disambiguate: true}, stack.Current())
+	stack.Set(KittyKeySetModeSet, KittyKeyFlags{Disambiguate: true})
+	expectEqual(t, KittyKeyFlags{Disambiguate: true}, stack.Current())
 
-	stack.Set(KittyKeySetModeOr, KittyKeyFlags{report_events: true})
+	stack.Set(KittyKeySetModeOr, KittyKeyFlags{ReportEvents: true})
 	expectEqual(t, KittyKeyFlags{
-		disambiguate:  true,
-		report_events: true,
+		Disambiguate: true,
+		ReportEvents: true,
 	}, stack.Current())
 
-	stack.Set(KittyKeySetModeNot, KittyKeyFlags{report_events: true})
-	expectEqual(t, KittyKeyFlags{disambiguate: true}, stack.Current())
+	stack.Set(KittyKeySetModeNot, KittyKeyFlags{ReportEvents: true})
+	expectEqual(t, KittyKeyFlags{Disambiguate: true}, stack.Current())
 }
 
 // Zig: test "term51: Flags.int: each flag has its own bit"
 func TestKittyKey_term51_Flags_int_each_flag_has_its_own_bit(t *testing.T) {
-	expectEqual(t, uint8(0b00001), KittyKeyFlags{disambiguate: true}.Int())
-	expectEqual(t, uint8(0b00010), KittyKeyFlags{report_events: true}.Int())
-	expectEqual(t, uint8(0b00100), KittyKeyFlags{report_alternates: true}.Int())
-	expectEqual(t, uint8(0b01000), KittyKeyFlags{report_all: true}.Int())
-	expectEqual(t, uint8(0b10000), KittyKeyFlags{report_associated: true}.Int())
+	expectEqual(t, uint8(0b00001), KittyKeyFlags{Disambiguate: true}.Int())
+	expectEqual(t, uint8(0b00010), KittyKeyFlags{ReportEvents: true}.Int())
+	expectEqual(t, uint8(0b00100), KittyKeyFlags{ReportAlternates: true}.Int())
+	expectEqual(t, uint8(0b01000), KittyKeyFlags{ReportAll: true}.Int())
+	expectEqual(t, uint8(0b10000), KittyKeyFlags{ReportAssociated: true}.Int())
 	expectEqual(t, uint8(0), KittyKeyFlags{}.Int())
 }
 
@@ -103,11 +103,11 @@ func TestKittyKey_term51_Flags_int_constants_and_round_trip_over_every_value(t *
 	for ; n < 32; n++ {
 		f := sm1_flags(n)
 		expectEqual(t, n, f.Int())
-		expectEqual(t, n&1 != 0, f.disambiguate)
-		expectEqual(t, n&2 != 0, f.report_events)
-		expectEqual(t, n&4 != 0, f.report_alternates)
-		expectEqual(t, n&8 != 0, f.report_all)
-		expectEqual(t, n&16 != 0, f.report_associated)
+		expectEqual(t, n&1 != 0, f.Disambiguate)
+		expectEqual(t, n&2 != 0, f.ReportEvents)
+		expectEqual(t, n&4 != 0, f.ReportAlternates)
+		expectEqual(t, n&8 != 0, f.ReportAll)
+		expectEqual(t, n&16 != 0, f.ReportAssociated)
 	}
 }
 

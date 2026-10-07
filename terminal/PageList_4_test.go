@@ -90,15 +90,15 @@ func pl4Cursor(x SizeCellCountInt, y SizeCellCountInt) Optional[PageListResizeCu
 // pl4ScreenPt, pl4ActivePt and pl4HistoryPt are `.{ .screen = .{ .x = x,
 // .y = y } }` and the like.
 func pl4ScreenPt(x uint, y uint) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 func pl4ActivePt(x uint, y uint) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 func pl4HistoryPt(x uint, y uint) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // The Zig `Scroll` union literals with a payload.
@@ -164,7 +164,7 @@ func pl4TrackPin(t *testing.T, s *PageList, p PageListPin) *PageListPin {
 }
 
 // pl4InsertHyperlink is `try page.insertHyperlink(link)`.
-func pl4InsertHyperlink(t *testing.T, page *Page, link Hyperlink) HyperlinkId {
+func pl4InsertHyperlink(t *testing.T, page *Page, link Hyperlink) HyperlinkID {
 	t.Helper()
 	id, err := page.InsertHyperlink(link)
 	zigTry(t, err)
@@ -172,7 +172,7 @@ func pl4InsertHyperlink(t *testing.T, page *Page, link Hyperlink) HyperlinkId {
 }
 
 // pl4StylesAdd is `try page.styles.add(page.memory, style)`.
-func pl4StylesAdd(t *testing.T, page *Page, style Style) StyleId {
+func pl4StylesAdd(t *testing.T, page *Page, style Style) StyleID {
 	t.Helper()
 	id, err := page.styles.Add(style)
 	zigTry(t, err)
@@ -180,8 +180,8 @@ func pl4StylesAdd(t *testing.T, page *Page, style Style) StyleId {
 }
 
 // pl4Bold and pl4Italic are `.{ .flags = .{ .bold = true } }` and the like.
-func pl4Bold() Style   { return Style{flags: styleFlags{bold: true}} }
-func pl4Italic() Style { return Style{flags: styleFlags{italic: true}} }
+func pl4Bold() Style   { return Style{Flags: StyleFlags{Bold: true}} }
+func pl4Italic() Style { return Style{Flags: StyleFlags{Italic: true}} }
 
 // ---------------------------------------------------------------------------
 // term51: additional tests (K) helpers.
@@ -225,7 +225,7 @@ func pl4KLoad(t *testing.T, s *PageList, text string) {
 		row.wrap = wrap
 		row.wrap_continuation = cont
 		row.semantic_prompt = sp
-		cells := p.node.data.GetCells(row)
+		cells := p.Node.data.GetCells(row)
 		for x := 0; x < len(body); x++ {
 			ch := body[x]
 			switch ch {
@@ -301,7 +301,7 @@ func pl4KDump(t *testing.T, s *PageList) string {
 		}
 		first = false
 		row := p.RowAndCell().row
-		cells := p.node.data.GetCells(row)
+		cells := p.Node.data.GetCells(row)
 		if len(cells) != int(s.cols) {
 			t.Fatalf("TestUnexpectedResult")
 		}
@@ -350,8 +350,8 @@ func pl4KExpect(t *testing.T, s *PageList, expected string) {
 func pl4KExpectPin(t *testing.T, s *PageList, p PageListPin, x uint, y uint) {
 	t.Helper()
 	pt := zigUnwrap(t, s.PointFromPin(PointTagScreen, p))
-	expectEqual(t, x, uint(pt.Screen.x))
-	expectEqual(t, y, uint(pt.Screen.y))
+	expectEqual(t, x, uint(pt.Screen.X))
+	expectEqual(t, y, uint(pt.Screen.Y))
 }
 
 // pl4KCell is term51KCell.
@@ -436,8 +436,8 @@ func (self *pl4KReflow) step() bool {
 	}
 	row := o.Value
 	zigTry(self.t, self.rc.reflowRow(self.list, row))
-	if row.y == row.node.data.size.rows-1 {
-		self.list.destroyNode(row.node)
+	if row.Y == row.Node.data.size.rows-1 {
+		self.list.destroyNode(row.Node)
 	}
 	return true
 }
@@ -472,10 +472,10 @@ func (self *pl4KReflow) finish() {
 func pl4KFillStyles(page *Page) uint {
 	n := uint(0)
 	for x := uint(0); x < uint(page.size.cols); x++ {
-		id, err := page.styles.Add(Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: uint8(x),
-			g: uint8(x >> 8),
-			b: 1,
+		id, err := page.styles.Add(Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: uint8(x),
+			G: uint8(x >> 8),
+			B: 1,
 		}}})
 		if err != nil {
 			break
@@ -497,10 +497,10 @@ func pl4KFillStyles(page *Page) uint {
 func pl4KFillStyleSet(page *Page) uint {
 	n := uint(0)
 	for ; ; n++ {
-		_, err := page.styles.Add(Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: uint8(n),
-			g: uint8(n >> 8),
-			b: uint8(n >> 16),
+		_, err := page.styles.Add(Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: uint8(n),
+			G: uint8(n >> 8),
+			B: uint8(n >> 16),
 		}}})
 		if err != nil {
 			break
@@ -532,7 +532,7 @@ func pl4KGrowColsFixture(t *testing.T, s *PageList, styled [3]bool) {
 	t.Helper()
 	first := &s.pages.first.data
 	expect(t, pl4KFillStyles(first) > 50, "try term51KFillStyles(first) > 50")
-	_, err := first.styles.Add(Style{flags: styleFlags{faint: true}})
+	_, err := first.styles.Add(Style{Flags: StyleFlags{Faint: true}})
 	pl4ExpectError(t, ErrOutOfMemory, err)
 	cap := PageCapacityInit(200, 3)
 	cap.styles = 128
@@ -615,7 +615,7 @@ func pl4LInitPages(t *testing.T, last_rows uint) *PageList {
 // pl4LRowOf is term51LRowOf: absolute (screen) row of a pin.
 func pl4LRowOf(t *testing.T, s *PageList, p PageListPin) uint {
 	t.Helper()
-	return uint(zigUnwrap(t, s.PointFromPin(PointTagScreen, p)).Screen.y)
+	return uint(zigUnwrap(t, s.PointFromPin(PointTagScreen, p)).Screen.Y)
 }
 
 // pl4LExpectViewportRow is term51LExpectViewportRow: expect the viewport to
@@ -625,16 +625,16 @@ func pl4LExpectViewportRow(t *testing.T, s *PageList, n uint, cached bool) {
 	t.Helper()
 	want := pl4Pin(t, s, pl4ScreenPt(0, n))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, want.node, s.viewport_pin.node)
-	expectEqual(t, want.y, s.viewport_pin.y)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.x)
+	expectEqual(t, want.Node, s.viewport_pin.Node)
+	expectEqual(t, want.Y, s.viewport_pin.Y)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.X)
 	expectEqual(t, n, pl4LRowOf(t, s, *s.viewport_pin))
 	if cached {
 		expectEqual(t, Some(n), s.viewport_pin_row_offset)
 	} else {
 		expectEqual(t, None[uint](), s.viewport_pin_row_offset)
 	}
-	expectEqual(t, n, s.Scrollbar().offset)
+	expectEqual(t, n, s.Scrollbar().Offset)
 }
 
 // pl4LPinAt is term51LPinAt: put the viewport in pin mode at row n with the
@@ -691,7 +691,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_background_color_cells_are_not_trimme
 	// Row 0: a, blank, bg palette, bg rgb. Row 1: only a bg cell.
 	cells0 := pl4KPin(t, s, 0, 0).Cells(PageListPinCellSubsetAll)
 	cells0[2] = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 4}}
-	cells0[3] = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}}}
+	cells0[3] = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}}
 	cells1 := pl4KPin(t, s, 0, 1).Cells(PageListPinCellSubsetAll)
 	cells1[1] = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 7}}
 
@@ -701,7 +701,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_background_color_cells_are_not_trimme
 	pl4KExpect(t, s, "|a.#>\n<#..|\n|.#.|")
 	expectEqual(t, uint8(4), pl4KCell(t, s, 2, 0).content.color_palette)
 	expectEqual(t, PageCellContentTagBgColorRgb, pl4KCell(t, s, 0, 1).content_tag)
-	expectEqual(t, uint8(3), pl4KCell(t, s, 0, 1).content.color_rgb.b)
+	expectEqual(t, uint8(3), pl4KCell(t, s, 0, 1).content.color_rgb.B)
 	expectEqual(t, uint8(7), pl4KCell(t, s, 1, 2).content.color_palette)
 }
 
@@ -787,7 +787,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_styles_follow_their_cells_and_are_sha
 	expect(t, d.row.styled, "d.row.styled")
 	expect(t, a.cell.style_id != 0, "a.cell.style_id != 0")
 	expectEqual(t, a.cell.style_id, d.cell.style_id)
-	expect(t, page.styles.Get(a.cell.style_id).flags.bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
+	expect(t, page.styles.Get(a.cell.style_id).Flags.Bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
 	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(a.cell.style_id))
 	expectEqual(t, uint(1), page.styles.living)
 	page.AssertIntegrity()
@@ -802,8 +802,8 @@ func TestPl4_term51_ReflowCursor_reflowRow_hyperlinks_follow_their_cells_and_are
 	{
 		page := &s.pages.first.data
 		id := pl4InsertHyperlink(t, page, Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("e")},
-			uri: []uint8("https://x.example"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("e")},
+			URI: []uint8("https://x.example"),
 		})
 		c0 := page.GetRowAndCell(0, 0)
 		zigTry(t, page.SetHyperlink(c0.row, c0.cell, id))
@@ -854,12 +854,12 @@ func TestPl4_term51_ReflowCursor_reflowRow_new_pages_are_created_when_the_page_i
 	expectEqual(t, uint(2), pl4KRowsPerPage(s)[0])
 	expectEqual(t, 2, len(pl4KRowsPerPage(s)))
 	expectEqual(t, uint(3), pl4KRowsPerPage(s)[1])
-	expectEqual(t, s.pages.first, p_b.node)
-	expectEqual(t, s.pages.last, p_c.node)
-	expectEqual(t, s.pages.last, p_e.node)
-	expectEqual(t, SizeCellCountInt(1), p_b.y)
-	expectEqual(t, SizeCellCountInt(0), p_c.y)
-	expectEqual(t, SizeCellCountInt(2), p_e.y)
+	expectEqual(t, s.pages.first, p_b.Node)
+	expectEqual(t, s.pages.last, p_c.Node)
+	expectEqual(t, s.pages.last, p_e.Node)
+	expectEqual(t, SizeCellCountInt(1), p_b.Y)
+	expectEqual(t, SizeCellCountInt(0), p_c.Y)
+	expectEqual(t, SizeCellCountInt(2), p_e.Y)
 }
 
 // Zig: test "term51: ReflowCursor.reflowRow: new pages inherit the capacity of the source page"
@@ -1003,10 +1003,10 @@ func TestPl4_term51_ReflowCursor_reflowRow_out_of_space_after_the_first_row_move
 	expectEqual(t, SizeStyleCountInt(128), s.pages.last.data.capacity.styles)
 	c := pl4KCell(t, s, 1, 1)
 	expect(t, c.style_id != 0, "c.style_id != 0")
-	expect(t, s.pages.last.data.styles.Get(c.style_id).flags.bold, "s.pages.last.?.data.styles.get(s.pages.last.?.data.memory, c.style_id).flags.bold")
+	expect(t, s.pages.last.data.styles.Get(c.style_id).Flags.Bold, "s.pages.last.?.data.styles.get(s.pages.last.?.data.memory, c.style_id).flags.bold")
 	expect(t, pl4KRow(t, s, 1).styled, "term51KRow(&s, 1).styled")
 	// The pin followed the row.
-	expectEqual(t, s.pages.last, p.node)
+	expectEqual(t, s.pages.last, p.Node)
 	pl4KExpectPin(t, s, *p, 1, 1)
 	s.AssertIntegrity()
 }
@@ -1019,20 +1019,20 @@ func TestPl4_term51_resizeWithoutReflow_layout_min_max_size_is_only_recomputed_w
 	old := s.min_max_size
 
 	// With reflow the caller (resize) is responsible: unchanged here.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(40), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(40), Reflow: true}))
 	expectEqual(t, old, s.min_max_size)
 	expectEqual(t, uint(40), uint(s.rows))
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(3000), rows: pl4S(41), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(3000), Rows: pl4S(41), Reflow: false}))
 	expectEqual(t, pageListMinMaxSize(3000, 41), s.min_max_size)
 	expect(t, s.min_max_size > old, "s.min_max_size > old")
 	expectEqual(t, uint(3000), uint(s.cols))
 	expectEqual(t, uint(41), uint(s.rows))
 
 	// Only one of the dimensions: the other one is the current one.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: false}))
 	expectEqual(t, pageListMinMaxSize(3000, 5), s.min_max_size)
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(20), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(20), Reflow: false}))
 	expectEqual(t, pageListMinMaxSize(20, 5), s.min_max_size)
 }
 
@@ -1043,8 +1043,8 @@ func TestPl4_term51_resizeWithoutReflow_no_change(t *testing.T) {
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abcd>\n<ef..|\n|g...|")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{reflow: true}))
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(4), rows: pl4S(3), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(4), Rows: pl4S(3), Reflow: true}))
 	pl4KExpect(t, s, "|abcd>\n<ef..|\n|g...|")
 	expectEqual(t, uint(4), uint(s.cols))
 	expectEqual(t, uint(3), uint(s.rows))
@@ -1063,7 +1063,7 @@ func TestPl4_term51_resizeWithoutReflow_fewer_cols_truncates_rows_and_clamps_pin
 	defer s.UntrackPin(p3)
 	defer s.UntrackPin(p1)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(3), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(3), Reflow: false}))
 	expectEqual(t, uint(3), uint(s.cols))
 	expectEqual(t, uint(3), uint(s.rows))
 	pl4KExpect(t, s, "|abc>\n<ghi|\n|mn.|")
@@ -1094,8 +1094,8 @@ func TestPl4_term51_resizeWithoutReflow_fewer_cols_releases_managed_memory_beyon
 		st.cell.style_id = bold
 		st.row.styled = true
 		link := pl4InsertHyperlink(t, page, Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
-			uri: []uint8("https://a"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
+			URI: []uint8("https://a"),
 		})
 		zigTry(t, page.SetHyperlink(g3.row, g3.cell, link))
 
@@ -1106,7 +1106,7 @@ func TestPl4_term51_resizeWithoutReflow_fewer_cols_releases_managed_memory_beyon
 		k.row.styled = true
 	}
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(3), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(3), Reflow: false}))
 	page := &s.pages.first.data
 	expectEqual(t, uint(1), page.GraphemeCount())
 	expectEqual(t, uint(0), page.HyperlinkCount())
@@ -1129,7 +1129,7 @@ func TestPl4_term51_resizeWithoutReflow_fewer_cols_can_split_a_wide_character_fr
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abW_|\n|ab.^>")
 	// The spacer head sits in the last column of a wrapped row.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(3), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(3), Reflow: false}))
 	// The wide cell is now the last column without its tail, and the spacer
 	// head was cut away.
 	pl4KExpect(t, s, "|abW|\n|ab.>")
@@ -1142,17 +1142,17 @@ func TestPl4_term51_resizeWithoutReflow_fewer_rows_trims_blank_rows_instead_of_m
 	defer s.Deinit()
 	pl4KLoad(t, s, "|a.|\n|b.|\n|..|\n|..|\n|..|")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(3), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(3), Reflow: true}))
 	expectEqual(t, uint(3), uint(s.rows))
 	pl4KExpect(t, s, "|a.|\n|b.|\n|..|")
 
 	// One blank row is left before the text: only that one is trimmed.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(1), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(1), Reflow: true}))
 	expectEqual(t, uint(1), uint(s.rows))
 	pl4KExpect(t, s, "|a.|\n|b.|")
 
 	// No blank rows: history is made and nothing is removed.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(1), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(1), Reflow: true}))
 	pl4KExpect(t, s, "|a.|\n|b.|")
 	pl4KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 1)
 }
@@ -1166,7 +1166,7 @@ func TestPl4_term51_resizeWithoutReflow_trimmed_rows_stop_at_a_tracked_pin(t *te
 	p := pl4TrackPin(t, s, pl4KPin(t, s, 0, 3))
 	defer s.UntrackPin(p)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(1), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(1), Reflow: true}))
 	// Row 4 is trimmed, row 3 holds the pin so the rest stays as history.
 	expectEqual(t, uint(1), uint(s.rows))
 	pl4KExpect(t, s, "|a.|\n|b.|\n|..|\n|..|")
@@ -1180,12 +1180,12 @@ func TestPl4_term51_resizeWithoutReflow_cols_and_rows_together(t *testing.T) {
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abcd>\n<ef..|\n|....|")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(2), rows: pl4S(2), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(2), Rows: pl4S(2), Reflow: true}))
 	pl4KExpect(t, s, "|ab>\n<ef|")
 	expectEqual(t, uint(2), uint(s.cols))
 	expectEqual(t, uint(2), uint(s.rows))
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(3), rows: pl4S(3), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(3), Rows: pl4S(3), Reflow: true}))
 	pl4KExpect(t, s, "|ab.>\n<ef.|\n|...|")
 }
 
@@ -1196,7 +1196,7 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_without_a_cursor_pulls_history
 	defer s.Deinit()
 	pl4KHistory(t, s)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: true}))
 	expectEqual(t, uint(5), uint(s.rows))
 	pl4KExpect(t, s, "|a.|\n|b.|\n|..|\n|..|\n|..|")
 	pl4KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 0)
@@ -1210,7 +1210,7 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_with_the_cursor_at_the_bottom_
 	pl4KHistory(t, s)
 
 	// y == rows - 1
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: true, cursor: pl4Cursor(0, 2)}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: true, Cursor: pl4Cursor(0, 2)}))
 	pl4KExpect(t, s, "|a.|\n|b.|\n|..|\n|..|\n|..|")
 	pl4KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 0)
 }
@@ -1222,7 +1222,7 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_with_the_cursor_beyond_the_bot
 	defer s.Deinit()
 	pl4KHistory(t, s)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: true, cursor: pl4Cursor(0, 9)}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: true, Cursor: pl4Cursor(0, 9)}))
 	pl4KExpect(t, s, "|a.|\n|b.|\n|..|\n|..|\n|..|")
 	pl4KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 0)
 }
@@ -1234,7 +1234,7 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_with_the_cursor_above_the_bott
 	defer s.Deinit()
 	pl4KHistory(t, s)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: true, cursor: pl4Cursor(0, 0)}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: true, Cursor: pl4Cursor(0, 0)}))
 	expectEqual(t, uint(5), uint(s.rows))
 	// History is kept as history: 2 rows were added.
 	pl4KExpect(t, s, "|a.|\n|b.|\n|..|\n|..|\n|..|\n|..|\n|..|")
@@ -1249,7 +1249,7 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_than_history_plus_active_adds_
 	zigTry(t, s.growRows(1))
 	pl4KLoad(t, s, "|a.|\n|..|\n|..|\n|..|")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(6), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(6), Reflow: true}))
 	pl4KExpect(t, s, "|a.|\n|..|\n|..|\n|..|\n|..|\n|..|")
 	pl4KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 0)
 }
@@ -1261,11 +1261,11 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_without_history_adds_rows(t *t
 	defer s.Deinit()
 	pl4KLoad(t, s, "|a.|\n|..|\n|..|")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: true}))
 	pl4KExpect(t, s, "|a.|\n|..|\n|..|\n|..|\n|..|")
 	s2 := pl4Init(t, 2, 3, pl4NoMax())
 	defer s2.Deinit()
-	zigTry(t, s2.resizeWithoutReflow(PageListResize{rows: pl4S(5), reflow: true, cursor: pl4Cursor(0, 0)}))
+	zigTry(t, s2.resizeWithoutReflow(PageListResize{Rows: pl4S(5), Reflow: true, Cursor: pl4Cursor(0, 0)}))
 	expectEqual(t, uint(5), s2.totalRows())
 }
 
@@ -1276,7 +1276,7 @@ func TestPl4_term51_resizeWithoutReflow_one_row(t *testing.T) {
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abc|\n|d..|\n|..e|")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(1), cols: pl4S(1), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(1), Cols: pl4S(1), Reflow: true}))
 	// The row with the cut text is blank and trimmed.
 	pl4KExpect(t, s, "|a|\n|d|")
 	expectEqual(t, uint(1), uint(s.rows))
@@ -1289,16 +1289,16 @@ func TestPl4_term51_resizeWithoutReflow_more_rows_moves_a_pinned_viewport_into_t
 	s := pl4Init(t, 2, 4, pl4NoMax())
 	defer s.Deinit()
 	zigTry(t, s.growRows(8))
-	s.Scroll(pl4ScrollPin(pl4Pin(t, s, Point{Tag: PointTagScreen, Screen: PointCoordinate{y: 7}})))
+	s.Scroll(pl4ScrollPin(pl4Pin(t, s, Point{Tag: PointTagScreen, Screen: PointCoordinate{Y: 7}})))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(6), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(6), Reflow: true}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	// A viewport above stays where it is.
-	s.Scroll(pl4ScrollPin(pl4Pin(t, s, Point{Tag: PointTagScreen, Screen: PointCoordinate{y: 2}})))
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(8), reflow: true}))
+	s.Scroll(pl4ScrollPin(pl4Pin(t, s, Point{Tag: PointTagScreen, Screen: PointCoordinate{Y: 2}})))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(8), Reflow: true}))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	zigTry(t, s.resizeWithoutReflow(PageListResize{rows: pl4S(11), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Rows: pl4S(11), Reflow: true}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 }
 
@@ -1308,17 +1308,17 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_spare_capacity_just_widens_the_p
 	s := pl4Init(t, 4, 3, pl4Max(0))
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abcd>\n<ef..|\n|....|")
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(2), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(2), Reflow: false}))
 	pl4KExpect(t, s, "|ab>\n<ef|\n|..|")
 
 	node := s.pages.first
-	tpin := pl4TrackPin(t, s, PageListPin{node: node, x: 1, y: 1})
+	tpin := pl4TrackPin(t, s, PageListPin{Node: node, X: 1, Y: 1})
 	defer s.UntrackPin(tpin)
 	expectEqual(t, uint(2), uint(s.cols))
 	zigTry(t, s.resizeWithoutReflowGrowCols(4, pl4KFirstChunk(t, s)))
 	// The same node: nothing was copied.
 	expectEqual(t, node, s.pages.first)
-	expectEqual(t, node, tpin.node)
+	expectEqual(t, node, tpin.Node)
 	expectEqual(t, uint(4), uint(s.cols))
 	expectEqual(t, SizeCellCountInt(4), node.data.size.cols)
 	// The cut cells stay cleared.
@@ -1330,17 +1330,17 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_spacer_head_at_the_old_edge_ta
 	testStdCapacity(t)
 	s := pl4Init(t, 4, 2, pl4Max(0))
 	defer s.Deinit()
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(3), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(3), Reflow: false}))
 	pl4KLoad(t, s, "|ab^>\n|c..|")
 	node := s.pages.first
-	tpin := pl4TrackPin(t, s, PageListPin{node: node, x: 0, y: 1})
+	tpin := pl4TrackPin(t, s, PageListPin{Node: node, X: 0, Y: 1})
 	defer s.UntrackPin(tpin)
 
 	zigTry(t, s.resizeWithoutReflowGrowCols(4, pl4KFirstChunk(t, s)))
 	// Capacity was enough but the row had to be cloned into a new page.
 	expect(t, s.pages.first != node, "s.pages.first.? != node")
-	expectEqual(t, s.pages.first, tpin.node)
-	expectEqual(t, SizeCellCountInt(1), tpin.y)
+	expectEqual(t, s.pages.first, tpin.Node)
+	expectEqual(t, SizeCellCountInt(1), tpin.Y)
 	expectEqual(t, uint(1), s.TotalPages())
 	// The spacer head became an empty narrow cell and the wrap was removed.
 	pl4KExpect(t, s, "|ab..|\n|c...|")
@@ -1361,15 +1361,15 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_page_without_capacity_is_clone
 		*b.cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'h'}, style_id: bold}
 		b.row.styled = true
 		link := pl4InsertHyperlink(t, page, Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 3},
-			uri: []uint8("https://l"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 3},
+			URI: []uint8("https://l"),
 		})
 		l := page.GetRowAndCell(2, 2)
 		*l.cell = PageCellInit('i')
 		zigTry(t, page.SetHyperlink(l.row, l.cell, link))
 	}
 	node := s.pages.first
-	tpin := pl4TrackPin(t, s, PageListPin{node: node, x: 2, y: 1})
+	tpin := pl4TrackPin(t, s, PageListPin{Node: node, X: 2, Y: 1})
 	defer s.UntrackPin(tpin)
 	old_page_size := s.page_size
 
@@ -1390,15 +1390,15 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_page_without_capacity_is_clone
 	expectEqual(t, uint(1), page.GraphemeCount())
 	expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, page.LookupGrapheme(page.GetRowAndCell(0, 2).cell)))
 	h := page.GetRowAndCell(1, 2).cell
-	expect(t, page.styles.Get(h.style_id).flags.bold, "page.styles.get(page.memory, h.style_id).flags.bold")
+	expect(t, page.styles.Get(h.style_id).Flags.Bold, "page.styles.get(page.memory, h.style_id).flags.bold")
 	expect(t, page.GetRowAndCell(1, 2).row.styled, "page.getRowAndCell(1, 2).row.styled")
 	l := page.GetRowAndCell(2, 2).cell
 	e := page.hyperlink_set.Get(zigUnwrap(t, page.LookupHyperlink(l)))
 	expectEqualStrings(t, "https://l", string(e.uri))
 	// The tracked pin follows to the new page.
-	expectEqual(t, s.pages.first, tpin.node)
-	expectEqual(t, SizeCellCountInt(1), tpin.y)
-	expectEqual(t, SizeCellCountInt(2), tpin.x)
+	expectEqual(t, s.pages.first, tpin.Node)
+	expectEqual(t, SizeCellCountInt(1), tpin.Y)
+	expectEqual(t, SizeCellCountInt(2), tpin.X)
 	page.AssertIntegrity()
 }
 
@@ -1456,11 +1456,11 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_a_page_with_too_many_rows
 		pl4KExpectPin(t, s, *pins[i], 0, y)
 		expectEqual(t, 'a'+uint32(y%26), pins[i].RowAndCell().cell.content.codepoint)
 	}
-	expectEqual(t, s.pages.first, pins[0].node)
-	expectEqual(t, s.pages.first, pins[1].node)
-	expectEqual(t, s.pages.last, pins[2].node)
-	expectEqual(t, SizeCellCountInt(0), pins[2].y)
-	expectEqual(t, SizeCellCountInt(19), pins[3].y)
+	expectEqual(t, s.pages.first, pins[0].Node)
+	expectEqual(t, s.pages.first, pins[1].Node)
+	expectEqual(t, s.pages.last, pins[2].Node)
+	expectEqual(t, SizeCellCountInt(0), pins[2].Y)
+	expectEqual(t, SizeCellCountInt(19), pins[3].Y)
 	for y := uint(0); y < 43; y++ {
 		expectEqual(t, 'a'+uint32(y%26), pl4KCell(t, s, 0, y).content.codepoint)
 	}
@@ -1495,7 +1495,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_rows_are_backfilled_into_
 		}
 	}()
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(2000), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(2000), Reflow: false}))
 	// First page makes pages of 23 and 13 rows, the second one fills the 10
 	// missing rows of the last of those and keeps the other 7 in a new page.
 	expectEqualSlices(t, []uint{23, 23, 7}, pl4KRowsPerPage(s))
@@ -1505,12 +1505,12 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_rows_are_backfilled_into_
 		pl4KExpectPin(t, s, *pins[i], 0, y)
 		expectEqual(t, 'a'+uint32((y+10)%26), pins[i].RowAndCell().cell.content.codepoint)
 	}
-	expectEqual(t, s.pages.first.next, pins[0].node)
-	expectEqual(t, SizeCellCountInt(13), pins[0].y)
-	expectEqual(t, SizeCellCountInt(22), pins[1].y)
-	expectEqual(t, s.pages.last, pins[2].node)
-	expectEqual(t, SizeCellCountInt(0), pins[2].y)
-	expectEqual(t, SizeCellCountInt(6), pins[3].y)
+	expectEqual(t, s.pages.first.next, pins[0].Node)
+	expectEqual(t, SizeCellCountInt(13), pins[0].Y)
+	expectEqual(t, SizeCellCountInt(22), pins[1].Y)
+	expectEqual(t, s.pages.last, pins[2].Node)
+	expectEqual(t, SizeCellCountInt(0), pins[2].Y)
+	expectEqual(t, SizeCellCountInt(6), pins[3].Y)
 	for y := uint(0); y < 53; y++ {
 		expectEqual(t, 'a'+uint32((y+10)%26), pl4KCell(t, s, 0, y).content.codepoint)
 	}
@@ -1525,7 +1525,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_rows_are_not_backfilled_i
 	zigTry(t, s.growRows(60))
 	expectEqualSlices(t, []uint{46, 17}, pl4KRowsPerPage(s))
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(2000), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(2000), Reflow: false}))
 	// The 46 rows make two full pages of 23 and the 17 rows start a new one.
 	expectEqualSlices(t, []uint{23, 23, 17}, pl4KRowsPerPage(s))
 	expectEqual(t, uint(63), s.totalRows())
@@ -1538,10 +1538,10 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_failed_backfill_falls_back_to_
 	s := pl4Init(t, 200, 1, pl4NoMax())
 	defer s.Deinit()
 	pl4KGrowColsFixture(t, s, [3]bool{true, false, false})
-	tpin := pl4TrackPin(t, s, PageListPin{node: s.pages.last, x: 0, y: 2})
+	tpin := pl4TrackPin(t, s, PageListPin{Node: s.pages.last, X: 0, Y: 2})
 	defer s.UntrackPin(tpin)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(201), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(201), Reflow: false}))
 	// The very first row cannot be copied to the previous page (the style set
 	// is full) so nothing is copied there.
 	expectEqualSlices(t, []uint{1, 3}, pl4KRowsPerPage(s))
@@ -1549,8 +1549,8 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_failed_backfill_falls_back_to_
 	expectEqual(t, uint32('a'), pl4KCell(t, s, 0, 1).content.codepoint)
 	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 3).content.codepoint)
 	expect(t, pl4KCell(t, s, 0, 1).style_id != 0, "term51KCell(&s, 0, 1).style_id != 0")
-	expectEqual(t, s.pages.last, tpin.node)
-	expectEqual(t, SizeCellCountInt(2), tpin.y)
+	expectEqual(t, s.pages.last, tpin.Node)
+	expectEqual(t, SizeCellCountInt(2), tpin.Y)
 	s.AssertIntegrity()
 }
 
@@ -1563,35 +1563,35 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_backfill_that_fails_midway_lea
 	old_node := s.pages.last
 	// One pin in the row that is copied to the previous page and one in a
 	// row that is not.
-	copied_pin := pl4TrackPin(t, s, PageListPin{node: old_node, x: 0, y: 0})
+	copied_pin := pl4TrackPin(t, s, PageListPin{Node: old_node, X: 0, Y: 0})
 	defer s.UntrackPin(copied_pin)
-	other_pin := pl4TrackPin(t, s, PageListPin{node: old_node, x: 0, y: 2})
+	other_pin := pl4TrackPin(t, s, PageListPin{Node: old_node, X: 0, Y: 2})
 	defer s.UntrackPin(other_pin)
 
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(201), reflow: false}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(201), Reflow: false}))
 	// Row 0 went to the previous page, rows 1 and 2 to a new one.
 	expectEqualSlices(t, []uint{2, 2}, pl4KRowsPerPage(s))
 	expectEqual(t, uint(4), s.totalRows())
 	expectEqual(t, uint32('a'), pl4KCell(t, s, 0, 1).content.codepoint)
 	expectEqual(t, uint32('b'), pl4KCell(t, s, 0, 2).content.codepoint)
 	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 3).content.codepoint)
-	expectEqual(t, s.pages.last, other_pin.node)
-	expectEqual(t, SizeCellCountInt(1), other_pin.y)
+	expectEqual(t, s.pages.last, other_pin.Node)
+	expectEqual(t, SizeCellCountInt(1), other_pin.Y)
 
 	// The pin in the copied row was not remapped when the copy stopped early
 	// (the remap is skipped) so it still points to the destroyed page.
-	expectEqual(t, old_node, copied_pin.node)
+	expectEqual(t, old_node, copied_pin.Node)
 	found := false
 	for node := s.pages.first; node != nil; node = node.next {
-		if node == copied_pin.node {
+		if node == copied_pin.Node {
 			found = true
 		}
 	}
 	expect(t, !found, "!found")
 
 	// Repair it so that the list can be torn down.
-	copied_pin.node = s.pages.first
-	copied_pin.y = 1
+	copied_pin.Node = s.pages.first
+	copied_pin.Y = 1
 }
 
 // Zig: test "term51: trailingBlankLines: counts blank rows from the bottom up to max"
@@ -1641,7 +1641,7 @@ func TestPl4_term51_trailingBlankLines_rows_with_only_colors_styles_or_spacers_a
 	{
 		page := &s.pages.first.data
 		*page.GetRowAndCell(0, 1).cell = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 1}}
-		*page.GetRowAndCell(1, 2).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}}}
+		*page.GetRowAndCell(1, 2).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}}
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		st := page.GetRowAndCell(2, 3)
 		st.cell.style_id = bold
@@ -1851,8 +1851,8 @@ func TestPl4_term51_resizeCols_layout_hyperlinks_that_need_more_string_bytes_are
 	{
 		page := &s.pages.first.data
 		id := pl4InsertHyperlink(t, page, Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 5},
-			uri: []uint8(uri_a),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 5},
+			URI: []uint8(uri_a),
 		})
 		rac := page.GetRowAndCell(uint(page.size.cols)-1, uint(page.size.rows)-1)
 		rac.row.wrap = true
@@ -1862,8 +1862,8 @@ func TestPl4_term51_resizeCols_layout_hyperlinks_that_need_more_string_bytes_are
 	{
 		page := &s.pages.last.data
 		id := pl4InsertHyperlink(t, page, Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 6},
-			uri: []uint8(uri_b),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 6},
+			URI: []uint8(uri_b),
 		})
 		rac := page.GetRowAndCell(0, 0)
 		rac.row.wrap_continuation = true
@@ -1872,7 +1872,7 @@ func TestPl4_term51_resizeCols_layout_hyperlinks_that_need_more_string_bytes_are
 	}
 	old_string_bytes := s.pages.last.data.capacity.string_bytes
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(3), Reflow: true}))
 	s.AssertIntegrity()
 	// The two rows became one.
 	expectEqual(t, total-1, s.totalRows())
@@ -1928,7 +1928,7 @@ func TestPl4_term51_resizeCols_layout_graphemes_that_need_more_bytes_are_kept_wh
 	}
 	old_bytes := s.pages.last.data.capacity.grapheme_bytes
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(3), Reflow: true}))
 	s.AssertIntegrity()
 	expectEqual(t, total-1, s.totalRows())
 	expectEqual(t, uint(2), s.TotalPages())
@@ -1956,10 +1956,10 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 	{
 		page := &s.pages.first.data
 		for x := uint(0); x < cols; x++ {
-			id, err := page.styles.Add(Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-				r: uint8(x),
-				g: uint8(x >> 8),
-				b: 0,
+			id, err := page.styles.Add(Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+				R: uint8(x),
+				G: uint8(x >> 8),
+				B: 0,
 			}}})
 			if err != nil {
 				break
@@ -1975,10 +1975,10 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 	{
 		page := &s.pages.last.data
 		for x := uint(0); x < cols; x++ {
-			id, err := page.styles.Add(Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-				r: uint8(x),
-				g: uint8(x >> 8),
-				b: 0,
+			id, err := page.styles.Add(Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+				R: uint8(x),
+				G: uint8(x >> 8),
+				B: 0,
 			}}})
 			if err != nil {
 				break
@@ -1995,7 +1995,7 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 	expect(t, n1 > 0 && n1 < cols, "n1 > 0 and n1 < cols")
 	expect(t, n1+n2 > uint(PageStdCapacity.styles), "n1 + n2 > std_capacity.styles")
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(SizeCellCountInt(cols * 2)), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(SizeCellCountInt(cols * 2)), Reflow: true}))
 	s.AssertIntegrity()
 	page := &s.pages.last.data
 	expect(t, page.capacity.styles > PageStdCapacity.styles, "page.capacity.styles > std_capacity.styles")
@@ -2004,9 +2004,9 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 	expect(t, pl4KRow(t, s, last_row).styled, "term51KRow(&s, last_row).styled")
 	// First part has the bg styles, the second the fg ones.
 	a := *pl4KPin(t, s, 0, last_row).RowAndCell().cell
-	expect(t, page.styles.Get(a.style_id).bg_color.Tag == StyleColorRgb, "page.styles.get(page.memory, a.style_id).bg_color == .rgb")
+	expect(t, page.styles.Get(a.style_id).BgColor.Tag == StyleColorRgb, "page.styles.get(page.memory, a.style_id).bg_color == .rgb")
 	b := *pl4KPin(t, s, cols, last_row).RowAndCell().cell
-	expect(t, page.styles.Get(b.style_id).fg_color.Tag == StyleColorRgb, "page.styles.get(page.memory, b.style_id).fg_color == .rgb")
+	expect(t, page.styles.Get(b.style_id).FgColor.Tag == StyleColorRgb, "page.styles.get(page.memory, b.style_id).fg_color == .rgb")
 	gap := *pl4KPin(t, s, n1, last_row).RowAndCell().cell
 	expectEqual(t, SizeStyleCountInt(0), gap.style_id)
 }
@@ -2039,7 +2039,7 @@ func TestPl4_term51_resizeCols_layout_a_line_wrapped_across_two_pages_is_joined_
 	defer s.UntrackPin(pin_b)
 	defer s.UntrackPin(pin_blank)
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(2000), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(2000), Reflow: true}))
 	s.AssertIntegrity()
 	// Rows 0-44 and the joined row; the blank rows after it were never written.
 	expectEqual(t, uint(46), s.totalRows())
@@ -2062,9 +2062,9 @@ func TestPl4_term51_resize_nothing_changes_when_the_dimensions_are_the_same(t *t
 	pl4KLoad(t, s, "|abcd>\n<ef..|\n|g...|")
 	s.viewport_pin_row_offset = Some[uint](3)
 
-	zigTry(t, s.Resize(PageListResize{reflow: true}))
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(4), rows: pl4S(3), reflow: true}))
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(4), rows: pl4S(3), reflow: false, cursor: pl4Cursor(1, 1)}))
+	zigTry(t, s.Resize(PageListResize{Reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(4), Rows: pl4S(3), Reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(4), Rows: pl4S(3), Reflow: false, Cursor: pl4Cursor(1, 1)}))
 	pl4KExpect(t, s, "|abcd>\n<ef..|\n|g...|")
 	expectEqual(t, None[uint](), s.viewport_pin_row_offset)
 }
@@ -2076,7 +2076,7 @@ func TestPl4_term51_resize_a_single_column_unwraps_when_it_grows(t *testing.T) {
 	defer s.Deinit()
 	pl4KLoad(t, s, "|a>\n<b>\n<c|\n|d|")
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(3), Reflow: true}))
 	pl4KExpect(t, s, "|abc|\n|d..|\n|...|\n|...|")
 	// The active area (4 rows) is made up with blank rows.
 	expectEqual(t, uint(4), uint(s.rows))
@@ -2089,9 +2089,9 @@ func TestPl4_term51_resize_a_wide_character_at_the_edge_round_trips_through_a_na
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abW_|\n|....|")
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(3), Reflow: true}))
 	pl4KExpect(t, s, "|ab^>\n<W_.|")
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(4), Reflow: true}))
 	pl4KExpect(t, s, "|abW_|\n|....|")
 }
 
@@ -2102,9 +2102,9 @@ func TestPl4_term51_resize_shrinking_to_one_column_destroys_wide_characters_for_
 	defer s.Deinit()
 	pl4KLoad(t, s, "|aW_b|\n|....|")
 
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(1), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(1), Reflow: true}))
 	pl4KExpect(t, s, "|a>\n<.>\n<b|")
-	zigTry(t, s.Resize(PageListResize{cols: pl4S(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl4S(4), Reflow: true}))
 	// The wide character became one empty cell.
 	pl4KExpect(t, s, "|a.b.|\n|....|")
 }
@@ -2173,11 +2173,11 @@ func TestPl4_term51_resizeWithoutReflow_dirty_flags_are_kept_by_column_changes(t
 	pl4KRow(t, s, 0).dirty = true
 
 	// Less columns clear in place.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(2), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(2), Reflow: true}))
 	expect(t, pl4KRow(t, s, 0).dirty, "term51KRow(&s, 0).dirty")
 	expect(t, !pl4KRow(t, s, 1).dirty, "!term51KRow(&s, 1).dirty")
 	// More columns than the capacity clone the rows into a new page.
-	zigTry(t, s.resizeWithoutReflow(PageListResize{cols: pl4S(9), reflow: true}))
+	zigTry(t, s.resizeWithoutReflow(PageListResize{Cols: pl4S(9), Reflow: true}))
 	expect(t, pl4KRow(t, s, 0).dirty, "term51KRow(&s, 0).dirty")
 	expect(t, !pl4KRow(t, s, 1).dirty, "!term51KRow(&s, 1).dirty")
 }
@@ -2220,9 +2220,9 @@ func TestPl4_term51_scroll_explicit_max_size_0_forces_active_for_every_variant(t
 		s.viewport_pin_row_offset = None[uint]()
 
 		// The viewport pin itself is never moved.
-		expectEqual(t, first, s.viewport_pin.node)
-		expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
-		expectEqual(t, SizeCellCountInt(0), s.viewport_pin.x)
+		expectEqual(t, first, s.viewport_pin.Node)
+		expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
+		expectEqual(t, SizeCellCountInt(0), s.viewport_pin.X)
 	}
 }
 
@@ -2243,7 +2243,7 @@ func TestPl4_term51_scroll_active_and_top_variants(t *testing.T) {
 	// Active to top.
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
-	expectEqual(t, s.pages.first, s.GetTopLeft(PointTagViewport).node)
+	expectEqual(t, s.pages.first, s.GetTopLeft(PointTagViewport).Node)
 	expectEqual(t, uint(0), s.viewportRowOffset())
 
 	// Top to top.
@@ -2276,67 +2276,67 @@ func TestPl4_term51_scroll_pin_variant(t *testing.T) {
 	second := s.pages.first.next
 	third := s.pages.last
 	// Active top-left is third page row 76 (absolute 2c + 76).
-	expectEqual(t, third, s.GetTopLeft(PointTagActive).node)
-	expectEqual(t, SizeCellCountInt(76), s.GetTopLeft(PointTagActive).y)
+	expectEqual(t, third, s.GetTopLeft(PointTagActive).Node)
+	expectEqual(t, SizeCellCountInt(76), s.GetTopLeft(PointTagActive).Y)
 
 	// Active top row: active. The viewport pin is not touched.
 	vp_before := *s.viewport_pin
-	s.Scroll(pl4ScrollPin(PageListPin{node: third, y: 76}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: third, Y: 76}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	expectEqual(t, vp_before.node, s.viewport_pin.node)
-	expectEqual(t, vp_before.y, s.viewport_pin.y)
+	expectEqual(t, vp_before.Node, s.viewport_pin.Node)
+	expectEqual(t, vp_before.Y, s.viewport_pin.Y)
 
 	// Last row, with an x: active.
-	s.Scroll(pl4ScrollPin(PageListPin{node: third, y: 99, x: 9}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: third, Y: 99, X: 9}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// One above the active top: a pin viewport; the offset cache is reset
 	// and the pin is copied including x.
 	s.viewport_pin_row_offset = Some[uint](42)
-	s.Scroll(pl4ScrollPin(PageListPin{node: third, y: 75}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: third, Y: 75}))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, third, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(75), s.viewport_pin.y)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.x)
+	expectEqual(t, third, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(75), s.viewport_pin.Y)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.X)
 	expectEqual(t, None[uint](), s.viewport_pin_row_offset)
-	expectEqual(t, 2*c+75, s.Scrollbar().offset)
+	expectEqual(t, 2*c+75, s.Scrollbar().Offset)
 
-	with_x := PageListPin{node: third, y: 75, x: 9}
+	with_x := PageListPin{Node: third, Y: 75, X: 9}
 	s.Scroll(pl4ScrollPin(with_x))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, SizeCellCountInt(9), s.viewport_pin.x)
+	expectEqual(t, SizeCellCountInt(9), s.viewport_pin.X)
 	expectEqual(t, None[uint](), s.viewport_pin_row_offset)
 
 	// A pin in the second page (even row 0): a pin viewport, not top.
-	s.Scroll(pl4ScrollPin(PageListPin{node: second, y: 0}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: second, Y: 0}))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, second, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
-	expectEqual(t, c, s.Scrollbar().offset)
+	expectEqual(t, second, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
+	expectEqual(t, c, s.Scrollbar().Offset)
 
 	// First page, row 1: pin viewport.
-	s.Scroll(pl4ScrollPin(PageListPin{node: s.pages.first, y: 1}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: s.pages.first, Y: 1}))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, uint(1), s.Scrollbar().offset)
+	expectEqual(t, uint(1), s.Scrollbar().Offset)
 
 	// First page row 0 (any x): top. The viewport pin is not modified.
-	s.Scroll(pl4ScrollPin(PageListPin{node: s.pages.first, y: 1}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: s.pages.first, Y: 1}))
 	keep := *s.viewport_pin
-	s.Scroll(pl4ScrollPin(PageListPin{node: s.pages.first, y: 0, x: 9}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: s.pages.first, Y: 0, X: 9}))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
-	expectEqual(t, keep.node, s.viewport_pin.node)
-	expectEqual(t, keep.y, s.viewport_pin.y)
+	expectEqual(t, keep.Node, s.viewport_pin.Node)
+	expectEqual(t, keep.Y, s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
-	s.Scroll(pl4ScrollPin(PageListPin{node: s.pages.first, y: 0}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: s.pages.first, Y: 0}))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	// From a pin viewport: pin in active goes active, pin at top goes top.
-	s.Scroll(pl4ScrollPin(PageListPin{node: third, y: 75}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: third, Y: 75}))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	s.Scroll(pl4ScrollPin(PageListPin{node: third, y: 76}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: third, Y: 76}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	s.Scroll(pl4ScrollPin(PageListPin{node: third, y: 75}))
-	s.Scroll(pl4ScrollPin(PageListPin{node: s.pages.first, y: 0}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: third, Y: 75}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: s.pages.first, Y: 0}))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 }
 
@@ -2354,21 +2354,21 @@ func TestPl4_term51_scroll_pin_variant_with_active_area_spanning_two_pages(t *te
 	expectEqual(t, SizeCellCountInt(5), second.data.size.rows)
 
 	// Active is the last 19 rows of the first page and all 5 of the last.
-	expectEqual(t, first, s.GetTopLeft(PointTagActive).node)
-	expectEqual(t, SizeCellCountInt(c-19), s.GetTopLeft(PointTagActive).y)
+	expectEqual(t, first, s.GetTopLeft(PointTagActive).Node)
+	expectEqual(t, SizeCellCountInt(c-19), s.GetTopLeft(PointTagActive).Y)
 
-	s.Scroll(pl4ScrollPin(PageListPin{node: first, y: SizeCellCountInt(c - 19)}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: first, Y: SizeCellCountInt(c - 19)}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	s.Scroll(pl4ScrollPin(PageListPin{node: first, y: SizeCellCountInt(c - 1)}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: first, Y: SizeCellCountInt(c - 1)}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	s.Scroll(pl4ScrollPin(PageListPin{node: second, y: 0}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: second, Y: 0}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	s.Scroll(pl4ScrollPin(PageListPin{node: second, y: 4}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: second, Y: 4}))
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
-	s.Scroll(pl4ScrollPin(PageListPin{node: first, y: SizeCellCountInt(c - 20)}))
+	s.Scroll(pl4ScrollPin(PageListPin{Node: first, Y: SizeCellCountInt(c - 20)}))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, c-20, s.Scrollbar().offset)
+	expectEqual(t, c-20, s.Scrollbar().Offset)
 }
 
 // Zig: test "term51: scroll: row variant top and active boundaries"
@@ -2400,15 +2400,15 @@ func TestPl4_term51_scroll_row_variant_top_and_active_boundaries(t *testing.T) {
 	// One before the active top is a real pin.
 	s.Scroll(pl4ScrollRow(total - uint(s.rows) - 1))
 	pl4LExpectViewportRow(t, s, total-uint(s.rows)-1, true)
-	expectEqual(t, s.pages.last, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(75), s.viewport_pin.y)
+	expectEqual(t, s.pages.last, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(75), s.viewport_pin.Y)
 
 	// Row 1 is the first real pin.
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(1))
 	pl4LExpectViewportRow(t, s, 1, true)
-	expectEqual(t, s.pages.first, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(1), s.viewport_pin.y)
+	expectEqual(t, s.pages.first, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(1), s.viewport_pin.Y)
 }
 
 // Zig: test "term51: scroll: row variant without scrollback"
@@ -2452,32 +2452,32 @@ func TestPl4_term51_scroll_row_variant_slow_path_walks_pages_from_either_end(t *
 	// Spot-check the exact node/y at the page boundaries.
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(c - 1))
-	expectEqual(t, s.pages.first, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(c-1), s.viewport_pin.y)
+	expectEqual(t, s.pages.first, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(c-1), s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(c))
-	expectEqual(t, second, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
+	expectEqual(t, second, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(628))
-	expectEqual(t, second, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(628-c), s.viewport_pin.y)
+	expectEqual(t, second, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(628-c), s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(629))
-	expectEqual(t, second, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(629-c), s.viewport_pin.y)
+	expectEqual(t, second, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(629-c), s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(2*c - 1))
-	expectEqual(t, second, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(c-1), s.viewport_pin.y)
+	expectEqual(t, second, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(c-1), s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(2 * c))
-	expectEqual(t, third, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
+	expectEqual(t, third, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollRow(1233))
-	expectEqual(t, third, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(75), s.viewport_pin.y)
+	expectEqual(t, third, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(75), s.viewport_pin.Y)
 }
 
 // Zig: test "term51: scroll: row variant from top and from a pin without cache"
@@ -2516,10 +2516,10 @@ func TestPl4_term51_scroll_row_variant_fast_path_from_cached_pin(t *testing.T) {
 	pl4LExpectViewportRow(t, s, 50, true)
 
 	// Same row: nothing changes.
-	node := s.viewport_pin.node
+	node := s.viewport_pin.Node
 	s.Scroll(pl4ScrollRow(50))
 	pl4LExpectViewportRow(t, s, 50, true)
-	expectEqual(t, node, s.viewport_pin.node)
+	expectEqual(t, node, s.viewport_pin.Node)
 
 	// Last pin row before active.
 	s.Scroll(pl4ScrollRow(s.total_rows - uint(s.rows) - 1))
@@ -2614,20 +2614,20 @@ func TestPl4_term51_scroll_delta_row_from_pin_moving_up(t *testing.T) {
 	pl4LPinAt(t, s, c+1)
 	s.Scroll(pl4ScrollDeltaRow(-2))
 	pl4LExpectViewportRow(t, s, c-1, true)
-	expectEqual(t, s.pages.first, s.viewport_pin.node)
+	expectEqual(t, s.pages.first, s.viewport_pin.Node)
 
 	// Up to exactly row 0: still a pin viewport (not converted to top).
 	pl4LPinAt(t, s, 10)
 	s.Scroll(pl4ScrollDeltaRow(-10))
 	pl4LExpectViewportRow(t, s, 0, true)
-	expectEqual(t, s.pages.first, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
+	expectEqual(t, s.pages.first, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
 
 	// One more up: overflow, top. The pin and cache are left as they were.
 	pl4LPinAt(t, s, 10)
 	s.Scroll(pl4ScrollDeltaRow(-11))
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
-	expectEqual(t, SizeCellCountInt(10), s.viewport_pin.y)
+	expectEqual(t, SizeCellCountInt(10), s.viewport_pin.Y)
 	expectEqual(t, Some[uint](10), s.viewport_pin_row_offset)
 
 	// Largest magnitude.
@@ -2660,7 +2660,7 @@ func TestPl4_term51_scroll_delta_row_from_pin_moving_down(t *testing.T) {
 	pl4LPinAt(t, s, c-1)
 	s.Scroll(pl4ScrollDeltaRow(2))
 	pl4LExpectViewportRow(t, s, c+1, true)
-	expectEqual(t, s.pages.first.next, s.viewport_pin.node)
+	expectEqual(t, s.pages.first.next, s.viewport_pin.Node)
 
 	// Down to the last row above active: stays a pin.
 	pl4LPinAt(t, s, 1000)
@@ -2735,7 +2735,7 @@ func TestPl4_term51_scroll_delta_row_from_top(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 	s.Scroll(pl4ScrollDeltaRow(int64(c)))
 	pl4LExpectViewportRow(t, s, c, false)
-	expectEqual(t, s.pages.first.next, s.viewport_pin.node)
+	expectEqual(t, s.pages.first.next, s.viewport_pin.Node)
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 	s.Scroll(pl4ScrollDeltaRow(int64(active_top - 1)))
@@ -2779,7 +2779,7 @@ func TestPl4_term51_scroll_delta_row_from_active(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
 	s.Scroll(pl4ScrollDeltaRow(-77))
 	pl4LExpectViewportRow(t, s, active_top-77, false)
-	expectEqual(t, s.pages.first.next, s.viewport_pin.node)
+	expectEqual(t, s.pages.first.next, s.viewport_pin.Node)
 
 	// To row 1, then row 0 which is converted to top.
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
@@ -2919,8 +2919,8 @@ func TestPl4_term51_scrollPrompt_backward_resets_the_cached_offset_and_sets_x_to
 	pl4LMark(t, s, 20, PageRowSemanticPromptPrompt)
 
 	// A pin viewport with a computed cache and an x.
-	s.Scroll(pl4ScrollPin(PageListPin{node: s.pages.first, y: 35, x: 7}))
-	expectEqual(t, uint(35), s.Scrollbar().offset)
+	s.Scroll(pl4ScrollPin(PageListPin{Node: s.pages.first, Y: 35, X: 7}))
+	expectEqual(t, uint(35), s.Scrollbar().Offset)
 	expectEqual(t, Some[uint](35), s.viewport_pin_row_offset)
 
 	s.scrollPrompt(-1)
@@ -2967,15 +2967,15 @@ func TestPl4_term51_scrollPrompt_backward_with_no_prompt_or_at_the_top_does_noth
 	// Viewport pinned at row 1: the prompt at row 0 is found, as a pin
 	// viewport at row 0 (it is not converted to top).
 	s.Scroll(pl4ScrollPin(pl4Pin(t, s, pl4ScreenPt(0, 1))))
-	expectEqual(t, uint(1), s.Scrollbar().offset)
+	expectEqual(t, uint(1), s.Scrollbar().Offset)
 	s.scrollPrompt(-1)
 	pl4LExpectViewportRow(t, s, 0, false)
-	expectEqual(t, s.pages.first, s.viewport_pin.node)
+	expectEqual(t, s.pages.first, s.viewport_pin.Node)
 
 	// A pin viewport with nothing above it: unchanged and the cache kept.
 	pl4LMark(t, s, 0, PageRowSemanticPromptNone)
 	s.Scroll(pl4ScrollPin(pl4Pin(t, s, pl4ScreenPt(0, 5))))
-	expectEqual(t, uint(5), s.Scrollbar().offset)
+	expectEqual(t, uint(5), s.Scrollbar().Offset)
 	s.scrollPrompt(-1)
 	pl4LExpectViewportRow(t, s, 5, true)
 }
@@ -3106,7 +3106,7 @@ func TestPl4_term51_scrollPrompt_forward_skips_continuation_lines_of_the_viewpor
 
 	// Nothing after 30/31: unchanged and the cache is kept.
 	s.Scroll(pl4ScrollPin(pl4Pin(t, s, pl4ScreenPt(0, 30))))
-	expectEqual(t, uint(30), s.Scrollbar().offset)
+	expectEqual(t, uint(30), s.Scrollbar().Offset)
 	s.scrollPrompt(1)
 	pl4LExpectViewportRow(t, s, 30, true)
 }
@@ -3331,7 +3331,7 @@ func TestPl4_term51_scrollClear_which_cells_count_as_non_empty(t *testing.T) {
 		defer s.Deinit()
 		*pl4Pin(t, s, pl4ActivePt(10, 1)).RowAndCell().cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
 		}
 		zigTry(t, s.ScrollClear())
 		expectEqual(t, uint(5+2), s.total_rows)
@@ -3558,17 +3558,17 @@ func TestPl4_term51_compact_oversized_page_in_the_middle_is_replaced(t *testing.
 	node := first.next
 
 	// Contents and tracked pins on every page.
-	pl4LText(PageListPin{node: node, x: 3, y: 7}, 'X')
-	pl4LText(PageListPin{node: node, x: 79, y: SizeCellCountInt(c - 1)}, 'Y')
-	pin_mid := pl4TrackPin(t, s, PageListPin{node: node, x: 5, y: 10})
-	pin_last := pl4TrackPin(t, s, PageListPin{node: node, x: 79, y: SizeCellCountInt(c - 1)})
-	pin_first := pl4TrackPin(t, s, PageListPin{node: first, x: 2, y: 3})
-	pin_third := pl4TrackPin(t, s, PageListPin{node: third, x: 1, y: 0})
-	s.Scroll(pl4ScrollPin(PageListPin{node: node, y: 20}))
-	expectEqual(t, c+20, s.Scrollbar().offset)
+	pl4LText(PageListPin{Node: node, X: 3, Y: 7}, 'X')
+	pl4LText(PageListPin{Node: node, X: 79, Y: SizeCellCountInt(c - 1)}, 'Y')
+	pin_mid := pl4TrackPin(t, s, PageListPin{Node: node, X: 5, Y: 10})
+	pin_last := pl4TrackPin(t, s, PageListPin{Node: node, X: 79, Y: SizeCellCountInt(c - 1)})
+	pin_first := pl4TrackPin(t, s, PageListPin{Node: first, X: 2, Y: 3})
+	pin_third := pl4TrackPin(t, s, PageListPin{Node: third, X: 1, Y: 0})
+	s.Scroll(pl4ScrollPin(PageListPin{Node: node, Y: 20}))
+	expectEqual(t, c+20, s.Scrollbar().Offset)
 
 	node = pl4LMakeOversized(t, s, node)
-	expectEqual(t, node, pin_mid.node)
+	expectEqual(t, node, pin_mid.Node)
 	node.data.dirty = true
 	old_len := pageListMemoryLen(&node.data)
 	old_size := node.data.size
@@ -3604,18 +3604,18 @@ func TestPl4_term51_compact_oversized_page_in_the_middle_is_replaced(t *testing.
 	expectEqual(t, uint(3), s.TotalPages())
 
 	// Tracked pins moved if they were on the page, untouched otherwise.
-	expectEqual(t, new, pin_mid.node)
-	expectEqual(t, SizeCellCountInt(5), pin_mid.x)
-	expectEqual(t, SizeCellCountInt(10), pin_mid.y)
-	expectEqual(t, new, pin_last.node)
-	expectEqual(t, SizeCellCountInt(79), pin_last.x)
-	expectEqual(t, SizeCellCountInt(c-1), pin_last.y)
-	expectEqual(t, first, pin_first.node)
-	expectEqual(t, third, pin_third.node)
-	expectEqual(t, new, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(20), s.viewport_pin.y)
+	expectEqual(t, new, pin_mid.Node)
+	expectEqual(t, SizeCellCountInt(5), pin_mid.X)
+	expectEqual(t, SizeCellCountInt(10), pin_mid.Y)
+	expectEqual(t, new, pin_last.Node)
+	expectEqual(t, SizeCellCountInt(79), pin_last.X)
+	expectEqual(t, SizeCellCountInt(c-1), pin_last.Y)
+	expectEqual(t, first, pin_first.Node)
+	expectEqual(t, third, pin_third.Node)
+	expectEqual(t, new, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(20), s.viewport_pin.Y)
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, c+20, s.Scrollbar().offset)
+	expectEqual(t, c+20, s.Scrollbar().Offset)
 
 	// Contents.
 	expectEqual(t, uint32('X'), new.data.GetRowAndCell(3, 7).cell.content.codepoint)
@@ -3647,7 +3647,7 @@ func TestPl4_term51_compact_sole_page_becomes_first_and_last(t *testing.T) {
 	expectEqual(t, uint(24), s.total_rows)
 
 	// Tracked viewport pin followed the page.
-	expectEqual(t, new, s.viewport_pin.node)
+	expectEqual(t, new, s.viewport_pin.Node)
 }
 
 // Zig: test "term51: compact: first and last pages of a longer list"
@@ -3665,7 +3665,7 @@ func TestPl4_term51_compact_first_and_last_pages_of_a_longer_list(t *testing.T) 
 		expectEqual(t, (*PageListNode)(nil), new.prev)
 		expectEqual(t, second, new.next)
 		expectEqual(t, new, second.prev)
-		expectEqual(t, new, s.viewport_pin.node)
+		expectEqual(t, new, s.viewport_pin.Node)
 	}
 
 	// Last page.
@@ -3697,7 +3697,7 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 		for _, e := range []struct {
 			x  uint
 			y  uint
-			id StyleId
+			id StyleID
 		}{
 			{x: 0, y: 0, id: bold},
 			{x: 1, y: 0, id: bold},
@@ -3724,8 +3724,8 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 
 		// A hyperlink.
 		link := pl4InsertHyperlink(t, page, Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
-			uri: []uint8("https://example.com"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
+			URI: []uint8("https://example.com"),
 		})
 		{
 			rac := page.GetRowAndCell(3, 2)
@@ -3749,12 +3749,12 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 
 	{
 		rac := page.GetRowAndCell(0, 0)
-		expect(t, page.styles.Get(rac.cell.style_id).flags.bold, "page.styles.get(page.memory, rac.cell.style_id).flags.bold")
+		expect(t, page.styles.Get(rac.cell.style_id).Flags.Bold, "page.styles.get(page.memory, rac.cell.style_id).flags.bold")
 		expect(t, rac.row.styled, "rac.row.styled")
 		rac2 := page.GetRowAndCell(1, 0)
 		expectEqual(t, rac.cell.style_id, rac2.cell.style_id)
 		rac3 := page.GetRowAndCell(0, 1)
-		expect(t, page.styles.Get(rac3.cell.style_id).flags.italic, "page.styles.get(page.memory, rac3.cell.style_id).flags.italic")
+		expect(t, page.styles.Get(rac3.cell.style_id).Flags.Italic, "page.styles.get(page.memory, rac3.cell.style_id).flags.italic")
 	}
 	{
 		rac := page.GetRowAndCell(2, 0)
@@ -3791,10 +3791,10 @@ func TestPl4_term51_compact_returns_null_when_compacting_would_not_save_memory(t
 		page := &node.data
 		for i := uint(0); i < 3000; i++ {
 			id := pl4StylesAdd(t, page, Style{
-				fg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-					r: uint8(i & 0xFF),
-					g: uint8(i >> 8),
-					b: 7,
+				FgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+					R: uint8(i & 0xFF),
+					G: uint8(i >> 8),
+					B: 7,
 				}},
 			})
 			rac := page.GetRowAndCell(i%80, i/80)
@@ -3835,7 +3835,7 @@ func TestPl4_term51_split_a_single_row_page_cannot_be_split(t *testing.T) {
 	page_size := s.page_size
 
 	// Even at row 0, which would otherwise be a no-op.
-	pl4ExpectError(t, ErrOutOfSpace, s.Split(PageListPin{node: s.pages.first}))
+	pl4ExpectError(t, ErrOutOfSpace, s.Split(PageListPin{Node: s.pages.first}))
 	expectEqual(t, uint(1), s.TotalPages())
 	expectEqual(t, serial, s.page_serial)
 	expectEqual(t, page_size, s.page_size)
@@ -3846,11 +3846,11 @@ func TestPl4_term51_split_row_0_is_a_no_op(t *testing.T) {
 	testStdCapacity(t)
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()
-	pl4LText(PageListPin{node: s.pages.first, y: 0}, 'A')
+	pl4LText(PageListPin{Node: s.pages.first, Y: 0}, 'A')
 	serial := s.page_serial
 	page_size := s.page_size
 
-	zigTry(t, s.Split(PageListPin{node: s.pages.first, y: 0, x: 5}))
+	zigTry(t, s.Split(PageListPin{Node: s.pages.first, Y: 0, X: 5}))
 	expectEqual(t, uint(1), s.TotalPages())
 	expectEqual(t, SizeCellCountInt(10), s.pages.first.data.size.rows)
 	expectEqual(t, serial, s.page_serial)
@@ -3865,12 +3865,12 @@ func TestPl4_term51_split_rows_from_the_pin_down_move_to_a_new_page(t *testing.T
 	defer s.Deinit()
 	first := s.pages.first
 	for y := uint(0); y < 10; y++ {
-		pl4LText(PageListPin{node: first, y: SizeCellCountInt(y), x: 1}, uint32('a'+y))
+		pl4LText(PageListPin{Node: first, Y: SizeCellCountInt(y), X: 1}, uint32('a'+y))
 	}
 	serial := s.page_serial
 	serial_min := s.page_serial_min
 
-	zigTry(t, s.Split(PageListPin{node: first, y: 4, x: 3}))
+	zigTry(t, s.Split(PageListPin{Node: first, Y: 4, X: 3}))
 
 	expectEqual(t, uint(2), s.TotalPages())
 	second := s.pages.last
@@ -3903,7 +3903,7 @@ func TestPl4_term51_split_rows_from_the_pin_down_move_to_a_new_page(t *testing.T
 	expectEqual(t, serial_min, s.page_serial_min)
 
 	// The active area still ends at the last row.
-	expectEqual(t, second, zigUnwrap(t, s.GetBottomRight(PointTagActive)).node)
+	expectEqual(t, second, zigUnwrap(t, s.GetBottomRight(PointTagActive)).Node)
 }
 
 // Zig: test "term51: split: row 1 and the last row"
@@ -3913,14 +3913,14 @@ func TestPl4_term51_split_row_1_and_the_last_row(t *testing.T) {
 	{
 		s := pl4Init(t, 80, 10, pl4NoMax())
 		defer s.Deinit()
-		zigTry(t, s.Split(PageListPin{node: s.pages.first, y: 1}))
+		zigTry(t, s.Split(PageListPin{Node: s.pages.first, Y: 1}))
 		expectEqual(t, SizeCellCountInt(1), s.pages.first.data.size.rows)
 		expectEqual(t, SizeCellCountInt(9), s.pages.last.data.size.rows)
 	}
 	{
 		s := pl4Init(t, 80, 10, pl4NoMax())
 		defer s.Deinit()
-		zigTry(t, s.Split(PageListPin{node: s.pages.first, y: 9}))
+		zigTry(t, s.Split(PageListPin{Node: s.pages.first, Y: 9}))
 		expectEqual(t, SizeCellCountInt(9), s.pages.first.data.size.rows)
 		expectEqual(t, SizeCellCountInt(1), s.pages.last.data.size.rows)
 	}
@@ -3936,24 +3936,24 @@ func TestPl4_term51_split_moves_exactly_the_tracked_pins_at_or_after_the_split_r
 	second := first.next
 	third := s.pages.last
 
-	pin_first := pl4TrackPin(t, s, PageListPin{node: first, x: 9, y: 100})
-	pin_before := pl4TrackPin(t, s, PageListPin{node: second, x: 1, y: 99})
-	pin_at := pl4TrackPin(t, s, PageListPin{node: second, x: 2, y: 100})
-	pin_after := pl4TrackPin(t, s, PageListPin{node: second, x: 3, y: 150})
-	pin_end := pl4TrackPin(t, s, PageListPin{node: second, x: 79, y: SizeCellCountInt(c - 1)})
-	pin_third := pl4TrackPin(t, s, PageListPin{node: third, x: 4, y: 100 - 1})
-	pin_after.garbage = true
+	pin_first := pl4TrackPin(t, s, PageListPin{Node: first, X: 9, Y: 100})
+	pin_before := pl4TrackPin(t, s, PageListPin{Node: second, X: 1, Y: 99})
+	pin_at := pl4TrackPin(t, s, PageListPin{Node: second, X: 2, Y: 100})
+	pin_after := pl4TrackPin(t, s, PageListPin{Node: second, X: 3, Y: 150})
+	pin_end := pl4TrackPin(t, s, PageListPin{Node: second, X: 79, Y: SizeCellCountInt(c - 1)})
+	pin_third := pl4TrackPin(t, s, PageListPin{Node: third, X: 4, Y: 100 - 1})
+	pin_after.Garbage = true
 
 	// The viewport pin lives in the moved region too. Its absolute row
 	// stays the same.
-	s.Scroll(pl4ScrollPin(PageListPin{node: second, y: 200}))
-	expectEqual(t, c+200, s.Scrollbar().offset)
+	s.Scroll(pl4ScrollPin(PageListPin{Node: second, Y: 200}))
+	expectEqual(t, c+200, s.Scrollbar().Offset)
 
 	// Split at the position of a tracked pin. A fresh pin is built from its
 	// fields: passing `pin_at.*` (even via a const copy) lets the argument
 	// alias the tracked pin, which split then moves, corrupting the pins
 	// handled after it (the integrity check fires).
-	split_at := PageListPin{node: pin_at.node, y: pin_at.y, x: pin_at.x}
+	split_at := PageListPin{Node: pin_at.Node, Y: pin_at.Y, X: pin_at.X}
 	zigTry(t, s.Split(split_at))
 
 	new := second.next
@@ -3961,29 +3961,29 @@ func TestPl4_term51_split_moves_exactly_the_tracked_pins_at_or_after_the_split_r
 	expectEqual(t, SizeCellCountInt(100), second.data.size.rows)
 	expectEqual(t, SizeCellCountInt(c-100), new.data.size.rows)
 
-	expectEqual(t, first, pin_first.node)
-	expectEqual(t, SizeCellCountInt(100), pin_first.y)
-	expectEqual(t, second, pin_before.node)
-	expectEqual(t, SizeCellCountInt(99), pin_before.y)
-	expectEqual(t, SizeCellCountInt(1), pin_before.x)
+	expectEqual(t, first, pin_first.Node)
+	expectEqual(t, SizeCellCountInt(100), pin_first.Y)
+	expectEqual(t, second, pin_before.Node)
+	expectEqual(t, SizeCellCountInt(99), pin_before.Y)
+	expectEqual(t, SizeCellCountInt(1), pin_before.X)
 
-	expectEqual(t, new, pin_at.node)
-	expectEqual(t, SizeCellCountInt(0), pin_at.y)
-	expectEqual(t, SizeCellCountInt(2), pin_at.x)
-	expectEqual(t, new, pin_after.node)
-	expectEqual(t, SizeCellCountInt(50), pin_after.y)
-	expectEqual(t, SizeCellCountInt(3), pin_after.x)
-	expect(t, pin_after.garbage, "pin_after.garbage")
-	expectEqual(t, new, pin_end.node)
-	expectEqual(t, SizeCellCountInt(c-1-100), pin_end.y)
-	expectEqual(t, SizeCellCountInt(79), pin_end.x)
-	expectEqual(t, third, pin_third.node)
-	expectEqual(t, SizeCellCountInt(99), pin_third.y)
+	expectEqual(t, new, pin_at.Node)
+	expectEqual(t, SizeCellCountInt(0), pin_at.Y)
+	expectEqual(t, SizeCellCountInt(2), pin_at.X)
+	expectEqual(t, new, pin_after.Node)
+	expectEqual(t, SizeCellCountInt(50), pin_after.Y)
+	expectEqual(t, SizeCellCountInt(3), pin_after.X)
+	expect(t, pin_after.Garbage, "pin_after.garbage")
+	expectEqual(t, new, pin_end.Node)
+	expectEqual(t, SizeCellCountInt(c-1-100), pin_end.Y)
+	expectEqual(t, SizeCellCountInt(79), pin_end.X)
+	expectEqual(t, third, pin_third.Node)
+	expectEqual(t, SizeCellCountInt(99), pin_third.Y)
 
-	expectEqual(t, new, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(100), s.viewport_pin.y)
+	expectEqual(t, new, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(100), s.viewport_pin.Y)
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, c+200, s.Scrollbar().offset)
+	expectEqual(t, c+200, s.Scrollbar().Offset)
 }
 
 // Zig: test "term51: split: position in the list"
@@ -3996,7 +3996,7 @@ func TestPl4_term51_split_position_in_the_list(t *testing.T) {
 	third := s.pages.last
 
 	// Split the first page: new page sits between first and second.
-	zigTry(t, s.Split(PageListPin{node: first, y: 100}))
+	zigTry(t, s.Split(PageListPin{Node: first, Y: 100}))
 	a := first.next
 	expect(t, a != second, "a != second")
 	expectEqual(t, second, a.next)
@@ -4005,7 +4005,7 @@ func TestPl4_term51_split_position_in_the_list(t *testing.T) {
 	expectEqual(t, third, s.pages.last)
 
 	// Split the last page: the new page becomes the last.
-	zigTry(t, s.Split(PageListPin{node: third, y: 50}))
+	zigTry(t, s.Split(PageListPin{Node: third, Y: 50}))
 	b := s.pages.last
 	expect(t, b != third, "b != third")
 	expectEqual(t, third, b.prev)
@@ -4033,7 +4033,7 @@ func TestPl4_term51_split_row_metadata_is_copied(t *testing.T) {
 		rac2.row.semantic_prompt = PageRowSemanticPromptPromptContinuation
 	}
 
-	zigTry(t, s.Split(PageListPin{node: first, y: 5}))
+	zigTry(t, s.Split(PageListPin{Node: first, Y: 5}))
 	second := s.pages.last
 
 	expect(t, second.data.GetRowAndCell(0, 0).row.wrap, "second.data.getRowAndCell(0, 0).row.wrap")
@@ -4074,8 +4074,8 @@ func TestPl4_term51_split_styles_graphemes_and_hyperlinks_move_with_their_rows(t
 		zigTry(t, page.SetGraphemes(rac.row, rac.cell, []uint32{0x200D}))
 	}
 	link := pl4InsertHyperlink(t, page, Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
-		uri: []uint8("https://example.com"),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
+		URI: []uint8("https://example.com"),
 	})
 	{
 		rac := page.GetRowAndCell(2, 9)
@@ -4086,13 +4086,13 @@ func TestPl4_term51_split_styles_graphemes_and_hyperlinks_move_with_their_rows(t
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, link))
 	}
 
-	zigTry(t, s.Split(PageListPin{node: first, y: 5}))
+	zigTry(t, s.Split(PageListPin{Node: first, Y: 5}))
 	second := s.pages.last
 
 	expectEqual(t, uint(1), first.data.styles.Count())
 	expectEqual(t, uint(1), second.data.styles.Count())
-	expect(t, first.data.styles.Get(first.data.GetRowAndCell(0, 2).cell.style_id).flags.bold, "first.data.styles.get(first.data.memory, first.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
-	expect(t, second.data.styles.Get(second.data.GetRowAndCell(0, 2).cell.style_id).flags.bold, "second.data.styles.get(second.data.memory, second.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
+	expect(t, first.data.styles.Get(first.data.GetRowAndCell(0, 2).cell.style_id).Flags.Bold, "first.data.styles.get(first.data.memory, first.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
+	expect(t, second.data.styles.Get(second.data.GetRowAndCell(0, 2).cell.style_id).Flags.Bold, "second.data.styles.get(second.data.memory, second.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
 
 	expectEqual(t, uint(0), first.data.GraphemeCount())
 	expectEqual(t, uint(1), second.data.GraphemeCount())
@@ -4111,7 +4111,7 @@ func TestPl4_term51_split_non_standard_page_keeps_its_capacity(t *testing.T) {
 	page_size := s.page_size
 	len_ := pageListMemoryLen(&node.data)
 
-	zigTry(t, s.Split(PageListPin{node: node, y: 3}))
+	zigTry(t, s.Split(PageListPin{Node: node, Y: 3}))
 	second := s.pages.last
 	expectEqual(t, node.data.capacity, second.data.capacity)
 	expectEqual(t, len_, pageListMemoryLen(&second.data))
@@ -4128,25 +4128,25 @@ func TestPl4_term51_split_layout_page_size_accounting_for_a_standard_page(t *tes
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()
 	page_size := s.page_size
-	zigTry(t, s.Split(PageListPin{node: s.pages.first, y: 5}))
+	zigTry(t, s.Split(PageListPin{Node: s.pages.first, Y: 5}))
 	expectEqual(t, page_size+pageListStdSize(), s.page_size)
 }
 
 // Zig: test "term51: Scrollbar.eql: compares every field"
 func TestPl4_term51_Scrollbar_eql_compares_every_field(t *testing.T) {
 	testStdCapacity(t)
-	a := PageListScrollbar{total: 10, offset: 3, len: 5}
+	a := PageListScrollbar{Total: 10, Offset: 3, Len: 5}
 	expect(t, a.Eql(a), "a.eql(a)")
-	expect(t, a.Eql(PageListScrollbar{total: 10, offset: 3, len: 5}), "a.eql(.{ .total = 10, .offset = 3, .len = 5 })")
-	expect(t, !a.Eql(PageListScrollbar{total: 11, offset: 3, len: 5}), "!a.eql(.{ .total = 11, .offset = 3, .len = 5 })")
-	expect(t, !a.Eql(PageListScrollbar{total: 10, offset: 4, len: 5}), "!a.eql(.{ .total = 10, .offset = 4, .len = 5 })")
-	expect(t, !a.Eql(PageListScrollbar{total: 10, offset: 3, len: 6}), "!a.eql(.{ .total = 10, .offset = 3, .len = 6 })")
-	expect(t, !a.Eql(PageListScrollbar{total: 3, offset: 10, len: 5}), "!a.eql(.{ .total = 3, .offset = 10, .len = 5 })")
+	expect(t, a.Eql(PageListScrollbar{Total: 10, Offset: 3, Len: 5}), "a.eql(.{ .total = 10, .offset = 3, .len = 5 })")
+	expect(t, !a.Eql(PageListScrollbar{Total: 11, Offset: 3, Len: 5}), "!a.eql(.{ .total = 11, .offset = 3, .len = 5 })")
+	expect(t, !a.Eql(PageListScrollbar{Total: 10, Offset: 4, Len: 5}), "!a.eql(.{ .total = 10, .offset = 4, .len = 5 })")
+	expect(t, !a.Eql(PageListScrollbar{Total: 10, Offset: 3, Len: 6}), "!a.eql(.{ .total = 10, .offset = 3, .len = 6 })")
+	expect(t, !a.Eql(PageListScrollbar{Total: 3, Offset: 10, Len: 5}), "!a.eql(.{ .total = 3, .offset = 10, .len = 5 })")
 	expect(t, !a.Eql(PageListScrollbarZero), "!a.eql(.zero)")
-	expect(t, PageListScrollbarZero.Eql(PageListScrollbar{total: 0, offset: 0, len: 0}), "Scrollbar.zero.eql(.{ .total = 0, .offset = 0, .len = 0 })")
+	expect(t, PageListScrollbarZero.Eql(PageListScrollbar{Total: 0, Offset: 0, Len: 0}), "Scrollbar.zero.eql(.{ .total = 0, .offset = 0, .len = 0 })")
 
 	// Symmetric.
-	b := PageListScrollbar{total: 10, offset: 4, len: 5}
+	b := PageListScrollbar{Total: 10, Offset: 4, Len: 5}
 	expect(t, !b.Eql(a), "!b.eql(a)")
 }
 
@@ -4156,7 +4156,7 @@ func TestPl4_term51_scrollbar_no_scrollback_reports_only_the_active_area(t *test
 	s := pl4Init(t, 80, 24, pl4Max(0))
 	defer s.Deinit()
 
-	want := PageListScrollbar{total: 24, offset: 0, len: 24}
+	want := PageListScrollbar{Total: 24, Offset: 0, Len: 24}
 	expect(t, s.Scrollbar().Eql(want), "s.scrollbar().eql(want)")
 
 	// Rows grown by the page layout are hidden.
@@ -4180,16 +4180,16 @@ func TestPl4_term51_scrollbar_reports_total_offset_and_rows_for_each_viewport(t 
 	// Even a tiny non-zero max size is not the no-scrollback special case.
 	s.explicit_max_size = 1
 
-	expect(t, s.Scrollbar().Eql(PageListScrollbar{total: total, offset: total - 24, len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = total - 24, .len = 24 })")
+	expect(t, s.Scrollbar().Eql(PageListScrollbar{Total: total, Offset: total - 24, Len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = total - 24, .len = 24 })")
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
-	expect(t, s.Scrollbar().Eql(PageListScrollbar{total: total, offset: 0, len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = 0, .len = 24 })")
+	expect(t, s.Scrollbar().Eql(PageListScrollbar{Total: total, Offset: 0, Len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = 0, .len = 24 })")
 
 	s.Scroll(pl4ScrollRow(500))
-	expect(t, s.Scrollbar().Eql(PageListScrollbar{total: total, offset: 500, len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = 500, .len = 24 })")
+	expect(t, s.Scrollbar().Eql(PageListScrollbar{Total: total, Offset: 500, Len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = 500, .len = 24 })")
 
 	s.Scroll(pl4ScrollPin(pl4Pin(t, s, pl4ScreenPt(0, 900))))
-	expect(t, s.Scrollbar().Eql(PageListScrollbar{total: total, offset: 900, len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = 900, .len = 24 })")
+	expect(t, s.Scrollbar().Eql(PageListScrollbar{Total: total, Offset: 900, Len: 24}), "s.scrollbar().eql(.{ .total = total, .offset = 900, .len = 24 })")
 	s.explicit_max_size = math.MaxUint64
 }
 
@@ -4198,7 +4198,7 @@ func TestPl4_term51_scrollbar_unscrolled_screen_fits_exactly(t *testing.T) {
 	testStdCapacity(t)
 	s := pl4Init(t, 80, 24, pl4NoMax())
 	defer s.Deinit()
-	expect(t, s.Scrollbar().Eql(PageListScrollbar{total: 24, offset: 0, len: 24}), "s.scrollbar().eql(.{ .total = 24, .offset = 0, .len = 24 })")
+	expect(t, s.Scrollbar().Eql(PageListScrollbar{Total: 24, Offset: 0, Len: 24}), "s.scrollbar().eql(.{ .total = 24, .offset = 0, .len = 24 })")
 }
 
 // Go-only: panic test: resize: cols is zero (assert(v > 0) under runtime safety)
@@ -4207,10 +4207,10 @@ func TestPl4_panic_resize_cols_is_zero(t *testing.T) {
 	s := pl4Init(t, 80, 24, pl4NoMax())
 	defer s.Deinit()
 	pl4ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{cols: pl4S(0), reflow: true})
+		_ = s.Resize(PageListResize{Cols: pl4S(0), Reflow: true})
 	})
 	pl4ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{cols: pl4S(0), reflow: false})
+		_ = s.Resize(PageListResize{Cols: pl4S(0), Reflow: false})
 	})
 }
 
@@ -4220,10 +4220,10 @@ func TestPl4_panic_resize_rows_is_zero(t *testing.T) {
 	s := pl4Init(t, 80, 24, pl4NoMax())
 	defer s.Deinit()
 	pl4ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{rows: pl4S(0), reflow: true})
+		_ = s.Resize(PageListResize{Rows: pl4S(0), Reflow: true})
 	})
 	pl4ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{rows: pl4S(0), reflow: false})
+		_ = s.Resize(PageListResize{Rows: pl4S(0), Reflow: false})
 	})
 }
 
@@ -4305,7 +4305,7 @@ func TestPl4_panic_split_pin_row_is_beyond_the_rows_of_its_page(t *testing.T) {
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()
 	pl4ExpectPanic(t, func() {
-		_ = s.Split(PageListPin{node: s.pages.first, y: 10})
+		_ = s.Split(PageListPin{Node: s.pages.first, Y: 10})
 	})
 }
 
@@ -4316,7 +4316,7 @@ func TestPl4_panic_split_pin_column_is_beyond_the_columns_of_its_page(t *testing
 	s := pl4Init(t, 80, 10, pl4NoMax())
 	defer s.Deinit()
 	pl4ExpectPanic(t, func() {
-		_ = s.Split(PageListPin{node: s.pages.first, y: 5, x: 80})
+		_ = s.Split(PageListPin{Node: s.pages.first, Y: 5, X: 80})
 	})
 }
 
@@ -4329,6 +4329,6 @@ func TestPl4_panic_split_pin_node_is_not_in_the_list(t *testing.T) {
 	other := pl4Init(t, 80, 10, pl4NoMax())
 	defer other.Deinit()
 	pl4ExpectPanic(t, func() {
-		_ = s.Split(PageListPin{node: other.pages.first, y: 5})
+		_ = s.Split(PageListPin{Node: other.pages.first, Y: 5})
 	})
 }

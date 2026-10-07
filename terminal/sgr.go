@@ -177,10 +177,10 @@ func (self SGRAttributeTag) String() string { return sgrAttributeTagNames[self] 
 // SGRAttributeUnknown is sgr.Attribute.Unknown.
 type SGRAttributeUnknown struct {
 	// Full is the full SGR input.
-	full []uint16
+	Full []uint16
 
 	// Partial is the remaining, where we got hung up.
-	partial []uint16
+	Partial []uint16
 }
 
 // SGRAttributeUnderline is sgr.Attribute.Underline.
@@ -278,8 +278,8 @@ func (self *SGRParser) Next() Optional[SGRAttribute] {
 			}
 			self.idx += 1
 			return Some(SGRAttribute{Tag: SGRAttributeTagUnknown, Unknown: SGRAttributeUnknown{
-				full:    self.params,
-				partial: slice[0:min(self.idx-start+1, uint(len(slice)))],
+				Full:    self.params,
+				Partial: slice[0:min(self.idx-start+1, uint(len(slice)))],
 			}})
 		}
 	}
@@ -525,7 +525,7 @@ func (self *SGRParser) Next() Optional[SGRAttribute] {
 	default:
 	}
 
-	return Some(SGRAttribute{Tag: SGRAttributeTagUnknown, Unknown: SGRAttributeUnknown{full: self.params, partial: slice}})
+	return Some(SGRAttribute{Tag: SGRAttributeTagUnknown, Unknown: SGRAttributeUnknown{Full: self.params, Partial: slice}})
 }
 
 // parseDirectColor is sgr.Parser.parseDirectColor.
@@ -556,9 +556,9 @@ func (self *SGRParser) parseDirectColor(
 
 		self.idx += 4
 		return Some(sgrAttributeInitRGB(tag, ColorRGB{
-			r: uint8(slice[2]),
-			g: uint8(slice[3]),
-			b: uint8(slice[4]),
+			R: uint8(slice[2]),
+			G: uint8(slice[3]),
+			B: uint8(slice[4]),
 		}))
 	}
 
@@ -571,17 +571,17 @@ func (self *SGRParser) parseDirectColor(
 
 		self.idx += 4
 		return Some(sgrAttributeInitRGB(tag, ColorRGB{
-			r: uint8(slice[2]),
-			g: uint8(slice[3]),
-			b: uint8(slice[4]),
+			R: uint8(slice[2]),
+			G: uint8(slice[3]),
+			B: uint8(slice[4]),
 		}))
 
 	case 4:
 		self.idx += 5
 		return Some(sgrAttributeInitRGB(tag, ColorRGB{
-			r: uint8(slice[3]),
-			g: uint8(slice[4]),
-			b: uint8(slice[5]),
+			R: uint8(slice[3]),
+			G: uint8(slice[4]),
+			B: uint8(slice[5]),
 		}))
 
 	default:

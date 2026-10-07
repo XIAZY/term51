@@ -235,29 +235,29 @@ func inputKey(it *replayTokens, w *bytes.Buffer) error {
 	// The request names the action: `action` is set explicitly (the zero
 	// value of InputKeyAction is release, Zig's default is press).
 	event := InputKeyKeyEvent{
-		action:              action,
-		key:                 key,
-		mods:                InputKeyModsModsFromInt(a.mods),
-		consumed_mods:       InputKeyModsModsFromInt(a.consumed),
-		composing:           a.composing == 1,
-		utf8:                a.utf8,
-		unshifted_codepoint: a.ucp,
+		Action:             action,
+		Key:                key,
+		Mods:               InputKeyModsModsFromInt(a.mods),
+		ConsumedMods:       InputKeyModsModsFromInt(a.consumed),
+		Composing:          a.composing == 1,
+		UTF8:               a.utf8,
+		UnshiftedCodepoint: a.ucp,
 	}
 
 	opts := InputKeyEncodeOptionsDefault
-	opts.cursor_key_application = a.opts&1 != 0
-	opts.keypad_key_application = a.opts&2 != 0
-	opts.ignore_keypad_with_numlock = a.opts&4 != 0
-	opts.alt_esc_prefix = a.opts&8 != 0
-	opts.modify_other_keys_state_2 = a.opts&16 != 0
-	opts.kitty_flags = KittyKeyFlagsFromInt(a.kitty)
-	if opts.macos_option_as_alt, ok = inputNames.oaa[a.oaaName]; !ok {
+	opts.CursorKeyApplication = a.opts&1 != 0
+	opts.KeypadKeyApplication = a.opts&2 != 0
+	opts.IgnoreKeypadWithNumlock = a.opts&4 != 0
+	opts.AltEscPrefix = a.opts&8 != 0
+	opts.ModifyOtherKeysState2 = a.opts&16 != 0
+	opts.KittyFlags = KittyKeyFlagsFromInt(a.kitty)
+	if opts.MacosOptionAsAlt, ok = inputNames.oaa[a.oaaName]; !ok {
 		return errReplayBadCase
 	}
 
 	aw := oscWriterAllocatingInit()
 	defer aw.deinit()
-	if err := InputKeyEncodeEncode(&aw.writer, event, opts); err != nil {
+	if err := inputKeyEncodeEncode(&aw.writer, event, opts); err != nil {
 		fmt.Fprintf(w, "=> !%s\n", zigErrorName(err))
 		return nil
 	}
@@ -291,7 +291,7 @@ func inputPaste(it *replayTokens, w *bytes.Buffer) error {
 	// The mutable form never fails: it rewrites unsafe bytes in place. Go
 	// passes a copy, so the aliasing of the Zig (`@as([]u8, data)`) is
 	// explicit and `data` stays intact.
-	segs := InputPasteEncodeMutable(append([]uint8(nil), data...), InputPasteOptions{bracketed: bracketed == 1})
+	segs := InputPasteEncodeMutable(append([]uint8(nil), data...), InputPasteOptions{Bracketed: bracketed == 1})
 	w.WriteString("=> ")
 	for i, seg := range segs {
 		if i > 0 {

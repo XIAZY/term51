@@ -56,41 +56,41 @@ func dumpTerminal(w *bytes.Buffer, t *Terminal, label string) {
 	// always empty.
 	w.WriteString("replies=\n")
 
-	dumpAny(w, "term.cols", t.cols)
-	dumpAny(w, "term.rows", t.rows)
-	dumpAny(w, "term.width_px", t.width_px)
-	dumpAny(w, "term.height_px", t.height_px)
-	dumpAny(w, "term.status_display", t.status_display)
-	dumpAny(w, "term.scrolling_region", t.scrolling_region)
-	dumpAny(w, "term.previous_char", t.previous_char)
-	dumpAny(w, "term.mouse_shape", t.mouse_shape)
-	dumpAny(w, "term.flags", t.flags)
-	dumpAny(w, "term.modes.values", t.modes.values)
-	dumpAny(w, "term.modes.saved", t.modes.saved)
-	dumpAny(w, "term.modes.default", t.modes.default_)
-	dumpAny(w, "term.colors.background", t.colors.background)
-	dumpAny(w, "term.colors.foreground", t.colors.foreground)
-	dumpAny(w, "term.colors.cursor", t.colors.cursor)
+	dumpAny(w, "term.cols", t.Cols)
+	dumpAny(w, "term.rows", t.Rows)
+	dumpAny(w, "term.width_px", t.WidthPx)
+	dumpAny(w, "term.height_px", t.HeightPx)
+	dumpAny(w, "term.status_display", t.StatusDisplay)
+	dumpAny(w, "term.scrolling_region", t.ScrollingRegion)
+	dumpAny(w, "term.previous_char", t.PreviousChar)
+	dumpAny(w, "term.mouse_shape", t.MouseShape)
+	dumpAny(w, "term.flags", t.Flags)
+	dumpAny(w, "term.modes.values", t.Modes.Values)
+	dumpAny(w, "term.modes.saved", t.Modes.Saved)
+	dumpAny(w, "term.modes.default", t.Modes.Default)
+	dumpAny(w, "term.colors.background", t.Colors.Background)
+	dumpAny(w, "term.colors.foreground", t.Colors.Foreground)
+	dumpAny(w, "term.colors.cursor", t.Colors.Cursor)
 
 	// Palette: only entries that differ from the original, plus the mask.
 	for i := 0; i < 256; i++ {
-		cur := t.colors.palette.current[i]
-		orig := t.colors.palette.original[i]
-		masked := t.colors.palette.mask.isSet(i)
-		if masked || cur.r != orig.r || cur.g != orig.g || cur.b != orig.b {
-			fmt.Fprintf(w, "term.colors.palette[%d]=%02x%02x%02x mask=%d\n", i, cur.r, cur.g, cur.b, boolInt(masked))
+		cur := t.Colors.Palette.Current[i]
+		orig := t.Colors.Palette.Original[i]
+		masked := t.Colors.Palette.Mask.isSet(i)
+		if masked || cur.R != orig.R || cur.G != orig.G || cur.B != orig.B {
+			fmt.Fprintf(w, "term.colors.palette[%d]=%02x%02x%02x mask=%d\n", i, cur.R, cur.G, cur.B, boolInt(masked))
 		}
 	}
 
 	w.WriteString("term.pwd=")
-	writeEscaped(w, t.pwd)
+	writeEscaped(w, t.Pwd)
 	w.WriteString("\n")
 
 	w.WriteString("term.tabstops=")
 	{
 		first := true
-		for x := uint(0); x < uint(t.cols); x++ {
-			if !t.tabstops.Get(x) {
+		for x := uint(0); x < uint(t.Cols); x++ {
+			if !t.Tabstops.Get(x) {
 				continue
 			}
 			if !first {
@@ -102,10 +102,10 @@ func dumpTerminal(w *bytes.Buffer, t *Terminal, label string) {
 	}
 	w.WriteString("\n")
 
-	fmt.Fprintf(w, "term.screens.active_key=%s\n", t.screens.active_key.String())
+	fmt.Fprintf(w, "term.screens.active_key=%s\n", t.Screens.ActiveKey.String())
 
 	for _, key := range []ScreenSetKey{ScreenSetKeyPrimary, ScreenSetKeyAlternate} {
-		if screen := t.screens.Get(key); screen != nil {
+		if screen := t.Screens.Get(key); screen != nil {
 			fmt.Fprintf(w, "[screen %s]\n", key.String())
 			dumpScreen(w, screen)
 		} else {
@@ -128,66 +128,66 @@ func boolInt(b bool) int {
 // separate functions (dumpScreenPages, dumpScreenRows), called in the same
 // order.
 func dumpScreen(w *bytes.Buffer, s *Screen) {
-	dumpAny(w, "screen.no_scrollback", s.no_scrollback)
-	dumpAny(w, "screen.cursor.x", s.cursor.x)
-	dumpAny(w, "screen.cursor.y", s.cursor.y)
-	dumpAny(w, "screen.cursor.cursor_style", s.cursor.cursor_style)
-	dumpAny(w, "screen.cursor.pending_wrap", s.cursor.pending_wrap)
-	dumpAny(w, "screen.cursor.protected", s.cursor.protected)
+	dumpAny(w, "screen.no_scrollback", s.NoScrollback)
+	dumpAny(w, "screen.cursor.x", s.Cursor.X)
+	dumpAny(w, "screen.cursor.y", s.Cursor.Y)
+	dumpAny(w, "screen.cursor.cursor_style", s.Cursor.CursorStyle)
+	dumpAny(w, "screen.cursor.pending_wrap", s.Cursor.PendingWrap)
+	dumpAny(w, "screen.cursor.protected", s.Cursor.Protected)
 	w.WriteString("screen.cursor.style=")
-	writeStyle(w, s.cursor.style)
+	writeStyle(w, s.Cursor.Style)
 	w.WriteString("\n")
-	dumpAny(w, "screen.cursor.semantic_content", s.cursor.semantic_content)
-	dumpAny(w, "screen.cursor.semantic_content_clear_eol", s.cursor.semantic_content_clear_eol)
-	if link := s.cursor.hyperlink; link != nil {
+	dumpAny(w, "screen.cursor.semantic_content", s.Cursor.SemanticContent)
+	dumpAny(w, "screen.cursor.semantic_content_clear_eol", s.Cursor.SemanticContentClearEol)
+	if link := s.Cursor.Hyperlink; link != nil {
 		w.WriteString("screen.cursor.hyperlink=")
-		switch link.id.Tag {
+		switch link.ID.Tag {
 		case HyperlinkHyperlinkIdExplicit:
 			w.WriteString("explicit:")
-			writeEscaped(w, link.id.Explicit)
+			writeEscaped(w, link.ID.Explicit)
 		case HyperlinkHyperlinkIdImplicit:
-			fmt.Fprintf(w, "implicit:%d", link.id.Implicit)
+			fmt.Fprintf(w, "implicit:%d", link.ID.Implicit)
 		}
 		w.WriteString(" uri=")
-		writeEscaped(w, link.uri)
+		writeEscaped(w, link.URI)
 		w.WriteString("\n")
 	} else {
 		w.WriteString("screen.cursor.hyperlink=null\n")
 	}
-	dumpAny(w, "ident.screen.cursor.style_id", s.cursor.style_id)
-	dumpAny(w, "ident.screen.cursor.hyperlink_id", s.cursor.hyperlink_id)
-	dumpAny(w, "ident.screen.cursor.hyperlink_implicit_id", s.cursor.hyperlink_implicit_id)
+	dumpAny(w, "ident.screen.cursor.style_id", s.Cursor.StyleID)
+	dumpAny(w, "ident.screen.cursor.hyperlink_id", s.Cursor.HyperlinkID)
+	dumpAny(w, "ident.screen.cursor.hyperlink_implicit_id", s.Cursor.HyperlinkImplicitID)
 
-	if s.saved_cursor.Valid {
-		sc := s.saved_cursor.Value
-		dumpAny(w, "screen.saved_cursor.x", sc.x)
-		dumpAny(w, "screen.saved_cursor.y", sc.y)
+	if s.SavedCursor.Valid {
+		sc := s.SavedCursor.Value
+		dumpAny(w, "screen.saved_cursor.x", sc.X)
+		dumpAny(w, "screen.saved_cursor.y", sc.Y)
 		w.WriteString("screen.saved_cursor.style=")
-		writeStyle(w, sc.style)
+		writeStyle(w, sc.Style)
 		w.WriteString("\n")
-		dumpAny(w, "screen.saved_cursor.protected", sc.protected)
-		dumpAny(w, "screen.saved_cursor.pending_wrap", sc.pending_wrap)
-		dumpAny(w, "screen.saved_cursor.origin", sc.origin)
-		dumpAny(w, "screen.saved_cursor.charset", sc.charset)
+		dumpAny(w, "screen.saved_cursor.protected", sc.Protected)
+		dumpAny(w, "screen.saved_cursor.pending_wrap", sc.PendingWrap)
+		dumpAny(w, "screen.saved_cursor.origin", sc.Origin)
+		dumpAny(w, "screen.saved_cursor.charset", sc.Charset)
 	} else {
 		w.WriteString("screen.saved_cursor=null\n")
 	}
 
-	dumpAny(w, "screen.charset", s.charset)
-	dumpAny(w, "screen.protected_mode", s.protected_mode)
-	dumpAny(w, "screen.kitty_keyboard.idx", s.kitty_keyboard.idx)
-	for i := range s.kitty_keyboard.flags {
-		dumpAny(w, fmt.Sprintf("screen.kitty_keyboard.flags[%d]", i), s.kitty_keyboard.flags[i])
+	dumpAny(w, "screen.charset", s.Charset)
+	dumpAny(w, "screen.protected_mode", s.ProtectedMode)
+	dumpAny(w, "screen.kitty_keyboard.idx", s.KittyKeyboard.idx)
+	for i := range s.KittyKeyboard.flags {
+		dumpAny(w, fmt.Sprintf("screen.kitty_keyboard.flags[%d]", i), s.KittyKeyboard.flags[i])
 	}
-	dumpAny(w, "screen.semantic_prompt", s.semantic_prompt)
-	dumpAny(w, "screen.dirty", s.dirty)
+	dumpAny(w, "screen.semantic_prompt", s.SemanticPrompt)
+	dumpAny(w, "screen.dirty", s.Dirty)
 	selection := "set"
-	if !s.selection.Valid {
+	if !s.Selection.Valid {
 		selection = "null"
 	}
 	fmt.Fprintf(w, "screen.selection=%s\n", selection)
 
-	pages := &s.pages
+	pages := &s.Pages
 	dumpScreenPages(w, pages)
 	dumpScreenRows(w, pages)
 }
@@ -215,12 +215,12 @@ func dumpScreenPages(w *bytes.Buffer, pages *PageList) {
 	{
 		tl := pages.GetTopLeft(PointTagActive)
 		pt := dumpUnwrap(pages.PointFromPin(PointTagScreen, tl))
-		fmt.Fprintf(w, "pages.active_top=%d\n", pt.Screen.y)
+		fmt.Fprintf(w, "pages.active_top=%d\n", pt.Screen.Y)
 	}
 	{
 		tl := pages.GetTopLeft(PointTagViewport)
 		pt := dumpUnwrap(pages.PointFromPin(PointTagScreen, tl))
-		fmt.Fprintf(w, "pages.viewport_top=%d\n", pt.Screen.y)
+		fmt.Fprintf(w, "pages.viewport_top=%d\n", pt.Screen.Y)
 	}
 	{
 		w.WriteString("layout.pages.nodes=")
@@ -265,7 +265,7 @@ func dumpScreenRows(w *bytes.Buffer, pages *PageList) {
 		pin := next.Value
 		rac := pin.RowAndCell()
 		row := rac.row
-		page := &pin.node.data
+		page := &pin.Node.data
 		dumpScreenRow(w, y, row, page)
 		y++
 	}
@@ -355,9 +355,9 @@ func dumpScreenCell(w *bytes.Buffer, x int, cell *PageCell, page *Page) {
 		fmt.Fprintf(w, " bgpal=%d", cell.content.color_palette)
 	case PageCellContentTagBgColorRgb:
 		fmt.Fprintf(w, " bgrgb=%02x%02x%02x",
-			cell.content.color_rgb.r,
-			cell.content.color_rgb.g,
-			cell.content.color_rgb.b,
+			cell.content.color_rgb.R,
+			cell.content.color_rgb.G,
+			cell.content.color_rgb.B,
 		)
 	}
 	if cell.wide != PageCellWideNarrow {
@@ -427,9 +427,9 @@ func isPlainAscii(cell *PageCell) bool {
 // Mirrors harness/src/dump.zig:307 writeStyle
 func writeStyle(w *bytes.Buffer, s Style) {
 	w.WriteString("{fg=")
-	writeColor(w, s.fg_color)
+	writeColor(w, s.FgColor)
 	w.WriteString(",bg=")
-	writeColor(w, s.bg_color)
+	writeColor(w, s.BgColor)
 	w.WriteString(",ul=")
 	writeColor(w, s.underline_color)
 	w.WriteString(",flags=")
@@ -438,14 +438,14 @@ func writeStyle(w *bytes.Buffer, s Style) {
 		name string
 		set  bool
 	}{
-		{"bold", s.flags.bold},
-		{"italic", s.flags.italic},
-		{"faint", s.flags.faint},
-		{"blink", s.flags.blink},
-		{"inverse", s.flags.inverse},
-		{"invisible", s.flags.invisible},
-		{"strikethrough", s.flags.strikethrough},
-		{"overline", s.flags.overline},
+		{"bold", s.Flags.Bold},
+		{"italic", s.Flags.Italic},
+		{"faint", s.Flags.Faint},
+		{"blink", s.Flags.Blink},
+		{"inverse", s.Flags.Inverse},
+		{"invisible", s.Flags.Invisible},
+		{"strikethrough", s.Flags.Strikethrough},
+		{"overline", s.Flags.Overline},
 	} {
 		if flag.set {
 			if any_ {
@@ -455,12 +455,12 @@ func writeStyle(w *bytes.Buffer, s Style) {
 			w.WriteString(flag.name)
 		}
 	}
-	if s.flags.underline != SGRAttributeUnderlineNone {
+	if s.Flags.Underline != SGRAttributeUnderlineNone {
 		if any_ {
 			w.WriteString("|")
 		}
 		any_ = true
-		fmt.Fprintf(w, "underline:%s", s.flags.underline.String())
+		fmt.Fprintf(w, "underline:%s", s.Flags.Underline.String())
 	}
 	if !any_ {
 		w.WriteString("none")
@@ -476,7 +476,7 @@ func writeColor(w *bytes.Buffer, c StyleColor) {
 	case StyleColorPalette:
 		fmt.Fprintf(w, "pal:%d", c.Palette)
 	case StyleColorRgb:
-		fmt.Fprintf(w, "rgb:%02x%02x%02x", c.Rgb.r, c.Rgb.g, c.Rgb.b)
+		fmt.Fprintf(w, "rgb:%02x%02x%02x", c.Rgb.R, c.Rgb.G, c.Rgb.B)
 	}
 }
 
@@ -605,29 +605,48 @@ func dumpField(v reflect.Value, i int) reflect.Value {
 	return reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem()
 }
 
-// zigName is the Zig field name of a Go struct field: the Go port appends
-// `_` to a name that is a Go keyword or collides (`default_` is `default`)
-// and prefixes `x` to a name that starts with a digit (`x132_column` is
-// `132_column`). The structs of the parser actions (ParserActionCSI, ...) have
-// exported fields, the CamelCase of the Zig name: `ParamsSep` is `params_sep`.
+// zigName is the Zig field name of a Go struct field. An unexported field
+// keeps the Zig name, with `_` appended when the name is a Go keyword or
+// collides (`default_` is `default`) and `x` in front when it starts with a
+// digit (`x132_column` is `132_column`). An exported field (the types listed
+// in docs/public-api.md, and the parser actions) is the CamelCase of the Zig
+// name: `ParamsSep` is `params_sep`, `StyleID` is `style_id`. CamelCase
+// loses the underscore in front of a digit, so the names that have one are
+// listed in zigNameDigits.
 func zigName(name string) string {
-	if name != "" && name[0] >= 'A' && name[0] <= 'Z' {
-		return zigSnake(name)
+	if z, ok := zigNameDigits[name]; ok {
+		return z
 	}
-	name = strings.TrimSuffix(name, "_")
+	if name != "" && name[0] >= 'A' && name[0] <= 'Z' {
+		name = zigSnake(name)
+	} else {
+		name = strings.TrimSuffix(name, "_")
+	}
 	if len(name) > 1 && name[0] == 'x' && name[1] >= '0' && name[1] <= '9' {
 		name = name[1:]
 	}
 	return name
 }
 
-// zigSnake is the inverse of zigCamel for a name without digits or
-// underscores: `ParamsSep` is `params_sep`.
+// zigNameDigits is the exported fields whose Zig name has an underscore in
+// front of a digit (scripts/exportfields reports them as "no round trip").
+var zigNameDigits = map[string]string{
+	"ModifyOtherKeys2":      "modify_other_keys_2",
+	"ModifyOtherKeysState2": "modify_other_keys_state_2",
+}
+
+// zigSnake is the inverse of zigCamel and of scripts/exportfields' naming: a
+// new word starts at a capital that follows a lower-case letter or digit, or
+// that is followed by a lower-case letter. `ParamsSep` is `params_sep`,
+// `StyleID` is `style_id`.
 func zigSnake(name string) string {
+	r := []rune(name)
 	var sb strings.Builder
-	for i, c := range name {
+	for i, c := range r {
 		if c >= 'A' && c <= 'Z' {
-			if i > 0 {
+			prevLower := i > 0 && !(r[i-1] >= 'A' && r[i-1] <= 'Z')
+			nextLower := i+1 < len(r) && r[i+1] >= 'a' && r[i+1] <= 'z'
+			if i > 0 && (prevLower || nextLower) {
 				sb.WriteByte('_')
 			}
 			c += 'a' - 'A'

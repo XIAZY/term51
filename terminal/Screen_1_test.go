@@ -60,10 +60,10 @@ const sc1KittyImageStorageLimit = 320 * 1000 * 1000
 func sc1Init(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Screen {
 	t.Helper()
 	s, err := ScreenInit(ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            max_scrollback,
-		kitty_image_storage_limit: sc1KittyImageStorageLimit,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          max_scrollback,
+		KittyImageStorageLimit: sc1KittyImageStorageLimit,
 	})
 	zigTry(t, err)
 	return &s
@@ -88,25 +88,25 @@ func sc1Dump(t *testing.T, s *Screen, pt Point) string {
 // sc1Active, sc1Screen, sc1History and sc1Viewport are the Zig literals
 // `.{ .active = .{ .x = x, .y = y } }` and so on.
 func sc1Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 func sc1Screen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 func sc1History(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: x, Y: y}}
 }
 
 func sc1Viewport(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: x, Y: y}}
 }
 
 // sc1Pin is `s.pages.pin(pt).?`.
 func sc1Pin(t *testing.T, s *Screen, pt Point) PageListPin {
 	t.Helper()
-	return zigUnwrap(t, s.pages.Pin(pt))
+	return zigUnwrap(t, s.Pages.Pin(pt))
 }
 
 // sc1Attr is the Zig literal `.{ .<tag> = {} }` of sgr.Attribute (a variant
@@ -123,7 +123,7 @@ func sc1SetAttr(t *testing.T, s *Screen, tag SGRAttributeTag) {
 
 // sc1DirectColorBg is `.{ .direct_color_bg = .{ .r = r } }`.
 func sc1DirectColorBg(r uint8) SGRAttribute {
-	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: r}}
+	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: r}}
 }
 
 // sc1Select is `try s.select(sel)` with a non-null selection.
@@ -144,7 +144,7 @@ func sc1Clone(t *testing.T, s *Screen, top Point, bot Optional[Point]) *Screen {
 // resize: the Zig default prompt_redraw (.false) is written out.
 func sc1NoReflow(cols SizeCellCountInt, rows SizeCellCountInt) ScreenResize {
 	r := screenResizeDefault(cols, rows)
-	r.reflow = false
+	r.Reflow = false
 	return r
 }
 
@@ -152,13 +152,13 @@ func sc1NoReflow(cols SizeCellCountInt, rows SizeCellCountInt) ScreenResize {
 // `s.pages.getCell(.{ .active = .{ .x = s.cursor.x, .y = s.cursor.y } }).?`.
 func sc1CursorCell(t *testing.T, s *Screen) PageListCell {
 	t.Helper()
-	return zigUnwrap(t, s.pages.GetCell(sc1Active(s.cursor.x, uint32(s.cursor.y))))
+	return zigUnwrap(t, s.Pages.GetCell(sc1Active(s.Cursor.X, uint32(s.Cursor.Y))))
 }
 
 // sc1PointFromPin is `s.pages.pointFromPin(tag, pin).?`.
 func sc1PointFromPin(t *testing.T, s *Screen, tag PointTag, pin PageListPin) Point {
 	t.Helper()
-	return zigUnwrap(t, s.pages.PointFromPin(tag, pin))
+	return zigUnwrap(t, s.Pages.PointFromPin(tag, pin))
 }
 
 // sc1SemOutput, sc1SemPrompt and sc1SemInput are the Zig literals `.output`,
@@ -195,7 +195,7 @@ func TestSc1_Screen_read_and_write(t *testing.T) {
 
 	s := sc1Init(t, 80, 24, 1000)
 	defer s.Deinit()
-	expectEqual[StyleId](t, 0, s.cursor.style_id)
+	expectEqual[StyleID](t, 0, s.Cursor.StyleID)
 
 	sc1Write(t, s, "hello, world")
 	str := sc1Dump(t, s, sc1Screen(0, 0))
@@ -208,7 +208,7 @@ func TestSc1_Screen_read_and_write_newline(t *testing.T) {
 
 	s := sc1Init(t, 80, 24, 1000)
 	defer s.Deinit()
-	expectEqual[StyleId](t, 0, s.cursor.style_id)
+	expectEqual[StyleID](t, 0, s.Cursor.StyleID)
 
 	sc1Write(t, s, "hello\nworld")
 	str := sc1Dump(t, s, sc1Screen(0, 0))
@@ -277,14 +277,14 @@ func TestSc1_Screen_cursorCopy_x_y(t *testing.T) {
 	s := sc1Init(t, 10, 10, 0)
 	defer s.Deinit()
 	s.CursorAbsolute(2, 3)
-	expect(t, s.cursor.x == 2, "s.cursor.x == 2")
-	expect(t, s.cursor.y == 3, "s.cursor.y == 3")
+	expect(t, s.Cursor.X == 2, "s.cursor.x == 2")
+	expect(t, s.Cursor.Y == 3, "s.cursor.y == 3")
 
 	s2 := sc1Init(t, 10, 10, 0)
 	defer s2.Deinit()
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
-	expect(t, s2.cursor.x == 2, "s2.cursor.x == 2")
-	expect(t, s2.cursor.y == 3, "s2.cursor.y == 3")
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
+	expect(t, s2.Cursor.X == 2, "s2.cursor.x == 2")
+	expect(t, s2.Cursor.Y == 3, "s2.cursor.y == 3")
 	sc1Write(t, s2, "Hello")
 
 	{
@@ -302,16 +302,16 @@ func TestSc1_Screen_cursorCopy_style_deref(t *testing.T) {
 
 	s2 := sc1Init(t, 10, 10, 0)
 	defer s2.Deinit()
-	page := &s2.cursor.page_pin.node.data
+	page := &s2.Cursor.PagePin.Node.data
 
 	// Bold should create our style
 	sc1SetAttr(t, s2, SGRAttributeTagBold)
 	expectEqual[uint](t, 1, page.styles.Count())
-	expect(t, s2.cursor.style.flags.bold, "s2.cursor.style.flags.bold")
+	expect(t, s2.Cursor.Style.Flags.Bold, "s2.cursor.style.flags.bold")
 
 	// Copy default style, should release our style
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
-	expect(t, !s2.cursor.style.flags.bold, "!s2.cursor.style.flags.bold")
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
+	expect(t, !s2.Cursor.Style.Flags.Bold, "!s2.cursor.style.flags.bold")
 	expectEqual[uint](t, 0, page.styles.Count())
 }
 
@@ -326,15 +326,15 @@ func TestSc1_Screen_cursorCopy_style_deref_new_page(t *testing.T) {
 	defer s2.Deinit()
 
 	// We need to get the cursor on a new page.
-	first_page_size := s2.pages.pages.first.data.capacity.rows
+	first_page_size := s2.Pages.pages.first.data.capacity.rows
 
 	// Fill the scrollback with blank lines until
 	// there are only 5 rows left on the first page.
-	s2.pages.pages.first.data.PauseIntegrityChecks(true)
+	s2.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 5 {
 		sc1Write(t, s2, "\n")
 	}
-	s2.pages.pages.first.data.PauseIntegrityChecks(false)
+	s2.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	sc1Write(t, s2, "1\n2\n3\n4\n5\n6\n7\n8\n9\n10")
 
@@ -360,32 +360,32 @@ func TestSc1_Screen_cursorCopy_style_deref_new_page(t *testing.T) {
 	//     +-------------+
 
 	// This should be PAGE 1
-	page := &s2.cursor.page_pin.node.data
+	page := &s2.Cursor.PagePin.Node.data
 
 	// It should be the last page in the list.
-	expect(t, &s2.pages.pages.last.data == page, "&s2.pages.pages.last.?.data == page")
+	expect(t, &s2.Pages.pages.last.data == page, "&s2.pages.pages.last.?.data == page")
 	// It should have a previous page.
-	expect(t, s2.cursor.page_pin.node.prev != nil, "s2.cursor.page_pin.node.prev != null")
+	expect(t, s2.Cursor.PagePin.Node.prev != nil, "s2.cursor.page_pin.node.prev != null")
 
 	// The cursor should be at 2, 9
-	expect(t, s2.cursor.x == 2, "s2.cursor.x == 2")
-	expect(t, s2.cursor.y == 9, "s2.cursor.y == 9")
+	expect(t, s2.Cursor.X == 2, "s2.cursor.x == 2")
+	expect(t, s2.Cursor.Y == 9, "s2.cursor.y == 9")
 
 	// Bold should create our style in page 1.
 	sc1SetAttr(t, s2, SGRAttributeTagBold)
 	expectEqual[uint](t, 1, page.styles.Count())
-	expect(t, s2.cursor.style.flags.bold, "s2.cursor.style.flags.bold")
+	expect(t, s2.Cursor.Style.Flags.Bold, "s2.cursor.style.flags.bold")
 
 	// Copy the cursor for the first screen. This should release
 	// the style from page 1 and move the cursor back to page 0.
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
-	expect(t, !s2.cursor.style.flags.bold, "!s2.cursor.style.flags.bold")
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
+	expect(t, !s2.Cursor.Style.Flags.Bold, "!s2.cursor.style.flags.bold")
 	expectEqual[uint](t, 0, page.styles.Count())
 	// The page after the page the cursor is now in should be page 1.
-	expect(t, page == &s2.cursor.page_pin.node.next.data, "page == &s2.cursor.page_pin.node.next.?.data")
+	expect(t, page == &s2.Cursor.PagePin.Node.next.data, "page == &s2.cursor.page_pin.node.next.?.data")
 	// The cursor should be at 0, 0
-	expect(t, s2.cursor.x == 0, "s2.cursor.x == 0")
-	expect(t, s2.cursor.y == 0, "s2.cursor.y == 0")
+	expect(t, s2.Cursor.X == 0, "s2.cursor.x == 0")
+	expect(t, s2.Cursor.Y == 0, "s2.cursor.y == 0")
 }
 
 // Zig: test "Screen cursorCopy style copy"
@@ -398,9 +398,9 @@ func TestSc1_Screen_cursorCopy_style_copy(t *testing.T) {
 
 	s2 := sc1Init(t, 10, 10, 0)
 	defer s2.Deinit()
-	page := &s2.cursor.page_pin.node.data
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
-	expect(t, s2.cursor.style.flags.bold, "s2.cursor.style.flags.bold")
+	page := &s2.Cursor.PagePin.Node.data
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
+	expect(t, s2.Cursor.Style.Flags.Bold, "s2.cursor.style.flags.bold")
 	expectEqual[uint](t, 1, page.styles.Count())
 }
 
@@ -413,17 +413,17 @@ func TestSc1_Screen_cursorCopy_hyperlink_deref(t *testing.T) {
 
 	s2 := sc1Init(t, 10, 10, 0)
 	defer s2.Deinit()
-	page := &s2.cursor.page_pin.node.data
+	page := &s2.Cursor.PagePin.Node.data
 
 	// Create a hyperlink for the cursor.
 	zigTry(t, s2.StartHyperlink([]uint8("https://example.com/"), None[[]uint8]()))
 	expectEqual[uint](t, 1, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id != 0, "s2.cursor.hyperlink_id != 0")
+	expect(t, s2.Cursor.HyperlinkID != 0, "s2.cursor.hyperlink_id != 0")
 
 	// Copy a cursor with no hyperlink, should release our hyperlink.
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
 	expectEqual[uint](t, 0, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id == 0, "s2.cursor.hyperlink_id == 0")
+	expect(t, s2.Cursor.HyperlinkID == 0, "s2.cursor.hyperlink_id == 0")
 }
 
 // Zig: test "Screen cursorCopy hyperlink deref new page"
@@ -437,15 +437,15 @@ func TestSc1_Screen_cursorCopy_hyperlink_deref_new_page(t *testing.T) {
 	defer s2.Deinit()
 
 	// We need to get the cursor on a new page.
-	first_page_size := s2.pages.pages.first.data.capacity.rows
+	first_page_size := s2.Pages.pages.first.data.capacity.rows
 
 	// Fill the scrollback with blank lines until
 	// there are only 5 rows left on the first page.
-	s2.pages.pages.first.data.PauseIntegrityChecks(true)
+	s2.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 5 {
 		sc1Write(t, s2, "\n")
 	}
-	s2.pages.pages.first.data.PauseIntegrityChecks(false)
+	s2.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	sc1Write(t, s2, "1\n2\n3\n4\n5\n6\n7\n8\n9\n10")
 
@@ -471,32 +471,32 @@ func TestSc1_Screen_cursorCopy_hyperlink_deref_new_page(t *testing.T) {
 	//     +-------------+
 
 	// This should be PAGE 1
-	page := &s2.cursor.page_pin.node.data
+	page := &s2.Cursor.PagePin.Node.data
 
 	// It should be the last page in the list.
-	expect(t, &s2.pages.pages.last.data == page, "&s2.pages.pages.last.?.data == page")
+	expect(t, &s2.Pages.pages.last.data == page, "&s2.pages.pages.last.?.data == page")
 	// It should have a previous page.
-	expect(t, s2.cursor.page_pin.node.prev != nil, "s2.cursor.page_pin.node.prev != null")
+	expect(t, s2.Cursor.PagePin.Node.prev != nil, "s2.cursor.page_pin.node.prev != null")
 
 	// The cursor should be at 2, 9
-	expect(t, s2.cursor.x == 2, "s2.cursor.x == 2")
-	expect(t, s2.cursor.y == 9, "s2.cursor.y == 9")
+	expect(t, s2.Cursor.X == 2, "s2.cursor.x == 2")
+	expect(t, s2.Cursor.Y == 9, "s2.cursor.y == 9")
 
 	// Create a hyperlink for the cursor, should be in page 1.
 	zigTry(t, s2.StartHyperlink([]uint8("https://example.com/"), None[[]uint8]()))
 	expectEqual[uint](t, 1, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id != 0, "s2.cursor.hyperlink_id != 0")
+	expect(t, s2.Cursor.HyperlinkID != 0, "s2.cursor.hyperlink_id != 0")
 
 	// Copy the cursor for the first screen. This should release
 	// the hyperlink from page 1 and move the cursor back to page 0.
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
 	expectEqual[uint](t, 0, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id == 0, "s2.cursor.hyperlink_id == 0")
+	expect(t, s2.Cursor.HyperlinkID == 0, "s2.cursor.hyperlink_id == 0")
 	// The page after the page the cursor is now in should be page 1.
-	expect(t, page == &s2.cursor.page_pin.node.next.data, "page == &s2.cursor.page_pin.node.next.?.data")
+	expect(t, page == &s2.Cursor.PagePin.Node.next.data, "page == &s2.cursor.page_pin.node.next.?.data")
 	// The cursor should be at 0, 0
-	expect(t, s2.cursor.x == 0, "s2.cursor.x == 0")
-	expect(t, s2.cursor.y == 0, "s2.cursor.y == 0")
+	expect(t, s2.Cursor.X == 0, "s2.cursor.x == 0")
+	expect(t, s2.Cursor.Y == 0, "s2.cursor.y == 0")
 }
 
 // Zig: test "Screen cursorCopy hyperlink copy"
@@ -508,20 +508,20 @@ func TestSc1_Screen_cursorCopy_hyperlink_copy(t *testing.T) {
 
 	// Create a hyperlink for the cursor.
 	zigTry(t, s.StartHyperlink([]uint8("https://example.com/"), None[[]uint8]()))
-	expectEqual[uint](t, 1, s.cursor.page_pin.node.data.hyperlink_set.Count())
-	expect(t, s.cursor.hyperlink_id != 0, "s.cursor.hyperlink_id != 0")
+	expectEqual[uint](t, 1, s.Cursor.PagePin.Node.data.hyperlink_set.Count())
+	expect(t, s.Cursor.HyperlinkID != 0, "s.cursor.hyperlink_id != 0")
 
 	s2 := sc1Init(t, 10, 10, 0)
 	defer s2.Deinit()
-	page := &s2.cursor.page_pin.node.data
+	page := &s2.Cursor.PagePin.Node.data
 
 	expectEqual[uint](t, 0, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id == 0, "s2.cursor.hyperlink_id == 0")
+	expect(t, s2.Cursor.HyperlinkID == 0, "s2.cursor.hyperlink_id == 0")
 
 	// Copy the cursor with the hyperlink.
-	zigTry(t, s2.CursorCopy(s.cursor, screenCursorCopyOptionsDefault()))
+	zigTry(t, s2.CursorCopy(s.Cursor, screenCursorCopyOptionsDefault()))
 	expectEqual[uint](t, 1, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id != 0, "s2.cursor.hyperlink_id != 0")
+	expect(t, s2.Cursor.HyperlinkID != 0, "s2.cursor.hyperlink_id != 0")
 }
 
 // Zig: test "Screen cursorCopy hyperlink copy disabled"
@@ -533,20 +533,20 @@ func TestSc1_Screen_cursorCopy_hyperlink_copy_disabled(t *testing.T) {
 
 	// Create a hyperlink for the cursor.
 	zigTry(t, s.StartHyperlink([]uint8("https://example.com/"), None[[]uint8]()))
-	expectEqual[uint](t, 1, s.cursor.page_pin.node.data.hyperlink_set.Count())
-	expect(t, s.cursor.hyperlink_id != 0, "s.cursor.hyperlink_id != 0")
+	expectEqual[uint](t, 1, s.Cursor.PagePin.Node.data.hyperlink_set.Count())
+	expect(t, s.Cursor.HyperlinkID != 0, "s.cursor.hyperlink_id != 0")
 
 	s2 := sc1Init(t, 10, 10, 0)
 	defer s2.Deinit()
-	page := &s2.cursor.page_pin.node.data
+	page := &s2.Cursor.PagePin.Node.data
 
 	expectEqual[uint](t, 0, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id == 0, "s2.cursor.hyperlink_id == 0")
+	expect(t, s2.Cursor.HyperlinkID == 0, "s2.cursor.hyperlink_id == 0")
 
 	// Copy the cursor with the hyperlink.
-	zigTry(t, s2.CursorCopy(s.cursor, ScreenCursorCopyOptions{hyperlink: false}))
+	zigTry(t, s2.CursorCopy(s.Cursor, ScreenCursorCopyOptions{Hyperlink: false}))
 	expectEqual[uint](t, 0, page.hyperlink_set.Count())
-	expect(t, s2.cursor.hyperlink_id == 0, "s2.cursor.hyperlink_id == 0")
+	expect(t, s2.Cursor.HyperlinkID == 0, "s2.cursor.hyperlink_id == 0")
 }
 
 // Zig: test "Screen style basics"
@@ -555,20 +555,20 @@ func TestSc1_Screen_style_basics(t *testing.T) {
 
 	s := sc1Init(t, 80, 24, 1000)
 	defer s.Deinit()
-	page := &s.cursor.page_pin.node.data
+	page := &s.Cursor.PagePin.Node.data
 	expectEqual[uint](t, 0, page.styles.Count())
 
 	// Set a new style
 	sc1SetAttr(t, s, SGRAttributeTagBold)
-	expect(t, s.cursor.style_id != 0, "s.cursor.style_id != 0")
+	expect(t, s.Cursor.StyleID != 0, "s.cursor.style_id != 0")
 	expectEqual[uint](t, 1, page.styles.Count())
-	expect(t, s.cursor.style.flags.bold, "s.cursor.style.flags.bold")
+	expect(t, s.Cursor.Style.Flags.Bold, "s.cursor.style.flags.bold")
 
 	// Set another style, we should still only have one since it was unused
 	sc1SetAttr(t, s, SGRAttributeTagItalic)
-	expect(t, s.cursor.style_id != 0, "s.cursor.style_id != 0")
+	expect(t, s.Cursor.StyleID != 0, "s.cursor.style_id != 0")
 	expectEqual[uint](t, 1, page.styles.Count())
-	expect(t, s.cursor.style.flags.italic, "s.cursor.style.flags.italic")
+	expect(t, s.Cursor.Style.Flags.Italic, "s.cursor.style.flags.italic")
 }
 
 // Zig: test "Screen style reset to default"
@@ -577,17 +577,17 @@ func TestSc1_Screen_style_reset_to_default(t *testing.T) {
 
 	s := sc1Init(t, 80, 24, 1000)
 	defer s.Deinit()
-	page := &s.cursor.page_pin.node.data
+	page := &s.Cursor.PagePin.Node.data
 	expectEqual[uint](t, 0, page.styles.Count())
 
 	// Set a new style
 	sc1SetAttr(t, s, SGRAttributeTagBold)
-	expect(t, s.cursor.style_id != 0, "s.cursor.style_id != 0")
+	expect(t, s.Cursor.StyleID != 0, "s.cursor.style_id != 0")
 	expectEqual[uint](t, 1, page.styles.Count())
 
 	// Reset to default
 	sc1SetAttr(t, s, SGRAttributeTagResetBold)
-	expect(t, s.cursor.style_id == 0, "s.cursor.style_id == 0")
+	expect(t, s.Cursor.StyleID == 0, "s.cursor.style_id == 0")
 	expectEqual[uint](t, 0, page.styles.Count())
 }
 
@@ -597,17 +597,17 @@ func TestSc1_Screen_style_reset_with_unset(t *testing.T) {
 
 	s := sc1Init(t, 80, 24, 1000)
 	defer s.Deinit()
-	page := &s.cursor.page_pin.node.data
+	page := &s.Cursor.PagePin.Node.data
 	expectEqual[uint](t, 0, page.styles.Count())
 
 	// Set a new style
 	sc1SetAttr(t, s, SGRAttributeTagBold)
-	expect(t, s.cursor.style_id != 0, "s.cursor.style_id != 0")
+	expect(t, s.Cursor.StyleID != 0, "s.cursor.style_id != 0")
 	expectEqual[uint](t, 1, page.styles.Count())
 
 	// Reset to default
 	sc1SetAttr(t, s, SGRAttributeTagUnset)
-	expect(t, s.cursor.style_id == 0, "s.cursor.style_id == 0")
+	expect(t, s.Cursor.StyleID == 0, "s.cursor.style_id == 0")
 	expectEqual[uint](t, 0, page.styles.Count())
 }
 
@@ -620,7 +620,7 @@ func TestSc1_Screen_clearRows_active_one_line(t *testing.T) {
 
 	sc1Write(t, s, "hello, world")
 	s.ClearRows(sc1Active(0, 0), None[Point](), false)
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	str := sc1Dump(t, s, sc1Screen(0, 0))
 	expectEqualStrings(t, "", str)
 }
@@ -634,8 +634,8 @@ func TestSc1_Screen_clearRows_active_multi_line(t *testing.T) {
 
 	sc1Write(t, s, "hello\nworld")
 	s.ClearRows(sc1Active(0, 0), None[Point](), false)
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	str := sc1Dump(t, s, sc1Screen(0, 0))
 	expectEqualStrings(t, "", str)
 }
@@ -652,7 +652,7 @@ func TestSc1_Screen_clearRows_active_styled_line(t *testing.T) {
 	sc1SetAttr(t, s, SGRAttributeTagUnset)
 
 	// We should have one style
-	page := &s.cursor.page_pin.node.data
+	page := &s.Cursor.PagePin.Node.data
 	expectEqual[uint](t, 1, page.styles.Count())
 
 	s.ClearRows(sc1Active(0, 0), None[Point](), false)
@@ -672,18 +672,18 @@ func TestSc1_Screen_clearRows_protected(t *testing.T) {
 	defer s.Deinit()
 
 	sc1Write(t, s, "UNPROTECTED")
-	s.cursor.protected = true
+	s.Cursor.Protected = true
 	sc1Write(t, s, "PROTECTED")
-	s.cursor.protected = false
+	s.Cursor.Protected = false
 	sc1Write(t, s, "UNPROTECTED")
 	sc1Write(t, s, "\n")
-	s.cursor.protected = true
+	s.Cursor.Protected = true
 	sc1Write(t, s, "PROTECTED")
-	s.cursor.protected = false
+	s.Cursor.Protected = false
 	sc1Write(t, s, "UNPROTECTED")
-	s.cursor.protected = true
+	s.Cursor.Protected = true
 	sc1Write(t, s, "PROTECTED")
-	s.cursor.protected = false
+	s.Cursor.Protected = false
 
 	s.ClearRows(sc1Active(0, 0), None[Point](), true)
 
@@ -785,7 +785,7 @@ func TestSc1_Screen_cursorDown_across_pages_preserves_style(t *testing.T) {
 	defer s.Deinit()
 
 	// Scroll down enough to go to another page
-	start_page := &s.pages.pages.last.data
+	start_page := &s.Pages.pages.last.data
 	rem := start_page.capacity.rows
 	start_page.PauseIntegrityChecks(true)
 	for range rem {
@@ -797,31 +797,31 @@ func TestSc1_Screen_cursorDown_across_pages_preserves_style(t *testing.T) {
 	// assertion fails then the bug is in the test: we should be scrolling
 	// above enough for a new page to show up.
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expect(t, start_page != page, "start_page != page")
 	}
 
 	// Scroll back to the previous page
 	s.CursorUp(1)
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expect(t, start_page == page, "start_page == page")
 	}
 
 	// Go back up, set a style
 	sc1SetAttr(t, s, SGRAttributeTagBold)
 	{
-		page := &s.cursor.page_pin.node.data
-		styleval := page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		page := &s.Cursor.PagePin.Node.data
+		styleval := page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 
 	// Go back down into the next page and we should have that style
 	s.CursorDown(1)
 	{
-		page := &s.cursor.page_pin.node.data
-		styleval := page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		page := &s.Cursor.PagePin.Node.data
+		styleval := page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 }
 
@@ -833,7 +833,7 @@ func TestSc1_Screen_cursorUp_across_pages_preserves_style(t *testing.T) {
 	defer s.Deinit()
 
 	// Scroll down enough to go to another page
-	start_page := &s.pages.pages.last.data
+	start_page := &s.Pages.pages.last.data
 	rem := start_page.capacity.rows
 	start_page.PauseIntegrityChecks(true)
 	for range rem {
@@ -845,26 +845,26 @@ func TestSc1_Screen_cursorUp_across_pages_preserves_style(t *testing.T) {
 	// assertion fails then the bug is in the test: we should be scrolling
 	// above enough for a new page to show up.
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expect(t, start_page != page, "start_page != page")
 	}
 
 	// Go back up, set a style
 	sc1SetAttr(t, s, SGRAttributeTagBold)
 	{
-		page := &s.cursor.page_pin.node.data
-		styleval := page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		page := &s.Cursor.PagePin.Node.data
+		styleval := page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 
 	// Go back down into the prev page and we should have that style
 	s.CursorUp(1)
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expect(t, start_page == page, "start_page == page")
 
-		styleval := page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		styleval := page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 }
 
@@ -876,7 +876,7 @@ func TestSc1_Screen_cursorAbsolute_across_pages_preserves_style(t *testing.T) {
 	defer s.Deinit()
 
 	// Scroll down enough to go to another page
-	start_page := &s.pages.pages.last.data
+	start_page := &s.Pages.pages.last.data
 	rem := start_page.capacity.rows
 	start_page.PauseIntegrityChecks(true)
 	for range rem {
@@ -888,26 +888,26 @@ func TestSc1_Screen_cursorAbsolute_across_pages_preserves_style(t *testing.T) {
 	// assertion fails then the bug is in the test: we should be scrolling
 	// above enough for a new page to show up.
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expect(t, start_page != page, "start_page != page")
 	}
 
 	// Go back up, set a style
 	sc1SetAttr(t, s, SGRAttributeTagBold)
 	{
-		page := &s.cursor.page_pin.node.data
-		styleval := page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		page := &s.Cursor.PagePin.Node.data
+		styleval := page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 
 	// Go back down into the prev page and we should have that style
 	s.CursorAbsolute(1, 1)
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expect(t, start_page == page, "start_page == page")
 
-		styleval := page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		styleval := page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 }
 
@@ -926,7 +926,7 @@ func TestSc1_Screen_cursorAbsolute_to_page_with_insufficient_capacity(t *testing
 	defer s.Deinit()
 
 	// Scroll down enough to go to another page
-	start_page := &s.pages.pages.last.data
+	start_page := &s.Pages.pages.last.data
 	rem := start_page.capacity.rows
 	start_page.PauseIntegrityChecks(true)
 	for range rem {
@@ -934,7 +934,7 @@ func TestSc1_Screen_cursorAbsolute_to_page_with_insufficient_capacity(t *testing
 	}
 	start_page.PauseIntegrityChecks(false)
 
-	new_page := &s.cursor.page_pin.node.data
+	new_page := &s.Cursor.PagePin.Node.data
 
 	// We need our page to change for this test to make sense. If this
 	// assertion fails then the bug is in the test: we should be scrolling
@@ -950,9 +950,9 @@ func TestSc1_Screen_cursorAbsolute_to_page_with_insufficient_capacity(t *testing
 		defer start_page.AssertIntegrity()
 
 		for n := uint32(1); ; n++ {
-			_, err := start_page.styles.Add(Style{bg_color: StyleColor{
+			_, err := start_page.styles.Add(Style{BgColor: StyleColor{
 				Tag: StyleColorRgb,
-				Rgb: ColorRGB{r: uint8(n), g: uint8(n >> 8), b: uint8(n >> 16)},
+				Rgb: ColorRGB{R: uint8(n), G: uint8(n >> 8), B: uint8(n >> 16)},
 			}})
 			if err != nil {
 				break
@@ -963,25 +963,25 @@ func TestSc1_Screen_cursorAbsolute_to_page_with_insufficient_capacity(t *testing
 	// Set a style on the cursor.
 	sc1SetAttr(t, s, SGRAttributeTagBold)
 	{
-		styleval := new_page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		styleval := new_page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 
 	// Go back up into the start page and we should still have that style.
 	s.CursorAbsolute(1, 1)
 	{
-		cur_page := &s.cursor.page_pin.node.data
+		cur_page := &s.Cursor.PagePin.Node.data
 		// The page we're on now should NOT equal start_page, since its
 		// capacity should have been adjusted, which invalidates our ptr.
 		expect(t, start_page != cur_page, "start_page != cur_page")
 		// To make sure we DID change pages we check we're not on new_page.
 		expect(t, new_page != cur_page, "new_page != cur_page")
 
-		styleval := cur_page.styles.Get(s.cursor.style_id)
-		expect(t, styleval.flags.bold, "styleval.flags.bold")
+		styleval := cur_page.styles.Get(s.Cursor.StyleID)
+		expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 	}
 
-	s.cursor.page_pin.node.data.AssertIntegrity()
+	s.Cursor.PagePin.Node.data.AssertIntegrity()
 	new_page.AssertIntegrity()
 }
 
@@ -1001,16 +1001,16 @@ func TestSc1_Screen_scrolling(t *testing.T) {
 		expectEqualStrings(t, "2EFGH\n3IJKL", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 2)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 2)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Everything is dirty because we have no scrollback
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 
 	// Scrolling to the bottom does nothing
 	s.Scroll(ScreenScroll{Tag: ScreenScrollActive})
@@ -1037,7 +1037,7 @@ func TestSc1_Screen_scrolling_with_a_single_row_screen_no_scrollback(t *testing.
 	}
 
 	// Screen should be dirty
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 }
 
 // Zig: test "Screen: scrolling with a single-row screen with scrollback"
@@ -1056,10 +1056,10 @@ func TestSc1_Screen_scrolling_with_a_single_row_screen_with_scrollback(t *testin
 	}
 
 	// Active should be dirty
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 
 	// Scrollback also dirty because cursor moved from there
-	expect(t, s.pages.IsDirty(sc1Screen(0, 0)), "s.pages.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Screen(0, 0)), "s.pages.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 
 	s.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: -1})
 	{
@@ -1076,7 +1076,7 @@ func TestSc1_Screen_scrolling_across_pages_preserves_style(t *testing.T) {
 	defer s.Deinit()
 	sc1SetAttr(t, s, SGRAttributeTagBold)
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL")
-	start_page := &s.pages.pages.last.data
+	start_page := &s.Pages.pages.last.data
 
 	// Scroll down enough to go to another page
 	rem := start_page.capacity.rows - start_page.size.rows + 1
@@ -1089,11 +1089,11 @@ func TestSc1_Screen_scrolling_across_pages_preserves_style(t *testing.T) {
 	// We need our page to change for this test o make sense. If this
 	// assertion fails then the bug is in the test: we should be scrolling
 	// above enough for a new page to show up.
-	page := &s.pages.pages.last.data
+	page := &s.Pages.pages.last.data
 	expect(t, start_page != page, "start_page != page")
 
-	styleval := page.styles.Get(s.cursor.style_id)
-	expect(t, styleval.flags.bold, "styleval.flags.bold")
+	styleval := page.styles.Get(s.Cursor.StyleID)
+	expect(t, styleval.Flags.Bold, "styleval.flags.bold")
 }
 
 // Zig: test "Screen: scroll down from 0"
@@ -1106,7 +1106,7 @@ func TestSc1_Screen_scroll_down_from_0(t *testing.T) {
 
 	// Scrolling up does nothing, but allows it
 	s.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: -1})
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -1137,7 +1137,7 @@ func TestSc1_Screen_scrollback_various_cases(t *testing.T) {
 
 	// Scrolling back should make it visible again
 	s.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: -1})
-	expect(t, s.pages.viewport.Tag != PageListViewportActive, "s.pages.viewport != .active")
+	expect(t, s.Pages.viewport.Tag != PageListViewportActive, "s.pages.viewport != .active")
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
 		expectEqualStrings(t, "1ABCD\n2EFGH\n3IJKL", contents)
@@ -1203,7 +1203,7 @@ func TestSc1_Screen_scrollback_with_multi_row_delta(t *testing.T) {
 
 	// Scroll down multiple
 	s.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: 5})
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
 		expectEqualStrings(t, "4ABCD\n5EFGH\n6IJKL", contents)
@@ -1267,7 +1267,7 @@ func TestSc1_Screen_scrolling_moves_selection(t *testing.T) {
 	// Select a single line
 	sc1Select(t, s, SelectionInit(
 		sc1Pin(t, s, sc1Active(0, 1)),
-		sc1Pin(t, s, sc1Active(s.pages.cols-1, 1)),
+		sc1Pin(t, s, sc1Active(s.Pages.cols-1, 1)),
 		false,
 	))
 
@@ -1276,9 +1276,9 @@ func TestSc1_Screen_scrolling_moves_selection(t *testing.T) {
 
 	// Our selection should've moved up
 	{
-		sel := zigUnwrap(t, s.selection)
-		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s.pages.cols-1, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s.Selection)
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s.Pages.cols-1, 0), zigUnwrap(t, s.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 
 	{
@@ -1292,9 +1292,9 @@ func TestSc1_Screen_scrolling_moves_selection(t *testing.T) {
 
 	// Our selection should've stayed the same
 	{
-		sel := zigUnwrap(t, s.selection)
-		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s.pages.cols-1, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s.Selection)
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s.Pages.cols-1, 0), zigUnwrap(t, s.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 
 	{
@@ -1314,9 +1314,9 @@ func TestSc1_Screen_scrolling_moves_selection(t *testing.T) {
 
 	// Our selection should be null because it left the screen.
 	{
-		sel := zigUnwrap(t, s.selection)
-		expect(t, !s.pages.PointFromPin(PointTagActive, sel.Start()).Valid, "s.pages.pointFromPin(.active, sel.start()) == null")
-		expect(t, !s.pages.PointFromPin(PointTagActive, sel.End()).Valid, "s.pages.pointFromPin(.active, sel.end()) == null")
+		sel := zigUnwrap(t, s.Selection)
+		expect(t, !s.Pages.PointFromPin(PointTagActive, sel.Start()).Valid, "s.pages.pointFromPin(.active, sel.start()) == null")
+		expect(t, !s.Pages.PointFromPin(PointTagActive, sel.End()).Valid, "s.pages.pointFromPin(.active, sel.end()) == null")
 	}
 }
 
@@ -1337,7 +1337,7 @@ func TestSc1_Screen_scrolling_moves_viewport(t *testing.T) {
 	}
 
 	{
-		expectEqualPoint(t, sc1Screen(0, 1), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagViewport))))
+		expectEqualPoint(t, sc1Screen(0, 1), zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, s.Pages.GetTopLeft(PointTagViewport))))
 	}
 }
 
@@ -1362,7 +1362,7 @@ func TestSc1_Screen_scrolling_when_viewport_is_pruned(t *testing.T) {
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL")
 
 	{
-		expectEqualPoint(t, sc1Screen(0, 0), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagViewport))))
+		expectEqualPoint(t, sc1Screen(0, 0), zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, s.Pages.GetTopLeft(PointTagViewport))))
 	}
 }
 
@@ -1479,7 +1479,7 @@ func TestSc1_Screen_scroll_above_same_page(t *testing.T) {
 	zigTry(t, s.SetAttribute(sc1DirectColorBg(155)))
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL")
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 
 	// At this point:
 	//  +-------------+ ACTIVE
@@ -1510,18 +1510,18 @@ func TestSc1_Screen_scroll_above_same_page(t *testing.T) {
 		expectEqualStrings(t, "2EFGH\n\n3IJKL", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Page 0 row 1 (active row 0) is dirty because the cursor moved off of it.
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	// Page 0 row 2 (active row 1) is dirty because it was cleared.
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	// Page 0 row 3 (active row 2) is dirty because it's new.
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 }
 
 // Zig: test "Screen: scroll above same page but cursor on previous page"
@@ -1532,21 +1532,21 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page(t *testin
 	defer s.Deinit()
 
 	// We need to get the cursor to a new page
-	first_page_size := s.pages.pages.first.data.capacity.rows
-	s.pages.pages.first.data.PauseIntegrityChecks(true)
+	first_page_size := s.Pages.pages.first.data.capacity.rows
+	s.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 3 {
 		sc1Write(t, s, "\n")
 	}
-	s.pages.pages.first.data.PauseIntegrityChecks(false)
+	s.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	zigTry(t, s.SetAttribute(sc1DirectColorBg(155)))
 	sc1Write(t, s, "1A\n2B\n3C\n4D\n5E")
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 
 	// Ensure we're still on the first page and have a second
-	expect(t, s.cursor.page_pin.node == s.pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
-	expect(t, s.pages.pages.first.next != nil, "s.pages.pages.first.?.next != null")
+	expect(t, s.Cursor.PagePin.Node == s.Pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
+	expect(t, s.Pages.pages.first.next != nil, "s.pages.pages.first.?.next != null")
 
 	// At this point:
 	//      +----------+ = PAGE 0
@@ -1587,19 +1587,19 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page(t *testin
 		expectEqualStrings(t, "2B\n\n3C\n4D\n5E", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Page 0's penultimate row is dirty because the cursor moved off of it.
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	// The rest of the rows are dirty because they've been modified or are new.
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 3)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 3 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 4)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 4 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 3)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 3 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 4)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 4 } })")
 }
 
 // Zig: test "Screen: scroll above same page but cursor on previous page last row"
@@ -1610,21 +1610,21 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page_last_row(
 	defer s.Deinit()
 
 	// We need to get the cursor to a new page
-	first_page_size := s.pages.pages.first.data.capacity.rows
-	s.pages.pages.first.data.PauseIntegrityChecks(true)
+	first_page_size := s.Pages.pages.first.data.capacity.rows
+	s.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 2 {
 		sc1Write(t, s, "\n")
 	}
-	s.pages.pages.first.data.PauseIntegrityChecks(false)
+	s.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	zigTry(t, s.SetAttribute(sc1DirectColorBg(155)))
 	sc1Write(t, s, "1A\n2B\n3C\n4D\n5E")
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 
 	// Ensure we're still on the first page and have a second
-	expect(t, s.cursor.page_pin.node == s.pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
-	expect(t, s.pages.pages.first.next != nil, "s.pages.pages.first.?.next != null")
+	expect(t, s.Cursor.PagePin.Node == s.Pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
+	expect(t, s.Pages.pages.first.next != nil, "s.pages.pages.first.?.next != null")
 
 	// At this point:
 	//      +----------+ = PAGE 0
@@ -1665,19 +1665,19 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page_last_row(
 		expectEqualStrings(t, "2B\n\n3C\n4D\n5E", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Page 0's final row is dirty because the cursor moved off of it.
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	// Page 1's rows are all dirty because every row was moved.
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 3)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 3 } })")
-	expect(t, s.pages.IsDirty(sc1Active(0, 4)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 4 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 3)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 3 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 4)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 4 } })")
 
 	// Attempt to clear the style from the cursor and
 	// then assert the integrity of both of our pages.
@@ -1685,8 +1685,8 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page_last_row(
 	// This catches a case of memory corruption where the cursor
 	// is moved between pages without accounting for style refs.
 	sc1SetAttr(t, s, SGRAttributeTagResetBg)
-	s.pages.pages.first.data.AssertIntegrity()
-	s.pages.pages.last.data.AssertIntegrity()
+	s.Pages.pages.first.data.AssertIntegrity()
+	s.Pages.pages.last.data.AssertIntegrity()
 }
 
 // Zig: test "Screen: scroll above creates new page"
@@ -1697,20 +1697,20 @@ func TestSc1_Screen_scroll_above_creates_new_page(t *testing.T) {
 	defer s.Deinit()
 
 	// We need to get the cursor to a new page
-	first_page_size := s.pages.pages.first.data.capacity.rows
-	s.pages.pages.first.data.PauseIntegrityChecks(true)
+	first_page_size := s.Pages.pages.first.data.capacity.rows
+	s.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 3 {
 		sc1Write(t, s, "\n")
 	}
-	s.pages.pages.first.data.PauseIntegrityChecks(false)
+	s.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	zigTry(t, s.SetAttribute(sc1DirectColorBg(155)))
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL")
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 
 	// Ensure we're still on the first page
-	expect(t, s.cursor.page_pin.node == s.pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
+	expect(t, s.Cursor.PagePin.Node == s.Pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
 
 	// At this point:
 	//      +----------+ = PAGE 0
@@ -1744,18 +1744,18 @@ func TestSc1_Screen_scroll_above_creates_new_page(t *testing.T) {
 		expectEqualStrings(t, "2EFGH\n\n3IJKL", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Page 0's penultimate row is dirty because the cursor moved off of it.
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	// Page 0's final row is dirty because it was cleared.
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	// Page 1's row is dirty because it's new.
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 }
 
 // Zig: test "Screen: scroll above with cursor on non-final row"
@@ -1766,23 +1766,23 @@ func TestSc1_Screen_scroll_above_with_cursor_on_non_final_row(t *testing.T) {
 	defer s.Deinit()
 
 	// Get the cursor to be 2 rows above a new page
-	first_page_size := s.pages.pages.first.data.capacity.rows
-	s.pages.pages.first.data.PauseIntegrityChecks(true)
+	first_page_size := s.Pages.pages.first.data.capacity.rows
+	s.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 3 {
 		sc1Write(t, s, "\n")
 	}
-	s.pages.pages.first.data.PauseIntegrityChecks(false)
+	s.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	// Write 3 lines of text, forcing the last line into the first
 	// row of a new page. Move our cursor onto the previous page.
 	zigTry(t, s.SetAttribute(sc1DirectColorBg(155)))
 	sc1Write(t, s, "1AB\n2BC\n3DE\n4FG")
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 
 	// Ensure we're still on the first page. So our cursor is on the first
 	// page but we have two pages of data.
-	expect(t, s.cursor.page_pin.node == s.pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
+	expect(t, s.Cursor.PagePin.Node == s.Pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first.?")
 
 	//      +----------+ = PAGE 0
 	//  ... :          :
@@ -1818,18 +1818,18 @@ func TestSc1_Screen_scroll_above_with_cursor_on_non_final_row(t *testing.T) {
 		expectEqualStrings(t, "2BC\n\n3DE\n4FG", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Page 0's penultimate row is dirty because the cursor moved off of it.
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	// Page 0's final row is dirty because it was cleared.
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	// Page 1's row is dirty because it's new.
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 }
 
 // Zig: test "Screen: scroll above no scrollback bottom of page"
@@ -1839,17 +1839,17 @@ func TestSc1_Screen_scroll_above_no_scrollback_bottom_of_page(t *testing.T) {
 	s := sc1Init(t, 10, 3, 0)
 	defer s.Deinit()
 
-	first_page_size := s.pages.pages.first.data.capacity.rows
-	s.pages.pages.first.data.PauseIntegrityChecks(true)
+	first_page_size := s.Pages.pages.first.data.capacity.rows
+	s.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for range first_page_size - 3 {
 		sc1Write(t, s, "\n")
 	}
-	s.pages.pages.first.data.PauseIntegrityChecks(false)
+	s.Pages.pages.first.data.PauseIntegrityChecks(false)
 
 	zigTry(t, s.SetAttribute(sc1DirectColorBg(155)))
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL")
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 
 	// At this point:
 	//  +-------------+ ACTIVE
@@ -1880,18 +1880,18 @@ func TestSc1_Screen_scroll_above_no_scrollback_bottom_of_page(t *testing.T) {
 		expectEqualStrings(t, "2EFGH\n\n3IJKL", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		cell := list_cell.Cell
 		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 155, g: 0, b: 0}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
 	}
 
 	// Page 0 row 1 (active row 0) is dirty because the cursor moved off of it.
-	expect(t, s.pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 0)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	// Page 0 row 2 (active row 1) is dirty because it was cleared.
-	expect(t, s.pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 1)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	// Page 0 row 3 (active row 2) is dirty because it is new.
-	expect(t, s.pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
+	expect(t, s.Pages.IsDirty(sc1Active(0, 2)), "s.pages.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 }
 
 // Zig: test "Screen: clone"
@@ -1905,8 +1905,8 @@ func TestSc1_Screen_clone(t *testing.T) {
 		contents := sc1Dump(t, s, sc1Active(0, 0))
 		expectEqualStrings(t, "1ABCD\n2EFGH", contents)
 	}
-	expectEqual[uint](t, 5, uint(s.cursor.x))
-	expectEqual[uint](t, 1, uint(s.cursor.y))
+	expectEqual[uint](t, 5, uint(s.Cursor.X))
+	expectEqual[uint](t, 1, uint(s.Cursor.Y))
 
 	// Clone
 	s2 := sc1Clone(t, s, sc1Active(0, 0), None[Point]())
@@ -1915,8 +1915,8 @@ func TestSc1_Screen_clone(t *testing.T) {
 		contents := sc1Dump(t, s2, sc1Active(0, 0))
 		expectEqualStrings(t, "1ABCD\n2EFGH", contents)
 	}
-	expectEqual[uint](t, 5, uint(s2.cursor.x))
-	expectEqual[uint](t, 1, uint(s2.cursor.y))
+	expectEqual[uint](t, 5, uint(s2.Cursor.X))
+	expectEqual[uint](t, 1, uint(s2.Cursor.Y))
 
 	// Write to s1, should not be in s2
 	sc1Write(t, s, "\n34567")
@@ -1928,8 +1928,8 @@ func TestSc1_Screen_clone(t *testing.T) {
 		contents := sc1Dump(t, s2, sc1Active(0, 0))
 		expectEqualStrings(t, "1ABCD\n2EFGH", contents)
 	}
-	expectEqual[uint](t, 5, uint(s2.cursor.x))
-	expectEqual[uint](t, 1, uint(s2.cursor.y))
+	expectEqual[uint](t, 5, uint(s2.Cursor.X))
+	expectEqual[uint](t, 1, uint(s2.Cursor.Y))
 }
 
 // Zig: test "Screen: clone partial"
@@ -1943,8 +1943,8 @@ func TestSc1_Screen_clone_partial(t *testing.T) {
 		contents := sc1Dump(t, s, sc1Active(0, 0))
 		expectEqualStrings(t, "1ABCD\n2EFGH", contents)
 	}
-	expectEqual[uint](t, 5, uint(s.cursor.x))
-	expectEqual[uint](t, 1, uint(s.cursor.y))
+	expectEqual[uint](t, 5, uint(s.Cursor.X))
+	expectEqual[uint](t, 1, uint(s.Cursor.Y))
 
 	// Clone
 	s2 := sc1Clone(t, s, sc1Active(0, 1), None[Point]())
@@ -1955,8 +1955,8 @@ func TestSc1_Screen_clone_partial(t *testing.T) {
 	}
 
 	// Cursor is shifted since we cloned partial
-	expectEqual[uint](t, 5, uint(s2.cursor.x))
-	expectEqual[uint](t, 0, uint(s2.cursor.y))
+	expectEqual[uint](t, 5, uint(s2.Cursor.X))
+	expectEqual[uint](t, 0, uint(s2.Cursor.Y))
 }
 
 // Zig: test "Screen: clone partial cursor out of bounds"
@@ -1970,8 +1970,8 @@ func TestSc1_Screen_clone_partial_cursor_out_of_bounds(t *testing.T) {
 		contents := sc1Dump(t, s, sc1Active(0, 0))
 		expectEqualStrings(t, "1ABCD\n2EFGH", contents)
 	}
-	expectEqual[uint](t, 5, uint(s.cursor.x))
-	expectEqual[uint](t, 1, uint(s.cursor.y))
+	expectEqual[uint](t, 5, uint(s.Cursor.X))
+	expectEqual[uint](t, 1, uint(s.Cursor.Y))
 
 	// Clone
 	s2 := sc1Clone(t, s, sc1Active(0, 0), Some(sc1Active(0, 0)))
@@ -1982,8 +1982,8 @@ func TestSc1_Screen_clone_partial_cursor_out_of_bounds(t *testing.T) {
 	}
 
 	// Cursor is shifted since we cloned partial
-	expectEqual[uint](t, 0, uint(s2.cursor.x))
-	expectEqual[uint](t, 0, uint(s2.cursor.y))
+	expectEqual[uint](t, 0, uint(s2.Cursor.X))
+	expectEqual[uint](t, 0, uint(s2.Cursor.Y))
 }
 
 // Zig: test "Screen: clone contains full selection"
@@ -1997,7 +1997,7 @@ func TestSc1_Screen_clone_contains_full_selection(t *testing.T) {
 	// Select a single line
 	sc1Select(t, s, SelectionInit(
 		sc1Pin(t, s, sc1Active(0, 1)),
-		sc1Pin(t, s, sc1Active(s.pages.cols-1, 1)),
+		sc1Pin(t, s, sc1Active(s.Pages.cols-1, 1)),
 		false,
 	))
 
@@ -2007,9 +2007,9 @@ func TestSc1_Screen_clone_contains_full_selection(t *testing.T) {
 
 	// Our selection should remain valid
 	{
-		sel := zigUnwrap(t, s2.selection)
-		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s2.Selection)
+		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.Pages.cols-1, 1), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2024,7 +2024,7 @@ func TestSc1_Screen_clone_contains_none_of_selection(t *testing.T) {
 	// Select a single line
 	sc1Select(t, s, SelectionInit(
 		sc1Pin(t, s, sc1Active(0, 0)),
-		sc1Pin(t, s, sc1Active(s.pages.cols-1, 0)),
+		sc1Pin(t, s, sc1Active(s.Pages.cols-1, 0)),
 		false,
 	))
 
@@ -2033,7 +2033,7 @@ func TestSc1_Screen_clone_contains_none_of_selection(t *testing.T) {
 	defer s2.Deinit()
 
 	// Our selection should be null
-	expect(t, !s2.selection.Valid, "s2.selection == null")
+	expect(t, !s2.Selection.Valid, "s2.selection == null")
 }
 
 // Zig: test "Screen: clone contains selection start cutoff"
@@ -2047,7 +2047,7 @@ func TestSc1_Screen_clone_contains_selection_start_cutoff(t *testing.T) {
 	// Select a single line
 	sc1Select(t, s, SelectionInit(
 		sc1Pin(t, s, sc1Active(0, 0)),
-		sc1Pin(t, s, sc1Active(s.pages.cols-1, 1)),
+		sc1Pin(t, s, sc1Active(s.Pages.cols-1, 1)),
 		false,
 	))
 
@@ -2057,9 +2057,9 @@ func TestSc1_Screen_clone_contains_selection_start_cutoff(t *testing.T) {
 
 	// Our selection should remain valid
 	{
-		sel := zigUnwrap(t, s2.selection)
-		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s2.Selection)
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.Pages.cols-1, 0), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2084,9 +2084,9 @@ func TestSc1_Screen_clone_contains_selection_end_cutoff(t *testing.T) {
 
 	// Our selection should remain valid
 	{
-		sel := zigUnwrap(t, s2.selection)
-		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 2), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s2.Selection)
+		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.Pages.cols-1, 2), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2111,9 +2111,9 @@ func TestSc1_Screen_clone_contains_selection_end_cutoff_reversed(t *testing.T) {
 
 	// Our selection should remain valid
 	{
-		sel := zigUnwrap(t, s2.selection)
-		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 2), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s2.Selection)
+		expectEqualPoint(t, sc1Active(0, 1), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.Pages.cols-1, 2), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2138,9 +2138,9 @@ func TestSc1_Screen_clone_contains_subset_of_selection(t *testing.T) {
 
 	// Our selection should remain valid
 	{
-		sel := zigUnwrap(t, s2.selection)
-		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(s2.pages.cols-1, 3), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s2.Selection)
+		expectEqualPoint(t, sc1Active(0, 0), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(s2.Pages.cols-1, 3), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2167,9 +2167,9 @@ func TestSc1_Screen_clone_contains_subset_of_rectangle_selection(t *testing.T) {
 	// preserving the columns of the start and end points of the
 	// selection.
 	{
-		sel := zigUnwrap(t, s2.selection)
-		expectEqualPoint(t, sc1Active(1, 0), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.Start())))
-		expectEqualPoint(t, sc1Active(3, 3), zigUnwrap(t, s2.pages.PointFromPin(PointTagActive, sel.End())))
+		sel := zigUnwrap(t, s2.Selection)
+		expectEqualPoint(t, sc1Active(1, 0), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.Start())))
+		expectEqualPoint(t, sc1Active(3, 3), zigUnwrap(t, s2.Pages.PointFromPin(PointTagActive, sel.End())))
 	}
 }
 
@@ -2277,9 +2277,9 @@ func TestSc1_Screen_clear_history_with_no_history(t *testing.T) {
 	s := sc1Init(t, 10, 3, 3)
 	defer s.Deinit()
 	sc1Write(t, s, "4ABCD\n5EFGH\n6IJKL")
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 	s.EraseRows(sc1History(0, 0), None[Point]())
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 	{
 		// Test our contents rotated
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2299,7 +2299,7 @@ func TestSc1_Screen_clear_history(t *testing.T) {
 	s := sc1Init(t, 10, 3, 3)
 	defer s.Deinit()
 	sc1Write(t, s, "1ABCD\n2EFGH\n3IJKL\n4ABCD\n5EFGH\n6IJKL")
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 
 	// Scroll to top
 	s.Scroll(ScreenScroll{Tag: ScreenScrollTop})
@@ -2310,7 +2310,7 @@ func TestSc1_Screen_clear_history(t *testing.T) {
 	}
 
 	s.EraseRows(sc1History(0, 0), None[Point]())
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 	{
 		// Test our contents rotated
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2332,7 +2332,7 @@ func TestSc1_Screen_clear_above_cursor(t *testing.T) {
 	sc1Write(t, s, "4ABCD\n5EFGH\n6IJKL")
 	s.ClearRows(
 		sc1Active(0, 0),
-		Some(sc1Active(0, uint32(s.cursor.y-1))),
+		Some(sc1Active(0, uint32(s.Cursor.Y-1))),
 		false,
 	)
 	{
@@ -2344,8 +2344,8 @@ func TestSc1_Screen_clear_above_cursor(t *testing.T) {
 		expectEqualStrings(t, "\n\n6IJKL", contents)
 	}
 
-	expectEqual[uint](t, 5, uint(s.cursor.x))
-	expectEqual[uint](t, 2, uint(s.cursor.y))
+	expectEqual[uint](t, 5, uint(s.Cursor.X))
+	expectEqual[uint](t, 2, uint(s.Cursor.Y))
 }
 
 // Zig: test "Screen: clear above cursor with history"
@@ -2358,7 +2358,7 @@ func TestSc1_Screen_clear_above_cursor_with_history(t *testing.T) {
 	sc1Write(t, s, "4ABCD\n5EFGH\n6IJKL")
 	s.ClearRows(
 		sc1Active(0, 0),
-		Some(sc1Active(0, uint32(s.cursor.y-1))),
+		Some(sc1Active(0, uint32(s.Cursor.Y-1))),
 		false,
 	)
 	{
@@ -2370,8 +2370,8 @@ func TestSc1_Screen_clear_above_cursor_with_history(t *testing.T) {
 		expectEqualStrings(t, "1ABCD\n2EFGH\n3IJKL\n\n\n6IJKL", contents)
 	}
 
-	expectEqual[uint](t, 5, uint(s.cursor.x))
-	expectEqual[uint](t, 2, uint(s.cursor.y))
+	expectEqual[uint](t, 5, uint(s.Cursor.X))
+	expectEqual[uint](t, 2, uint(s.Cursor.Y))
 }
 
 // Zig: test "Screen: resize (no reflow) more rows"
@@ -2399,13 +2399,13 @@ func TestSc1_Screen_resize_no_reflow_less_rows(t *testing.T) {
 	defer s.Deinit()
 	const str = "1ABCD\n2EFGH\n3IJKL"
 	sc1Write(t, s, str)
-	expectEqual[SizeCellCountInt](t, 5, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 5, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 	zigTry(t, s.Resize(sc1NoReflow(10, 2)))
 
 	// Since we shrunk, we should adjust our cursor
-	expectEqual[SizeCellCountInt](t, 5, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 5, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2423,20 +2423,20 @@ func TestSc1_Screen_resize_no_reflow_less_rows_trims_blank_lines(t *testing.T) {
 	sc1Write(t, s, str)
 
 	// Write only a background color into the remaining rows
-	for y := 1; y < int(s.pages.rows); y++ {
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, uint32(y))))
-		*list_cell.cell = PageCell{
+	for y := 1; y < int(s.Pages.rows); y++ {
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, uint32(y))))
+		*list_cell.Cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 0xFF, g: 0, b: 0}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
 		}
 	}
 
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(sc1NoReflow(6, 2)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2454,20 +2454,20 @@ func TestSc1_Screen_resize_no_reflow_more_rows_trims_blank_lines(t *testing.T) {
 	sc1Write(t, s, str)
 
 	// Write only a background color into the remaining rows
-	for y := 1; y < int(s.pages.rows); y++ {
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, uint32(y))))
-		*list_cell.cell = PageCell{
+	for y := 1; y < int(s.Pages.rows); y++ {
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, uint32(y))))
+		*list_cell.Cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 0xFF, g: 0, b: 0}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
 		}
 	}
 
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(sc1NoReflow(10, 7)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2555,10 +2555,10 @@ func TestSc1_Screen_resize_no_reflow_less_rows_with_empty_trailing(t *testing.T)
 	s.CursorAbsolute(0, 0)
 	sc1Write(t, s, "A\nB")
 
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(sc1NoReflow(5, 2)))
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2577,8 +2577,8 @@ func TestSc1_Screen_resize_no_reflow_more_rows_with_soft_wrapping(t *testing.T) 
 
 	// Every second row should be wrapped
 	for y := 0; y < 6; y++ {
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, uint32(y))))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, uint32(y))))
+		row := list_cell.Row
 		wrapped := (y%2 == 0)
 		expectEqual(t, wrapped, row.wrap)
 	}
@@ -2593,8 +2593,8 @@ func TestSc1_Screen_resize_no_reflow_more_rows_with_soft_wrapping(t *testing.T) 
 
 	// Every second row should be wrapped
 	for y := 0; y < 6; y++ {
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, uint32(y))))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, uint32(y))))
+		row := list_cell.Row
 		wrapped := (y%2 == 0)
 		expectEqual(t, wrapped, row.wrap)
 	}
@@ -2608,12 +2608,12 @@ func TestSc1_Screen_resize_more_rows_no_scrollback(t *testing.T) {
 	defer s.Deinit()
 	const str = "1ABCD\n2EFGH\n3IJKL"
 	sc1Write(t, s, str)
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(screenResizeDefault(5, 10)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2633,12 +2633,12 @@ func TestSc1_Screen_resize_more_rows_with_empty_scrollback(t *testing.T) {
 	defer s.Deinit()
 	const str = "1ABCD\n2EFGH\n3IJKL"
 	sc1Write(t, s, str)
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(screenResizeDefault(5, 10)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2668,7 +2668,7 @@ func TestSc1_Screen_resize_more_rows_with_populated_scrollback(t *testing.T) {
 	s.CursorAbsolute(0, 1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '4', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '4', list_cell.Cell.content.codepoint)
 	}
 
 	// Resize
@@ -2677,7 +2677,7 @@ func TestSc1_Screen_resize_more_rows_with_populated_scrollback(t *testing.T) {
 	// Cursor should still be on the "4"
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '4', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '4', list_cell.Cell.content.codepoint)
 	}
 
 	{
@@ -2696,12 +2696,12 @@ func TestSc1_Screen_resize_more_cols_no_reflow(t *testing.T) {
 	const str = "1ABCD\n2EFGH\n3IJKL"
 	sc1Write(t, s, str)
 
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(screenResizeDefault(10, 3)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -2743,8 +2743,8 @@ func TestSc1_Screen_resize_no_reflow_more_cols_with_scrollback_scrolled_up(t *te
 	sc1Write(t, s, str)
 
 	// Cursor at bottom
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 
 	s.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: -4})
 	{
@@ -2759,8 +2759,8 @@ func TestSc1_Screen_resize_no_reflow_more_cols_with_scrollback_scrolled_up(t *te
 	}
 
 	// Cursor remains at bottom
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 }
 
 // https://github.com/mitchellh/ghostty/issues/1159
@@ -2775,8 +2775,8 @@ func TestSc1_Screen_resize_no_reflow_less_cols_with_scrollback_scrolled_up(t *te
 	sc1Write(t, s, str)
 
 	// Cursor at bottom
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 
 	s.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: -4})
 	{
@@ -2795,8 +2795,8 @@ func TestSc1_Screen_resize_no_reflow_less_cols_with_scrollback_scrolled_up(t *te
 	}
 
 	// Cursor remains at bottom
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 
 	// Old implementation doesn't do this but it makes sense to me:
 	// {
@@ -2835,16 +2835,16 @@ func TestSc1_Screen_resize_more_cols_no_reflow_preserves_semantic_prompt(t *test
 
 	// Our one row should still be a semantic prompt, the others should not.
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 0)))
-		expect(t, list_cell.row.semantic_prompt == PageRowSemanticPromptNone, "list_cell.row.semantic_prompt == .none")
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 0)))
+		expect(t, list_cell.Row.semantic_prompt == PageRowSemanticPromptNone, "list_cell.row.semantic_prompt == .none")
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 1)))
-		expect(t, list_cell.row.semantic_prompt == PageRowSemanticPromptPrompt, "list_cell.row.semantic_prompt == .prompt")
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
+		expect(t, list_cell.Row.semantic_prompt == PageRowSemanticPromptPrompt, "list_cell.row.semantic_prompt == .prompt")
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Active(0, 2)))
-		expect(t, list_cell.row.semantic_prompt == PageRowSemanticPromptNone, "list_cell.row.semantic_prompt == .none")
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 2)))
+		expect(t, list_cell.Row.semantic_prompt == PageRowSemanticPromptNone, "list_cell.row.semantic_prompt == .none")
 	}
 }
 
@@ -2868,7 +2868,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_fits_full_width(t *testing
 	s.CursorAbsolute(0, 1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '2', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '2', list_cell.Cell.content.codepoint)
 	}
 
 	// Resize and verify we undid the soft wrap because we have space now
@@ -2879,8 +2879,8 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_fits_full_width(t *testing
 	}
 
 	// Our cursor should've moved
-	expectEqual[uint](t, 5, uint(s.cursor.x))
-	expectEqual[uint](t, 0, uint(s.cursor.y))
+	expectEqual[uint](t, 5, uint(s.Cursor.X))
+	expectEqual[uint](t, 0, uint(s.Cursor.Y))
 }
 
 // Zig: test "Screen: resize more cols with reflow that ends in newline"
@@ -2903,7 +2903,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_ends_in_newline(t *testing
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '3', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '3', list_cell.Cell.content.codepoint)
 	}
 
 	// Resize and verify we undid the soft wrap because we have space now
@@ -2916,7 +2916,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_ends_in_newline(t *testing
 	// Our cursor should still be on the 3
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '3', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '3', list_cell.Cell.content.codepoint)
 	}
 }
 
@@ -2933,7 +2933,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_forces_more_wrapping(t *te
 	s.CursorAbsolute(0, 1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '2', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '2', list_cell.Cell.content.codepoint)
 	}
 
 	// Verify we soft wrapped
@@ -2952,8 +2952,8 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_forces_more_wrapping(t *te
 	}
 
 	// Our cursor should've moved
-	expectEqual[SizeCellCountInt](t, 5, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 5, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize more cols with reflow that unwraps multiple times"
@@ -2969,7 +2969,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_unwraps_multiple_times(t *
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '3', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '3', list_cell.Cell.content.codepoint)
 	}
 
 	// Verify we soft wrapped
@@ -2988,8 +2988,8 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_unwraps_multiple_times(t *
 	}
 
 	// Our cursor should've moved
-	expectEqual[SizeCellCountInt](t, 10, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 10, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize more cols with populated scrollback"
@@ -3010,7 +3010,7 @@ func TestSc1_Screen_resize_more_cols_with_populated_scrollback(t *testing.T) {
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '5', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '5', list_cell.Cell.content.codepoint)
 	}
 
 	// Resize
@@ -3024,7 +3024,7 @@ func TestSc1_Screen_resize_more_cols_with_populated_scrollback(t *testing.T) {
 	// Cursor should still be on the "5"
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '5', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, '5', list_cell.Cell.content.codepoint)
 	}
 }
 
@@ -3041,7 +3041,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow(t *testing.T) {
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'E', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, 'E', list_cell.Cell.content.codepoint)
 	}
 
 	// Verify we soft wrapped
@@ -3060,8 +3060,8 @@ func TestSc1_Screen_resize_more_cols_with_reflow(t *testing.T) {
 	}
 
 	// Our cursor should've moved
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize more rows and cols with wrapping"
@@ -3081,8 +3081,8 @@ func TestSc1_Screen_resize_more_rows_and_cols_with_wrapping(t *testing.T) {
 	zigTry(t, s.Resize(screenResizeDefault(5, 10)))
 
 	// Cursor should move due to wrapping
-	expectEqual[SizeCellCountInt](t, 3, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 3, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -3104,12 +3104,12 @@ func TestSc1_Screen_resize_less_rows_no_scrollback(t *testing.T) {
 	sc1Write(t, s, str)
 
 	s.CursorAbsolute(0, 0)
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(screenResizeDefault(5, 1)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -3136,7 +3136,7 @@ func TestSc1_Screen_resize_less_rows_moving_cursor(t *testing.T) {
 	s.CursorAbsolute(1, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'I', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, 'I', list_cell.Cell.content.codepoint)
 	}
 
 	// Resize
@@ -3154,8 +3154,8 @@ func TestSc1_Screen_resize_less_rows_moving_cursor(t *testing.T) {
 	}
 
 	// Cursor should be on the last line
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize less rows with empty scrollback"
@@ -3221,16 +3221,16 @@ func TestSc1_Screen_resize_less_rows_with_full_scrollback(t *testing.T) {
 		expectEqualStrings(t, expected, contents)
 	}
 
-	expectEqual[SizeCellCountInt](t, 4, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 4, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 
 	// Resize
 	zigTry(t, s.Resize(screenResizeDefault(5, 2)))
 
 	// Cursor should stay in the same relative place (bottom of the
 	// screen, same character).
-	expectEqual[SizeCellCountInt](t, 4, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 4, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Screen(0, 0))
@@ -3254,12 +3254,12 @@ func TestSc1_Screen_resize_less_cols_no_reflow(t *testing.T) {
 	sc1Write(t, s, str)
 
 	s.CursorAbsolute(0, 0)
-	cursor := s.cursor
+	cursor := s.Cursor
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
 
 	// Cursor should not move
-	expectEqual(t, cursor.x, s.cursor.x)
-	expectEqual(t, cursor.y, s.cursor.y)
+	expectEqual(t, cursor.X, s.Cursor.X)
+	expectEqual(t, cursor.Y, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -3284,7 +3284,7 @@ func TestSc1_Screen_resize_less_cols_with_reflow_but_row_space(t *testing.T) {
 	s.CursorAbsolute(4, 0)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'D', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, 'D', list_cell.Cell.content.codepoint)
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
@@ -3300,8 +3300,8 @@ func TestSc1_Screen_resize_less_cols_with_reflow_but_row_space(t *testing.T) {
 	}
 
 	// Cursor should be on the last line
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize less cols with reflow with trimmed rows"
@@ -3389,10 +3389,10 @@ func TestSc1_Screen_resize_less_cols_with_reflow_and_scrollback(t *testing.T) {
 	sc1Write(t, s, str)
 
 	// Put our cursor on the end
-	s.CursorAbsolute(1, s.pages.rows-1)
+	s.CursorAbsolute(1, s.Pages.rows-1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'E', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, 'E', list_cell.Cell.content.codepoint)
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
@@ -3404,8 +3404,8 @@ func TestSc1_Screen_resize_less_cols_with_reflow_and_scrollback(t *testing.T) {
 	}
 
 	// Cursor should be on the last line
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize less cols with reflow previously wrapped and scrollback"
@@ -3425,10 +3425,10 @@ func TestSc1_Screen_resize_less_cols_with_reflow_previously_wrapped_and_scrollba
 	}
 
 	// Put our cursor on the end
-	s.CursorAbsolute(s.pages.cols-1, s.pages.rows-1)
+	s.CursorAbsolute(s.Pages.cols-1, s.Pages.rows-1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'H', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, 'H', list_cell.Cell.content.codepoint)
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
@@ -3445,11 +3445,11 @@ func TestSc1_Screen_resize_less_cols_with_reflow_previously_wrapped_and_scrollba
 	}
 
 	// Cursor should be on the last line
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'H', list_cell.cell.content.codepoint)
+		expectEqual[uint32](t, 'H', list_cell.Cell.content.codepoint)
 	}
 }
 
@@ -3477,8 +3477,8 @@ func TestSc1_Screen_resize_less_cols_with_scrollback_keeps_cursor_row(t *testing
 	}
 
 	// Cursor should be on the last line
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
 }
 
 // Zig: test "Screen: resize more rows, less cols with reflow with scrollback"
@@ -3575,8 +3575,8 @@ func TestSc1_Screen_resize_less_cols_to_eliminate_wide_char(t *testing.T) {
 		expectEqualStrings(t, str, contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expectEqual[uint32](t, '😀', cell.content.codepoint)
 	}
@@ -3588,8 +3588,8 @@ func TestSc1_Screen_resize_less_cols_to_eliminate_wide_char(t *testing.T) {
 		expectEqualStrings(t, "", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual[uint32](t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -3608,14 +3608,14 @@ func TestSc1_Screen_resize_less_cols_to_wrap_wide_char(t *testing.T) {
 		expectEqualStrings(t, str, contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expectEqual[uint32](t, '😀', cell.content.codepoint)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -3625,10 +3625,10 @@ func TestSc1_Screen_resize_less_cols_to_wrap_wide_char(t *testing.T) {
 		expectEqualStrings(t, "x\n😀", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
-		expect(t, list_cell.row.wrap, "list_cell.row.wrap")
+		expect(t, list_cell.Row.wrap, "list_cell.row.wrap")
 	}
 }
 
@@ -3645,14 +3645,14 @@ func TestSc1_Screen_resize_less_cols_to_eliminate_wide_char_with_row_space(t *te
 		expectEqualStrings(t, str, contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expectEqual[uint32](t, '😀', cell.content.codepoint)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -3681,18 +3681,18 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head(t *testing.T) {
 	// We should expect that if we resize to more cols, the wide spacer
 	// head is replaced with the emoji.
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -3702,14 +3702,14 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head(t *testing.T) {
 		expectEqualStrings(t, str, contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expectEqual[uint32](t, '😀', cell.content.codepoint)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(3, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(3, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -3730,18 +3730,18 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head_multiple_lines(t *tes
 	// Similar to the "wide spacer head" test, but this time we'er going
 	// to increase our columns such that multiple rows are unwrapped.
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(2, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 2)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 2)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 2)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 2)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -3751,14 +3751,14 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head_multiple_lines(t *tes
 		expectEqualStrings(t, str, contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(5, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(5, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expectEqual[uint32](t, '😀', cell.content.codepoint)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(6, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(6, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -3776,13 +3776,13 @@ func TestSc1_Screen_resize_more_cols_requiring_a_wide_spacer_head(t *testing.T) 
 		expectEqualStrings(t, "xx\n😀", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -3795,19 +3795,19 @@ func TestSc1_Screen_resize_more_cols_requiring_a_wide_spacer_head(t *testing.T) 
 		expectEqualStrings(t, "xx\n😀", contents)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expectEqual[uint32](t, '😀', cell.content.codepoint)
 	}
 	{
-		list_cell := zigUnwrap(t, s.pages.GetCell(sc1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -3834,15 +3834,15 @@ func TestSc1_Screen_resize_more_cols_with_cursor_at_prompt(t *testing.T) {
 	}
 
 	zigTry(t, s.Resize(ScreenResize{
-		cols:          20,
-		rows:          3,
-		reflow:        true,
-		prompt_redraw: OSCParsersSemanticPromptRedrawTrue,
+		Cols:         20,
+		Rows:         3,
+		Reflow:       true,
+		PromptRedraw: OSCParsersSemanticPromptRedrawTrue,
 	}))
 
 	// Cursor should not move
-	expectEqual[SizeCellCountInt](t, 6, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 1, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 6, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 1, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -3874,15 +3874,15 @@ func TestSc1_Screen_resize_more_cols_with_cursor_not_at_prompt(t *testing.T) {
 	}
 
 	zigTry(t, s.Resize(ScreenResize{
-		cols:          20,
-		rows:          3,
-		reflow:        true,
-		prompt_redraw: OSCParsersSemanticPromptRedrawTrue,
+		Cols:         20,
+		Rows:         3,
+		Reflow:       true,
+		PromptRedraw: OSCParsersSemanticPromptRedrawTrue,
 	}))
 
 	// Cursor should not move
-	expectEqual[SizeCellCountInt](t, 6, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
+	expectEqual[SizeCellCountInt](t, 6, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 
 	{
 		contents := sc1Dump(t, s, sc1Viewport(0, 0))
@@ -3915,10 +3915,10 @@ func TestSc1_Screen_resize_with_prompt_redraw_last_clears_only_one_line(t *testi
 
 	// Cursor is at end of "world" line with semantic_content = .input
 	zigTry(t, s.Resize(ScreenResize{
-		cols:          20,
-		rows:          4,
-		reflow:        true,
-		prompt_redraw: OSCParsersSemanticPromptRedrawLast,
+		Cols:         20,
+		Rows:         4,
+		Reflow:       true,
+		PromptRedraw: OSCParsersSemanticPromptRedrawLast,
 	}))
 
 	// With .last, only the current line where cursor is should be cleared
@@ -3954,10 +3954,10 @@ func TestSc1_Screen_resize_with_prompt_redraw_last_multiline_prompt_clears_only_
 
 	// Cursor is at end of line3 (the last continuation line)
 	zigTry(t, s.Resize(ScreenResize{
-		cols:          30,
-		rows:          5,
-		reflow:        true,
-		prompt_redraw: OSCParsersSemanticPromptRedrawLast,
+		Cols:         30,
+		Rows:         5,
+		Reflow:       true,
+		PromptRedraw: OSCParsersSemanticPromptRedrawLast,
 	}))
 
 	// With .last, only line3 (where cursor is) should be cleared
@@ -3976,16 +3976,16 @@ func TestSc1_Screen_select_untracked(t *testing.T) {
 	defer s.Deinit()
 	sc1Write(t, s, "ABC  DEF\n 123\n456")
 
-	expect(t, !s.selection.Valid, "s.selection == null")
-	tracked := s.pages.CountTrackedPins()
+	expect(t, !s.Selection.Valid, "s.selection == null")
+	tracked := s.Pages.CountTrackedPins()
 	sc1Select(t, s, SelectionInit(
 		sc1Pin(t, s, sc1Active(0, 0)),
 		sc1Pin(t, s, sc1Active(3, 0)),
 		false,
 	))
-	expectEqual(t, tracked+2, s.pages.CountTrackedPins())
+	expectEqual(t, tracked+2, s.Pages.CountTrackedPins())
 	zigTry(t, s.Select(None[Selection]()))
-	expectEqual(t, tracked, s.pages.CountTrackedPins())
+	expectEqual(t, tracked, s.Pages.CountTrackedPins())
 }
 
 // Zig: test "Screen: selectAll"
@@ -4134,7 +4134,7 @@ func TestSc1_Screen_selectLine_disabled_whitespace_trimming(t *testing.T) {
 	// Going forward
 	{
 		opts := screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 0)))
-		opts.whitespace = None[[]uint32]()
+		opts.Whitespace = None[[]uint32]()
 		sel := zigUnwrap(t, s.SelectLine(opts))
 		defer sel.Deinit(s)
 		expectEqualPoint(t, sc1Screen(0, 0), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
@@ -4144,7 +4144,7 @@ func TestSc1_Screen_selectLine_disabled_whitespace_trimming(t *testing.T) {
 	// Non-wrapped
 	{
 		opts := screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 3)))
-		opts.whitespace = None[[]uint32]()
+		opts.Whitespace = None[[]uint32]()
 		sel := zigUnwrap(t, s.SelectLine(opts))
 		defer sel.Deinit(s)
 		expectEqualPoint(t, sc1Screen(0, 3), sc1PointFromPin(t, s, PointTagScreen, sel.Start()))
@@ -4200,7 +4200,7 @@ func TestSc1_Screen_selectLine_semantic_prompt_boundary(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(1, 1)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		const expected = "A"
 		expectEqualStrings(t, expected, contents)
 	}
@@ -4261,7 +4261,7 @@ func TestSc1_Screen_selectLine_semantic_input_to_output_boundary(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(2, 0)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "ls -la", contents)
 	}
 
@@ -4269,7 +4269,7 @@ func TestSc1_Screen_selectLine_semantic_input_to_output_boundary(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(2, 1)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "file.txt", contents)
 	}
 }
@@ -4341,7 +4341,7 @@ func TestSc1_Screen_selectLine_semantic_boundary_soft_wrap_with_mid_row_transiti
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(3, 0)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "cmd12", contents)
 	}
 
@@ -4349,7 +4349,7 @@ func TestSc1_Screen_selectLine_semantic_boundary_soft_wrap_with_mid_row_transiti
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(0, 1)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "cmd12", contents)
 	}
 
@@ -4357,7 +4357,7 @@ func TestSc1_Screen_selectLine_semantic_boundary_soft_wrap_with_mid_row_transiti
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(3, 1)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "out", contents)
 	}
 }
@@ -4378,10 +4378,10 @@ func TestSc1_Screen_selectLine_semantic_boundary_disabled(t *testing.T) {
 	// With semantic_prompt_boundary = false, should select entire line
 	{
 		opts := screenSelectLineDefault(sc1Pin(t, s, sc1Active(0, 0)))
-		opts.semantic_prompt_boundary = false
+		opts.SemanticPromptBoundary = false
 		sel := zigUnwrap(t, s.SelectLine(opts))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "$ command", contents)
 	}
 }
@@ -4445,7 +4445,7 @@ func TestSc1_Screen_selectLine_semantic_all_same_content(t *testing.T) {
 	{
 		sel := zigUnwrap(t, s.SelectLine(screenSelectLineDefault(sc1Pin(t, s, sc1Active(2, 1)))))
 		defer sel.Deinit(s)
-		contents := sc1SelectionString(t, s, ScreenSelectionString{sel: sel, trim: false})
+		contents := sc1SelectionString(t, s, ScreenSelectionString{Sel: sel, Trim: false})
 		expectEqualStrings(t, "prompt text", contents)
 	}
 }
@@ -4510,8 +4510,8 @@ func TestSc1_panic_cursorCopy_x_out_of_range(t *testing.T) {
 	defer s.Deinit()
 	s2 := sc1Init(t, 5, 10, 0)
 	defer s2.Deinit()
-	other := s.cursor
-	other.x = 7
+	other := s.Cursor
+	other.X = 7
 	sc1ExpectPanic(t, func() { _ = s2.CursorCopy(other, screenCursorCopyOptionsDefault()) })
 }
 
@@ -4523,8 +4523,8 @@ func TestSc1_panic_cursorCopy_y_out_of_range(t *testing.T) {
 	defer s.Deinit()
 	s2 := sc1Init(t, 10, 5, 0)
 	defer s2.Deinit()
-	other := s.cursor
-	other.y = 7
+	other := s.Cursor
+	other.Y = 7
 	sc1ExpectPanic(t, func() { _ = s2.CursorCopy(other, screenCursorCopyOptionsDefault()) })
 }
 
@@ -4538,9 +4538,9 @@ func TestSc1_panic_clone_untracked_selection(t *testing.T) {
 
 	// Set the selection directly (not through select) so that it stays
 	// untracked.
-	s.selection = Some(SelectionInit(
+	s.Selection = Some(SelectionInit(
 		sc1Pin(t, s, sc1Active(0, 1)),
-		sc1Pin(t, s, sc1Active(s.pages.cols-1, 1)),
+		sc1Pin(t, s, sc1Active(s.Pages.cols-1, 1)),
 		false,
 	))
 	sc1ExpectPanic(t, func() { _, _ = s.Clone(sc1Active(0, 0), None[Point]()) })

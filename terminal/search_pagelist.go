@@ -95,9 +95,9 @@ func SearchPagelistInit(
 	assert(start.data.size.rows > 0) // Zig: u16 subtraction traps
 	assert(start.data.size.cols > 0) // Zig: u16 subtraction traps
 	pin, err := list.TrackPin(PageListPin{
-		node: start,
-		y:    start.data.size.rows - 1,
-		x:    start.data.size.cols - 1,
+		Node: start,
+		Y:    start.data.size.rows - 1,
+		X:    start.data.size.cols - 1,
 	})
 	if err != nil {
 		return SearchPagelist{}, err
@@ -176,7 +176,7 @@ func (self *SearchPagelist) Feed() (bool, error) {
 	// If our pin becomes garbage it means wherever we were next
 	// was reused and we can't make sense of our progress anymore.
 	// It is effectively equivalent to reaching the end of the PageList.
-	if self.pin.garbage {
+	if self.pin.Garbage {
 		return false, nil
 	}
 
@@ -185,7 +185,7 @@ func (self *SearchPagelist) Feed() (bool, error) {
 
 	// Start at our previous node and then continue adding until we
 	// get our desired amount of data.
-	for node := self.pin.node.prev; node != nil; node = node.prev {
+	for node := self.pin.Node.prev; node != nil; node = node.prev {
 		added, err := self.window.Append(node)
 		if err != nil {
 			return false, err
@@ -198,7 +198,7 @@ func (self *SearchPagelist) Feed() (bool, error) {
 		}
 
 		// Move our tracked pin to the new node.
-		self.pin.node = node
+		self.pin.Node = node
 
 		if rem == 0 {
 			break

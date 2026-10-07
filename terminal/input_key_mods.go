@@ -240,13 +240,13 @@ var inputKeyModsModSideNames = [inputKeyModsModSideCount]string{"left", "right"}
 // in bits 6 to 9, _padding in bits 10 to 15. Every field defaults to the Go
 // zero value. See the file header for the conversions.
 type InputKeyModsMods struct {
-	shift     bool
-	ctrl      bool
-	alt       bool
-	super     bool
-	caps_lock bool
-	num_lock  bool
-	sides     InputKeyModsModsSide
+	Shift    bool
+	Ctrl     bool
+	Alt      bool
+	Super    bool
+	CapsLock bool
+	NumLock  bool
+	Sides    InputKeyModsModsSide
 	// Zig: u6, default 0.
 	_padding uint8
 }
@@ -259,10 +259,10 @@ type InputKeyModsModsBacking = uint16
 //
 // Zig: packed struct(u4), every field default false.
 type InputKeyModsModsKeys struct {
-	shift bool
-	ctrl  bool
-	alt   bool
-	super bool
+	Shift bool
+	Ctrl  bool
+	Alt   bool
+	Super bool
 }
 
 // InputKeyModsModsKeysBacking is key_mods.Mods.Keys.Backing (u4).
@@ -273,16 +273,16 @@ type InputKeyModsModsKeysBacking = uint8
 // Zig: pub inline fn int(self: Keys) Keys.Backing.
 func (self InputKeyModsModsKeys) Int() InputKeyModsModsKeysBacking {
 	var v InputKeyModsModsKeysBacking
-	if self.shift {
+	if self.Shift {
 		v |= 1 << 0
 	}
-	if self.ctrl {
+	if self.Ctrl {
 		v |= 1 << 1
 	}
-	if self.alt {
+	if self.Alt {
 		v |= 1 << 2
 	}
-	if self.super {
+	if self.Super {
 		v |= 1 << 3
 	}
 	return v
@@ -296,10 +296,10 @@ func (self InputKeyModsModsKeys) Int() InputKeyModsModsKeysBacking {
 func InputKeyModsModsKeysFromInt(v InputKeyModsModsKeysBacking) InputKeyModsModsKeys {
 	assert(v <= 0xF)
 	return InputKeyModsModsKeys{
-		shift: v&(1<<0) != 0,
-		ctrl:  v&(1<<1) != 0,
-		alt:   v&(1<<2) != 0,
-		super: v&(1<<3) != 0,
+		Shift: v&(1<<0) != 0,
+		Ctrl:  v&(1<<1) != 0,
+		Alt:   v&(1<<2) != 0,
+		Super: v&(1<<3) != 0,
 	}
 }
 
@@ -311,10 +311,10 @@ func InputKeyModsModsKeysFromInt(v InputKeyModsModsKeysBacking) InputKeyModsMods
 //
 // Zig: packed struct(u4), every field default .left (the Go zero value).
 type InputKeyModsModsSide struct {
-	shift InputKeyModsModSide
-	ctrl  InputKeyModsModSide
-	alt   InputKeyModsModSide
-	super InputKeyModsModSide
+	Shift InputKeyModsModSide
+	Ctrl  InputKeyModsModSide
+	Alt   InputKeyModsModSide
+	Super InputKeyModsModSide
 }
 
 // InputKeyModsModsSideBacking is key_mods.Mods.Side.Backing (u4).
@@ -326,11 +326,11 @@ type InputKeyModsModsSideBacking = uint8
 //
 // A field above 1 cannot be a Mod.Side (enum(u1)) in Zig: asserted.
 func (self InputKeyModsModsSide) Int() InputKeyModsModsSideBacking {
-	assert(self.shift <= 1 && self.ctrl <= 1 && self.alt <= 1 && self.super <= 1)
-	return InputKeyModsModsSideBacking(self.shift) |
-		InputKeyModsModsSideBacking(self.ctrl)<<1 |
-		InputKeyModsModsSideBacking(self.alt)<<2 |
-		InputKeyModsModsSideBacking(self.super)<<3
+	assert(self.Shift <= 1 && self.Ctrl <= 1 && self.Alt <= 1 && self.Super <= 1)
+	return InputKeyModsModsSideBacking(self.Shift) |
+		InputKeyModsModsSideBacking(self.Ctrl)<<1 |
+		InputKeyModsModsSideBacking(self.Alt)<<2 |
+		InputKeyModsModsSideBacking(self.Super)<<3
 }
 
 // InputKeyModsModsSideFromInt stands for Zig's `@bitCast` from Side.Backing
@@ -340,10 +340,10 @@ func (self InputKeyModsModsSide) Int() InputKeyModsModsSideBacking {
 func InputKeyModsModsSideFromInt(v InputKeyModsModsSideBacking) InputKeyModsModsSide {
 	assert(v <= 0xF)
 	return InputKeyModsModsSide{
-		shift: InputKeyModsModSide(v >> 0 & 1),
-		ctrl:  InputKeyModsModSide(v >> 1 & 1),
-		alt:   InputKeyModsModSide(v >> 2 & 1),
-		super: InputKeyModsModSide(v >> 3 & 1),
+		Shift: InputKeyModsModSide(v >> 0 & 1),
+		Ctrl:  InputKeyModsModSide(v >> 1 & 1),
+		Alt:   InputKeyModsModSide(v >> 2 & 1),
+		Super: InputKeyModsModSide(v >> 3 & 1),
 	}
 }
 
@@ -352,11 +352,11 @@ func InputKeyModsModsSideFromInt(v InputKeyModsModsSideBacking) InputKeyModsMods
 //
 // A constant value, so it is given here; it is not logic.
 var InputKeyModsModsSideMask = InputKeyModsMods{
-	sides: InputKeyModsModsSide{
-		shift: InputKeyModsModSideRight,
-		ctrl:  InputKeyModsModSideRight,
-		alt:   InputKeyModsModSideRight,
-		super: InputKeyModsModSideRight,
+	Sides: InputKeyModsModsSide{
+		Shift: InputKeyModsModSideRight,
+		Ctrl:  InputKeyModsModSideRight,
+		Alt:   InputKeyModsModSideRight,
+		Super: InputKeyModsModSideRight,
 	},
 }
 
@@ -367,25 +367,25 @@ var InputKeyModsModsSideMask = InputKeyModsMods{
 func (self InputKeyModsMods) Int() InputKeyModsModsBacking {
 	assert(self._padding <= 0x3F)
 	var v InputKeyModsModsBacking
-	if self.shift {
+	if self.Shift {
 		v |= 1 << 0
 	}
-	if self.ctrl {
+	if self.Ctrl {
 		v |= 1 << 1
 	}
-	if self.alt {
+	if self.Alt {
 		v |= 1 << 2
 	}
-	if self.super {
+	if self.Super {
 		v |= 1 << 3
 	}
-	if self.caps_lock {
+	if self.CapsLock {
 		v |= 1 << 4
 	}
-	if self.num_lock {
+	if self.NumLock {
 		v |= 1 << 5
 	}
-	v |= InputKeyModsModsBacking(self.sides.Int()) << 6
+	v |= InputKeyModsModsBacking(self.Sides.Int()) << 6
 	v |= InputKeyModsModsBacking(self._padding) << 10
 	return v
 }
@@ -395,14 +395,14 @@ func (self InputKeyModsMods) Int() InputKeyModsModsBacking {
 // including _padding.
 func InputKeyModsModsFromInt(v InputKeyModsModsBacking) InputKeyModsMods {
 	return InputKeyModsMods{
-		shift:     v&(1<<0) != 0,
-		ctrl:      v&(1<<1) != 0,
-		alt:       v&(1<<2) != 0,
-		super:     v&(1<<3) != 0,
-		caps_lock: v&(1<<4) != 0,
-		num_lock:  v&(1<<5) != 0,
-		sides:     InputKeyModsModsSideFromInt(InputKeyModsModsSideBacking(v >> 6 & 0xF)),
-		_padding:  uint8(v >> 10 & 0x3F),
+		Shift:    v&(1<<0) != 0,
+		Ctrl:     v&(1<<1) != 0,
+		Alt:      v&(1<<2) != 0,
+		Super:    v&(1<<3) != 0,
+		CapsLock: v&(1<<4) != 0,
+		NumLock:  v&(1<<5) != 0,
+		Sides:    InputKeyModsModsSideFromInt(InputKeyModsModsSideBacking(v >> 6 & 0xF)),
+		_padding: uint8(v >> 10 & 0x3F),
 	}
 }
 
@@ -430,10 +430,10 @@ func (self InputKeyModsMods) Keys() InputKeyModsModsKeys {
 // bindings.
 func (self InputKeyModsMods) Binding() InputKeyModsMods {
 	return InputKeyModsMods{
-		shift: self.shift,
-		ctrl:  self.ctrl,
-		alt:   self.alt,
-		super: self.super,
+		Shift: self.Shift,
+		Ctrl:  self.Ctrl,
+		Alt:   self.Alt,
+		Super: self.Super,
 	}
 }
 
@@ -447,8 +447,8 @@ func (self InputKeyModsMods) Unset(other InputKeyModsMods) InputKeyModsMods {
 // locks set.
 func (self InputKeyModsMods) WithoutLocks() InputKeyModsMods {
 	copy := self
-	copy.caps_lock = false
-	copy.num_lock = false
+	copy.CapsLock = false
+	copy.NumLock = false
 	return copy
 }
 
@@ -472,11 +472,11 @@ func (self InputKeyModsMods) Translation(option_as_alt InputConfigOptionAsAlt) I
 			goto alt
 		case InputConfigOptionAsAltTrue:
 		case InputConfigOptionAsAltLeft:
-			if self.sides.alt == InputKeyModsModSideRight {
+			if self.Sides.Alt == InputKeyModsModSideRight {
 				goto alt
 			}
 		case InputConfigOptionAsAltRight:
-			if self.sides.alt == InputKeyModsModSideLeft {
+			if self.Sides.Alt == InputKeyModsModSideLeft {
 				goto alt
 			}
 		default:
@@ -484,7 +484,7 @@ func (self InputKeyModsMods) Translation(option_as_alt InputConfigOptionAsAlt) I
 		}
 
 		// Unset alt
-		result.alt = false
+		result.Alt = false
 	}
 alt:
 
@@ -497,9 +497,9 @@ alt:
 // Darwin: see the file header. Off Darwin the result is self.ctrl.
 func (self InputKeyModsMods) CtrlOrSuper() bool {
 	if inputKeyModsIsDarwin() {
-		return self.super
+		return self.Super
 	}
-	return self.ctrl
+	return self.Ctrl
 }
 
 // inputKeyModsIsDarwin stands for the comptime check
@@ -513,13 +513,13 @@ func inputKeyModsIsDarwin() bool { return platformIsDarwin() }
 func inputKeyModsModsKeyField(mods *InputKeyModsMods, mod InputKeyModsMod) *bool {
 	switch mod {
 	case InputKeyModsModShift:
-		return &mods.shift
+		return &mods.Shift
 	case InputKeyModsModCtrl:
-		return &mods.ctrl
+		return &mods.Ctrl
 	case InputKeyModsModAlt:
-		return &mods.alt
+		return &mods.Alt
 	case InputKeyModsModSuper:
-		return &mods.super
+		return &mods.Super
 	default:
 		panic("unreachable")
 	}
@@ -531,13 +531,13 @@ func inputKeyModsModsKeyField(mods *InputKeyModsMods, mod InputKeyModsMod) *bool
 func inputKeyModsModsSideField(sides *InputKeyModsModsSide, mod InputKeyModsMod) *InputKeyModsModSide {
 	switch mod {
 	case InputKeyModsModShift:
-		return &sides.shift
+		return &sides.Shift
 	case InputKeyModsModCtrl:
-		return &sides.ctrl
+		return &sides.Ctrl
 	case InputKeyModsModAlt:
-		return &sides.alt
+		return &sides.Alt
 	case InputKeyModsModSuper:
-		return &sides.super
+		return &sides.Super
 	default:
 		panic("unreachable")
 	}
@@ -969,7 +969,7 @@ func inputKeyModsRemapSetFormatMod(writer *inputKeyModsFixedBufferStream, mods I
 	// Check which mod is set and format it with optional side prefix
 	for _, name := range inputKeyModsRemapSetFormatModFields {
 		if *inputKeyModsModsKeyField(&mods, name) {
-			side := *inputKeyModsModsSideField(&mods.sides, name)
+			side := *inputKeyModsModsSideField(&mods.Sides, name)
 			if side == InputKeyModsModSideRight {
 				if err := writer.writeAll([]uint8("right_")); err != nil {
 					return err
@@ -1079,7 +1079,7 @@ func inputKeyModsRemapSetInitMods(mod InputKeyModsMod, side InputKeyModsModSide)
 	// Zig: switch (mod) { inline else => |tag| { ... } }.
 	mods := InputKeyModsMods{}
 	*inputKeyModsModsKeyField(&mods, mod) = true
-	*inputKeyModsModsSideField(&mods.sides, mod) = side
+	*inputKeyModsModsSideField(&mods.Sides, mod) = side
 	return mods
 }
 
@@ -1099,7 +1099,7 @@ func (self *InputKeyModsRemapSet) Apply(mods InputKeyModsMods) InputKeyModsMods 
 	}
 
 	mods_binding := InputKeyModsModsKeysBacking(mods.Int() & 0xF) // @truncate
-	mods_sides := mods.sides.Int()
+	mods_sides := mods.Sides.Int()
 
 	keys := self.map_.Keys()
 	values := self.map_.Values()
@@ -1109,7 +1109,7 @@ func (self *InputKeyModsRemapSet) Apply(mods InputKeyModsMods) InputKeyModsMods 
 		if mods_binding&from_binding != from_binding {
 			continue
 		}
-		from_sides := from.sides.Int()
+		from_sides := from.Sides.Int()
 		if (mods_sides^from_sides)&from_binding != 0 {
 			continue
 		}
@@ -1164,7 +1164,7 @@ func (self *InputKeyModsRemapSetMask) Update(mods InputKeyModsMods) {
 
 	// Both Keys and Side are u4 with matching bit positions.
 	// This lets us use keys_int to select which side bits to update.
-	sides := mods.sides.Int()
+	sides := mods.Sides.Int()
 	left_int := self.left_sides.Int()
 	right_int := self.right_sides.Int()
 
@@ -1208,7 +1208,7 @@ func (self *InputKeyModsRemapSetMask) Match(mods InputKeyModsMods) bool {
 	// Example: pressing right_ctrl but only left_ctrl is remapped
 	//   sides = 0b0010, left_int = 0b0010, right_int = 0b0000
 	//   (~0b0010 & 0b0010) | (0b0010 & 0b0000) = 0b0000 ✗ no match
-	sides := mods.sides.Int()
+	sides := mods.Sides.Int()
 	left_int := self.left_sides.Int()
 	right_int := self.right_sides.Int()
 	side_match := ((^sides & 0xF) & left_int) | (sides & right_int)

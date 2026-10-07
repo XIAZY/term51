@@ -52,7 +52,7 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 				parser.command = OSCCommand{
 					Tag: OSCCommandKeyConemuSleep,
 					ConemuSleep: OSCCommandConemuSleepPayload{
-						duration_ms: duration_ms,
+						DurationMs: duration_ms,
 					},
 				}
 				return &parser.command
@@ -62,8 +62,8 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 					parser.command = OSCCommand{
 						Tag: OSCCommandKeyConemuXtermEmulation,
 						ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{
-							keyboard: Some(true),
-							output:   Some(true),
+							Keyboard: Some(true),
+							Output:   Some(true),
 						},
 					}
 					return &parser.command
@@ -79,8 +79,8 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 					parser.command = OSCCommand{
 						Tag: OSCCommandKeyConemuXtermEmulation,
 						ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{
-							keyboard: Some(false),
-							output:   Some(false),
+							Keyboard: Some(false),
+							Output:   Some(false),
 						},
 					}
 					return &parser.command
@@ -88,8 +88,8 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 					parser.command = OSCCommand{
 						Tag: OSCCommandKeyConemuXtermEmulation,
 						ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{
-							keyboard: Some(true),
-							output:   Some(true),
+							Keyboard: Some(true),
+							Output:   Some(true),
 						},
 					}
 					return &parser.command
@@ -97,8 +97,8 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 					parser.command = OSCCommand{
 						Tag: OSCCommandKeyConemuXtermEmulation,
 						ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{
-							keyboard: None[bool](),
-							output:   Some(false),
+							Keyboard: None[bool](),
+							Output:   Some(false),
 						},
 					}
 					return &parser.command
@@ -106,8 +106,8 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 					parser.command = OSCCommand{
 						Tag: OSCCommandKeyConemuXtermEmulation,
 						ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{
-							keyboard: None[bool](),
-							output:   Some(true),
+							Keyboard: None[bool](),
+							Output:   Some(true),
 						},
 					}
 					return &parser.command
@@ -206,42 +206,42 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 				parser.command = OSCCommand{
 					Tag: OSCCommandKeyConemuProgressReport,
 					ConemuProgressReport: OSCCommandProgressReport{
-						state: OSCCommandProgressReportStateRemove,
+						State: OSCCommandProgressReportStateRemove,
 					},
 				}
 			case '1':
 				parser.command = OSCCommand{
 					Tag: OSCCommandKeyConemuProgressReport,
 					ConemuProgressReport: OSCCommandProgressReport{
-						state:    OSCCommandProgressReportStateSet,
-						progress: Some[uint8](0),
+						State:    OSCCommandProgressReportStateSet,
+						Progress: Some[uint8](0),
 					},
 				}
 			case '2':
 				parser.command = OSCCommand{
 					Tag: OSCCommandKeyConemuProgressReport,
 					ConemuProgressReport: OSCCommandProgressReport{
-						state: OSCCommandProgressReportStateError,
+						State: OSCCommandProgressReportStateError,
 					},
 				}
 			case '3':
 				parser.command = OSCCommand{
 					Tag: OSCCommandKeyConemuProgressReport,
 					ConemuProgressReport: OSCCommandProgressReport{
-						state: OSCCommandProgressReportStateIndeterminate,
+						State: OSCCommandProgressReportStateIndeterminate,
 					},
 				}
 			case '4':
 				parser.command = OSCCommand{
 					Tag: OSCCommandKeyConemuProgressReport,
 					ConemuProgressReport: OSCCommandProgressReport{
-						state: OSCCommandProgressReportStatePause,
+						State: OSCCommandProgressReportStatePause,
 					},
 				}
 			default:
 				goto conemu
 			}
-			switch parser.command.ConemuProgressReport.state {
+			switch parser.command.ConemuProgressReport.State {
 			case OSCCommandProgressReportStateRemove, OSCCommandProgressReportStateIndeterminate:
 			case OSCCommandProgressReportStateSet, OSCCommandProgressReportStateError, OSCCommandProgressReportStatePause:
 				// progress: (Zig's `break :progress` is the `break` out of
@@ -258,9 +258,9 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 				// here whatever the target: the recorded corpus comes from
 				// a 64-bit build.
 				if v, ok := oscParsersOsc9ParseUnsigned(data[4:], 64); ok {
-					parser.command.ConemuProgressReport.progress = Some(uint8(max(0, min(v, 100))))
+					parser.command.ConemuProgressReport.Progress = Some(uint8(max(0, min(v, 100))))
 				} else {
-					parser.command.ConemuProgressReport.progress = None[uint8]()
+					parser.command.ConemuProgressReport.Progress = None[uint8]()
 				}
 			}
 			return &parser.command
@@ -338,7 +338,7 @@ func OSCParsersOsc9Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 			parser.command = OSCCommand{
 				Tag: OSCCommandKeyReportPwd,
 				ReportPwd: OSCCommandReportPwdPayload{
-					value: data[2 : len(data)-1],
+					Value: data[2 : len(data)-1],
 				},
 			}
 			return &parser.command
@@ -358,8 +358,8 @@ conemu:
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyShowDesktopNotification,
 		ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{
-			title: []uint8{0}[:0], // Zig: "", a [:0]const u8 literal
-			body:  data[0 : len(data)-1],
+			Title: []uint8{0}[:0], // Zig: "", a [:0]const u8 literal
+			Body:  data[0 : len(data)-1],
 		},
 	}
 	return &parser.command

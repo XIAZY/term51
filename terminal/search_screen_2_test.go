@@ -78,7 +78,7 @@ func ss2TerminalInit(t *testing.T, opts TerminalOptions) *Terminal {
 func ss2New(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Terminal {
 	t.Helper()
 	opts := terminalOptionsDefault(cols, rows)
-	opts.max_scrollback = math.MaxUint64
+	opts.MaxScrollback = math.MaxUint64
 	return ss2TerminalInit(t, opts)
 }
 
@@ -87,7 +87,7 @@ func ss2New(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Termina
 func ss2NewSmall(t *testing.T) *Terminal {
 	t.Helper()
 	opts := terminalOptionsDefault(ss2Cols, 2)
-	opts.max_scrollback = 1
+	opts.MaxScrollback = 1
 	return ss2TerminalInit(t, opts)
 }
 
@@ -220,21 +220,21 @@ func ss2ExpectAt(t *testing.T, list *PageList, hl HighlightFlattened, sx uint, s
 	t.Helper()
 	u := hl.Untracked()
 	expectEqualPoint(t, Point{Tag: PointTagScreen, Screen: PointCoordinate{
-		x: SizeCellCountInt(sx),
-		y: uint32(sy),
-	}}, zigUnwrap(t, list.PointFromPin(PointTagScreen, u.start)))
+		X: SizeCellCountInt(sx),
+		Y: uint32(sy),
+	}}, zigUnwrap(t, list.PointFromPin(PointTagScreen, u.Start)))
 	expectEqualPoint(t, Point{Tag: PointTagScreen, Screen: PointCoordinate{
-		x: SizeCellCountInt(ex),
-		y: uint32(ey),
-	}}, zigUnwrap(t, list.PointFromPin(PointTagScreen, u.end)))
+		X: SizeCellCountInt(ex),
+		Y: uint32(ey),
+	}}, zigUnwrap(t, list.PointFromPin(PointTagScreen, u.End)))
 }
 
 // ss2ExpectSel is term51AMExpectSel: expect the selected match to be at the
 // given screen coordinates and index.
 func ss2ExpectSel(t *testing.T, search *SearchScreen, idx uint, sx uint, sy uint, ex uint, ey uint) {
 	t.Helper()
-	expectEqual(t, idx, ss2Selected(t, search).idx)
-	ss2ExpectAt(t, &search.screen.pages, zigUnwrap(t, search.SelectedMatch()), sx, sy, ex, ey)
+	expectEqual(t, idx, ss2Selected(t, search).Idx)
+	ss2ExpectAt(t, &search.screen.Pages, zigUnwrap(t, search.SelectedMatch()), sx, sy, ex, ey)
 }
 
 // ss2ExpectRows is term51AMExpectRows: expect the match list to have exactly
@@ -245,7 +245,7 @@ func ss2ExpectRows(t *testing.T, search *SearchScreen, expected [][3]uint) {
 	zigTry(t, err)
 	expectEqual(t, uint(len(expected)), uint(len(ms)))
 	for i, e := range expected {
-		ss2ExpectAt(t, &search.screen.pages, ms[i], e[0], e[1], e[2], e[1])
+		ss2ExpectAt(t, &search.screen.Pages, ms[i], e[0], e[1], e[2], e[1])
 	}
 }
 
@@ -275,13 +275,13 @@ func TestSs2_ScreenSearch_reloadActive_selected_match_gone_and_no_matches_left_c
 	// Zig-only: const alloc = std.testing.allocator;
 	term := ss2New(t, 10, 5)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz\r\nFizz")
 
 	base := list.CountTrackedPins()
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	ss2Select(t, search, SearchScreenSelectNext)
 	expectEqual(t, base+4, list.CountTrackedPins())
@@ -300,12 +300,12 @@ func TestSs2_ScreenSearch_reloadActive_selection_in_history_keeps_its_match_when
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	// No prior selection: prev selects the oldest, the last index.
@@ -334,27 +334,27 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_adds_matches_and_shifts_
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 	n3 := ss2Last(t, list)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectNext)
 	ss2Select(t, search, SearchScreenSelectNext)
 	b2 := ss2RowBase(list, 1)
 	ss2ExpectSel(t, search, 1, 0, b2, 3, b2)
-	expect(t, ss2History(t, search).start_pin.node == n3, "search.history.?.start_pin.node == n3")
+	expect(t, ss2History(t, search).start_pin.Node == n3, "search.history.?.start_pin.node == n3")
 
 	// Move on to a fourth page, the third becomes history.
 	ss2GrowTo(t, &s, list, 4)
 	ss2Write(t, &s, "FiZz\r\nxx")
 	n4 := ss2Last(t, list)
 	zigTry(t, search.ReloadActive())
-	expect(t, ss2History(t, search).start_pin.node == n4, "search.history.?.start_pin.node == n4")
+	expect(t, ss2History(t, search).start_pin.Node == n4, "search.history.?.start_pin.node == n4")
 	expectEqual(t, 1, len(search.active_results))
 	expectEqual(t, 3, len(search.history_results))
 	expectEqual(t, uint(4), search.MatchesLen())
@@ -376,12 +376,12 @@ func TestSs2_ScreenSearch_reloadActive_selection_in_the_active_area_is_reset_whe
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectNext)
@@ -403,7 +403,7 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_without_matches_keeps_th
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "ab\r\ncd")
@@ -413,7 +413,7 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_without_matches_keeps_th
 	// defer arena.deinit(); var fa = std.testing.FailingAllocator.init(
 	// arena.allocator(), .{});): the list preallocated for the new results
 	// is never freed. Go has no allocator; the rest of the test is kept.
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 0, len(search.active_results))
 	ss2Select(t, search, SearchScreenSelectPrev)
@@ -422,7 +422,7 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_without_matches_keeps_th
 	ss2GrowTo(t, &s, list, 4)
 	ss2Write(t, &s, "FiZz\r\nxx")
 	zigTry(t, search.ReloadActive())
-	expect(t, ss2History(t, search).start_pin.node == ss2Last(t, list), "search.history.?.start_pin.node == list.pages.last.?")
+	expect(t, ss2History(t, search).start_pin.Node == ss2Last(t, list), "search.history.?.start_pin.node == list.pages.last.?")
 	expectEqual(t, 1, len(search.active_results))
 	expectEqual(t, 2, len(search.history_results))
 	ss2ExpectSel(t, search, 2, 0, 0, 3, 0)
@@ -438,12 +438,12 @@ func TestSs2_ScreenSearch_reloadActive_history_added_by_a_move_is_ordered_newest
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "Fizz fizz\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 2, len(search.active_results))
@@ -469,7 +469,7 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_adds_a_match_spanning_in
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 
@@ -477,7 +477,7 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_adds_a_match_spanning_in
 	ss2Write(t, &s, "abcdefg")
 	ss2GrowTo(t, &s, list, 2)
 	ss2Write(t, &s, "\r\n")
-	search := ss2Init(t, term.screens.active, "Test")
+	search := ss2Init(t, term.Screens.Active, "Test")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, uint(0), search.MatchesLen())
@@ -490,26 +490,26 @@ func TestSs2_ScreenSearch_reloadActive_new_history_node_adds_a_match_spanning_in
 	ss2Write(t, &s, "\r\n"+ss2Xs+"Test\r\nzz")
 	expectEqual(t, uint(3), ss2Nodes(list))
 	n3 := ss2Last(t, list)
-	expect(t, ss2History(t, search).start_pin.node == n2, "search.history.?.start_pin.node == n2")
+	expect(t, ss2History(t, search).start_pin.Node == n2, "search.history.?.start_pin.node == n2")
 
 	zigTry(t, search.ReloadActive())
-	expect(t, ss2History(t, search).start_pin.node == n3, "search.history.?.start_pin.node == n3")
+	expect(t, ss2History(t, search).start_pin.Node == n3, "search.history.?.start_pin.node == n3")
 	expectEqual(t, 0, len(search.active_results))
 	expectEqual(t, 1, len(search.history_results))
 	m := search.history_results[0]
-	expectEqual(t, 2, len(m.chunks))
-	expect(t, m.chunks[0].node == n2, "m.chunks.items(.node)[0] == n2")
-	expect(t, m.chunks[1].node == n3, "m.chunks.items(.node)[1] == n3")
+	expectEqual(t, 2, len(m.Chunks))
+	expect(t, m.Chunks[0].Node == n2, "m.chunks.items(.node)[0] == n2")
+	expect(t, m.Chunks[1].Node == n3, "m.chunks.items(.node)[1] == n3")
 	// Forward search: serials are in page order.
-	expectEqual(t, n2.serial, m.chunks[0].serial)
-	expectEqual(t, n3.serial, m.chunks[1].serial)
+	expectEqual(t, n2.serial, m.Chunks[0].Serial)
+	expectEqual(t, n3.serial, m.Chunks[1].Serial)
 	last_row := n2.data.size.rows - 1
-	expectEqual(t, SizeCellCountInt(last_row), m.chunks[0].start)
-	expectEqual(t, SizeCellCountInt(last_row+1), m.chunks[0].end)
-	expectEqual(t, SizeCellCountInt(0), m.chunks[1].start)
-	expectEqual(t, SizeCellCountInt(1), m.chunks[1].end)
-	expectEqual(t, SizeCellCountInt(ss2Cols-2), m.top_x)
-	expectEqual(t, SizeCellCountInt(1), m.bot_x)
+	expectEqual(t, SizeCellCountInt(last_row), m.Chunks[0].Start)
+	expectEqual(t, SizeCellCountInt(last_row+1), m.Chunks[0].End)
+	expectEqual(t, SizeCellCountInt(0), m.Chunks[1].Start)
+	expectEqual(t, SizeCellCountInt(1), m.Chunks[1].End)
+	expectEqual(t, SizeCellCountInt(ss2Cols-2), m.TopX)
+	expectEqual(t, SizeCellCountInt(1), m.BotX)
 	b2 := ss2RowBase(list, 1)
 	ss2ExpectAt(t, list, m, ss2Cols-2, b2+uint(last_row), 1, ss2RowBase(list, 2))
 }
@@ -519,16 +519,16 @@ func TestSs2_ScreenSearch_reloadActive_full_reset_drops_history_and_reselects_th
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectPrev)
-	expectEqual(t, uint(2), ss2Selected(t, search).idx)
+	expectEqual(t, uint(2), ss2Selected(t, search).Idx)
 	expectEqual(t, searchScreenStateComplete, search.state)
 
 	term.FullReset()
@@ -540,9 +540,9 @@ func TestSs2_ScreenSearch_reloadActive_full_reset_drops_history_and_reselects_th
 	// one match in the new screen.
 	expectEqual(t, 0, len(search.history_results))
 	expect(t, search.history.Valid, "search.history != null")
-	expect(t, !ss2History(t, search).start_pin.garbage, "!search.history.?.start_pin.garbage")
-	expect(t, !ss2History(t, search).searcher.pin.garbage, "!search.history.?.searcher.pin.garbage")
-	expect(t, ss2History(t, search).start_pin.node == ss2First(t, list), "search.history.?.start_pin.node == list.pages.first.?")
+	expect(t, !ss2History(t, search).start_pin.Garbage, "!search.history.?.start_pin.garbage")
+	expect(t, !ss2History(t, search).searcher.pin.Garbage, "!search.history.?.searcher.pin.garbage")
+	expect(t, ss2History(t, search).start_pin.Node == ss2First(t, list), "search.history.?.start_pin.node == list.pages.first.?")
 	expectEqual(t, uint(1), search.MatchesLen())
 	ss2ExpectSel(t, search, 0, 1, 0, 4, 0)
 	// The state is not reset by a reload.
@@ -558,22 +558,22 @@ func TestSs2_ScreenSearch_reloadActive_garbage_selection_pins_reselect_the_oldes
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz\r\nFizz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectNext)
 	ss2ExpectSel(t, search, 0, 0, 2, 3, 2)
 
 	// Only one of the two pins being garbage is enough.
-	ss2Selected(t, search).highlight.end.garbage = true
+	ss2Selected(t, search).Highlight.End.Garbage = true
 	zigTry(t, search.ReloadActive())
 	ss2ExpectSel(t, search, 1, 0, 0, 3, 0)
-	expect(t, !ss2Selected(t, search).highlight.end.garbage, "!search.selected.?.highlight.end.garbage")
+	expect(t, !ss2Selected(t, search).Highlight.End.Garbage, "!search.selected.?.highlight.end.garbage")
 
-	ss2Selected(t, search).highlight.start.garbage = true
+	ss2Selected(t, search).Highlight.Start.Garbage = true
 	zigTry(t, search.ReloadActive())
 	ss2ExpectSel(t, search, 1, 0, 0, 3, 0)
-	expect(t, !ss2Selected(t, search).highlight.start.garbage, "!search.selected.?.highlight.start.garbage")
+	expect(t, !ss2Selected(t, search).Highlight.Start.Garbage, "!search.selected.?.highlight.start.garbage")
 
 	// Non garbage pins are left alone: still the oldest.
 	zigTry(t, search.ReloadActive())
@@ -585,17 +585,17 @@ func TestSs2_ScreenSearch_reloadActive_garbage_selection_with_no_matches_left_se
 	testStdCapacity(t)
 	term := ss2New(t, 10, 5)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz")
 
 	base := list.CountTrackedPins()
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	ss2Select(t, search, SearchScreenSelectNext)
 	ss2Write(t, &s, "\x1b[2J\x1b[H")
-	ss2Selected(t, search).highlight.start.garbage = true
+	ss2Selected(t, search).Highlight.Start.Garbage = true
 	zigTry(t, search.ReloadActive())
 	expect(t, !search.selected.Valid, "search.selected == null")
 	expectEqual(t, base+2, list.CountTrackedPins())
@@ -605,12 +605,12 @@ func TestSs2_ScreenSearch_reloadActive_garbage_selection_with_no_matches_left_se
 func TestSs2_ScreenSearch_reloadActive_no_scrollback_prunes_matches_above_the_active_area(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 2)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term := ss2TerminalInit(t, opts)
 	defer term.Deinit()
 	_, err := term.SwitchScreen(ScreenSetKeyAlternate)
 	zigTry(t, err)
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 
@@ -620,7 +620,7 @@ func TestSs2_ScreenSearch_reloadActive_no_scrollback_prunes_matches_above_the_ac
 	ss2Write(t, &s, "x")
 	expectEqual(t, uint(4), list.total_rows)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	// Both matches are above the active area: all pruned.
 	expectEqual(t, 0, len(search.active_results))
@@ -632,7 +632,7 @@ func TestSs2_ScreenSearch_reloadActive_no_scrollback_prunes_matches_above_the_ac
 	ss2Write(t, &s, "Fizz")
 	zigTry(t, search.ReloadActive())
 	expectEqual(t, 1, len(search.active_results))
-	tl := uint(zigUnwrap(t, list.PointFromPin(PointTagScreen, list.GetTopLeft(PointTagActive))).Screen.y)
+	tl := uint(zigUnwrap(t, list.PointFromPin(PointTagScreen, list.GetTopLeft(PointTagActive))).Screen.Y)
 	ss2ExpectAt(t, list, search.active_results[0], 0, tl, 3, tl)
 
 	// Both in the active area: nothing is pruned.
@@ -647,14 +647,14 @@ func TestSs2_ScreenSearch_reloadActive_no_scrollback_prunes_matches_above_the_ac
 func TestSs2_ScreenSearch_reloadActive_no_scrollback_with_all_matches_in_the_active_area(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 3)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term := ss2TerminalInit(t, opts)
 	defer term.Deinit()
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz\r\nFizz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	ss2ExpectRows(t, search, [][3]uint{{0, 2, 3}, {0, 0, 3}})
 	// Scrolling shifts the rows in place, the first Fizz is gone.
@@ -667,7 +667,7 @@ func TestSs2_ScreenSearch_reloadActive_no_scrollback_with_all_matches_in_the_act
 func TestSs2_ScreenSearch_reloadActive_no_scrollback_drops_a_single_cell_match_at_the_active_top_left(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 2)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term := ss2TerminalInit(t, opts)
 	defer term.Deinit()
 	s := term.VtStream()
@@ -679,18 +679,18 @@ func TestSs2_ScreenSearch_reloadActive_no_scrollback_drops_a_single_cell_match_a
 	// left cell (a one character needle at x=0 of the first row) is lost
 	// even though it is visible.
 	func() {
-		search := ss2Init(t, term.screens.active, "F")
+		search := ss2Init(t, term.Screens.Active, "F")
 		defer search.Deinit()
 		ss2ExpectRows(t, search, [][3]uint{{1, 1, 1}})
 	}()
 	// Two characters ending on x=1 are kept.
 	func() {
-		search := ss2Init(t, term.screens.active, "Fi")
+		search := ss2Init(t, term.Screens.Active, "Fi")
 		defer search.Deinit()
 		ss2ExpectRows(t, search, [][3]uint{{0, 0, 1}})
 	}()
 	func() {
-		search := ss2Init(t, term.screens.active, "i")
+		search := ss2Init(t, term.Screens.Active, "i")
 		defer search.Deinit()
 		ss2ExpectRows(t, search, [][3]uint{{1, 0, 1}})
 	}()
@@ -704,7 +704,7 @@ func TestSs2_ScreenSearch_selectedMatch_null_without_a_selection(t *testing.T) {
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, ss2Text)
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	expect(t, !search.SelectedMatch().Valid, "search.selectedMatch() == null")
 	zigTry(t, search.SearchAll())
@@ -716,14 +716,14 @@ func TestSs2_ScreenSearch_selectedMatch_maps_the_index_from_the_newest_match(t *
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz\r\nfizz")
 	b2 := ss2RowBase(list, 1)
 	b3 := ss2RowBase(list, 2)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, uint(4), search.MatchesLen())
@@ -738,7 +738,7 @@ func TestSs2_ScreenSearch_selectedMatch_maps_the_index_from_the_newest_match(t *
 		{idx: 3, x: 0, y: 0},      // last history result
 	}
 	for _, c := range cases {
-		ss2Selected(t, search).idx = c.idx
+		ss2Selected(t, search).Idx = c.idx
 		m := zigUnwrap(t, search.SelectedMatch())
 		ss2ExpectAt(t, list, m, c.x, c.y, c.x+3, c.y)
 		// It is the same entry the matches list has at that index.
@@ -746,7 +746,7 @@ func TestSs2_ScreenSearch_selectedMatch_maps_the_index_from_the_newest_match(t *
 		zigTry(t, err)
 		// Raw pointer comparison of the chunk storage: the address of the
 		// first chunk.
-		expect(t, &m.chunks[0] == &ms[c.idx].chunks[0], "m.chunks.bytes == ms[c.idx].chunks.bytes")
+		expect(t, &m.Chunks[0] == &ms[c.idx].Chunks[0], "m.chunks.bytes == ms[c.idx].chunks.bytes")
 	}
 }
 
@@ -755,20 +755,20 @@ func TestSs2_ScreenSearch_selectedMatch_index_past_the_results_is_null(t *testin
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectNext)
-	ss2Selected(t, search).idx = 2
+	ss2Selected(t, search).Idx = 2
 	expect(t, search.SelectedMatch().Valid, "search.selectedMatch() != null")
-	ss2Selected(t, search).idx = 3
+	ss2Selected(t, search).Idx = 3
 	expect(t, !search.SelectedMatch().Valid, "search.selectedMatch() == null")
-	ss2Selected(t, search).idx = math.MaxUint - 1
+	ss2Selected(t, search).Idx = math.MaxUint - 1
 	expect(t, !search.SelectedMatch().Valid, "search.selectedMatch() == null")
 }
 
@@ -777,21 +777,21 @@ func TestSs2_ScreenSearch_selectedMatch_history_only_and_active_only(t *testing.
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "ab\r\ncd")
 	b2 := ss2RowBase(list, 1)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 0, len(search.active_results))
 	ss2Select(t, search, SearchScreenSelectNext)
 	ss2ExpectSel(t, search, 0, 0, b2, 3, b2)
-	ss2Selected(t, search).idx = 1
+	ss2Selected(t, search).Idx = 1
 	ss2ExpectAt(t, list, zigUnwrap(t, search.SelectedMatch()), 0, 0, 3, 0)
-	ss2Selected(t, search).idx = 2
+	ss2Selected(t, search).Idx = 2
 	expect(t, !search.SelectedMatch().Valid, "search.selectedMatch() == null")
 }
 
@@ -800,14 +800,14 @@ func TestSs2_ScreenSearch_select_next_walks_newest_to_oldest_without_wrapping(t 
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 	b2 := ss2RowBase(list, 1)
 	b3 := ss2RowBase(list, 2)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 
@@ -830,14 +830,14 @@ func TestSs2_ScreenSearch_select_prev_walks_oldest_to_newest_without_wrapping(t 
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 	b2 := ss2RowBase(list, 1)
 	b3 := ss2RowBase(list, 2)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 
@@ -860,14 +860,14 @@ func TestSs2_ScreenSearch_select_next_and_prev_alternate(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 	b2 := ss2RowBase(list, 1)
 	b3 := ss2RowBase(list, 2)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expect(t, ss2Select(t, search, SearchScreenSelectNext), "try search.select(.next)")
@@ -887,12 +887,12 @@ func TestSs2_ScreenSearch_select_no_matches_selects_nothing(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "nomatch")
+	search := ss2Init(t, term.Screens.Active, "nomatch")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expect(t, !ss2Select(t, search, SearchScreenSelectNext), "!try search.select(.next)")
@@ -911,7 +911,7 @@ func TestSs2_ScreenSearch_select_one_match(t *testing.T) {
 	defer s.Deinit()
 	ss2Write(t, &s, ss2Text)
 
-	search := ss2Init(t, term.screens.active, "Bang")
+	search := ss2Init(t, term.Screens.Active, "Bang")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 
@@ -922,7 +922,7 @@ func TestSs2_ScreenSearch_select_one_match(t *testing.T) {
 	expect(t, !ss2Select(t, search, SearchScreenSelectNext), "!try search.select(.next)")
 	ss2ExpectSel(t, search, 0, 0, 3, 3, 3)
 
-	ss2Selected(t, search).Deinit(term.screens.active)
+	ss2Selected(t, search).Deinit(term.Screens.Active)
 	search.selected = Optional[SearchScreenSelectedMatch]{}
 	// next first.
 	expect(t, ss2Select(t, search, SearchScreenSelectNext), "try search.select(.next)")
@@ -937,14 +937,14 @@ func TestSs2_ScreenSearch_select_before_history_is_searched_only_known_matches_a
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz\r\nFizz")
 	b2 := ss2RowBase(list, 1)
 	b3 := ss2RowBase(list, 2)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	expectEqual(t, 0, len(search.history_results))
 
@@ -985,7 +985,7 @@ func TestSs2_ScreenSearch_select_sees_changes_to_the_active_area_without_a_reloa
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	expect(t, ss2Select(t, search, SearchScreenSelectNext), "try search.select(.next)")
 	ss2ExpectSel(t, search, 0, 0, 0, 3, 0)
@@ -1005,14 +1005,14 @@ func TestSs2_ScreenSearch_select_viewport_scrolling_does_not_change_matches_or_s
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 	b2 := ss2RowBase(list, 1)
 	b3 := ss2RowBase(list, 2)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expect(t, ss2Select(t, search, SearchScreenSelectNext), "try search.select(.next)")
@@ -1035,7 +1035,7 @@ func TestSs2_ScreenSearch_selectNext_first_selection_is_the_newest_match(t *test
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
@@ -1043,7 +1043,7 @@ func TestSs2_ScreenSearch_selectNext_first_selection_is_the_newest_match(t *test
 	b3 := ss2RowBase(list, 2)
 	base := list.CountTrackedPins()
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 
@@ -1068,13 +1068,13 @@ func TestSs2_ScreenSearch_selectNext_history_only_and_nothing(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "ab\r\ncd")
 	b2 := ss2RowBase(list, 1)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	// Nothing known yet.
 	expect(t, !ss2SelectNext(t, search), "!try search.selectNext()")
@@ -1097,7 +1097,7 @@ func TestSs2_ScreenSearch_selectNext_does_not_reload_the_active_area(t *testing.
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz\r\nFizz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	// The screen is cleared but the stored results are used as they are.
 	ss2Write(t, &s, "\x1b[2J\x1b[H")
@@ -1113,7 +1113,7 @@ func TestSs2_ScreenSearch_selectPrev_first_selection_is_the_oldest_match(t *test
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
@@ -1121,7 +1121,7 @@ func TestSs2_ScreenSearch_selectPrev_first_selection_is_the_oldest_match(t *test
 	b3 := ss2RowBase(list, 2)
 	base := list.CountTrackedPins()
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 
@@ -1146,7 +1146,7 @@ func TestSs2_ScreenSearch_selectPrev_active_only_and_nothing(t *testing.T) {
 	defer s.Deinit()
 	ss2Write(t, &s, "Buzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	expect(t, !ss2SelectPrev(t, search), "!try search.selectPrev()")
 	expect(t, !search.selected.Valid, "search.selected == null")
@@ -1170,7 +1170,7 @@ func TestSs2_ScreenSearch_selectPrev_does_not_reload_the_active_area(t *testing.
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz\r\nFizz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	ss2Write(t, &s, "\x1b[2J\x1b[H")
 	expect(t, ss2SelectPrev(t, search), "try search.selectPrev()")
@@ -1185,7 +1185,7 @@ func TestSs2_ScreenSearch_pruneHistory_removes_results_from_the_first_invalid_se
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "ab\r\ncd")
@@ -1196,7 +1196,7 @@ func TestSs2_ScreenSearch_pruneHistory_removes_results_from_the_first_invalid_se
 	n2 := n1.next
 	expect(t, n1.serial == 0 && n2.serial == 1, "n1.serial == 0 and n2.serial == 1")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 2, len(search.history_results))
@@ -1233,12 +1233,12 @@ func TestSs2_ScreenSearch_pruneHistory_invalid_result_drops_everything_older_eve
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "ab\r\ncd")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	defer func() { list.page_serial_min = 0 }()
@@ -1256,7 +1256,7 @@ func TestSs2_ScreenSearch_pruneHistory_no_results_is_a_no_op(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, 10, 2)
 	defer term.Deinit()
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	search.pruneHistory()
 	expectEqual(t, 0, len(search.history_results))
@@ -1267,7 +1267,7 @@ func TestSs2_ScreenSearch_pruneHistory_only_the_first_chunk_serial_is_checked(t 
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	cap_ := ss2Cap(t, list)
@@ -1278,15 +1278,15 @@ func TestSs2_ScreenSearch_pruneHistory_only_the_first_chunk_serial_is_checked(t 
 	ss2GrowTo(t, &s, list, 3)
 	ss2Write(t, &s, "ab\r\ncd")
 
-	search := ss2Init(t, term.screens.active, "Test")
+	search := ss2Init(t, term.Screens.Active, "Test")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 1, len(search.history_results))
 	m := search.history_results[0]
 	// The match spans node 1 (serial 0) and node 2 (serial 1), but the
 	// reverse search stored the serials newest first: [1, 0].
-	expectEqual(t, uint64(1), m.chunks[0].serial)
-	expectEqual(t, uint64(0), m.chunks[1].serial)
+	expectEqual(t, uint64(1), m.Chunks[0].Serial)
+	expectEqual(t, uint64(0), m.Chunks[1].Serial)
 
 	defer func() { list.page_serial_min = 0 }()
 	// Page 1 (serial 0) is gone but the match is kept because the first
@@ -1304,12 +1304,12 @@ func TestSs2_ScreenSearch_reloadActive_pruned_scrollback_page_reselects_the_olde
 	testStdCapacity(t)
 	term := ss2NewSmall(t)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2PrunePrelude(t, &s, list)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 1, len(search.active_results))
@@ -1322,16 +1322,16 @@ func TestSs2_ScreenSearch_reloadActive_pruned_scrollback_page_reselects_the_olde
 	expectEqual(t, uint64(1), list.page_serial_min)
 	expectEqual(t, uint(2), ss2Nodes(list))
 	expect(t, ss2First(t, list) == n2, "list.pages.first.? == n2")
-	expect(t, ss2Selected(t, search).highlight.start.garbage, "search.selected.?.highlight.start.garbage")
-	expect(t, ss2History(t, search).searcher.pin.garbage, "search.history.?.searcher.pin.garbage")
-	expect(t, !ss2History(t, search).start_pin.garbage, "!search.history.?.start_pin.garbage")
+	expect(t, ss2Selected(t, search).Highlight.Start.Garbage, "search.selected.?.highlight.start.garbage")
+	expect(t, ss2History(t, search).searcher.pin.Garbage, "search.history.?.searcher.pin.garbage")
+	expect(t, !ss2History(t, search).start_pin.Garbage, "!search.history.?.start_pin.garbage")
 
 	zigTry(t, search.ReloadActive())
 	// Page 2 became history and its match was added, the stale result
 	// from the pruned page was dropped, and the oldest was reselected.
 	expectEqual(t, 1, len(search.active_results))
 	expectEqual(t, 1, len(search.history_results))
-	expect(t, ss2History(t, search).start_pin.node == ss2Last(t, list), "search.history.?.start_pin.node == list.pages.last.?")
+	expect(t, ss2History(t, search).start_pin.Node == ss2Last(t, list), "search.history.?.start_pin.node == list.pages.last.?")
 	b := ss2RowBase(list, 1)
 	ss2ExpectSel(t, search, 1, 0, 1, 3, 1)
 	ss2ExpectRows(t, search, [][3]uint{{0, b, 3}, {0, 1, 3}})
@@ -1342,12 +1342,12 @@ func TestSs2_ScreenSearch_select_garbage_selection_after_pruning_moves_one_past_
 	testStdCapacity(t)
 	term := ss2NewSmall(t)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2PrunePrelude(t, &s, list)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectPrev)
@@ -1367,12 +1367,12 @@ func TestSs2_ScreenSearch_select_garbage_selection_after_pruning_and_next_stays_
 	testStdCapacity(t)
 	term := ss2NewSmall(t)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2PrunePrelude(t, &s, list)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectPrev)
@@ -1388,12 +1388,12 @@ func TestSs2_ScreenSearch_feed_completing_prunes_stale_history_results(t *testin
 	testStdCapacity(t)
 	term := ss2NewSmall(t)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2PrunePrelude(t, &s, list)
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, searchScreenStateComplete, search.state)
@@ -1401,7 +1401,7 @@ func TestSs2_ScreenSearch_feed_completing_prunes_stale_history_results(t *testin
 
 	ss2PruneFirst(t, &s, list)
 	// The history searcher's pin sat on the pruned page.
-	expect(t, ss2History(t, search).searcher.pin.garbage, "search.history.?.searcher.pin.garbage")
+	expect(t, ss2History(t, search).searcher.pin.Garbage, "search.history.?.searcher.pin.garbage")
 	expectEqual(t, 1, len(search.history_results))
 
 	// A complete search still needs feeds: it cleans up the stale result.
@@ -1419,7 +1419,7 @@ func TestSs2_ScreenSearch_init_match_across_the_first_active_page_and_the_next_i
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	cap_ := ss2Cap(t, list)
@@ -1431,7 +1431,7 @@ func TestSs2_ScreenSearch_init_match_across_the_first_active_page_and_the_next_i
 	ss2Write(t, &s, ss2Xs+"Test")
 	expectEqual(t, uint(2), ss2Nodes(list))
 
-	search := ss2Init(t, term.screens.active, "Test")
+	search := ss2Init(t, term.Screens.Active, "Test")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	// The active search appends the last page first, so the text is not in
@@ -1446,7 +1446,7 @@ func TestSs2_ScreenSearch_init_match_across_pages_is_found_when_the_active_area_
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	cap_ := ss2Cap(t, list)
@@ -1456,7 +1456,7 @@ func TestSs2_ScreenSearch_init_match_across_pages_is_found_when_the_active_area_
 	ss2Write(t, &s, ss2Xs+"Test\r\n")
 	expectEqual(t, uint(2), ss2Nodes(list))
 
-	search := ss2Init(t, term.screens.active, "Test")
+	search := ss2Init(t, term.Screens.Active, "Test")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	// Found by the history search, which starts at page 2.
@@ -1470,7 +1470,7 @@ func TestSs2_ScreenSearch_init_active_results_across_two_pages_are_not_ordered_n
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	cap_ := ss2Cap(t, list)
@@ -1481,7 +1481,7 @@ func TestSs2_ScreenSearch_init_active_results_across_two_pages_are_not_ordered_n
 	ss2Write(t, &s, "Fizz\r\nFizz")
 	expectEqual(t, uint(2), ss2Nodes(list))
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, 2, len(search.active_results))
@@ -1505,7 +1505,7 @@ func TestSs2_ScreenSearch_init_match_in_the_page_before_the_active_area_is_found
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	cap_ := ss2Cap(t, list)
@@ -1518,7 +1518,7 @@ func TestSs2_ScreenSearch_init_match_in_the_page_before_the_active_area_is_found
 	ss2Write(t, &s, "\r\n"+ss2Full+"y\r\nzz")
 	expectEqual(t, uint(2), ss2Nodes(list))
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	// Found by the active search (the whole overlap page is searched) and
@@ -1534,12 +1534,12 @@ func TestSs2_ScreenSearch_reloadActive_resize_without_feed_keeps_stale_dimension
 	testStdCapacity(t)
 	term := ss2New(t, 10, 3)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	ss2Select(t, search, SearchScreenSelectNext)
 	ss2ExpectSel(t, search, 0, 0, 0, 3, 0)
@@ -1551,7 +1551,7 @@ func TestSs2_ScreenSearch_reloadActive_resize_without_feed_keeps_stale_dimension
 	expectEqual(t, SizeCellCountInt(3), search.rows)
 	expectEqual(t, uint(1), search.MatchesLen())
 	ss2ExpectSel(t, search, 0, 0, 0, 0, 1)
-	expectEqual(t, SizeCellCountInt(2), search.active_results[0].chunks[0].end)
+	expectEqual(t, SizeCellCountInt(2), search.active_results[0].Chunks[0].End)
 
 	// A feed notices the size and starts over: the selection is dropped.
 	zigTry(t, search.Feed())
@@ -1571,25 +1571,25 @@ func TestSs2_ScreenSearch_init_matching_is_ASCII_case_insensitive_over_UTF_8_byt
 	ss2Write(t, &s, "caf\xc3\xa9 CAF")
 
 	func() {
-		search := ss2Init(t, term.screens.active, "caf\xc3\xa9")
+		search := ss2Init(t, term.Screens.Active, "caf\xc3\xa9")
 		defer search.Deinit()
 		ss2ExpectRows(t, search, [][3]uint{{0, 0, 3}})
 	}()
 	func() {
 		// Only ASCII letters fold: a different case of the e acute is a
 		// different byte sequence.
-		search := ss2Init(t, term.screens.active, "caf\xc3\x89")
+		search := ss2Init(t, term.Screens.Active, "caf\xc3\x89")
 		defer search.Deinit()
 		expectEqual(t, uint(0), search.MatchesLen())
 	}()
 	func() {
 		// One cell for a two byte character.
-		search := ss2Init(t, term.screens.active, "\xc3\xa9")
+		search := ss2Init(t, term.Screens.Active, "\xc3\xa9")
 		defer search.Deinit()
 		ss2ExpectRows(t, search, [][3]uint{{3, 0, 3}})
 	}()
 	func() {
-		search := ss2Init(t, term.screens.active, "caf")
+		search := ss2Init(t, term.Screens.Active, "caf")
 		defer search.Deinit()
 		ss2ExpectRows(t, search, [][3]uint{{5, 0, 7}, {0, 0, 2}})
 	}()
@@ -1600,22 +1600,22 @@ func TestSs2_ScreenSearch_init_a_needle_with_a_newline_matches_across_hard_line_
 	testStdCapacity(t)
 	term := ss2New(t, 10, 3)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, "Fizz\r\nBuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz\nBuzz")
+	search := ss2Init(t, term.Screens.Active, "Fizz\nBuzz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	expectEqual(t, uint(1), search.MatchesLen())
 	m := search.active_results[0]
 	ss2ExpectAt(t, list, m, 0, 0, 3, 1)
-	expectEqual(t, 1, len(m.chunks))
-	expectEqual(t, SizeCellCountInt(0), m.chunks[0].start)
-	expectEqual(t, SizeCellCountInt(2), m.chunks[0].end)
-	expectEqual(t, SizeCellCountInt(0), m.top_x)
-	expectEqual(t, SizeCellCountInt(3), m.bot_x)
+	expectEqual(t, 1, len(m.Chunks))
+	expectEqual(t, SizeCellCountInt(0), m.Chunks[0].Start)
+	expectEqual(t, SizeCellCountInt(2), m.Chunks[0].End)
+	expectEqual(t, SizeCellCountInt(0), m.TopX)
+	expectEqual(t, SizeCellCountInt(3), m.BotX)
 }
 
 // Go-only: panic test: SearchScreen.ReloadActive: a selection in the history whose highlight no longer matches its result
@@ -1623,12 +1623,12 @@ func TestSs2_panic_ReloadActive_history_selection_does_not_match_its_result(t *t
 	testStdCapacity(t)
 	term := ss2New(t, ss2Cols, 2)
 	defer term.Deinit()
-	list := &term.screens.active.pages
+	list := &term.Screens.Active.Pages
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2ThreePages(t, &s, list, "Fizz", "fIzZ", "FIZZ\r\nbuzz")
 
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectNext)
@@ -1641,7 +1641,7 @@ func TestSs2_panic_ReloadActive_history_selection_does_not_match_its_result(t *t
 	// names the selected match (assert(m.highlight.start.eql(hl.startPin()))).
 	ss2GrowTo(t, &s, list, 4)
 	ss2Write(t, &s, "FiZz\r\nxx")
-	ss2Selected(t, search).highlight.start.x++
+	ss2Selected(t, search).Highlight.Start.X++
 	ss2ExpectPanic(t, func() { _ = search.ReloadActive() })
 }
 
@@ -1650,7 +1650,7 @@ func TestSs2_panic_pruneHistory_result_without_chunks(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, 10, 2)
 	defer term.Deinit()
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	// `serials[0]` of an empty chunk list.
 	search.history_results = []HighlightFlattened{HighlightFlattenedEmpty}
@@ -1666,11 +1666,11 @@ func TestSs2_panic_selectNext_index_overflow(t *testing.T) {
 	s := term.VtStream()
 	defer s.Deinit()
 	ss2Write(t, &s, ss2Text)
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	zigTry(t, search.SearchAll())
 	ss2Select(t, search, SearchScreenSelectNext)
-	ss2Selected(t, search).idx = math.MaxUint
+	ss2Selected(t, search).Idx = math.MaxUint
 	// `const next_idx = prev.idx + 1;` traps on overflow in a safe build.
 	ss2ExpectPanic(t, func() { _, _ = search.selectNext() })
 }
@@ -1680,7 +1680,7 @@ func TestSs2_panic_Needle_direction_is_not_forward(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, 10, 2)
 	defer term.Deinit()
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	search.active.window.direction = searchSlidingWindowDirectionReverse
 	ss2ExpectPanic(t, func() { _ = search.Needle() })
@@ -1692,7 +1692,7 @@ func TestSs2_panic_Matches_direction_is_not_forward(t *testing.T) {
 	testStdCapacity(t)
 	term := ss2New(t, 10, 2)
 	defer term.Deinit()
-	search := ss2Init(t, term.screens.active, "Fizz")
+	search := ss2Init(t, term.Screens.Active, "Fizz")
 	defer search.Deinit()
 	search.active.window.direction = searchSlidingWindowDirectionReverse
 	ss2ExpectPanic(t, func() { _, _ = search.Matches() })

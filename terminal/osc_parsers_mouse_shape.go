@@ -28,7 +28,7 @@ func OSCParsersMouseShapeParse(parser *OSCParser, _ Optional[uint8]) *OSCCommand
 	parser.command = OSCCommand{
 		Tag: OSCCommandKeyMouseShape,
 		MouseShape: OSCCommandMouseShapePayload{
-			value: data[0 : len(data)-1],
+			Value: data[0 : len(data)-1],
 		},
 	}
 	return &parser.command

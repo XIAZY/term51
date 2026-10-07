@@ -604,29 +604,29 @@ func (self OSCCommand) zigFmtAny() string {
 	case OSCCommandKeySemanticPrompt:
 		v := self.SemanticPrompt
 		zigFmtAnyStruct(&b, depth-1,
-			"action", func(int) string { return "." + v.action.String() },
-			"options_unvalidated", func(d int) string { return zigFmtAnyBytes(v.options_unvalidated, d) },
+			"action", func(int) string { return "." + v.Action.String() },
+			"options_unvalidated", func(d int) string { return zigFmtAnyBytes(v.OptionsUnvalidated, d) },
 		)
 	case OSCCommandKeyClipboardContents:
 		v := self.ClipboardContents
 		zigFmtAnyStruct(&b, depth-1,
-			"kind", func(int) string { return strconv.FormatUint(uint64(v.kind), 10) },
-			"data", func(d int) string { return zigFmtAnyBytes(v.data, d) },
+			"kind", func(int) string { return strconv.FormatUint(uint64(v.Kind), 10) },
+			"data", func(d int) string { return zigFmtAnyBytes(v.Data, d) },
 		)
 	case OSCCommandKeyReportPwd:
 		v := self.ReportPwd
 		zigFmtAnyStruct(&b, depth-1,
-			"value", func(d int) string { return zigFmtAnyBytes(v.value, d) },
+			"value", func(d int) string { return zigFmtAnyBytes(v.Value, d) },
 		)
 	case OSCCommandKeyMouseShape:
 		v := self.MouseShape
 		zigFmtAnyStruct(&b, depth-1,
-			"value", func(d int) string { return zigFmtAnyBytes(v.value, d) },
+			"value", func(d int) string { return zigFmtAnyBytes(v.Value, d) },
 		)
 	case OSCCommandKeyColorOperation:
 		v := self.ColorOperation
 		zigFmtAnyStruct(&b, depth-1,
-			"op", func(int) string { return "." + v.op.String() },
+			"op", func(int) string { return "." + v.Op.String() },
 			// color.List is std.SegmentedList(Request, 2): fields
 			// prealloc_segment ([2]Request), dynamic_segments
 			// ([][*]Request) and len (usize).
@@ -635,11 +635,11 @@ func (self OSCCommand) zigFmtAny() string {
 				zigFmtAnyStruct(&l, d,
 					"prealloc_segment", func(d int) string { return zigFmtAnyElided(d, "{ ... }") },
 					"dynamic_segments", func(d int) string { return zigFmtAnyElided(d, "{ ... }") },
-					"len", func(int) string { return strconv.Itoa(v.requests.count()) },
+					"len", func(int) string { return strconv.Itoa(v.Requests.count()) },
 				)
 				return l.String()
 			},
-			"terminator", func(int) string { return "." + v.terminator.TagName() },
+			"terminator", func(int) string { return "." + v.Terminator.TagName() },
 		)
 	case OSCCommandKeyKittyColorProtocol:
 		v := self.KittyColorProtocol
@@ -650,33 +650,33 @@ func (self OSCCommand) zigFmtAny() string {
 				var l strings.Builder
 				zigFmtAnyStruct(&l, d,
 					"items", func(d int) string { return zigFmtAnyElided(d, "{ ... }") },
-					"capacity", func(int) string { return strconv.Itoa(oscKittyColorListCapacity(len(v.list))) },
+					"capacity", func(int) string { return strconv.Itoa(oscKittyColorListCapacity(len(v.List))) },
 				)
 				return l.String()
 			},
-			"terminator", func(int) string { return "." + v.terminator.TagName() },
+			"terminator", func(int) string { return "." + v.Terminator.TagName() },
 		)
 	case OSCCommandKeyShowDesktopNotification:
 		v := self.ShowDesktopNotification
 		zigFmtAnyStruct(&b, depth-1,
-			"title", func(d int) string { return zigFmtAnyBytes(v.title, d) },
-			"body", func(d int) string { return zigFmtAnyBytes(v.body, d) },
+			"title", func(d int) string { return zigFmtAnyBytes(v.Title, d) },
+			"body", func(d int) string { return zigFmtAnyBytes(v.Body, d) },
 		)
 	case OSCCommandKeyHyperlinkStart:
 		v := self.HyperlinkStart
 		zigFmtAnyStruct(&b, depth-1,
 			"id", func(d int) string {
-				if !v.id.Valid {
+				if !v.ID.Valid {
 					return "null"
 				}
-				return zigFmtAnyBytes(v.id.Value, d)
+				return zigFmtAnyBytes(v.ID.Value, d)
 			},
-			"uri", func(d int) string { return zigFmtAnyBytes(v.uri, d) },
+			"uri", func(d int) string { return zigFmtAnyBytes(v.URI, d) },
 		)
 	case OSCCommandKeyConemuSleep:
 		v := self.ConemuSleep
 		zigFmtAnyStruct(&b, depth-1,
-			"duration_ms", func(int) string { return strconv.FormatUint(uint64(v.duration_ms), 10) },
+			"duration_ms", func(int) string { return strconv.FormatUint(uint64(v.DurationMs), 10) },
 		)
 	case OSCCommandKeyConemuShowMessageBox:
 		b.WriteString(zigFmtAnyBytes(self.ConemuShowMessageBox, depth-1))
@@ -696,12 +696,12 @@ func (self OSCCommand) zigFmtAny() string {
 	case OSCCommandKeyConemuProgressReport:
 		v := self.ConemuProgressReport
 		zigFmtAnyStruct(&b, depth-1,
-			"state", func(int) string { return "." + v.state.String() },
+			"state", func(int) string { return "." + v.State.String() },
 			"progress", func(int) string {
-				if !v.progress.Valid {
+				if !v.Progress.Valid {
 					return "null"
 				}
-				return strconv.FormatUint(uint64(v.progress.Value), 10)
+				return strconv.FormatUint(uint64(v.Progress.Value), 10)
 			},
 		)
 	case OSCCommandKeyConemuGuimacro:
@@ -713,40 +713,40 @@ func (self OSCCommand) zigFmtAny() string {
 	case OSCCommandKeyConemuXtermEmulation:
 		v := self.ConemuXtermEmulation
 		zigFmtAnyStruct(&b, depth-1,
-			"keyboard", func(int) string { return zigFmtAnyOptionalBool(v.keyboard) },
-			"output", func(int) string { return zigFmtAnyOptionalBool(v.output) },
+			"keyboard", func(int) string { return zigFmtAnyOptionalBool(v.Keyboard) },
+			"output", func(int) string { return zigFmtAnyOptionalBool(v.Output) },
 		)
 	case OSCCommandKeyConemuComment:
 		b.WriteString(zigFmtAnyBytes(self.ConemuComment, depth-1))
 	case OSCCommandKeyKittyTextSizing:
 		v := self.KittyTextSizing
 		zigFmtAnyStruct(&b, depth-1,
-			"scale", func(int) string { return strconv.FormatUint(uint64(v.scale), 10) },
-			"width", func(int) string { return strconv.FormatUint(uint64(v.width), 10) },
-			"numerator", func(int) string { return strconv.FormatUint(uint64(v.numerator), 10) },
-			"denominator", func(int) string { return strconv.FormatUint(uint64(v.denominator), 10) },
-			"valign", func(int) string { return "." + v.valign.String() },
-			"halign", func(int) string { return "." + v.halign.String() },
-			"text", func(d int) string { return zigFmtAnyBytes(v.text, d) },
+			"scale", func(int) string { return strconv.FormatUint(uint64(v.Scale), 10) },
+			"width", func(int) string { return strconv.FormatUint(uint64(v.Width), 10) },
+			"numerator", func(int) string { return strconv.FormatUint(uint64(v.Numerator), 10) },
+			"denominator", func(int) string { return strconv.FormatUint(uint64(v.Denominator), 10) },
+			"valign", func(int) string { return "." + v.Valign.String() },
+			"halign", func(int) string { return "." + v.Halign.String() },
+			"text", func(d int) string { return zigFmtAnyBytes(v.Text, d) },
 		)
 	case OSCCommandKeyKittyClipboardProtocol:
 		v := self.KittyClipboardProtocol
 		zigFmtAnyStruct(&b, depth-1,
-			"metadata", func(d int) string { return zigFmtAnyBytes(v.metadata, d) },
+			"metadata", func(d int) string { return zigFmtAnyBytes(v.Metadata, d) },
 			"payload", func(d int) string {
-				if !v.payload.Valid {
+				if !v.Payload.Valid {
 					return "null"
 				}
-				return zigFmtAnyBytes(v.payload.Value, d)
+				return zigFmtAnyBytes(v.Payload.Value, d)
 			},
-			"terminator", func(int) string { return "." + v.terminator.TagName() },
+			"terminator", func(int) string { return "." + v.Terminator.TagName() },
 		)
 	case OSCCommandKeyContextSignal:
 		v := self.ContextSignal
 		zigFmtAnyStruct(&b, depth-1,
-			"action", func(int) string { return "." + v.action.String() },
-			"id", func(d int) string { return zigFmtAnyBytes(v.id, d) },
-			"metadata", func(d int) string { return zigFmtAnyBytes(v.metadata, d) },
+			"action", func(int) string { return "." + v.Action.String() },
+			"id", func(d int) string { return zigFmtAnyBytes(v.ID, d) },
+			"metadata", func(d int) string { return zigFmtAnyBytes(v.Metadata, d) },
 		)
 	default:
 		panic("unreachable")
@@ -827,8 +827,8 @@ func oscKittyColorListCapacity(n int) int {
 // OSCCommandClipboardContentsPayload is the payload of
 // Command.clipboard_contents: struct { kind: u8, data: [:0]const u8 }.
 type OSCCommandClipboardContentsPayload struct {
-	kind uint8
-	data []uint8
+	Kind uint8
+	Data []uint8
 }
 
 // OSCCommandReportPwdPayload is the payload of Command.report_pwd:
@@ -836,44 +836,44 @@ type OSCCommandClipboardContentsPayload struct {
 type OSCCommandReportPwdPayload struct {
 	// The reported pwd value. This is not checked for validity. It should
 	// be a file URL but it is up to the caller to utilize this value.
-	value []uint8
+	Value []uint8
 }
 
 // OSCCommandMouseShapePayload is the payload of Command.mouse_shape:
 // struct { value: [:0]const u8 }.
 type OSCCommandMouseShapePayload struct {
-	value []uint8
+	Value []uint8
 }
 
 // OSCCommandColorOperationPayload is the payload of Command.color_operation.
 type OSCCommandColorOperationPayload struct {
-	op OSCParsersColorOperation
+	Op OSCParsersColorOperation
 
 	// Zig: color.List, default .{} (empty). The zero value is the empty
 	// list.
-	requests OSCParsersColorList
+	Requests OSCParsersColorList
 
 	// Zig: default .st, which is the zero value.
-	terminator OSCTerminator
+	Terminator OSCTerminator
 }
 
 // OSCCommandShowDesktopNotificationPayload is the payload of
 // Command.show_desktop_notification.
 type OSCCommandShowDesktopNotificationPayload struct {
-	title []uint8
-	body  []uint8
+	Title []uint8
+	Body  []uint8
 }
 
 // OSCCommandHyperlinkStartPayload is the payload of Command.hyperlink_start.
 type OSCCommandHyperlinkStartPayload struct {
 	// Zig: ?[:0]const u8, default null.
-	id  Optional[[]uint8]
-	uri []uint8
+	ID  Optional[[]uint8]
+	URI []uint8
 }
 
 // OSCCommandConemuSleepPayload is the payload of Command.conemu_sleep.
 type OSCCommandConemuSleepPayload struct {
-	duration_ms uint16
+	DurationMs uint16
 }
 
 // OSCCommandConemuChangeTabTitlePayloadTag is the tag of the payload of
@@ -913,11 +913,11 @@ type OSCCommandConemuXtermEmulationPayload struct {
 	// null => do not change
 	// false => turn off
 	// true => turn on
-	keyboard Optional[bool]
+	Keyboard Optional[bool]
 	// null => do not change
 	// false => turn off
 	// true => turn on
-	output Optional[bool]
+	Output Optional[bool]
 }
 
 // OSCCommandSemanticPrompt is osc.Command.SemanticPrompt:
@@ -1012,10 +1012,10 @@ var oscCommandKeyNames = [oscCommandKeyCount]string{
 //
 // The C ABI declarations (`C`, `cval`) are not ported.
 type OSCCommandProgressReport struct {
-	state OSCCommandProgressReportState
+	State OSCCommandProgressReportState
 
 	// Zig: ?u8, default null.
-	progress Optional[uint8]
+	Progress Optional[uint8]
 }
 
 // OSCCommandProgressReportState is osc.Command.ProgressReport.State.

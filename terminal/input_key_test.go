@@ -23,7 +23,7 @@ import (
 
 // kmKeyEventDefault is Zig's `KeyEvent{}`: the action defaults to .press.
 func kmKeyEventDefault() InputKeyKeyEvent {
-	return InputKeyKeyEvent{action: InputKeyActionPress}
+	return InputKeyKeyEvent{Action: InputKeyActionPress}
 }
 
 // kmKeyTableEntry is an element of term51ADKeyTable: `struct { Key, c_int,
@@ -408,24 +408,24 @@ func TestKmKey_term51_Key_every_value_count_and_integer(t *testing.T) {
 func TestKmKey_term51_KeyEvent_field_defaults(t *testing.T) {
 	testPlatform(t, "linux")
 	ev := kmKeyEventDefault()
-	expectEqual(t, InputKeyActionPress, ev.action)
-	expectEqual(t, InputKeyKeyUnidentified, ev.key)
-	expectEqual(t, InputKeyMods{}, ev.mods)
-	expectEqual(t, InputKeyMods{}, ev.consumed_mods)
-	expectEqual(t, false, ev.composing)
-	expectEqualStrings(t, "", string(ev.utf8))
-	expectEqual(t, uint32(0), ev.unshifted_codepoint)
+	expectEqual(t, InputKeyActionPress, ev.Action)
+	expectEqual(t, InputKeyKeyUnidentified, ev.Key)
+	expectEqual(t, InputKeyMods{}, ev.Mods)
+	expectEqual(t, InputKeyMods{}, ev.ConsumedMods)
+	expectEqual(t, false, ev.Composing)
+	expectEqualStrings(t, "", string(ev.UTF8))
+	expectEqual(t, uint32(0), ev.UnshiftedCodepoint)
 }
 
 // Zig: test "term51: KeyEvent.effectiveMods: empty utf8 returns mods untouched"
 func TestKmKey_term51_KeyEvent_effectiveMods_empty_utf8_returns_mods_untouched(t *testing.T) {
 	testPlatform(t, "linux")
 	ev := kmKeyEventDefault()
-	ev.mods = InputKeyMods{shift: true, ctrl: true, caps_lock: true}
-	ev.consumed_mods = InputKeyMods{shift: true, ctrl: true}
-	expectEqual(t, ev.mods, ev.EffectiveMods())
+	ev.Mods = InputKeyMods{Shift: true, Ctrl: true, CapsLock: true}
+	ev.ConsumedMods = InputKeyMods{Shift: true, Ctrl: true}
+	expectEqual(t, ev.Mods, ev.EffectiveMods())
 	expectEqual(t,
-		InputKeyMods{shift: true, ctrl: true, caps_lock: true},
+		InputKeyMods{Shift: true, Ctrl: true, CapsLock: true},
 		ev.EffectiveMods(),
 	)
 }
@@ -435,38 +435,38 @@ func TestKmKey_term51_KeyEvent_effectiveMods_utf8_subtracts_consumed_mods(t *tes
 	testPlatform(t, "linux")
 	{
 		ev := kmKeyEventDefault()
-		ev.utf8 = []uint8("A")
-		ev.mods = InputKeyMods{shift: true}
-		ev.consumed_mods = InputKeyMods{shift: true}
+		ev.UTF8 = []uint8("A")
+		ev.Mods = InputKeyMods{Shift: true}
+		ev.ConsumedMods = InputKeyMods{Shift: true}
 		expectEqual(t, InputKeyMods{}, ev.EffectiveMods())
 	}
 	{
 		ev := kmKeyEventDefault()
-		ev.utf8 = []uint8("A")
-		ev.mods = InputKeyMods{shift: true, ctrl: true, alt: true, super: true}
-		ev.consumed_mods = InputKeyMods{shift: true}
+		ev.UTF8 = []uint8("A")
+		ev.Mods = InputKeyMods{Shift: true, Ctrl: true, Alt: true, Super: true}
+		ev.ConsumedMods = InputKeyMods{Shift: true}
 		expectEqual(t,
-			InputKeyMods{ctrl: true, alt: true, super: true},
+			InputKeyMods{Ctrl: true, Alt: true, Super: true},
 			ev.EffectiveMods(),
 		)
 	}
 	{
 		// Nothing consumed leaves everything, including locks.
 		ev := kmKeyEventDefault()
-		ev.utf8 = []uint8("a")
-		ev.mods = InputKeyMods{ctrl: true, num_lock: true}
+		ev.UTF8 = []uint8("a")
+		ev.Mods = InputKeyMods{Ctrl: true, NumLock: true}
 		expectEqual(t,
-			InputKeyMods{ctrl: true, num_lock: true},
+			InputKeyMods{Ctrl: true, NumLock: true},
 			ev.EffectiveMods(),
 		)
 	}
 	{
 		// Consumed bits that are not set in mods are ignored.
 		ev := kmKeyEventDefault()
-		ev.utf8 = []uint8("a")
-		ev.mods = InputKeyMods{ctrl: true}
-		ev.consumed_mods = InputKeyMods{alt: true}
-		expectEqual(t, InputKeyMods{ctrl: true}, ev.EffectiveMods())
+		ev.UTF8 = []uint8("a")
+		ev.Mods = InputKeyMods{Ctrl: true}
+		ev.ConsumedMods = InputKeyMods{Alt: true}
+		expectEqual(t, InputKeyMods{Ctrl: true}, ev.EffectiveMods())
 	}
 }
 
@@ -474,11 +474,11 @@ func TestKmKey_term51_KeyEvent_effectiveMods_utf8_subtracts_consumed_mods(t *tes
 func TestKmKey_term51_KeyEvent_effectiveMods_composing_does_not_change_the_result(t *testing.T) {
 	testPlatform(t, "linux")
 	ev := kmKeyEventDefault()
-	ev.utf8 = []uint8("x")
-	ev.composing = true
-	ev.mods = InputKeyMods{alt: true, super: true}
-	ev.consumed_mods = InputKeyMods{alt: true}
-	expectEqual(t, InputKeyMods{super: true}, ev.EffectiveMods())
+	ev.UTF8 = []uint8("x")
+	ev.Composing = true
+	ev.Mods = InputKeyMods{Alt: true, Super: true}
+	ev.ConsumedMods = InputKeyMods{Alt: true}
+	expectEqual(t, InputKeyMods{Super: true}, ev.EffectiveMods())
 }
 
 // Zig: test "term51: KeyEvent.effectiveMods: consumed side bits are cleared too"
@@ -487,18 +487,18 @@ func TestKmKey_term51_KeyEvent_effectiveMods_consumed_side_bits_are_cleared_too(
 	// Mods.unset is a plain bit operation, so consumed side bits clear the
 	// matching side bits of mods even though the key bit itself is separate.
 	ev := kmKeyEventDefault()
-	ev.utf8 = []uint8("A")
-	ev.mods = InputKeyMods{shift: true, sides: kmSides{shift: kmRight}}
-	ev.consumed_mods = InputKeyMods{shift: true, sides: kmSides{shift: kmRight}}
+	ev.UTF8 = []uint8("A")
+	ev.Mods = InputKeyMods{Shift: true, Sides: kmSides{Shift: kmRight}}
+	ev.ConsumedMods = InputKeyMods{Shift: true, Sides: kmSides{Shift: kmRight}}
 	expectEqual(t, InputKeyMods{}, ev.EffectiveMods())
 
 	// A consumed mods without the side bit leaves the right side bit behind.
 	ev2 := kmKeyEventDefault()
-	ev2.utf8 = []uint8("A")
-	ev2.mods = InputKeyMods{shift: true, sides: kmSides{shift: kmRight}}
-	ev2.consumed_mods = InputKeyMods{shift: true}
+	ev2.UTF8 = []uint8("A")
+	ev2.Mods = InputKeyMods{Shift: true, Sides: kmSides{Shift: kmRight}}
+	ev2.ConsumedMods = InputKeyMods{Shift: true}
 	expectEqual(t,
-		InputKeyMods{sides: kmSides{shift: kmRight}},
+		InputKeyMods{Sides: kmSides{Shift: kmRight}},
 		ev2.EffectiveMods(),
 	)
 }
@@ -507,13 +507,13 @@ func TestKmKey_term51_KeyEvent_effectiveMods_consumed_side_bits_are_cleared_too(
 func TestKmKey_term51_KeyEvent_bindingHash_equal_inputs_hash_equal(t *testing.T) {
 	testPlatform(t, "linux")
 	a := kmKeyEventDefault()
-	a.key = InputKeyKeyKeyA
-	a.mods = InputKeyMods{ctrl: true}
-	a.unshifted_codepoint = 'a'
+	a.Key = InputKeyKeyKeyA
+	a.Mods = InputKeyMods{Ctrl: true}
+	a.UnshiftedCodepoint = 'a'
 	b := kmKeyEventDefault()
-	b.key = InputKeyKeyKeyA
-	b.mods = InputKeyMods{ctrl: true}
-	b.unshifted_codepoint = 'a'
+	b.Key = InputKeyKeyKeyA
+	b.Mods = InputKeyMods{Ctrl: true}
+	b.UnshiftedCodepoint = 'a'
 	expectEqual(t, a.BindingHash(), b.BindingHash())
 	// Deterministic across calls.
 	expectEqual(t, a.BindingHash(), a.BindingHash())
@@ -525,33 +525,33 @@ func TestKmKey_term51_KeyEvent_bindingHash_equal_inputs_hash_equal(t *testing.T)
 func TestKmKey_term51_KeyEvent_bindingHash_key_codepoint_and_binding_mods_change_the_hash(t *testing.T) {
 	testPlatform(t, "linux")
 	base := kmKeyEventDefault()
-	base.key = InputKeyKeyKeyA
-	base.unshifted_codepoint = 'a'
+	base.Key = InputKeyKeyKeyA
+	base.UnshiftedCodepoint = 'a'
 	h := base.BindingHash()
 
 	other := base
-	other.key = InputKeyKeyKeyB
+	other.Key = InputKeyKeyKeyB
 	expect(t, other.BindingHash() != h, "other.bindingHash() != h")
 
 	other = base
-	other.unshifted_codepoint = 'b'
+	other.UnshiftedCodepoint = 'b'
 	expect(t, other.BindingHash() != h, "other.bindingHash() != h")
 
 	other = base
-	other.unshifted_codepoint = 0
+	other.UnshiftedCodepoint = 0
 	expect(t, other.BindingHash() != h, "other.bindingHash() != h")
 
 	other = base
-	other.mods = InputKeyMods{shift: true}
+	other.Mods = InputKeyMods{Shift: true}
 	hs := other.BindingHash()
 	expect(t, hs != h, "hs != h")
-	other.mods = InputKeyMods{ctrl: true}
+	other.Mods = InputKeyMods{Ctrl: true}
 	hc := other.BindingHash()
 	expect(t, hc != h && hc != hs, "hc != h and hc != hs")
-	other.mods = InputKeyMods{alt: true}
+	other.Mods = InputKeyMods{Alt: true}
 	ha := other.BindingHash()
 	expect(t, ha != h && ha != hs && ha != hc, "ha != h and ha != hs and ha != hc")
-	other.mods = InputKeyMods{super: true}
+	other.Mods = InputKeyMods{Super: true}
 	hu := other.BindingHash()
 	expect(t, hu != h && hu != hs && hu != hc && hu != ha, "hu != h and hu != hs and hu != hc and hu != ha")
 }
@@ -560,42 +560,42 @@ func TestKmKey_term51_KeyEvent_bindingHash_key_codepoint_and_binding_mods_change
 func TestKmKey_term51_KeyEvent_bindingHash_irrelevant_fields_are_ignored(t *testing.T) {
 	testPlatform(t, "linux")
 	base := kmKeyEventDefault()
-	base.key = InputKeyKeyEnter
-	base.mods = InputKeyMods{ctrl: true}
-	base.unshifted_codepoint = 13
+	base.Key = InputKeyKeyEnter
+	base.Mods = InputKeyMods{Ctrl: true}
+	base.UnshiftedCodepoint = 13
 	h := base.BindingHash()
 
 	// action
 	other := base
-	other.action = InputKeyActionRelease
+	other.Action = InputKeyActionRelease
 	expectEqual(t, h, other.BindingHash())
-	other.action = InputKeyActionRepeat
+	other.Action = InputKeyActionRepeat
 	expectEqual(t, h, other.BindingHash())
 
 	// composing
 	other = base
-	other.composing = true
+	other.Composing = true
 	expectEqual(t, h, other.BindingHash())
 
 	// utf8
 	other = base
-	other.utf8 = []uint8("\r")
+	other.UTF8 = []uint8("\r")
 	expectEqual(t, h, other.BindingHash())
 
 	// consumed mods
 	other = base
-	other.consumed_mods = InputKeyMods{ctrl: true, shift: true}
+	other.ConsumedMods = InputKeyMods{Ctrl: true, Shift: true}
 	expectEqual(t, h, other.BindingHash())
 
 	// locks
 	other = base
-	other.mods.caps_lock = true
-	other.mods.num_lock = true
+	other.Mods.CapsLock = true
+	other.Mods.NumLock = true
 	expectEqual(t, h, other.BindingHash())
 
 	// sides
 	other = base
-	other.mods.sides = InputKeyModsModsSideMask.sides
+	other.Mods.Sides = InputKeyModsModsSideMask.Sides
 	expectEqual(t, h, other.BindingHash())
 }
 
@@ -977,31 +977,31 @@ func TestKmKey_term51_ctrlOrSuper_sets_exactly_one_of_ctrl_or_super(t *testing.T
 			is_darwin := kmIsDarwin(goos)
 
 			m := InputKeyCtrlOrSuper(InputKeyMods{})
-			expectEqual(t, is_darwin, m.super)
-			expectEqual(t, !is_darwin, m.ctrl)
-			expect(t, !m.shift, "!m.shift")
-			expect(t, !m.alt, "!m.alt")
-			expect(t, !m.caps_lock, "!m.caps_lock")
-			expect(t, !m.num_lock, "!m.num_lock")
+			expectEqual(t, is_darwin, m.Super)
+			expectEqual(t, !is_darwin, m.Ctrl)
+			expect(t, !m.Shift, "!m.shift")
+			expect(t, !m.Alt, "!m.alt")
+			expect(t, !m.CapsLock, "!m.caps_lock")
+			expect(t, !m.NumLock, "!m.num_lock")
 
 			// Other mods are preserved, including locks and sides.
 			m2 := InputKeyCtrlOrSuper(InputKeyMods{
-				shift:     true,
-				alt:       true,
-				caps_lock: true,
-				sides:     kmSides{alt: kmRight},
+				Shift:    true,
+				Alt:      true,
+				CapsLock: true,
+				Sides:    kmSides{Alt: kmRight},
 			})
-			expect(t, m2.shift, "m2.shift")
-			expect(t, m2.alt, "m2.alt")
-			expect(t, m2.caps_lock, "m2.caps_lock")
-			expectEqual(t, kmSides{alt: kmRight}, m2.sides)
-			expectEqual(t, is_darwin, m2.super)
-			expectEqual(t, !is_darwin, m2.ctrl)
+			expect(t, m2.Shift, "m2.shift")
+			expect(t, m2.Alt, "m2.alt")
+			expect(t, m2.CapsLock, "m2.caps_lock")
+			expectEqual(t, kmSides{Alt: kmRight}, m2.Sides)
+			expectEqual(t, is_darwin, m2.Super)
+			expectEqual(t, !is_darwin, m2.Ctrl)
 
 			// Idempotent, and the other one stays untouched when already set.
 			expectEqual(t, m, InputKeyCtrlOrSuper(m))
-			m3 := InputKeyCtrlOrSuper(InputKeyMods{ctrl: true, super: true})
-			expect(t, m3.ctrl && m3.super, "m3.ctrl and m3.super")
+			m3 := InputKeyCtrlOrSuper(InputKeyMods{Ctrl: true, Super: true})
+			expect(t, m3.Ctrl && m3.Super, "m3.ctrl and m3.super")
 			expect(t, InputKeyCtrlOrSuper(InputKeyMods{}).CtrlOrSuper(), "ctrlOrSuper(.{}).ctrlOrSuper()")
 		})
 	}

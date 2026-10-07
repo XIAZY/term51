@@ -56,9 +56,9 @@ func TestDCS_XTGETTCAP_command(t *testing.T) {
 	}
 	cmd := zigUnwrap(t, h.Unhook())
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
-	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.xtgettcap.Next())))
-	expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+	expect(t, cmd.Tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
+	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.Xtgettcap.Next())))
+	expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 }
 
 // Zig: test "XTGETTCAP mixed case"
@@ -71,9 +71,9 @@ func TestDCS_XTGETTCAP_mixed_case(t *testing.T) {
 	}
 	cmd := zigUnwrap(t, h.Unhook())
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
-	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.xtgettcap.Next())))
-	expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+	expect(t, cmd.Tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
+	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.Xtgettcap.Next())))
+	expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 }
 
 // Zig: test "XTGETTCAP command multiple keys"
@@ -86,10 +86,10 @@ func TestDCS_XTGETTCAP_command_multiple_keys(t *testing.T) {
 	}
 	cmd := zigUnwrap(t, h.Unhook())
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
-	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.xtgettcap.Next())))
-	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.xtgettcap.Next())))
-	expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+	expect(t, cmd.Tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
+	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.Xtgettcap.Next())))
+	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.Xtgettcap.Next())))
+	expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 }
 
 // Zig: test "XTGETTCAP command invalid data"
@@ -102,10 +102,10 @@ func TestDCS_XTGETTCAP_command_invalid_data(t *testing.T) {
 	}
 	cmd := zigUnwrap(t, h.Unhook())
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
-	expectEqualStrings(t, "WHO", string(zigUnwrap(t, cmd.xtgettcap.Next())))
-	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.xtgettcap.Next())))
-	expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+	expect(t, cmd.Tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
+	expectEqualStrings(t, "WHO", string(zigUnwrap(t, cmd.Xtgettcap.Next())))
+	expectEqualStrings(t, "536D756C78", string(zigUnwrap(t, cmd.Xtgettcap.Next())))
+	expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 }
 
 // Zig: test "DECRQSS command"
@@ -116,8 +116,8 @@ func TestDCS_DECRQSS_command(t *testing.T) {
 	_ = h.Put('m')
 	cmd := zigUnwrap(t, h.Unhook())
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandDecrqss, "cmd == .decrqss")
-	expect(t, cmd.decrqss == DCSCommandDECRQSSSgr, "cmd.decrqss == .sgr")
+	expect(t, cmd.Tag == DCSCommandDecrqss, "cmd == .decrqss")
+	expect(t, cmd.Decrqss == DCSCommandDECRQSSSgr, "cmd.decrqss == .sgr")
 }
 
 // Zig: test "DECRQSS invalid command"
@@ -128,8 +128,8 @@ func TestDCS_DECRQSS_invalid_command(t *testing.T) {
 	_ = h.Put('z')
 	cmd := zigUnwrap(t, h.Unhook())
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandDecrqss, "cmd == .decrqss")
-	expect(t, cmd.decrqss == DCSCommandDECRQSSNone, "cmd.decrqss == .none")
+	expect(t, cmd.Tag == DCSCommandDecrqss, "cmd == .decrqss")
+	expect(t, cmd.Decrqss == DCSCommandDECRQSSNone, "cmd.decrqss == .none")
 
 	h.discard()
 
@@ -397,8 +397,8 @@ func TestDCS_term51_Handler_unhook_every_decrqss_request(t *testing.T) {
 		defer h.Deinit()
 		cmd := zigUnwrap(t, term51Run(&h, ParserActionDCS{Intermediates: []uint8("$"), Final: 'q'}, case_.data))
 		defer cmd.Deinit()
-		expect(t, cmd.tag == DCSCommandDecrqss, "cmd == .decrqss")
-		expectEqual(t, case_.want, cmd.decrqss)
+		expect(t, cmd.Tag == DCSCommandDecrqss, "cmd == .decrqss")
+		expectEqual(t, case_.want, cmd.Decrqss)
 		expect(t, h.state.tag == DCSStateInactive, "h.state == .inactive")
 	}
 }
@@ -409,8 +409,8 @@ func TestDCS_term51_Handler_unhook_xtgettcap_data_is_upper_cased(t *testing.T) {
 	defer h.Deinit()
 	cmd := zigUnwrap(t, term51Run(&h, ParserActionDCS{Intermediates: []uint8("+"), Final: 'q'}, "544e;636f;aBcDef09"))
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
-	expectEqualStrings(t, "544E;636F;ABCDEF09", string(cmd.xtgettcap.data.written()))
+	expect(t, cmd.Tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
+	expectEqualStrings(t, "544E;636F;ABCDEF09", string(cmd.Xtgettcap.data.written()))
 	expect(t, h.state.tag == DCSStateInactive, "h.state == .inactive")
 }
 
@@ -420,8 +420,8 @@ func TestDCS_term51_Handler_unhook_an_empty_xtgettcap_request_still_yields_a_com
 	defer h.Deinit()
 	cmd := zigUnwrap(t, term51Run(&h, ParserActionDCS{Intermediates: []uint8("+"), Final: 'q'}, ""))
 	defer cmd.Deinit()
-	expect(t, cmd.tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
-	expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+	expect(t, cmd.Tag == DCSCommandXtgettcap, "cmd == .xtgettcap")
+	expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 }
 
 // Zig: test "term51: Handler.unhook: the handler can be hooked again afterwards"
@@ -432,7 +432,7 @@ func TestDCS_term51_Handler_unhook_the_handler_can_be_hooked_again_afterwards(t 
 	a.Deinit()
 	b := zigUnwrap(t, term51Run(&h, ParserActionDCS{Intermediates: []uint8("$"), Final: 'q'}, "r"))
 	b.Deinit()
-	expectEqual(t, DCSCommandDECRQSSDecstbm, b.decrqss)
+	expectEqual(t, DCSCommandDECRQSSDecstbm, b.Decrqss)
 }
 
 // Zig: test "term51: Handler.discard: frees a pending xtgettcap buffer"
@@ -467,9 +467,9 @@ func TestDCS_term51_Command_deinit_frees_xtgettcap_data_and_is_a_no_op_for_decrq
 	defer h.Deinit()
 	a := zigUnwrap(t, term51Run(&h, ParserActionDCS{Intermediates: []uint8("+"), Final: 'q'}, "544e"))
 	a.Deinit() // leak check (Go has no leak check; the call is kept)
-	b := DCSCommand{tag: DCSCommandDecrqss, decrqss: DCSCommandDECRQSSSgr}
+	b := DCSCommand{Tag: DCSCommandDecrqss, Decrqss: DCSCommandDECRQSSSgr}
 	b.Deinit()
-	expectEqual(t, DCSCommandDECRQSSSgr, b.decrqss)
+	expectEqual(t, DCSCommandDECRQSSSgr, b.Decrqss)
 }
 
 // Zig: test "term51: Command.XTGETTCAP.next: splits on semicolons"
@@ -496,11 +496,11 @@ func TestDCS_term51_Command_XTGETTCAP_next_splits_on_semicolons(t *testing.T) {
 		cmd := zigUnwrap(t, term51Run(&h, ParserActionDCS{Intermediates: []uint8("+"), Final: 'q'}, case_.data))
 		defer cmd.Deinit()
 		for _, want := range case_.want {
-			expectEqualStrings(t, want, string(zigUnwrap(t, cmd.xtgettcap.Next())))
+			expectEqualStrings(t, want, string(zigUnwrap(t, cmd.Xtgettcap.Next())))
 		}
-		expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+		expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 		// and stays exhausted
-		expect(t, !cmd.xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
+		expect(t, !cmd.Xtgettcap.Next().Valid, "cmd.xtgettcap.next() == null")
 	}
 }
 

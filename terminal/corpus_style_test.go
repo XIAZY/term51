@@ -44,17 +44,17 @@ func sm3_corpusColor(t *testing.T, s string) StyleColor {
 }
 
 // sm3_corpusFlags is `@bitCast` of a u16 to Style.Flags.
-func sm3_corpusFlags(v uint16) styleFlags {
-	return styleFlags{
-		bold:          v&(1<<0) != 0,
-		italic:        v&(1<<1) != 0,
-		faint:         v&(1<<2) != 0,
-		blink:         v&(1<<3) != 0,
-		inverse:       v&(1<<4) != 0,
-		invisible:     v&(1<<5) != 0,
-		strikethrough: v&(1<<6) != 0,
-		overline:      v&(1<<7) != 0,
-		underline:     SGRAttributeUnderline((v >> 8) & 0x7),
+func sm3_corpusFlags(v uint16) StyleFlags {
+	return StyleFlags{
+		Bold:          v&(1<<0) != 0,
+		Italic:        v&(1<<1) != 0,
+		Faint:         v&(1<<2) != 0,
+		Blink:         v&(1<<3) != 0,
+		Inverse:       v&(1<<4) != 0,
+		Invisible:     v&(1<<5) != 0,
+		Strikethrough: v&(1<<6) != 0,
+		Overline:      v&(1<<7) != 0,
+		Underline:     SGRAttributeUnderline((v >> 8) & 0x7),
 		_padding:      uint8(v >> 11),
 	}
 }
@@ -81,10 +81,10 @@ func TestStyle_corpus_hash(t *testing.T) {
 			t.Fatalf("line %d: bad flags %q: %v", i+1, f[4], err)
 		}
 		s := Style{
-			fg_color:        sm3_corpusColor(t, f[1]),
-			bg_color:        sm3_corpusColor(t, f[2]),
+			FgColor:         sm3_corpusColor(t, f[1]),
+			BgColor:         sm3_corpusColor(t, f[2]),
 			underline_color: sm3_corpusColor(t, f[3]),
-			flags:           sm3_corpusFlags(uint16(flags)),
+			Flags:           sm3_corpusFlags(uint16(flags)),
 		}
 		got := fmt.Sprintf("%016x", s.Hash())
 		if got != f[5] {

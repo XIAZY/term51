@@ -590,13 +590,13 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 				// The entire highlight is within this meta.
 				start_map := meta.cell_map[meta_i]
 				end_map := meta.cell_map[end_i]
-				result.top_x = start_map.x
-				result.bot_x = end_map.x
+				result.TopX = start_map.X
+				result.BotX = end_map.X
 				self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
-					node:   meta.node,
-					serial: meta.serial,
-					start:  searchSlidingWindowCellCount(start_map.y),
-					end:    searchSlidingWindowCellCount(end_map.y + 1),
+					Node:   meta.node,
+					Serial: meta.serial,
+					Start:  searchSlidingWindowCellCount(start_map.Y),
+					End:    searchSlidingWindowCellCount(end_map.Y + 1),
 				})
 
 				return tlT{
@@ -610,12 +610,12 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 				// We found the meta that contains the start of the match
 				// only. Consume this entire node from our start offset.
 				map_ := meta.cell_map[meta_i]
-				result.top_x = map_.x
+				result.TopX = map_.X
 				self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
-					node:   meta.node,
-					serial: meta.serial,
-					start:  searchSlidingWindowCellCount(map_.y),
-					end:    meta.node.data.size.rows,
+					Node:   meta.node,
+					Serial: meta.serial,
+					Start:  searchSlidingWindowCellCount(map_.Y),
+					End:    meta.node.data.size.rows,
 				})
 
 				return tlT{
@@ -648,10 +648,10 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 				// This meta doesn't contain the match. We still add it
 				// to our results because we want the full flattened list.
 				self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
-					node:   meta.node,
-					serial: meta.serial,
-					start:  0,
-					end:    meta.node.data.size.rows,
+					Node:   meta.node,
+					Serial: meta.serial,
+					Start:  0,
+					End:    meta.node.data.size.rows,
 				})
 
 				meta_consumed += uint(len(meta.cell_map))
@@ -660,12 +660,12 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 
 			// We found it
 			map_ := meta.cell_map[meta_i]
-			result.bot_x = map_.x
+			result.BotX = map_.X
 			self.chunk_buf = append(self.chunk_buf, HighlightFlattenedChunk{
-				node:   meta.node,
-				serial: meta.serial,
-				start:  0,
-				end:    searchSlidingWindowCellCount(map_.y + 1),
+				Node:   meta.node,
+				Serial: meta.serial,
+				Start:  0,
+				End:    searchSlidingWindowCellCount(map_.Y + 1),
 			})
 			found = true
 			break
@@ -698,7 +698,7 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 			assert(meta_it.idx == tl.prune.meta)
 			next := meta_it.Next()
 			assert(next != nil) // .?
-			assert(next.node == self.chunk_buf[0].node)
+			assert(next.node == self.chunk_buf[0].Node)
 		}
 		self.meta.DeleteOldest(tl.prune.meta)
 
@@ -720,12 +720,12 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 			// Zig: std.mem.reverse on the node, start and end columns of
 			// the MultiArrayList, each on its own; the serial column is
 			// not reversed.
-			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) *PageListNode { return c.node },
-				func(c *HighlightFlattenedChunk, v *PageListNode) { c.node = v })
-			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) SizeCellCountInt { return c.start },
-				func(c *HighlightFlattenedChunk, v SizeCellCountInt) { c.start = v })
-			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) SizeCellCountInt { return c.end },
-				func(c *HighlightFlattenedChunk, v SizeCellCountInt) { c.end = v })
+			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) *PageListNode { return c.Node },
+				func(c *HighlightFlattenedChunk, v *PageListNode) { c.Node = v })
+			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) SizeCellCountInt { return c.Start },
+				func(c *HighlightFlattenedChunk, v SizeCellCountInt) { c.Start = v })
+			searchSlidingWindowReverseChunkField(chunks, func(c *HighlightFlattenedChunk) SizeCellCountInt { return c.End },
+				func(c *HighlightFlattenedChunk, v SizeCellCountInt) { c.End = v })
 
 			// Now normally with forward traversal with multiple pages,
 			// the suffix of the first page and the prefix of the last
@@ -744,34 +744,34 @@ func (self *SearchSlidingWindow) highlight(start_offset uint, len_ uint) Highlig
 			// order.
 			n := len(chunks)
 			assert(n >= 2)
-			assert(chunks[0].end > 0) // Zig: u16 subtraction traps
-			chunks[0].start = chunks[0].end - 1
-			chunks[0].end = chunks[0].node.data.size.rows
-			assert(chunks[n-1].start < 0xFFFF) // Zig: u16 addition traps
-			chunks[n-1].end = chunks[n-1].start + 1
-			chunks[n-1].start = 0
+			assert(chunks[0].End > 0) // Zig: u16 subtraction traps
+			chunks[0].Start = chunks[0].End - 1
+			chunks[0].End = chunks[0].Node.data.size.rows
+			assert(chunks[n-1].Start < 0xFFFF) // Zig: u16 addition traps
+			chunks[n-1].End = chunks[n-1].Start + 1
+			chunks[n-1].Start = 0
 		} else {
 			// For a single chunk, the y values are in reverse order
 			// (start is the screen-end, end is the screen-start).
 			// Swap them to get proper top-to-bottom order.
-			start_y := chunks[0].start
-			assert(chunks[0].end > 0) // Zig: u16 subtraction traps
-			chunks[0].start = chunks[0].end - 1
+			start_y := chunks[0].Start
+			assert(chunks[0].End > 0) // Zig: u16 subtraction traps
+			chunks[0].Start = chunks[0].End - 1
 			assert(start_y < 0xFFFF) // Zig: u16 addition traps
-			chunks[0].end = start_y + 1
+			chunks[0].End = start_y + 1
 		}
 
 		// X values also need to be reversed since the top/bottom
 		// are swapped for the nodes.
-		top_x := result.top_x
-		result.top_x = result.bot_x
-		result.bot_x = top_x
+		top_x := result.TopX
+		result.TopX = result.BotX
+		result.BotX = top_x
 	default:
 		panic("unreachable")
 	}
 
 	// Copy over our MultiArrayList so it points to the proper memory.
-	result.chunks = self.chunk_buf
+	result.Chunks = self.chunk_buf
 	return result
 }
 
@@ -834,13 +834,13 @@ func (self *SearchSlidingWindow) Append(node *PageListNode) (uint, error) {
 	{
 		// formatter:
 		opts := FormatterOptionsPlain // .emit = .plain
-		opts.unwrap = true
+		opts.Unwrap = true
 		formatter = FormatterPageFormatterInit(&meta.node.data, opts)
 		formatter.point_map = Some(FormatterPageFormatterPointMap{
 			map_: &meta.cell_map,
 		})
 	}
-	if err := formatter.Format(&encoded.writer); err != nil {
+	if err := formatter.format(&encoded.writer); err != nil {
 		// writer uses anyerror but the only realistic error on
 		// an ArrayList is out of memory.
 		return 0, ErrOutOfMemory
@@ -856,7 +856,7 @@ func (self *SearchSlidingWindow) Append(node *PageListNode) (uint, error) {
 			return 0, ErrOutOfMemory
 		}
 		// Zig: meta.cell_map.getLastOrNull() orelse .{ .x = 0, .y = 0 }
-		last := PointCoordinate{x: 0, y: 0}
+		last := PointCoordinate{X: 0, Y: 0}
 		if len(meta.cell_map) > 0 {
 			last = meta.cell_map[len(meta.cell_map)-1]
 		}

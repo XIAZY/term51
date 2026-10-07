@@ -85,18 +85,18 @@ func col_x11Get(name string) Optional[ColorRGB] {
 // Zig: test (unnamed, x11_color.zig:48)
 func TestX11Color_unnamed(t *testing.T) {
 	expectEqual(t, None[ColorRGB](), col_x11Get("nosuchcolor"))
-	expectEqual(t, ColorRGB{r: 255, g: 255, b: 255}, zigUnwrap(t, col_x11Get("white")))
-	expectEqual(t, Some(ColorRGB{r: 0, g: 250, b: 154}), col_x11Get("medium spring green"))
-	expectEqual(t, Some(ColorRGB{r: 34, g: 139, b: 34}), col_x11Get("ForestGreen"))
-	expectEqual(t, Some(ColorRGB{r: 34, g: 139, b: 34}), col_x11Get("FoReStGReen"))
-	expectEqual(t, Some(ColorRGB{r: 0, g: 0, b: 0}), col_x11Get("black"))
-	expectEqual(t, Some(ColorRGB{r: 255, g: 0, b: 0}), col_x11Get("red"))
-	expectEqual(t, Some(ColorRGB{r: 0, g: 255, b: 0}), col_x11Get("green"))
-	expectEqual(t, Some(ColorRGB{r: 0, g: 0, b: 255}), col_x11Get("blue"))
-	expectEqual(t, Some(ColorRGB{r: 255, g: 255, b: 255}), col_x11Get("white"))
-	expectEqual(t, Some(ColorRGB{r: 124, g: 252, b: 0}), col_x11Get("lawngreen"))
-	expectEqual(t, Some(ColorRGB{r: 0, g: 250, b: 154}), col_x11Get("mediumspringgreen"))
-	expectEqual(t, Some(ColorRGB{r: 34, g: 139, b: 34}), col_x11Get("forestgreen"))
+	expectEqual(t, ColorRGB{R: 255, G: 255, B: 255}, zigUnwrap(t, col_x11Get("white")))
+	expectEqual(t, Some(ColorRGB{R: 0, G: 250, B: 154}), col_x11Get("medium spring green"))
+	expectEqual(t, Some(ColorRGB{R: 34, G: 139, B: 34}), col_x11Get("ForestGreen"))
+	expectEqual(t, Some(ColorRGB{R: 34, G: 139, B: 34}), col_x11Get("FoReStGReen"))
+	expectEqual(t, Some(ColorRGB{R: 0, G: 0, B: 0}), col_x11Get("black"))
+	expectEqual(t, Some(ColorRGB{R: 255, G: 0, B: 0}), col_x11Get("red"))
+	expectEqual(t, Some(ColorRGB{R: 0, G: 255, B: 0}), col_x11Get("green"))
+	expectEqual(t, Some(ColorRGB{R: 0, G: 0, B: 255}), col_x11Get("blue"))
+	expectEqual(t, Some(ColorRGB{R: 255, G: 255, B: 255}), col_x11Get("white"))
+	expectEqual(t, Some(ColorRGB{R: 124, G: 252, B: 0}), col_x11Get("lawngreen"))
+	expectEqual(t, Some(ColorRGB{R: 0, G: 250, B: 154}), col_x11Get("mediumspringgreen"))
+	expectEqual(t, Some(ColorRGB{R: 34, G: 139, B: 34}), col_x11Get("forestgreen"))
 }
 
 // ---------------------------------------------------------------------------
@@ -120,8 +120,8 @@ func TestX11Color_term51_colorMap_table_has_782_entries_first_is_snow_and_last_i
 	}
 
 	// First and last lines of rgb.txt.
-	expectEqual(t, ColorRGB{r: 255, g: 250, b: 250}, zigUnwrap(t, col_x11Get("snow")))
-	expectEqual(t, ColorRGB{r: 0, g: 128, b: 128}, zigUnwrap(t, col_x11Get("teal")))
+	expectEqual(t, ColorRGB{R: 255, G: 250, B: 250}, zigUnwrap(t, col_x11Get("snow")))
+	expectEqual(t, ColorRGB{R: 0, G: 128, B: 128}, zigUnwrap(t, col_x11Get("teal")))
 	expect(t, strings.HasPrefix(x11ColorData, "255 250 250\t\tsnow\n"), "std.mem.startsWith(u8, data, \"255 250 250\\t\\tsnow\\n\")")
 	expect(t, strings.HasSuffix(x11ColorData, "  0 128 128\t\tteal\n"), "std.mem.endsWith(u8, data, \"  0 128 128\\t\\tteal\\n\")")
 }
@@ -132,70 +132,70 @@ func TestX11Color_term51_colorMap_spot_check_name_and_value_pairs_across_the_tab
 		name  string
 		color ColorRGB
 	}{
-		{"snow", ColorRGB{r: 255, g: 250, b: 250}},
-		{"ghost white", ColorRGB{r: 248, g: 248, b: 255}},
-		{"GhostWhite", ColorRGB{r: 248, g: 248, b: 255}},
-		{"white smoke", ColorRGB{r: 245, g: 245, b: 245}},
-		{"old lace", ColorRGB{r: 253, g: 245, b: 230}},
-		{"antique white", ColorRGB{r: 250, g: 235, b: 215}},
-		{"peach puff", ColorRGB{r: 255, g: 218, b: 185}},
-		{"alice blue", ColorRGB{r: 240, g: 248, b: 255}},
-		{"misty rose", ColorRGB{r: 255, g: 228, b: 225}},
-		{"white", ColorRGB{r: 255, g: 255, b: 255}},
-		{"black", ColorRGB{r: 0, g: 0, b: 0}},
-		{"dark slate gray", ColorRGB{r: 47, g: 79, b: 79}},
-		{"light slate gray", ColorRGB{r: 119, g: 136, b: 153}},
-		{"LightSlateGrey", ColorRGB{r: 119, g: 136, b: 153}},
-		{"gray", ColorRGB{r: 190, g: 190, b: 190}},
-		{"grey", ColorRGB{r: 190, g: 190, b: 190}},
-		{"x11 gray", ColorRGB{r: 190, g: 190, b: 190}},
-		{"web gray", ColorRGB{r: 128, g: 128, b: 128}},
-		{"midnight blue", ColorRGB{r: 25, g: 25, b: 112}},
-		{"navy", ColorRGB{r: 0, g: 0, b: 128}},
-		{"NavyBlue", ColorRGB{r: 0, g: 0, b: 128}},
-		{"blue", ColorRGB{r: 0, g: 0, b: 255}},
-		{"dodger blue", ColorRGB{r: 30, g: 144, b: 255}},
-		{"deep sky blue", ColorRGB{r: 0, g: 191, b: 255}},
-		{"cyan", ColorRGB{r: 0, g: 255, b: 255}},
-		{"aqua", ColorRGB{r: 0, g: 255, b: 255}},
-		{"green", ColorRGB{r: 0, g: 255, b: 0}},
-		{"lime", ColorRGB{r: 0, g: 255, b: 0}},
-		{"web green", ColorRGB{r: 0, g: 128, b: 0}},
-		{"chartreuse", ColorRGB{r: 127, g: 255, b: 0}},
-		{"yellow", ColorRGB{r: 255, g: 255, b: 0}},
-		{"gold", ColorRGB{r: 255, g: 215, b: 0}},
-		{"tan", ColorRGB{r: 210, g: 180, b: 140}},
-		{"orange red", ColorRGB{r: 255, g: 69, b: 0}},
-		{"red", ColorRGB{r: 255, g: 0, b: 0}},
-		{"hot pink", ColorRGB{r: 255, g: 105, b: 180}},
-		{"magenta", ColorRGB{r: 255, g: 0, b: 255}},
-		{"fuchsia", ColorRGB{r: 255, g: 0, b: 255}},
-		{"orchid", ColorRGB{r: 218, g: 112, b: 214}},
-		{"maroon", ColorRGB{r: 176, g: 48, b: 96}},
-		{"x11 maroon", ColorRGB{r: 176, g: 48, b: 96}},
-		{"web maroon", ColorRGB{r: 128, g: 0, b: 0}},
-		{"purple", ColorRGB{r: 160, g: 32, b: 240}},
-		{"web purple", ColorRGB{r: 128, g: 0, b: 128}},
-		{"tan1", ColorRGB{r: 255, g: 165, b: 79}},
-		{"DeepSkyBlue4", ColorRGB{r: 0, g: 104, b: 139}},
-		{"gray0", ColorRGB{r: 0, g: 0, b: 0}},
-		{"gray1", ColorRGB{r: 3, g: 3, b: 3}},
-		{"gray50", ColorRGB{r: 127, g: 127, b: 127}},
-		{"grey51", ColorRGB{r: 130, g: 130, b: 130}},
-		{"gray99", ColorRGB{r: 252, g: 252, b: 252}},
-		{"gray100", ColorRGB{r: 255, g: 255, b: 255}},
-		{"grey100", ColorRGB{r: 255, g: 255, b: 255}},
-		{"dark gray", ColorRGB{r: 169, g: 169, b: 169}},
-		{"DarkGray", ColorRGB{r: 169, g: 169, b: 169}},
-		{"dark red", ColorRGB{r: 139, g: 0, b: 0}},
-		{"light green", ColorRGB{r: 144, g: 238, b: 144}},
-		{"crimson", ColorRGB{r: 220, g: 20, b: 60}},
-		{"indigo", ColorRGB{r: 75, g: 0, b: 130}},
-		{"olive", ColorRGB{r: 128, g: 128, b: 0}},
-		{"rebecca purple", ColorRGB{r: 102, g: 51, b: 153}},
-		{"RebeccaPurple", ColorRGB{r: 102, g: 51, b: 153}},
-		{"silver", ColorRGB{r: 192, g: 192, b: 192}},
-		{"teal", ColorRGB{r: 0, g: 128, b: 128}},
+		{"snow", ColorRGB{R: 255, G: 250, B: 250}},
+		{"ghost white", ColorRGB{R: 248, G: 248, B: 255}},
+		{"GhostWhite", ColorRGB{R: 248, G: 248, B: 255}},
+		{"white smoke", ColorRGB{R: 245, G: 245, B: 245}},
+		{"old lace", ColorRGB{R: 253, G: 245, B: 230}},
+		{"antique white", ColorRGB{R: 250, G: 235, B: 215}},
+		{"peach puff", ColorRGB{R: 255, G: 218, B: 185}},
+		{"alice blue", ColorRGB{R: 240, G: 248, B: 255}},
+		{"misty rose", ColorRGB{R: 255, G: 228, B: 225}},
+		{"white", ColorRGB{R: 255, G: 255, B: 255}},
+		{"black", ColorRGB{R: 0, G: 0, B: 0}},
+		{"dark slate gray", ColorRGB{R: 47, G: 79, B: 79}},
+		{"light slate gray", ColorRGB{R: 119, G: 136, B: 153}},
+		{"LightSlateGrey", ColorRGB{R: 119, G: 136, B: 153}},
+		{"gray", ColorRGB{R: 190, G: 190, B: 190}},
+		{"grey", ColorRGB{R: 190, G: 190, B: 190}},
+		{"x11 gray", ColorRGB{R: 190, G: 190, B: 190}},
+		{"web gray", ColorRGB{R: 128, G: 128, B: 128}},
+		{"midnight blue", ColorRGB{R: 25, G: 25, B: 112}},
+		{"navy", ColorRGB{R: 0, G: 0, B: 128}},
+		{"NavyBlue", ColorRGB{R: 0, G: 0, B: 128}},
+		{"blue", ColorRGB{R: 0, G: 0, B: 255}},
+		{"dodger blue", ColorRGB{R: 30, G: 144, B: 255}},
+		{"deep sky blue", ColorRGB{R: 0, G: 191, B: 255}},
+		{"cyan", ColorRGB{R: 0, G: 255, B: 255}},
+		{"aqua", ColorRGB{R: 0, G: 255, B: 255}},
+		{"green", ColorRGB{R: 0, G: 255, B: 0}},
+		{"lime", ColorRGB{R: 0, G: 255, B: 0}},
+		{"web green", ColorRGB{R: 0, G: 128, B: 0}},
+		{"chartreuse", ColorRGB{R: 127, G: 255, B: 0}},
+		{"yellow", ColorRGB{R: 255, G: 255, B: 0}},
+		{"gold", ColorRGB{R: 255, G: 215, B: 0}},
+		{"tan", ColorRGB{R: 210, G: 180, B: 140}},
+		{"orange red", ColorRGB{R: 255, G: 69, B: 0}},
+		{"red", ColorRGB{R: 255, G: 0, B: 0}},
+		{"hot pink", ColorRGB{R: 255, G: 105, B: 180}},
+		{"magenta", ColorRGB{R: 255, G: 0, B: 255}},
+		{"fuchsia", ColorRGB{R: 255, G: 0, B: 255}},
+		{"orchid", ColorRGB{R: 218, G: 112, B: 214}},
+		{"maroon", ColorRGB{R: 176, G: 48, B: 96}},
+		{"x11 maroon", ColorRGB{R: 176, G: 48, B: 96}},
+		{"web maroon", ColorRGB{R: 128, G: 0, B: 0}},
+		{"purple", ColorRGB{R: 160, G: 32, B: 240}},
+		{"web purple", ColorRGB{R: 128, G: 0, B: 128}},
+		{"tan1", ColorRGB{R: 255, G: 165, B: 79}},
+		{"DeepSkyBlue4", ColorRGB{R: 0, G: 104, B: 139}},
+		{"gray0", ColorRGB{R: 0, G: 0, B: 0}},
+		{"gray1", ColorRGB{R: 3, G: 3, B: 3}},
+		{"gray50", ColorRGB{R: 127, G: 127, B: 127}},
+		{"grey51", ColorRGB{R: 130, G: 130, B: 130}},
+		{"gray99", ColorRGB{R: 252, G: 252, B: 252}},
+		{"gray100", ColorRGB{R: 255, G: 255, B: 255}},
+		{"grey100", ColorRGB{R: 255, G: 255, B: 255}},
+		{"dark gray", ColorRGB{R: 169, G: 169, B: 169}},
+		{"DarkGray", ColorRGB{R: 169, G: 169, B: 169}},
+		{"dark red", ColorRGB{R: 139, G: 0, B: 0}},
+		{"light green", ColorRGB{R: 144, G: 238, B: 144}},
+		{"crimson", ColorRGB{R: 220, G: 20, B: 60}},
+		{"indigo", ColorRGB{R: 75, G: 0, B: 130}},
+		{"olive", ColorRGB{R: 128, G: 128, B: 0}},
+		{"rebecca purple", ColorRGB{R: 102, G: 51, B: 153}},
+		{"RebeccaPurple", ColorRGB{R: 102, G: 51, B: 153}},
+		{"silver", ColorRGB{R: 192, G: 192, B: 192}},
+		{"teal", ColorRGB{R: 0, G: 128, B: 128}},
 	}
 	expect(t, len(cases) >= 20, "cases.len >= 20")
 	for _, c := range cases {
@@ -205,7 +205,7 @@ func TestX11Color_term51_colorMap_spot_check_name_and_value_pairs_across_the_tab
 
 // Zig: test "term51: colorMap: lookup is case-insensitive and exact otherwise"
 func TestX11Color_term51_colorMap_lookup_is_case_insensitive_and_exact_otherwise(t *testing.T) {
-	forest := ColorRGB{r: 34, g: 139, b: 34}
+	forest := ColorRGB{R: 34, G: 139, B: 34}
 	expectEqual(t, forest, zigUnwrap(t, col_x11Get("forestgreen")))
 	expectEqual(t, forest, zigUnwrap(t, col_x11Get("ForestGreen")))
 	expectEqual(t, forest, zigUnwrap(t, col_x11Get("FORESTGREEN")))
@@ -221,14 +221,14 @@ func TestX11Color_term51_colorMap_lookup_is_case_insensitive_and_exact_otherwise
 // Zig: test "term51: colorMap: names that are prefixes of other names"
 func TestX11Color_term51_colorMap_names_that_are_prefixes_of_other_names(t *testing.T) {
 	// "navy" vs "navy blue", "tan" vs "tan1", "gray" vs "gray0"/"gray100".
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 128}, zigUnwrap(t, col_x11Get("navy")))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 128}, zigUnwrap(t, col_x11Get("navy blue")))
-	expectEqual(t, ColorRGB{r: 210, g: 180, b: 140}, zigUnwrap(t, col_x11Get("tan")))
-	expectEqual(t, ColorRGB{r: 255, g: 165, b: 79}, zigUnwrap(t, col_x11Get("tan1")))
-	expectEqual(t, ColorRGB{r: 190, g: 190, b: 190}, zigUnwrap(t, col_x11Get("gray")))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, zigUnwrap(t, col_x11Get("gray0")))
-	expectEqual(t, ColorRGB{r: 238, g: 221, b: 130}, zigUnwrap(t, col_x11Get("light goldenrod")))
-	expectEqual(t, ColorRGB{r: 250, g: 250, b: 210}, zigUnwrap(t, col_x11Get("light goldenrod yellow")))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 128}, zigUnwrap(t, col_x11Get("navy")))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 128}, zigUnwrap(t, col_x11Get("navy blue")))
+	expectEqual(t, ColorRGB{R: 210, G: 180, B: 140}, zigUnwrap(t, col_x11Get("tan")))
+	expectEqual(t, ColorRGB{R: 255, G: 165, B: 79}, zigUnwrap(t, col_x11Get("tan1")))
+	expectEqual(t, ColorRGB{R: 190, G: 190, B: 190}, zigUnwrap(t, col_x11Get("gray")))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, zigUnwrap(t, col_x11Get("gray0")))
+	expectEqual(t, ColorRGB{R: 238, G: 221, B: 130}, zigUnwrap(t, col_x11Get("light goldenrod")))
+	expectEqual(t, ColorRGB{R: 250, G: 250, B: 210}, zigUnwrap(t, col_x11Get("light goldenrod yellow")))
 	// A strict prefix of a name that is not itself a name is not found.
 	expectEqual(t, None[ColorRGB](), col_x11Get("light golden"))
 	expectEqual(t, None[ColorRGB](), col_x11Get("forestgree"))
@@ -278,7 +278,7 @@ func TestX11Color_term51_colorMap_every_name_in_the_data_file_resolves_to_its_re
 		b, err := strconv.ParseUint(strings.Trim(line[8:11], " "), 10, 8)
 		zigTry(t, err)
 		name := strings.Trim(line[12:], " \t\n")
-		want := ColorRGB{r: uint8(r), g: uint8(g), b: uint8(b)}
+		want := ColorRGB{R: uint8(r), G: uint8(g), B: uint8(b)}
 		expect(t, len(name) > 0, "name.len > 0")
 
 		lower := col_allocLowerString(name)
@@ -300,7 +300,7 @@ func TestX11Color_term51_colorMap_every_name_in_the_data_file_resolves_to_its_re
 func TestX11Color_term51_colorMap_names_with_a_changed_or_extra_space_do_not_resolve(t *testing.T) {
 	// The data file lists both "medium spring green" and "MediumSpringGreen",
 	// so the run-together spelling resolves (case-insensitively) ...
-	expectEqual(t, ColorRGB{r: 0, g: 250, b: 154}, zigUnwrap(t, col_x11Get("mediumspringgreen")))
+	expectEqual(t, ColorRGB{R: 0, G: 250, B: 154}, zigUnwrap(t, col_x11Get("mediumspringgreen")))
 	// ... but other spellings do not.
 	expect(t, !col_x11Get("medium-spring-green").Valid, "map.get(\"medium-spring-green\") == null")
 	expect(t, !col_x11Get("medium_spring_green").Valid, "map.get(\"medium_spring_green\") == null")
@@ -308,7 +308,7 @@ func TestX11Color_term51_colorMap_names_with_a_changed_or_extra_space_do_not_res
 	expect(t, !col_x11Get("medium  spring green").Valid, "map.get(\"medium  spring green\") == null")
 	expect(t, !col_x11Get(" medium spring green").Valid, "map.get(\" medium spring green\") == null")
 	expect(t, !col_x11Get("medium spring green ").Valid, "map.get(\"medium spring green \") == null")
-	expect(t, zigUnwrap(t, col_x11Get("medium spring green")).g == 250, "map.get(\"medium spring green\").?.g == 250")
+	expect(t, zigUnwrap(t, col_x11Get("medium spring green")).G == 250, "map.get(\"medium spring green\").?.g == 250")
 	// an over-long name is rejected, not truncated
 	long := strings.Repeat("a", 4096)
 	expect(t, !col_x11Get(long).Valid, "map.get(long) == null")

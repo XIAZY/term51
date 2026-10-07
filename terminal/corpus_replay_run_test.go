@@ -145,7 +145,7 @@ func runCase(ops []replayOp, mode feedMode, w *bytes.Buffer) error {
 // `t_opt.?.vtStream()`. The other options have their Zig defaults.
 func runCaseTerminalInit(st *runCaseState, cols, rows uint16, maxScrollback uint64) error {
 	opts := terminalOptionsDefault(cols, rows)
-	opts.max_scrollback = maxScrollback
+	opts.MaxScrollback = maxScrollback
 	t := new(Terminal)
 	var err error
 	*t, err = TerminalInit(opts)
@@ -220,17 +220,17 @@ func runCaseResize(st *runCaseState, v replayOpResizeArgs) error {
 
 // Mirrors harness/src/main.zig:264 runCase, arm .scroll_top
 func runCaseScrollTop(st *runCaseState) {
-	st.t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
+	st.t.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
 }
 
 // Mirrors harness/src/main.zig:265 runCase, arm .scroll_active
 func runCaseScrollActive(st *runCaseState) {
-	st.t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollActive})
+	st.t.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollActive})
 }
 
 // Mirrors harness/src/main.zig:266 runCase, arm .scroll_delta
 func runCaseScrollDelta(st *runCaseState, n int64) {
-	st.t.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: n})
+	st.t.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollDeltaRow, DeltaRow: n})
 }
 
 // Mirrors harness/src/main.zig:267 runCase, arm .dump
@@ -265,8 +265,8 @@ func runCaseTransientInvariant(st *runCaseState) {
 // the error.
 func verifyScreensIntegrity(t *Terminal) error {
 	for _, key := range []ScreenSetKey{ScreenSetKeyPrimary, ScreenSetKeyAlternate} {
-		if screen := t.screens.Get(key); screen != nil {
-			if err := screen.pages.verifyIntegrity(); err != nil {
+		if screen := t.Screens.Get(key); screen != nil {
+			if err := screen.Pages.verifyIntegrity(); err != nil {
 				return fmt.Errorf("integrity check failed on screen %s: %s", key.String(), zigErrorName(err))
 			}
 		}

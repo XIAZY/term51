@@ -80,19 +80,19 @@ func pl2C(n SizeCellCountInt) Optional[SizeCellCountInt] { return Some(n) }
 // pl2Active, pl2Screen, pl2History and pl2Viewport are the Zig literals
 // `.{ .active = .{ .x = x, .y = y } }` and so on.
 func pl2Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 func pl2Screen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 func pl2History(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: x, Y: y}}
 }
 
 func pl2Viewport(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: x, Y: y}}
 }
 
 // pl2Pin is `s.pin(pt).?`.
@@ -150,7 +150,7 @@ func pl2JSetCell(p PageListPin, cp uint32) {
 // cell).
 func pl2JCp(t *testing.T, s *PageList, pt Point) uint32 {
 	t.Helper()
-	return zigUnwrap(t, s.GetCell(pt)).cell.content.codepoint
+	return zigUnwrap(t, s.GetCell(pt)).Cell.content.codepoint
 }
 
 // pl2JMarkRows is term51JMarkRows: marks every screen row of the list with
@@ -251,14 +251,14 @@ func TestPl2_PageList_resize_no_reflow_more_rows_and_less_cols(t *testing.T) {
 	defer s.Deinit()
 
 	// Resize less
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(5), rows: pl2C(20), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(5), Rows: pl2C(20), Reflow: false}))
 	expectEqual(t, 5, s.cols)
 	expectEqual(t, 20, s.rows)
 	expectEqual(t, 20, s.totalRows())
 
 	pl2RowIterAll(s, func(offset PageListPin) {
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, 5, len(cells))
 	})
 }
@@ -277,7 +277,7 @@ func TestPl2_PageList_resize_more_rows_and_cols_doesn_t_fit_in_single_std_page(t
 	zigTry(t, err)
 	expect(t, cap.rows < new_rows, "cap.rows < new_rows")
 
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(new_cols), rows: pl2C(new_rows), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(new_cols), Rows: pl2C(new_rows), Reflow: true}))
 	expectEqual(t, new_cols, s.cols)
 	expectEqual(t, new_rows, s.rows)
 	expectEqual(t, new_rows, s.totalRows())
@@ -291,14 +291,14 @@ func TestPl2_PageList_resize_no_reflow_empty_screen(t *testing.T) {
 	defer s.Deinit()
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(10), rows: pl2C(10), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(10), Rows: pl2C(10), Reflow: false}))
 	expectEqual(t, 10, s.cols)
 	expectEqual(t, 10, s.rows)
 	expectEqual(t, 10, s.totalRows())
 
 	pl2RowIterAll(s, func(offset PageListPin) {
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, 10, len(cells))
 	})
 }
@@ -329,13 +329,13 @@ func TestPl2_PageList_resize_no_reflow_more_cols_forces_smaller_cap(t *testing.T
 
 	// Resize to our large cap
 	rows := s.totalRows()
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(cap2.cols), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(cap2.cols), Reflow: false}))
 
 	// Our total rows should be the same, and contents should be the same.
 	expectEqual(t, rows, s.totalRows())
 	pl2RowIterAll(s, func(offset PageListPin) {
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(cap2.cols), uint(len(cells)))
 		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
 	})
@@ -368,15 +368,15 @@ func TestPl2_PageList_resize_no_reflow_more_rows_adds_blank_rows_if_cursor_at_bo
 	defer s.UntrackPin(p)
 	original_cursor := zigUnwrap(t, s.PointFromPin(PointTagActive, *p)).Active
 	{
-		get := zigUnwrap(t, s.GetCell(pl2Active(original_cursor.x, original_cursor.y)))
-		expectEqual[uint32](t, 3, get.cell.content.codepoint)
+		get := zigUnwrap(t, s.GetCell(pl2Active(original_cursor.X, original_cursor.Y)))
+		expectEqual[uint32](t, 3, get.Cell.content.codepoint)
 	}
 
 	// Resize
 	zigTry(t, s.resizeWithoutReflow(PageListResize{
-		rows:   pl2C(10),
-		reflow: false,
-		cursor: Some(PageListResizeCursor{x: 0, y: s.rows - 2}),
+		Rows:   pl2C(10),
+		Reflow: false,
+		Cursor: Some(PageListResizeCursor{x: 0, y: s.rows - 2}),
 	}))
 	expectEqual(t, 5, s.cols)
 	expectEqual(t, 10, s.rows)
@@ -398,7 +398,7 @@ func TestPl2_PageList_resize_no_reflow_more_rows_adds_blank_rows_if_cursor_at_bo
 	for y := uint(0); y < 3; y++ {
 		get := zigUnwrap(t, s.GetCell(pl2Active(0, uint32(y))))
 		expected := uint32(y + 2)
-		expectEqual(t, expected, get.cell.content.codepoint)
+		expectEqual(t, expected, get.Cell.content.codepoint)
 	}
 }
 
@@ -418,13 +418,13 @@ func TestPl2_PageList_resize_reflow_more_cols_no_wrapped_rows(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(10), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(10), Reflow: true}))
 	expectEqual(t, 10, s.cols)
 	expectEqual(t, 3, s.totalRows())
 
 	pl2RowIterAll(s, func(offset PageListPin) {
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, 10, len(cells))
 		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
 	})
@@ -454,7 +454,7 @@ func TestPl2_PageList_resize_reflow_more_cols_wrapped_rows(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -469,7 +469,7 @@ func TestPl2_PageList_resize_reflow_more_cols_wrapped_rows(t *testing.T) {
 		// First row should be unwrapped
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 4, len(cells))
 		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
@@ -506,20 +506,20 @@ func TestPl2_PageList_resize_reflow_invalidates_viewport_offset_cache(t *testing
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: pl2Pin(t, s, pl2Screen(0, pin_y))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: pin_y,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: pin_y,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Resize with reflow - unwrapping rows changes total_rows
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 
 	// Verify scrollbar cache was invalidated during reflow
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 5,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 5,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -566,7 +566,7 @@ func TestPl2_PageList_resize_reflow_more_cols_creates_multiple_pages(t *testing.
 	newcap, err := cap.Adjust(PageCapacityAdjustment{cols: pl2C(cap.cols + 100)})
 	zigTry(t, err)
 	expect(t, newcap.rows < cap.rows, "newcap.rows < cap.rows")
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(newcap.cols), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(newcap.cols), Reflow: true}))
 	expectEqual(t, uint(newcap.cols), uint(s.cols))
 	expectEqual(t, uint(cap.rows), s.totalRows())
 
@@ -659,7 +659,7 @@ func TestPl2_PageList_resize_reflow_more_cols_wrap_across_page_boundary(t *testi
 	end_rows := s.totalRows() - 1
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, end_rows, s.totalRows())
 
@@ -763,13 +763,13 @@ func TestPl2_PageList_resize_reflow_more_cols_wrap_across_page_boundary_cursor_i
 	// Put a tracked pin in wrapped row on the last page
 	p := pl2Track(t, s, pl2Pin(t, s, pl2Active(1, 9)))
 	defer s.UntrackPin(p)
-	expect(t, p.node == s.pages.last, "p.node == s.pages.last")
+	expect(t, p.Node == s.pages.last, "p.node == s.pages.last")
 
 	// We expect one fewer rows since we unwrapped a row.
 	end_rows := s.totalRows() - 1
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, end_rows, s.totalRows())
 
@@ -840,8 +840,8 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_across_page_boundary_cursor_i
 	// Put a tracked pin in wrapped row on the last page
 	p := pl2Track(t, s, pl2Pin(t, s, pl2Active(2, 5)))
 	defer s.UntrackPin(p)
-	expect(t, p.node == s.pages.last, "p.node == s.pages.last")
-	expect(t, p.y == 0, "p.y == 0")
+	expect(t, p.Node == s.pages.last, "p.node == s.pages.last")
+	expect(t, p.Y == 0, "p.y == 0")
 
 	// PageList.diagram ->
 	//
@@ -866,9 +866,9 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_across_page_boundary_cursor_i
 
 	// Resize
 	zigTry(t, s.Resize(PageListResize{
-		cols:   pl2C(4),
-		reflow: true,
-		cursor: Some(PageListResizeCursor{x: 2, y: 5}),
+		Cols:   pl2C(4),
+		Reflow: true,
+		Cursor: Some(PageListResizeCursor{x: 2, y: 5}),
 	}))
 	expectEqual(t, 4, s.cols)
 
@@ -993,7 +993,7 @@ func TestPl2_PageList_resize_reflow_more_cols_cursor_in_wrapped_row(t *testing.T
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1035,7 +1035,7 @@ func TestPl2_PageList_resize_reflow_more_cols_cursor_in_not_wrapped_row(t *testi
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1088,7 +1088,7 @@ func TestPl2_PageList_resize_reflow_more_cols_cursor_in_wrapped_row_that_isn_t_u
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1110,7 +1110,7 @@ func TestPl2_PageList_resize_reflow_more_cols_no_reflow_preserves_semantic_promp
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1169,8 +1169,8 @@ func TestPl2_PageList_resize_reflow_exceeds_hyperlink_memory_forcing_capacity_in
 	{
 		page := &s.pages.first.data
 		id, err := page.InsertHyperlink(Hyperlink{
-			id:  pl2Implicit(0),
-			uri: bytes.Repeat([]byte("a"), PageStringBytesDefault-1),
+			ID:  pl2Implicit(0),
+			URI: bytes.Repeat([]byte("a"), PageStringBytesDefault-1),
 		})
 		zigTry(t, err)
 		rac := page.GetRowAndCell(uint(page.size.cols-1), uint(page.size.rows-1))
@@ -1178,8 +1178,8 @@ func TestPl2_PageList_resize_reflow_exceeds_hyperlink_memory_forcing_capacity_in
 		*rac.cell = pl2CpCell('X')
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, id))
 		_, err = page.InsertHyperlink(Hyperlink{
-			id:  pl2Implicit(1),
-			uri: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAA"),
+			ID:  pl2Implicit(1),
+			URI: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAA"),
 		})
 		pl2ExpectError(t, ErrStringsOutOfMemory, err)
 	}
@@ -1189,8 +1189,8 @@ func TestPl2_PageList_resize_reflow_exceeds_hyperlink_memory_forcing_capacity_in
 	{
 		page := &s.pages.last.data
 		id, err := page.InsertHyperlink(Hyperlink{
-			id:  pl2Implicit(1),
-			uri: bytes.Repeat([]byte("a"), PageStringBytesDefault-1),
+			ID:  pl2Implicit(1),
+			URI: bytes.Repeat([]byte("a"), PageStringBytesDefault-1),
 		})
 		zigTry(t, err)
 		rac := page.GetRowAndCell(0, 0)
@@ -1198,14 +1198,14 @@ func TestPl2_PageList_resize_reflow_exceeds_hyperlink_memory_forcing_capacity_in
 		*rac.cell = pl2CpCell('X')
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, id))
 		_, err = page.InsertHyperlink(Hyperlink{
-			id:  pl2Implicit(2),
-			uri: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAA"),
+			ID:  pl2Implicit(2),
+			URI: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAA"),
 		})
 		pl2ExpectError(t, ErrStringsOutOfMemory, err)
 	}
 
 	// Resize to 1 column wider, unwrapping the row.
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(s.cols + 1), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(s.cols + 1), Reflow: true}))
 }
 
 // Zig: test "PageList resize reflow exceeds grapheme memory forcing capacity increase"
@@ -1275,7 +1275,7 @@ func TestPl2_PageList_resize_reflow_exceeds_grapheme_memory_forcing_capacity_inc
 	}
 
 	// Resize to 1 column wider, unwrapping the row.
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(s.cols + 1), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(s.cols + 1), Reflow: true}))
 }
 
 // Zig: test "PageList resize reflow exceeds style memory forcing capacity increase"
@@ -1310,10 +1310,10 @@ func TestPl2_PageList_resize_reflow_exceeds_style_memory_forcing_capacity_increa
 		page := &s.pages.first.data
 		for x := uint(0); x < uint(s.cols); x++ {
 			id, err := page.styles.Add(Style{
-				bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-					r: uint8(x),
-					g: uint8(x >> 8),
-					b: uint8(x >> 16),
+				BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+					R: uint8(x),
+					G: uint8(x >> 8),
+					B: uint8(x >> 16),
 				}},
 			})
 			if err != nil {
@@ -1337,10 +1337,10 @@ func TestPl2_PageList_resize_reflow_exceeds_style_memory_forcing_capacity_increa
 		page := &s.pages.last.data
 		for x := uint(0); x < uint(s.cols); x++ {
 			id, err := page.styles.Add(Style{
-				fg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-					r: uint8(x),
-					g: uint8(x >> 8),
-					b: uint8(x >> 16),
+				FgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+					R: uint8(x),
+					G: uint8(x >> 8),
+					B: uint8(x >> 16),
 				}},
 			})
 			if err != nil {
@@ -1359,7 +1359,7 @@ func TestPl2_PageList_resize_reflow_exceeds_style_memory_forcing_capacity_increa
 	}
 
 	// Resize to twice as wide, fully unwrapping the row.
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(s.cols * 2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(s.cols * 2), Reflow: true}))
 }
 
 // Zig: test "PageList resize reflow more cols unwrap wide spacer head"
@@ -1393,7 +1393,7 @@ func TestPl2_PageList_resize_reflow_more_cols_unwrap_wide_spacer_head(t *testing
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -1461,7 +1461,7 @@ func TestPl2_PageList_resize_reflow_more_cols_unwrap_wide_spacer_head_across_two
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 3, s.totalRows())
 
@@ -1534,7 +1534,7 @@ func TestPl2_PageList_resize_reflow_more_cols_unwrap_still_requires_wide_spacer_
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(3), Reflow: true}))
 	expectEqual(t, 3, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -1591,7 +1591,7 @@ func TestPl2_PageList_resize_reflow_less_cols_no_reflow_preserves_semantic_promp
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1625,7 +1625,7 @@ func TestPl2_PageList_resize_reflow_less_cols_no_reflow_preserves_semantic_promp
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1651,7 +1651,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_preserves_semantic_prompt(t *
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1681,16 +1681,16 @@ func TestPl2_PageList_resize_reflow_less_cols_no_wrapped_rows(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(5), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(5), Reflow: true}))
 	expectEqual(t, 5, s.cols)
 	expectEqual(t, 3, s.totalRows())
 
 	pl2RowIterAll(s, func(offset PageListPin) {
 		for x := uint(0); x < 4; x++ {
 			offset_copy := offset
-			offset_copy.x = SizeCellCountInt(x)
+			offset_copy.X = SizeCellCountInt(x)
 			rac := offset_copy.RowAndCell()
-			cells := offset.node.data.GetCells(rac.row)
+			cells := offset.Node.data.GetCells(rac.row)
 			expectEqual(t, 5, len(cells))
 			expectEqual(t, uint32(x), cells[x].content.codepoint)
 		}
@@ -1713,7 +1713,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1728,7 +1728,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 		// First row should be wrapped
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
@@ -1736,7 +1736,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 2, cells[0].content.codepoint)
@@ -1745,7 +1745,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 		// First row should be wrapped
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
@@ -1753,7 +1753,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 2, cells[0].content.codepoint)
@@ -1781,7 +1781,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1798,7 +1798,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 		// First row should be wrapped
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
@@ -1806,7 +1806,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 		expectEqual(t, 2, len(cells))
@@ -1820,7 +1820,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 		// First row should be wrapped
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
@@ -1828,7 +1828,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 		expectEqual(t, 2, len(cells))
@@ -1860,7 +1860,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_wrapped_row(t *testing.T
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1907,7 +1907,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wraps_spacer_head(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(3), Reflow: true}))
 	expectEqual(t, 3, s.cols)
 	expectEqual(t, 3, s.totalRows())
 
@@ -1964,7 +1964,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_goes_to_scrollback(t *testi
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 4, s.totalRows())
 
@@ -1992,7 +1992,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_unchanged_row(t *testing
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -2020,7 +2020,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_blank_cell(t *testing.T)
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -2048,7 +2048,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_final_blank_cell(t *test
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -2076,7 +2076,7 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_in_wrapped_blank_cell(t *te
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -2100,7 +2100,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 3, s.totalRows())
 
@@ -2109,7 +2109,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines(t *testing.T) {
 		// First row should be wrapped
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
@@ -2117,7 +2117,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines(t *testing.T) {
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 2, cells[0].content.codepoint)
@@ -2146,7 +2146,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between(t *testing.T) 
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 5, s.totalRows())
 
@@ -2159,7 +2159,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between(t *testing.T) 
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
@@ -2167,7 +2167,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between(t *testing.T) 
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 2, cells[0].content.codepoint)
@@ -2192,7 +2192,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between_no_scrollback(
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 3, s.totalRows())
 
@@ -2200,7 +2200,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between_no_scrollback(
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
@@ -2208,13 +2208,13 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between_no_scrollback(
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual[uint32](t, 0, cells[0].content.codepoint)
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
 		expectEqual[uint32](t, 'C', cells[0].content.codepoint)
@@ -2246,11 +2246,11 @@ func TestPl2_PageList_resize_reflow_less_cols_cursor_not_on_last_line_preserves_
 
 	// Resize
 	zigTry(t, s.Resize(PageListResize{
-		cols:   pl2C(4),
-		reflow: true,
+		Cols:   pl2C(4),
+		Reflow: true,
 
 		// Important: not on last row
-		cursor: Some(PageListResizeCursor{x: 1, y: 1}),
+		Cursor: Some(PageListResizeCursor{x: 1, y: 1}),
 	}))
 	expectEqual(t, 4, s.cols)
 	expectEqual(t, 10, s.totalRows())
@@ -2270,7 +2270,7 @@ func TestPl2_PageList_resize_reflow_less_cols_copy_style(t *testing.T) {
 		page := &s.pages.first.data
 
 		// Create a style
-		style := Style{flags: styleFlags{bold: true}}
+		style := Style{Flags: StyleFlags{Bold: true}}
 		style_id, err := page.styles.Add(style)
 		zigTry(t, err)
 
@@ -2289,20 +2289,20 @@ func TestPl2_PageList_resize_reflow_less_cols_copy_style(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
 	pl2RowIterActive(s, func(offset PageListPin) {
 		for x := uint(0); x < uint(s.cols-1); x++ {
 			offset_copy := offset
-			offset_copy.x = SizeCellCountInt(x)
+			offset_copy.X = SizeCellCountInt(x)
 			rac := offset_copy.RowAndCell()
 			style_id := rac.cell.style_id
 			expect(t, style_id != 0, "style_id != 0")
 
-			style := offset.node.data.styles.Get(style_id)
-			expect(t, style.flags.bold, "style.flags.bold")
+			style := offset.Node.data.styles.Get(style_id)
+			expect(t, style.Flags.Bold, "style.flags.bold")
 
 			row := rac.row
 			expect(t, row.styled, "row.styled")
@@ -2331,7 +2331,7 @@ func TestPl2_PageList_resize_reflow_less_cols_to_eliminate_a_wide_char(t *testin
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(1), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(1), Reflow: true}))
 	expectEqual(t, 1, s.cols)
 	expectEqual(t, 1, s.totalRows())
 
@@ -2372,7 +2372,7 @@ func TestPl2_PageList_resize_reflow_less_cols_to_wrap_a_wide_char(t *testing.T) 
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 	expectEqual(t, 2, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -2449,7 +2449,7 @@ func TestPl2_PageList_resize_reflow_less_cols_to_wrap_a_multi_codepoint_grapheme
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(3), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(3), Reflow: true}))
 	expectEqual(t, 3, s.cols)
 	expectEqual(t, 2, s.totalRows())
 
@@ -2520,9 +2520,9 @@ func TestPl2_PageList_reset(t *testing.T) {
 
 	// Active area should be the top
 	expectEqual(t, PageListPin{
-		node: s.pages.first,
-		y:    0,
-		x:    0,
+		Node: s.pages.first,
+		Y:    0,
+		X:    0,
 	}, s.GetTopLeft(PointTagActive))
 }
 
@@ -2568,10 +2568,10 @@ func TestPl2_PageList_reset_moves_tracked_pins_and_marks_them_as_garbage(t *test
 	s.Reset()
 
 	// Our added pin should now be garbage
-	expect(t, p.garbage, "p.garbage")
+	expect(t, p.Garbage, "p.garbage")
 
 	// Viewport pin should not be garbage because it makes sense.
-	expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
+	expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
 }
 
 // Zig: test "PageList clears history"
@@ -2588,9 +2588,9 @@ func TestPl2_PageList_clears_history(t *testing.T) {
 
 	// Active area should be the top
 	expectEqual(t, PageListPin{
-		node: s.pages.first,
-		y:    0,
-		x:    0,
+		Node: s.pages.first,
+		Y:    0,
+		X:    0,
 	}, s.GetTopLeft(PointTagActive))
 }
 
@@ -2665,7 +2665,7 @@ func TestPl2_PageList_resize_reflow_grapheme_map_capacity_exceeded(t *testing.T)
 	// They will all end up in a contiguous region of the destination.
 	// If the bug exists (hyperlink_bytes increased instead of grapheme_bytes),
 	// this will fail with GraphemeMapOutOfMemory when we exceed capacity.
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(2), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(2), Reflow: true}))
 
 	// Verify the resize succeeded
 	expectEqual(t, 2, s.cols)
@@ -2718,7 +2718,7 @@ func TestPl2_PageList_resize_grow_cols_with_unwrap_fixes_viewport_pin(t *testing
 	expect(t, s.GetBottomRight(PointTagViewport).Valid, "s.getBottomRight(.viewport) != null")
 
 	// Resize with reflow: unwraps rows, reducing total_rows
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(4), reflow: true}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(4), Reflow: true}))
 	expectEqual(t, 4, s.cols)
 	expect(t, s.totalRows() < 40, "s.totalRows() < 40")
 
@@ -2774,7 +2774,7 @@ func TestPl2_PageList_grow_reuses_non_standard_page_without_leak(t *testing.T) {
 	// Zig-only: const first_page_mem_ptr = s.pages.first.?.data.memory.ptr; (raw pointer of the page buffer)
 
 	// Create a tracked pin pointing to the non-standard first page
-	tracked_pin := pl2Track(t, s, PageListPin{node: first_page_ptr, x: 0, y: 0})
+	tracked_pin := pl2Track(t, s, PageListPin{Node: first_page_ptr, X: 0, Y: 0})
 	defer s.UntrackPin(tracked_pin)
 
 	// Now grow one more time to trigger the reuse path. Since the first page
@@ -2793,10 +2793,10 @@ func TestPl2_PageList_grow_reuses_non_standard_page_without_leak(t *testing.T) {
 	// Zig-only: try testing.expect(s.pages.last.?.data.memory.ptr != first_page_mem_ptr); (raw pointer of the page buffer)
 
 	// The tracked pin should have been moved to the new first page and marked as garbage
-	expectEqual(t, s.pages.first, tracked_pin.node)
-	expectEqual(t, 0, tracked_pin.x)
-	expectEqual(t, 0, tracked_pin.y)
-	expect(t, tracked_pin.garbage, "tracked_pin.garbage")
+	expectEqual(t, s.pages.first, tracked_pin.Node)
+	expectEqual(t, 0, tracked_pin.X)
+	expectEqual(t, 0, tracked_pin.Y)
+	expect(t, tracked_pin.Garbage, "tracked_pin.garbage")
 }
 
 // Zig: test "PageList grow non-standard page prune protection"
@@ -2907,7 +2907,7 @@ func TestPl2_PageList_resize_no_reflow_more_cols_remaps_pins_in_backfill_path(t 
 
 	// Track a pin in row 0 of the second page. This row will be copied
 	// to the first page during backfill and the pin must be remapped.
-	tracked := pl2Track(t, s, PageListPin{node: second_page, x: 0, y: 0})
+	tracked := pl2Track(t, s, PageListPin{Node: second_page, X: 0, Y: 0})
 	defer s.UntrackPin(tracked)
 
 	// Write a marker character to the tracked cell so we can verify
@@ -2915,18 +2915,18 @@ func TestPl2_PageList_resize_no_reflow_more_cols_remaps_pins_in_backfill_path(t 
 	const marker uint32 = 'X'
 	*tracked.RowAndCell().cell = pl2CpCell(marker)
 
-	zigTry(t, s.Resize(PageListResize{cols: pl2C(new_cols), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: pl2C(new_cols), Reflow: false}))
 
 	// Verify the pin points to a valid node still in the page list.
 	found := false
 	for node := s.pages.first; node != nil; node = node.next {
-		if node == tracked.node {
+		if node == tracked.Node {
 			found = true
 			break
 		}
 	}
 	expect(t, found, "found")
-	expect(t, tracked.y < tracked.node.data.size.rows, "tracked.y < tracked.node.data.size.rows")
+	expect(t, tracked.Y < tracked.Node.data.size.rows, "tracked.y < tracked.node.data.size.rows")
 
 	// Verify the pin still points to the cell with our marker content.
 	cell := tracked.RowAndCell().cell
@@ -2987,7 +2987,7 @@ func TestPl2_PageList_compact_oversized_page(t *testing.T) {
 	}
 
 	// Create a tracked pin on this page
-	tracked := pl2Track(t, s, PageListPin{node: node, x: 5, y: 10})
+	tracked := pl2Track(t, s, PageListPin{Node: node, X: 5, Y: 10})
 	defer s.UntrackPin(tracked)
 
 	// Make the page oversized
@@ -3024,9 +3024,9 @@ func TestPl2_PageList_compact_oversized_page(t *testing.T) {
 	expectEqual(t, new_node, second_node.prev)
 
 	// Verify pin updated correctly
-	expectEqual(t, new_node, tracked.node)
-	expectEqual[SizeCellCountInt](t, 5, tracked.x)
-	expectEqual[SizeCellCountInt](t, 10, tracked.y)
+	expectEqual(t, new_node, tracked.Node)
+	expectEqual[SizeCellCountInt](t, 5, tracked.X)
+	expectEqual[SizeCellCountInt](t, 10, tracked.Y)
 
 	// Verify content preserved
 	page := &new_node.data
@@ -3087,7 +3087,7 @@ func TestPl2_PageList_split_at_middle_row(t *testing.T) {
 	}
 
 	// Split at row 5 (middle)
-	split_pin := PageListPin{node: s.pages.first, y: 5, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// Verify two pages exist
@@ -3131,7 +3131,7 @@ func TestPl2_PageList_split_at_row_0_is_no_op(t *testing.T) {
 	}
 
 	// Split at row 0 should be a no-op
-	split_pin := PageListPin{node: s.pages.first, y: 0, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 0, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// Verify only one page exists (no split occurred)
@@ -3162,7 +3162,7 @@ func TestPl2_PageList_split_at_last_row(t *testing.T) {
 	}
 
 	// Split at last row (row 9)
-	split_pin := PageListPin{node: s.pages.first, y: 9, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 9, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// Verify two pages exist
@@ -3190,7 +3190,7 @@ func TestPl2_PageList_split_single_row_page_returns_OutOfSpace(t *testing.T) {
 	s := pl2Init(t, 10, 1, pl2Max(0))
 	defer s.Deinit()
 
-	split_pin := PageListPin{node: s.pages.first, y: 0, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 0, X: 0}
 	result := s.Split(split_pin)
 
 	pl2ExpectError(t, ErrOutOfSpace, result)
@@ -3204,19 +3204,19 @@ func TestPl2_PageList_split_moves_tracked_pins(t *testing.T) {
 	defer s.Deinit()
 
 	// Track a pin at row 7
-	tracked := pl2Track(t, s, PageListPin{node: s.pages.first, y: 7, x: 3})
+	tracked := pl2Track(t, s, PageListPin{Node: s.pages.first, Y: 7, X: 3})
 	defer s.UntrackPin(tracked)
 
 	// Split at row 5
-	split_pin := PageListPin{node: s.pages.first, y: 5, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// The tracked pin should now be in the second page
-	expect(t, tracked.node == s.pages.first.next, "tracked.node == s.pages.first.?.next.?")
+	expect(t, tracked.Node == s.pages.first.next, "tracked.node == s.pages.first.?.next.?")
 	// y should be adjusted: was 7, split at 5, so new y = 7 - 5 = 2
-	expectEqual(t, 2, tracked.y)
+	expectEqual(t, 2, tracked.Y)
 	// x should remain unchanged
-	expectEqual(t, 3, tracked.x)
+	expectEqual(t, 3, tracked.X)
 }
 
 // Zig: test "PageList split tracked pin before split point unchanged"
@@ -3229,18 +3229,18 @@ func TestPl2_PageList_split_tracked_pin_before_split_point_unchanged(t *testing.
 	original_node := s.pages.first
 
 	// Track a pin at row 2 (before the split point)
-	tracked := pl2Track(t, s, PageListPin{node: original_node, y: 2, x: 5})
+	tracked := pl2Track(t, s, PageListPin{Node: original_node, Y: 2, X: 5})
 	defer s.UntrackPin(tracked)
 
 	// Split at row 5
-	split_pin := PageListPin{node: original_node, y: 5, x: 0}
+	split_pin := PageListPin{Node: original_node, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// The tracked pin should remain in the original page
-	expect(t, tracked.node == s.pages.first, "tracked.node == s.pages.first.?")
+	expect(t, tracked.Node == s.pages.first, "tracked.node == s.pages.first.?")
 	// y and x should be unchanged
-	expectEqual(t, 2, tracked.y)
-	expectEqual(t, 5, tracked.x)
+	expectEqual(t, 2, tracked.Y)
+	expectEqual(t, 5, tracked.X)
 }
 
 // Zig: test "PageList split tracked pin at split point moves to new page"
@@ -3253,19 +3253,19 @@ func TestPl2_PageList_split_tracked_pin_at_split_point_moves_to_new_page(t *test
 	original_node := s.pages.first
 
 	// Track a pin at the exact split point (row 5)
-	tracked := pl2Track(t, s, PageListPin{node: original_node, y: 5, x: 4})
+	tracked := pl2Track(t, s, PageListPin{Node: original_node, Y: 5, X: 4})
 	defer s.UntrackPin(tracked)
 
 	// Split at row 5
-	split_pin := PageListPin{node: original_node, y: 5, x: 0}
+	split_pin := PageListPin{Node: original_node, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// The tracked pin should be in the new page
-	expect(t, tracked.node == s.pages.first.next, "tracked.node == s.pages.first.?.next.?")
+	expect(t, tracked.Node == s.pages.first.next, "tracked.node == s.pages.first.?.next.?")
 	// y should be 0 since it was at the split point: 5 - 5 = 0
-	expectEqual(t, 0, tracked.y)
+	expectEqual(t, 0, tracked.Y)
 	// x should remain unchanged
-	expectEqual(t, 4, tracked.x)
+	expectEqual(t, 4, tracked.X)
 }
 
 // Zig: test "PageList split multiple tracked pins across regions"
@@ -3278,40 +3278,40 @@ func TestPl2_PageList_split_multiple_tracked_pins_across_regions(t *testing.T) {
 	original_node := s.pages.first
 
 	// Track multiple pins in different regions
-	pin_before := pl2Track(t, s, PageListPin{node: original_node, y: 1, x: 0})
+	pin_before := pl2Track(t, s, PageListPin{Node: original_node, Y: 1, X: 0})
 	defer s.UntrackPin(pin_before)
-	pin_at_split := pl2Track(t, s, PageListPin{node: original_node, y: 5, x: 2})
+	pin_at_split := pl2Track(t, s, PageListPin{Node: original_node, Y: 5, X: 2})
 	defer s.UntrackPin(pin_at_split)
-	pin_after1 := pl2Track(t, s, PageListPin{node: original_node, y: 7, x: 3})
+	pin_after1 := pl2Track(t, s, PageListPin{Node: original_node, Y: 7, X: 3})
 	defer s.UntrackPin(pin_after1)
-	pin_after2 := pl2Track(t, s, PageListPin{node: original_node, y: 9, x: 8})
+	pin_after2 := pl2Track(t, s, PageListPin{Node: original_node, Y: 9, X: 8})
 	defer s.UntrackPin(pin_after2)
 
 	// Split at row 5
-	split_pin := PageListPin{node: original_node, y: 5, x: 0}
+	split_pin := PageListPin{Node: original_node, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	first_page := s.pages.first
 	second_page := first_page.next
 
 	// Pin before split point stays in original page
-	expect(t, pin_before.node == first_page, "pin_before.node == first_page")
-	expectEqual(t, 1, pin_before.y)
-	expectEqual(t, 0, pin_before.x)
+	expect(t, pin_before.Node == first_page, "pin_before.node == first_page")
+	expectEqual(t, 1, pin_before.Y)
+	expectEqual(t, 0, pin_before.X)
 
 	// Pin at split point moves to new page with y=0
-	expect(t, pin_at_split.node == second_page, "pin_at_split.node == second_page")
-	expectEqual(t, 0, pin_at_split.y)
-	expectEqual(t, 2, pin_at_split.x)
+	expect(t, pin_at_split.Node == second_page, "pin_at_split.node == second_page")
+	expectEqual(t, 0, pin_at_split.Y)
+	expectEqual(t, 2, pin_at_split.X)
 
 	// Pins after split point move to new page with adjusted y
-	expect(t, pin_after1.node == second_page, "pin_after1.node == second_page")
-	expectEqual(t, 2, pin_after1.y) // 7 - 5 = 2
-	expectEqual(t, 3, pin_after1.x)
+	expect(t, pin_after1.Node == second_page, "pin_after1.node == second_page")
+	expectEqual(t, 2, pin_after1.Y) // 7 - 5 = 2
+	expectEqual(t, 3, pin_after1.X)
 
-	expect(t, pin_after2.node == second_page, "pin_after2.node == second_page")
-	expectEqual(t, 4, pin_after2.y) // 9 - 5 = 4
-	expectEqual(t, 8, pin_after2.x)
+	expect(t, pin_after2.Node == second_page, "pin_after2.node == second_page")
+	expectEqual(t, 4, pin_after2.Y) // 9 - 5 = 4
+	expectEqual(t, 8, pin_after2.X)
 }
 
 // Zig: test "PageList split tracked viewport_pin in split region moves correctly"
@@ -3324,20 +3324,20 @@ func TestPl2_PageList_split_tracked_viewport_pin_in_split_region_moves_correctly
 	original_node := s.pages.first
 
 	// Set viewport_pin to row 7 (after split point)
-	s.viewport_pin.node = original_node
-	s.viewport_pin.y = 7
-	s.viewport_pin.x = 6
+	s.viewport_pin.Node = original_node
+	s.viewport_pin.Y = 7
+	s.viewport_pin.X = 6
 
 	// Split at row 5
-	split_pin := PageListPin{node: original_node, y: 5, x: 0}
+	split_pin := PageListPin{Node: original_node, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	// viewport_pin should be in the new page
-	expect(t, s.viewport_pin.node == s.pages.first.next, "s.viewport_pin.node == s.pages.first.?.next.?")
+	expect(t, s.viewport_pin.Node == s.pages.first.next, "s.viewport_pin.node == s.pages.first.?.next.?")
 	// y should be adjusted: 7 - 5 = 2
-	expectEqual(t, 2, s.viewport_pin.y)
+	expectEqual(t, 2, s.viewport_pin.Y)
 	// x should remain unchanged
-	expectEqual(t, 6, s.viewport_pin.x)
+	expectEqual(t, 6, s.viewport_pin.X)
 }
 
 // Zig: test "PageList split middle page preserves linked list order"
@@ -3350,7 +3350,7 @@ func TestPl2_PageList_split_middle_page_preserves_linked_list_order(t *testing.T
 
 	// Split at row 4 to create: page1 (rows 0-3), page2 (rows 4-11)
 	first_node := s.pages.first
-	split_pin1 := PageListPin{node: first_node, y: 4, x: 0}
+	split_pin1 := PageListPin{Node: first_node, Y: 4, X: 0}
 	zigTry(t, s.Split(split_pin1))
 
 	// Now we have 2 pages
@@ -3360,7 +3360,7 @@ func TestPl2_PageList_split_middle_page_preserves_linked_list_order(t *testing.T
 	expectEqual(t, 8, page2.data.size.rows)
 
 	// Split page2 at row 4 to create: page1 -> page2 (rows 0-3) -> page3 (rows 4-7)
-	split_pin2 := PageListPin{node: page2, y: 4, x: 0}
+	split_pin2 := PageListPin{Node: page2, Y: 4, X: 0}
 	zigTry(t, s.Split(split_pin2))
 
 	// Now we have 3 pages
@@ -3399,14 +3399,14 @@ func TestPl2_PageList_split_last_page_makes_new_page_the_last(t *testing.T) {
 
 	// Split to create 2 pages first
 	first_node := s.pages.first
-	split_pin1 := PageListPin{node: first_node, y: 5, x: 0}
+	split_pin1 := PageListPin{Node: first_node, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin1))
 
 	// Now split the last page
 	last_before_split := s.pages.last
 	expectEqual(t, 5, last_before_split.data.size.rows)
 
-	split_pin2 := PageListPin{node: last_before_split, y: 2, x: 0}
+	split_pin2 := PageListPin{Node: last_before_split, Y: 2, X: 0}
 	zigTry(t, s.Split(split_pin2))
 
 	// The new page should be the new last
@@ -3429,14 +3429,14 @@ func TestPl2_PageList_split_first_page_keeps_original_as_first(t *testing.T) {
 	defer s.Deinit()
 
 	original_first := s.pages.first
-	split_pin1 := PageListPin{node: original_first, y: 5, x: 0}
+	split_pin1 := PageListPin{Node: original_first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin1))
 
 	// Get second page (created by first split)
 	second_page := s.pages.first.next
 
 	// Now split the first page again
-	split_pin2 := PageListPin{node: s.pages.first, y: 2, x: 0}
+	split_pin2 := PageListPin{Node: s.pages.first, Y: 2, X: 0}
 	zigTry(t, s.Split(split_pin2))
 
 	// Original first should still be first
@@ -3480,7 +3480,7 @@ func TestPl2_PageList_split_preserves_wrap_flags(t *testing.T) {
 	}
 
 	// Split at row 5
-	split_pin := PageListPin{node: s.pages.first, y: 5, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	second_page := &s.pages.first.next.data
@@ -3518,7 +3518,7 @@ func TestPl2_PageList_split_preserves_styled_cells(t *testing.T) {
 	page := &s.pages.first.data
 
 	// Create a style and apply it to cells in rows 5-7 (which will be in the second page)
-	style := Style{flags: styleFlags{bold: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
 	style_id, err := page.styles.Add(style)
 	zigTry(t, err)
 
@@ -3536,7 +3536,7 @@ func TestPl2_PageList_split_preserves_styled_cells(t *testing.T) {
 	page.styles.Release(style_id)
 
 	// Split at row 5
-	split_pin := PageListPin{node: s.pages.first, y: 5, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	first_page := &s.pages.first.data
@@ -3555,7 +3555,7 @@ func TestPl2_PageList_split_preserves_styled_cells(t *testing.T) {
 		expect(t, rac.cell.style_id != 0, "rac.cell.style_id != 0")
 
 		got_style := second_page.styles.Get(rac.cell.style_id)
-		expect(t, got_style.flags.bold, "got_style.flags.bold")
+		expect(t, got_style.Flags.Bold, "got_style.flags.bold")
 		expect(t, rac.row.styled, "rac.row.styled")
 	}
 }
@@ -3580,7 +3580,7 @@ func TestPl2_PageList_split_preserves_grapheme_clusters(t *testing.T) {
 	}
 
 	// Split at row 5
-	split_pin := PageListPin{node: s.pages.first, y: 5, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	first_page := &s.pages.first.data
@@ -3616,8 +3616,8 @@ func TestPl2_PageList_split_preserves_hyperlinks(t *testing.T) {
 
 	// Add a hyperlink to row 7 (will be row 2 in second page after split at 5)
 	hyperlink_id, err := page.InsertHyperlink(Hyperlink{
-		id:  pl2Implicit(0),
-		uri: []uint8("https://example.com"),
+		ID:  pl2Implicit(0),
+		URI: []uint8("https://example.com"),
 	})
 	zigTry(t, err)
 	{
@@ -3627,7 +3627,7 @@ func TestPl2_PageList_split_preserves_hyperlinks(t *testing.T) {
 	}
 
 	// Split at row 5
-	split_pin := PageListPin{node: s.pages.first, y: 5, x: 0}
+	split_pin := PageListPin{Node: s.pages.first, Y: 5, X: 0}
 	zigTry(t, s.Split(split_pin))
 
 	first_page := &s.pages.first.data
@@ -3882,10 +3882,10 @@ func TestPl2_term51_init_fields_of_a_default_list(t *testing.T) {
 	// The only tracked pin is the viewport pin at the top left.
 	expectEqual[uint](t, 1, s.CountTrackedPins())
 	expect(t, s.TrackedPins()[0] == s.viewport_pin, "s.trackedPins()[0] == s.viewport_pin")
-	expect(t, s.viewport_pin.node == node, "s.viewport_pin.node == node")
-	expectEqual[SizeCellCountInt](t, 0, s.viewport_pin.x)
-	expectEqual[SizeCellCountInt](t, 0, s.viewport_pin.y)
-	expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
+	expect(t, s.viewport_pin.Node == node, "s.viewport_pin.node == node")
+	expectEqual[SizeCellCountInt](t, 0, s.viewport_pin.X)
+	expectEqual[SizeCellCountInt](t, 0, s.viewport_pin.Y)
+	expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
 
 	// The grid is blank.
 	for y := uint(0); y < 24; y++ {
@@ -3956,7 +3956,7 @@ func TestPl2_term51_init_smallest_dimensions(t *testing.T) {
 	expectEqual[SizeCellCountInt](t, 1, s.rows)
 	expectEqual[SizeCellCountInt](t, 23475, s.pages.first.data.capacity.rows)
 	expectEqual(t, 2*pageListStdSize(), s.min_max_size)
-	expectEqual(t, PageListPin{node: s.pages.first, y: 0, x: 0}, s.GetTopLeft(PointTagActive))
+	expectEqual(t, PageListPin{Node: s.pages.first, Y: 0, X: 0}, s.GetTopLeft(PointTagActive))
 	expect(t, !s.Pin(pl2Active(1, 0)).Valid, "s.pin(.{ .active = .{ .x = 1, .y = 0 } }) == null")
 	expect(t, !s.Pin(pl2Active(0, 1)).Valid, "s.pin(.{ .active = .{ .x = 0, .y = 1 } }) == null")
 }
@@ -3998,8 +3998,8 @@ func TestPl2_term51_init_rows_split_across_pages_at_the_page_row_capacity(t *tes
 			}
 
 			// Active area is the whole list.
-			expect(t, s.GetTopLeft(PointTagActive).node == s.pages.first, "s.getTopLeft(.active).node == s.pages.first.?")
-			expectEqual[SizeCellCountInt](t, 0, s.GetTopLeft(PointTagActive).y)
+			expect(t, s.GetTopLeft(PointTagActive).Node == s.pages.first, "s.getTopLeft(.active).node == s.pages.first.?")
+			expectEqual[SizeCellCountInt](t, 0, s.GetTopLeft(PointTagActive).Y)
 		}()
 	}
 }
@@ -4029,12 +4029,12 @@ func TestPl2_term51_init_maximum_rows(t *testing.T) {
 	expectEqual[SizeCellCountInt](t, 65535, s.rows)
 	expectEqual(t, 4*pageListStdSize(), s.min_max_size)
 	expectEqual[uint64](t, 3, s.page_serial)
-	expectEqual(t, s.pages.first, s.GetTopLeft(PointTagActive).node)
-	expectEqual[SizeCellCountInt](t, 0, s.GetTopLeft(PointTagActive).y)
+	expectEqual(t, s.pages.first, s.GetTopLeft(PointTagActive).Node)
+	expectEqual[SizeCellCountInt](t, 0, s.GetTopLeft(PointTagActive).Y)
 
 	last := pl2Pin(t, s, pl2Active(0, 65534))
-	expect(t, last.node == s.pages.last, "last.node == s.pages.last.?")
-	expectEqual[SizeCellCountInt](t, 18584, last.y)
+	expect(t, last.Node == s.pages.last, "last.node == s.pages.last.?")
+	expectEqual[SizeCellCountInt](t, 18584, last.Y)
 	expect(t, !s.Pin(pl2Active(0, 65535)).Valid, "s.pin(.{ .active = .{ .x = 0, .y = 65535 } }) == null")
 }
 
@@ -4405,11 +4405,11 @@ func TestPl2_term51_verifyIntegrity_TotalRowsMismatch(t *testing.T) {
 	// It takes precedence over bad tracked pins.
 	p := pl2Track(t, s, pl2Pin(t, s, pl2Screen(0, 50)))
 	defer s.UntrackPin(p)
-	p.y = 200
+	p.Y = 200
 	s.total_rows = 99
 	pl2ExpectError(t, ErrTotalRowsMismatch, s.verifyIntegrity())
 	s.total_rows = 100
-	p.y = 50
+	p.Y = 50
 	zigTry(t, s.verifyIntegrity())
 }
 
@@ -4432,56 +4432,56 @@ func TestPl2_term51_verifyIntegrity_TrackedPinInvalid(t *testing.T) {
 	zigTry(t, s.verifyIntegrity())
 
 	// y: last row of the page is valid, one past is not.
-	p.node = s.pages.first
-	p.y = 92
+	p.Node = s.pages.first
+	p.Y = 92
 	zigTry(t, s.verifyIntegrity())
-	p.y = 93
+	p.Y = 93
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
 
 	// The last page has only 7 rows.
-	p.node = s.pages.last
-	p.y = 6
+	p.Node = s.pages.last
+	p.Y = 6
 	zigTry(t, s.verifyIntegrity())
-	p.y = 7
+	p.Y = 7
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
 
 	// x: last column valid, one past not (checked against the page's
 	// size.cols).
-	p.y = 0
-	p.x = 499
+	p.Y = 0
+	p.X = 499
 	zigTry(t, s.verifyIntegrity())
-	p.x = 500
+	p.X = 500
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
-	p.x = math.MaxUint16
+	p.X = math.MaxUint16
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
 
 	// The page's size.cols (not the list's cols) is the bound.
-	p.x = 100
+	p.X = 100
 	s.pages.last.data.size.cols = 100
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
-	p.x = 99
+	p.X = 99
 	zigTry(t, s.verifyIntegrity())
 	s.pages.last.data.size.cols = 500
-	p.x = 0
+	p.X = 0
 
 	// A node that is not part of this list.
-	p.node = other.pages.first
+	p.Node = other.pages.first
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
 
 	// The viewport pin is itself tracked so it is checked too.
-	p.node = s.pages.first
+	p.Node = s.pages.first
 	zigTry(t, s.verifyIntegrity())
-	s.viewport_pin.y = 93
+	s.viewport_pin.Y = 93
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
-	s.viewport_pin.y = 0
+	s.viewport_pin.Y = 0
 	zigTry(t, s.verifyIntegrity())
 
 	// Paused: not reported.
-	p.y = 93
+	p.Y = 93
 	s.PauseIntegrityChecks(true)
 	zigTry(t, s.verifyIntegrity())
 	s.PauseIntegrityChecks(false)
-	p.y = 0
+	p.Y = 0
 }
 
 // Zig: test "term51: verifyIntegrity: viewport pin insufficient rows"
@@ -4503,12 +4503,12 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_insufficient_rows(t *testing.T)
 
 	// 54 total rows, 24 needed: offsets 0..30 are fine.
 	for _, y := range []SizeCellCountInt{0, 1, 29, 30} {
-		*s.viewport_pin = PageListPin{node: s.pages.first, y: y}
+		*s.viewport_pin = PageListPin{Node: s.pages.first, Y: y}
 		zigTry(t, s.verifyIntegrity())
 	}
 	// 31 leaves only 23 rows.
 	for _, y := range []SizeCellCountInt{31, 40, 53} {
-		*s.viewport_pin = PageListPin{node: s.pages.first, y: y}
+		*s.viewport_pin = PageListPin{Node: s.pages.first, Y: y}
 		pl2ExpectError(t, ErrViewportPinInsufficientRows, s.verifyIntegrity())
 	}
 
@@ -4518,7 +4518,7 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_insufficient_rows(t *testing.T)
 	s.PauseIntegrityChecks(false)
 
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
-	*s.viewport_pin = PageListPin{node: s.pages.first}
+	*s.viewport_pin = PageListPin{Node: s.pages.first}
 	zigTry(t, s.verifyIntegrity())
 }
 
@@ -4555,7 +4555,7 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_across_pages(t *testing.T) {
 		for i := uint(0); i < c.page; i++ {
 			node = node.next
 		}
-		*s.viewport_pin = PageListPin{node: node, y: c.y}
+		*s.viewport_pin = PageListPin{Node: node, Y: c.y}
 
 		s.viewport_pin_row_offset = None[uint]()
 		zigTry(t, s.verifyIntegrity())
@@ -4571,15 +4571,15 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_across_pages(t *testing.T) {
 
 	// Boundary of the insufficient rows check: 274 total rows, 24 needed.
 	s.viewport_pin_row_offset = None[uint]()
-	*s.viewport_pin = PageListPin{node: s.pages.last, y: 64}
+	*s.viewport_pin = PageListPin{Node: s.pages.last, Y: 64}
 	zigTry(t, s.verifyIntegrity())
-	*s.viewport_pin = PageListPin{node: s.pages.last, y: 65}
+	*s.viewport_pin = PageListPin{Node: s.pages.last, Y: 65}
 	pl2ExpectError(t, ErrViewportPinInsufficientRows, s.verifyIntegrity())
-	*s.viewport_pin = PageListPin{node: s.pages.last, y: 87}
+	*s.viewport_pin = PageListPin{Node: s.pages.last, Y: 87}
 	pl2ExpectError(t, ErrViewportPinInsufficientRows, s.verifyIntegrity())
 
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
-	*s.viewport_pin = PageListPin{node: s.pages.first}
+	*s.viewport_pin = PageListPin{Node: s.pages.first}
 }
 
 // Zig: test "term51: verifyIntegrity: viewport pin offset mismatch precedes insufficient rows"
@@ -4596,7 +4596,7 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_offset_mismatch_precedes_insuff
 	zigTry(t, s.growRows(30))
 
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: s.pages.first, y: 40}
+	*s.viewport_pin = PageListPin{Node: s.pages.first, Y: 40}
 
 	// Wrong cache and too few rows: the mismatch is reported first.
 	s.viewport_pin_row_offset = Some[uint](1)
@@ -4606,7 +4606,7 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_offset_mismatch_precedes_insuff
 	pl2ExpectError(t, ErrViewportPinInsufficientRows, s.verifyIntegrity())
 
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
-	*s.viewport_pin = PageListPin{node: s.pages.first}
+	*s.viewport_pin = PageListPin{Node: s.pages.first}
 	s.viewport_pin_row_offset = None[uint]()
 }
 
@@ -4627,8 +4627,8 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_not_in_list(t *testing.T) {
 	// With the viewport pin tracked, a foreign node is first reported as
 	// an invalid tracked pin.
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	vp_node := s.viewport_pin.node
-	s.viewport_pin.node = other.pages.first
+	vp_node := s.viewport_pin.Node
+	s.viewport_pin.Node = other.pages.first
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
 
 	// Hand construct the otherwise unreachable state: viewport pin not
@@ -4644,7 +4644,7 @@ func TestPl2_term51_verifyIntegrity_viewport_pin_not_in_list(t *testing.T) {
 	zigTry(t, s.verifyIntegrity())
 
 	// Restore.
-	s.viewport_pin.node = vp_node
+	s.viewport_pin.Node = vp_node
 	s.viewport_pin_row_offset = None[uint]()
 	zigTry(t, s.tracked_pins.PutNoClobber(s.viewport_pin))
 	zigTry(t, s.verifyIntegrity())
@@ -4666,7 +4666,7 @@ func TestPl2_term51_verifyIntegrity_viewport_state_ignored_unless_pin(t *testing
 	// Nonsense cached offset and a pin with too few rows below it do not
 	// matter for the active and top viewports.
 	s.viewport_pin_row_offset = Some[uint](9999)
-	*s.viewport_pin = PageListPin{node: s.pages.first, y: 53}
+	*s.viewport_pin = PageListPin{Node: s.pages.first, Y: 53}
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
 	zigTry(t, s.verifyIntegrity())
 	s.viewport = PageListViewport{Tag: PageListViewportTop}
@@ -4675,7 +4675,7 @@ func TestPl2_term51_verifyIntegrity_viewport_state_ignored_unless_pin(t *testing
 	pl2ExpectError(t, ErrViewportPinOffsetMismatch, s.verifyIntegrity())
 
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
-	*s.viewport_pin = PageListPin{node: s.pages.first}
+	*s.viewport_pin = PageListPin{Node: s.pages.first}
 	s.viewport_pin_row_offset = None[uint]()
 }
 
@@ -4695,15 +4695,15 @@ func TestPl2_term51_verifyIntegrity_tracked_pin_check_precedes_viewport_checks(t
 	p := pl2Track(t, s, pl2Pin(t, s, pl2Screen(0, 1)))
 	defer s.UntrackPin(p)
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: s.pages.first, y: 53}
+	*s.viewport_pin = PageListPin{Node: s.pages.first, Y: 53}
 	s.viewport_pin_row_offset = Some[uint](5)
-	p.y = 54
+	p.Y = 54
 	pl2ExpectError(t, ErrTrackedPinInvalid, s.verifyIntegrity())
-	p.y = 1
+	p.Y = 1
 	pl2ExpectError(t, ErrViewportPinOffsetMismatch, s.verifyIntegrity())
 
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
-	*s.viewport_pin = PageListPin{node: s.pages.first}
+	*s.viewport_pin = PageListPin{Node: s.pages.first}
 	s.viewport_pin_row_offset = None[uint]()
 }
 
@@ -4782,7 +4782,7 @@ func TestPl2_term51_deinit_cloned_list_does_not_touch_the_source(t *testing.T) {
 	defer s.Deinit()
 	pl2JMarkRows(t, s)
 
-	c, err := s.Clone(PageListClone{top: pl2Screen(0, 0)})
+	c, err := s.Clone(PageListClone{Top: pl2Screen(0, 0)})
 	zigTry(t, err)
 	c.Deinit()
 
@@ -4826,7 +4826,7 @@ func TestPl2_term51_reset_clears_history_and_rebuilds_a_single_page(t *testing.T
 	}
 	expect(t, !s.Pin(pl2Screen(0, 24)).Valid, "s.pin(.{ .screen = .{ .x = 0, .y = 24 } }) == null")
 	expectEqual(t,
-		PageListPin{node: s.pages.first, y: 0, x: 0},
+		PageListPin{Node: s.pages.first, Y: 0, X: 0},
 		s.GetTopLeft(PointTagActive),
 	)
 	zigTry(t, s.verifyIntegrity())
@@ -4855,9 +4855,9 @@ func TestPl2_panic_verifyIntegrity_viewport_pin_garbage(t *testing.T) {
 	testStdCapacity(t)
 
 	s := pl2Init(t, 80, 24, None[uint64]())
-	s.viewport_pin.garbage = true
+	s.viewport_pin.Garbage = true
 	pl2ExpectPanic(t, func() { _ = s.verifyIntegrity() })
-	s.viewport_pin.garbage = false
+	s.viewport_pin.Garbage = false
 	s.Deinit()
 }
 
@@ -4889,7 +4889,7 @@ func TestPl2_panic_resize_zero_cols(t *testing.T) {
 
 	s := pl2Init(t, 10, 10, None[uint64]())
 	defer s.Deinit()
-	pl2ExpectPanic(t, func() { _ = s.Resize(PageListResize{cols: pl2C(0), reflow: true}) })
+	pl2ExpectPanic(t, func() { _ = s.Resize(PageListResize{Cols: pl2C(0), Reflow: true}) })
 }
 
 // Go-only: panic test: resize: assert(v > 0) for rows
@@ -4898,7 +4898,7 @@ func TestPl2_panic_resize_zero_rows(t *testing.T) {
 
 	s := pl2Init(t, 10, 10, None[uint64]())
 	defer s.Deinit()
-	pl2ExpectPanic(t, func() { _ = s.Resize(PageListResize{rows: pl2C(0), reflow: true}) })
+	pl2ExpectPanic(t, func() { _ = s.Resize(PageListResize{Rows: pl2C(0), Reflow: true}) })
 }
 
 // Go-only: panic test: resizeCols: assert(cols != self.cols)
@@ -4931,7 +4931,7 @@ func TestPl2_panic_split_invalid_pin(t *testing.T) {
 	defer s.Deinit()
 	other := pl2Init(t, 10, 10, None[uint64]())
 	defer other.Deinit()
-	pl2ExpectPanic(t, func() { _ = s.Split(PageListPin{node: other.pages.first, y: 5, x: 0}) })
+	pl2ExpectPanic(t, func() { _ = s.Split(PageListPin{Node: other.pages.first, Y: 5, X: 0}) })
 }
 
 // Go-only: panic test: split: assert(self.pinIsValid(p)) with y beyond the page rows
@@ -4941,7 +4941,7 @@ func TestPl2_panic_split_pin_y_out_of_range(t *testing.T) {
 
 	s := pl2Init(t, 10, 10, None[uint64]())
 	defer s.Deinit()
-	pl2ExpectPanic(t, func() { _ = s.Split(PageListPin{node: s.pages.first, y: 10, x: 0}) })
+	pl2ExpectPanic(t, func() { _ = s.Split(PageListPin{Node: s.pages.first, Y: 10, X: 0}) })
 }
 
 // Go-only: panic test: trackPin: assert(self.pinIsValid(p)) with a node that is not in the list
@@ -4953,7 +4953,7 @@ func TestPl2_panic_trackPin_invalid_pin(t *testing.T) {
 	defer s.Deinit()
 	other := pl2Init(t, 10, 10, None[uint64]())
 	defer other.Deinit()
-	pl2ExpectPanic(t, func() { _, _ = s.TrackPin(PageListPin{node: other.pages.first, y: 0, x: 0}) })
+	pl2ExpectPanic(t, func() { _, _ = s.TrackPin(PageListPin{Node: other.pages.first, Y: 0, X: 0}) })
 }
 
 // Go-only: panic test: untrackPin: assert(p != self.viewport_pin)

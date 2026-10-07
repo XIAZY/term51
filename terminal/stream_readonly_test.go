@@ -51,7 +51,7 @@ type sroSnap struct {
 	pending_wrap          bool
 	cursor_protected      bool
 	cursor_style_value    Style
-	hyperlink_id          HyperlinkId
+	hyperlink_id          HyperlinkID
 	hyperlink_implicit_id SizeOffsetInt
 	semantic_content      PageCellSemanticContent
 	protected_mode        ANSIProtectedMode
@@ -80,46 +80,46 @@ type sroSnap struct {
 // sroSnapshot is term51DSnapshot.
 func sroSnapshot(t *testing.T, tm *Terminal) sroSnap {
 	t.Helper()
-	scr := tm.screens.active
+	scr := tm.Screens.Active
 	var tabs [sroMaxCols]bool
-	n := uint(tm.cols)
+	n := uint(tm.Cols)
 	if n > sroMaxCols {
 		n = sroMaxCols
 	}
 	for i := uint(0); i < n; i++ {
-		tabs[i] = tm.tabstops.Get(i)
+		tabs[i] = tm.Tabstops.Get(i)
 	}
 	str, err := tm.PlainString()
 	zigTry(t, err)
 	return sroSnap{
-		x:                     scr.cursor.x,
-		y:                     scr.cursor.y,
-		cursor_style:          scr.cursor.cursor_style,
-		pending_wrap:          scr.cursor.pending_wrap,
-		cursor_protected:      scr.cursor.protected,
-		cursor_style_value:    scr.cursor.style,
-		hyperlink_id:          scr.cursor.hyperlink_id,
-		hyperlink_implicit_id: scr.cursor.hyperlink_implicit_id,
-		semantic_content:      scr.cursor.semantic_content,
-		protected_mode:        scr.protected_mode,
-		saved_cursor:          scr.saved_cursor,
-		charset:               scr.charset,
-		kitty_keyboard:        scr.kitty_keyboard,
-		active_key:            tm.screens.active_key,
-		top:                   tm.scrolling_region.top,
-		bottom:                tm.scrolling_region.bottom,
-		left:                  tm.scrolling_region.left,
-		right:                 tm.scrolling_region.right,
-		cols:                  tm.cols,
-		rows:                  tm.rows,
-		modes:                 tm.modes.values,
-		saved_modes:           tm.modes.saved,
-		flags:                 tm.flags,
-		colors:                tm.colors,
-		status_display:        tm.status_display,
-		mouse_shape:           tm.mouse_shape,
-		previous_char:         tm.previous_char,
-		pwd_len:               uint(len(tm.pwd)),
+		x:                     scr.Cursor.X,
+		y:                     scr.Cursor.Y,
+		cursor_style:          scr.Cursor.CursorStyle,
+		pending_wrap:          scr.Cursor.PendingWrap,
+		cursor_protected:      scr.Cursor.Protected,
+		cursor_style_value:    scr.Cursor.Style,
+		hyperlink_id:          scr.Cursor.HyperlinkID,
+		hyperlink_implicit_id: scr.Cursor.HyperlinkImplicitID,
+		semantic_content:      scr.Cursor.SemanticContent,
+		protected_mode:        scr.ProtectedMode,
+		saved_cursor:          scr.SavedCursor,
+		charset:               scr.Charset,
+		kitty_keyboard:        scr.KittyKeyboard,
+		active_key:            tm.Screens.ActiveKey,
+		top:                   tm.ScrollingRegion.Top,
+		bottom:                tm.ScrollingRegion.Bottom,
+		left:                  tm.ScrollingRegion.Left,
+		right:                 tm.ScrollingRegion.Right,
+		cols:                  tm.Cols,
+		rows:                  tm.Rows,
+		modes:                 tm.Modes.Values,
+		saved_modes:           tm.Modes.Saved,
+		flags:                 tm.Flags,
+		colors:                tm.Colors,
+		status_display:        tm.StatusDisplay,
+		mouse_shape:           tm.MouseShape,
+		previous_char:         tm.PreviousChar,
+		pwd_len:               uint(len(tm.Pwd)),
 		tabs:                  tabs,
 		text:                  string(str),
 	}
@@ -128,9 +128,9 @@ func sroSnapshot(t *testing.T, tm *Terminal) sroSnap {
 // sroModesWith is term51DModesWith: the mode bits of a snapshot with one mode
 // changed.
 func sroModesWith(bits ModesModePacked, mode ModesMode, value bool) ModesModePacked {
-	state := ModesModeState{values: bits}
+	state := ModesModeState{Values: bits}
 	state.Set(mode, value)
-	return state.values
+	return state.Values
 }
 
 // sroVt is `try h.vt(tag, value)`: the action carries its own tag.
@@ -146,14 +146,14 @@ func sroAct(key StreamActionKey) StreamAction { return StreamAction{Tag: key} }
 
 // sroPrintAct is `.print, .{ .cp = cp }`.
 func sroPrintAct(cp uint32) StreamAction {
-	return StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: cp}}
+	return StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{Cp: cp}}
 }
 
 // sroModeAct is set_mode, reset_mode, save_mode, restore_mode or
 // request_mode with `.{ .mode = mode }`.
 func sroModeAct(key StreamActionKey, mode ModesMode) StreamAction {
 	a := StreamAction{Tag: key}
-	m := StreamActionMode{mode: mode}
+	m := StreamActionMode{Mode: mode}
 	switch key {
 	case StreamActionKeySetMode:
 		a.SetMode = m
@@ -175,7 +175,7 @@ func sroModeAct(key StreamActionKey, mode ModesMode) StreamAction {
 // `.{ .top_left = a, .bottom_right = b }`.
 func sroMarginAct(key StreamActionKey, top_left uint16, bottom_right uint16) StreamAction {
 	a := StreamAction{Tag: key}
-	m := StreamActionMargin{top_left: top_left, bottom_right: bottom_right}
+	m := StreamActionMargin{TopLeft: top_left, BottomRight: bottom_right}
 	switch key {
 	case StreamActionKeyTopAndBottomMargin:
 		a.TopAndBottomMargin = m
@@ -239,7 +239,7 @@ func sroU16Act(key StreamActionKey, n uint16) StreamAction {
 // sroMoveAct is a cursor movement with `.{ .value = n }`.
 func sroMoveAct(key StreamActionKey, n uint16) StreamAction {
 	a := StreamAction{Tag: key}
-	m := StreamActionCursorMovement{value: n}
+	m := StreamActionCursorMovement{Value: n}
 	switch key {
 	case StreamActionKeyCursorUp:
 		a.CursorUp = m
@@ -265,7 +265,7 @@ func sroMoveAct(key StreamActionKey, n uint16) StreamAction {
 
 // sroCursorPosAct is `.cursor_pos, .{ .row = row, .col = col }`.
 func sroCursorPosAct(row uint16, col uint16) StreamAction {
-	return StreamAction{Tag: StreamActionKeyCursorPos, CursorPos: StreamActionCursorPos{row: row, col: col}}
+	return StreamAction{Tag: StreamActionKeyCursorPos, CursorPos: StreamActionCursorPos{Row: row, Col: col}}
 }
 
 // sroBoolAct is an action whose payload is a bool: the erase_display_* and
@@ -303,7 +303,7 @@ func sroBoolAct(key StreamActionKey, b bool) StreamAction {
 // `.{ .flags = flags }`.
 func sroKittyAct(key StreamActionKey, flags KittyKeyFlags) StreamAction {
 	a := StreamAction{Tag: key}
-	f := StreamActionKittyKeyboardFlags{flags: flags}
+	f := StreamActionKittyKeyboardFlags{Flags: flags}
 	switch key {
 	case StreamActionKeyKittyKeyboardPush:
 		a.KittyKeyboardPush = f
@@ -328,7 +328,7 @@ func sroSGRAct(tag SGRAttributeTag) StreamAction {
 func sroConfigureCharsetAct(slot CharsetsSlots, charset CharsetsCharset) StreamAction {
 	return StreamAction{
 		Tag:              StreamActionKeyConfigureCharset,
-		ConfigureCharset: StreamActionConfigureCharset{slot: slot, charset: charset},
+		ConfigureCharset: StreamActionConfigureCharset{Slot: slot, Charset: charset},
 	}
 }
 
@@ -336,7 +336,7 @@ func sroConfigureCharsetAct(slot CharsetsSlots, charset CharsetsCharset) StreamA
 func sroInvokeCharsetAct(bank CharsetsActiveSlot, charset CharsetsSlots, locking bool) StreamAction {
 	return StreamAction{
 		Tag:           StreamActionKeyInvokeCharset,
-		InvokeCharset: StreamActionInvokeCharset{bank: bank, charset: charset, locking: locking},
+		InvokeCharset: StreamActionInvokeCharset{Bank: bank, Charset: charset, Locking: locking},
 	}
 }
 
@@ -349,7 +349,7 @@ func sroSemanticPromptAct(cmd OSCCommandSemanticPrompt) StreamAction {
 func sroStartHyperlinkAct(uri string, id Optional[[]uint8]) StreamAction {
 	return StreamAction{
 		Tag:            StreamActionKeyStartHyperlink,
-		StartHyperlink: StreamActionStartHyperlink{uri: []uint8(uri), id: id},
+		StartHyperlink: StreamActionStartHyperlink{URI: []uint8(uri), ID: id},
 	}
 }
 
@@ -378,10 +378,10 @@ func sroBusy(t *testing.T, tm *Terminal, h *StreamReadonlyHandler) {
 	sroVt(t, h, sroModeAct(StreamActionKeySetMode, ModesModeMouseEventNormal))
 	sroVt(t, h, sroModeAct(StreamActionKeySetMode, ModesModeMouseFormatSgr))
 	sroVt(t, h, sroModeAct(StreamActionKeySetMode, ModesModeBracketedPaste))
-	tm.colors.palette.Set(3, ColorRGB{r: 1, g: 2, b: 3})
-	tm.colors.foreground.Set(ColorRGB{r: 4, g: 5, b: 6})
-	tm.colors.cursor.Set(ColorRGB{r: 7, g: 8, b: 9})
-	sroVt(t, h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{disambiguate: true}))
+	tm.Colors.Palette.Set(3, ColorRGB{R: 1, G: 2, B: 3})
+	tm.Colors.Foreground.Set(ColorRGB{R: 4, G: 5, B: 6})
+	tm.Colors.Cursor.Set(ColorRGB{R: 7, G: 8, B: 9})
+	sroVt(t, h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{Disambiguate: true}))
 	sroVt(t, h, sroAct(StreamActionKeyTabSet))
 	h.terminal.SetTopAndBottomMargin(2, 5)
 	h.terminal.SetCursorPos(3, 4)
@@ -389,14 +389,14 @@ func sroBusy(t *testing.T, tm *Terminal, h *StreamReadonlyHandler) {
 
 // sroAt is term51DAt.
 func sroAt(tm *Terminal, x SizeCellCountInt, y SizeCellCountInt) {
-	tm.screens.active.CursorAbsolute(x, y)
+	tm.Screens.Active.CursorAbsolute(x, y)
 }
 
 // sroExpectCursor is term51DExpectCursor.
 func sroExpectCursor(t *testing.T, tm *Terminal, x uint, y uint) {
 	t.Helper()
-	expectEqual(t, x, uint(tm.screens.active.cursor.x))
-	expectEqual(t, y, uint(tm.screens.active.cursor.y))
+	expectEqual(t, x, uint(tm.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(tm.Screens.Active.Cursor.Y))
 }
 
 // sroExpectText is term51DExpectText.
@@ -418,7 +418,7 @@ func sroFill(t *testing.T, tm *Terminal) {
 // sroScreen is `t.screens.get(key).?`.
 func sroScreen(t *testing.T, tm *Terminal, key ScreenSetKey) *Screen {
 	t.Helper()
-	scr := tm.screens.Get(key)
+	scr := tm.Screens.Get(key)
 	if scr == nil {
 		t.Fatalf("unwrapped a null optional: screens.get(%d)", key)
 	}
@@ -428,16 +428,16 @@ func sroScreen(t *testing.T, tm *Terminal, key ScreenSetKey) *Screen {
 // sroGetCell is `t.screens.active.pages.getCell(.{ .active = .{ .x = x, .y = y } }).?`.
 func sroGetCell(t *testing.T, tm *Terminal, x SizeCellCountInt, y uint32) PageListCell {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(Point{
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: x, y: y},
+		Active: PointCoordinate{X: x, Y: y},
 	}))
 }
 
 // sroDumpScreen is `t.screens.active.dumpStringAlloc(alloc, .{ .screen = .{} })`.
 func sroDumpScreen(t *testing.T, tm *Terminal) string {
 	t.Helper()
-	str, err := tm.screens.active.DumpStringAlloc(Point{Tag: PointTagScreen})
+	str, err := tm.Screens.Active.DumpStringAlloc(Point{Tag: PointTagScreen})
 	zigTry(t, err)
 	return string(str)
 }
@@ -457,7 +457,7 @@ func sroNewFilled(t *testing.T) Terminal {
 	tm := sroNew(t, 10, 5)
 	sroFill(t, &tm)
 	sroAt(&tm, 0, 0)
-	tm.screens.active.cursor.pending_wrap = false
+	tm.Screens.Active.Cursor.PendingWrap = false
 	return tm
 }
 
@@ -476,8 +476,8 @@ func TestStreamReadonly_basic_print(t *testing.T) {
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("Hello")))
-	expectEqual(t, 5, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
+	expectEqual(t, 5, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
 
 	str, err := tm.PlainString()
 	zigTry(t, err)
@@ -498,13 +498,13 @@ func TestStreamReadonly_cursor_movement(t *testing.T) {
 
 	// Move cursor using escape sequences
 	zigTry(t, s.NextSlice([]uint8("Hello\x1B[1;1H")))
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
 
 	// Move to position 2,3
 	zigTry(t, s.NextSlice([]uint8("\x1B[2;3H")))
-	expectEqual(t, 2, tm.screens.active.cursor.x)
-	expectEqual(t, 1, tm.screens.active.cursor.y)
+	expectEqual(t, 2, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 1, tm.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "erase operations"
@@ -520,8 +520,8 @@ func TestStreamReadonly_erase_operations(t *testing.T) {
 
 	// Print some text
 	zigTry(t, s.NextSlice([]uint8("Hello World")))
-	expectEqual(t, 11, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
+	expectEqual(t, 11, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
 
 	// Move cursor to position 1,6 and erase from cursor to end of line
 	zigTry(t, s.NextSlice([]uint8("\x1B[1;6H")))
@@ -545,7 +545,7 @@ func TestStreamReadonly_tabs(t *testing.T) {
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("A\tB")))
-	expectEqual(t, 9, tm.screens.active.cursor.x)
+	expectEqual(t, 9, tm.Screens.Active.Cursor.X)
 
 	str, err := tm.PlainString()
 	zigTry(t, err)
@@ -565,11 +565,11 @@ func TestStreamReadonly_modes(t *testing.T) {
 	defer s.Deinit()
 
 	// Test wraparound mode
-	expect(t, tm.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+	expect(t, tm.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
 	zigTry(t, s.NextSlice([]uint8("\x1B[?7l"))) // Disable wraparound
-	expect(t, !tm.modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
+	expect(t, !tm.Modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
 	zigTry(t, s.NextSlice([]uint8("\x1B[?7h"))) // Enable wraparound
-	expect(t, tm.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+	expect(t, tm.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
 }
 
 // Zig: test "scrolling regions"
@@ -585,10 +585,10 @@ func TestStreamReadonly_scrolling_regions(t *testing.T) {
 
 	// Set scrolling region from line 5 to 20
 	zigTry(t, s.NextSlice([]uint8("\x1B[5;20r")))
-	expectEqual(t, 4, tm.scrolling_region.top)
-	expectEqual(t, 19, tm.scrolling_region.bottom)
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 79, tm.scrolling_region.right)
+	expectEqual(t, 4, tm.ScrollingRegion.Top)
+	expectEqual(t, 19, tm.ScrollingRegion.Bottom)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 79, tm.ScrollingRegion.Right)
 }
 
 // Zig: test "charsets"
@@ -625,18 +625,18 @@ func TestStreamReadonly_alt_screen(t *testing.T) {
 
 	// Write to primary screen
 	zigTry(t, s.NextSlice([]uint8("Primary")))
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	// Switch to alt screen
 	zigTry(t, s.NextSlice([]uint8("\x1B[?1049h")))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Write to alt screen
 	zigTry(t, s.NextSlice([]uint8("Alt")))
 
 	// Switch back to primary
 	zigTry(t, s.NextSlice([]uint8("\x1B[?1049l")))
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	str, err := tm.PlainString()
 	zigTry(t, err)
@@ -657,21 +657,21 @@ func TestStreamReadonly_cursor_save_and_restore(t *testing.T) {
 
 	// Move cursor to 10,15
 	zigTry(t, s.NextSlice([]uint8("\x1B[10;15H")))
-	expectEqual(t, 14, tm.screens.active.cursor.x)
-	expectEqual(t, 9, tm.screens.active.cursor.y)
+	expectEqual(t, 14, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 9, tm.Screens.Active.Cursor.Y)
 
 	// Save cursor
 	zigTry(t, s.NextSlice([]uint8("\x1B7")))
 
 	// Move cursor elsewhere
 	zigTry(t, s.NextSlice([]uint8("\x1B[1;1H")))
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
 
 	// Restore cursor
 	zigTry(t, s.NextSlice([]uint8("\x1B8")))
-	expectEqual(t, 14, tm.screens.active.cursor.x)
-	expectEqual(t, 9, tm.screens.active.cursor.y)
+	expectEqual(t, 14, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 9, tm.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "attributes"
@@ -716,8 +716,8 @@ func TestStreamReadonly_DECALN_screen_alignment(t *testing.T) {
 	expectEqualStrings(t, "EEEEEEEEEE\nEEEEEEEEEE\nEEEEEEEEEE", string(str))
 
 	// Cursor should be at 1,1
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "full reset"
@@ -741,11 +741,11 @@ func TestStreamReadonly_full_reset(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("\x1Bc")))
 
 	// Verify reset state
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
-	expectEqual(t, 0, tm.scrolling_region.top)
-	expectEqual(t, 23, tm.scrolling_region.bottom)
-	expect(t, tm.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
+	expectEqual(t, 0, tm.ScrollingRegion.Top)
+	expectEqual(t, 23, tm.ScrollingRegion.Bottom)
+	expect(t, tm.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
 }
 
 // Zig: test "ignores query actions"
@@ -784,19 +784,19 @@ func TestStreamReadonly_OSC_4_set_and_reset_palette(t *testing.T) {
 	defer s.Deinit()
 
 	// Save default color
-	default_color_0 := tm.colors.palette.original[0]
+	default_color_0 := tm.Colors.Palette.Original[0]
 
 	// Set color 0 to red
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;0;rgb:ff/00/00\x1b\\")))
-	expectEqual(t, uint8(0xff), tm.colors.palette.current[0].r)
-	expectEqual(t, uint8(0x00), tm.colors.palette.current[0].g)
-	expectEqual(t, uint8(0x00), tm.colors.palette.current[0].b)
-	expect(t, tm.colors.palette.mask.isSet(0), "t.colors.palette.mask.isSet(0)")
+	expectEqual(t, uint8(0xff), tm.Colors.Palette.Current[0].R)
+	expectEqual(t, uint8(0x00), tm.Colors.Palette.Current[0].G)
+	expectEqual(t, uint8(0x00), tm.Colors.Palette.Current[0].B)
+	expect(t, tm.Colors.Palette.Mask.isSet(0), "t.colors.palette.mask.isSet(0)")
 
 	// Reset color 0
 	zigTry(t, s.NextSlice([]uint8("\x1b]104;0\x1b\\")))
-	expectEqual(t, default_color_0, tm.colors.palette.current[0])
-	expect(t, !tm.colors.palette.mask.isSet(0), "!t.colors.palette.mask.isSet(0)")
+	expectEqual(t, default_color_0, tm.Colors.Palette.Current[0])
+	expect(t, !tm.Colors.Palette.Mask.isSet(0), "!t.colors.palette.mask.isSet(0)")
 }
 
 // Zig: test "OSC 104 reset all palette colors"
@@ -814,18 +814,18 @@ func TestStreamReadonly_OSC_104_reset_all_palette_colors(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;0;rgb:ff/00/00\x1b\\")))
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;1;rgb:00/ff/00\x1b\\")))
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;2;rgb:00/00/ff\x1b\\")))
-	expect(t, tm.colors.palette.mask.isSet(0), "t.colors.palette.mask.isSet(0)")
-	expect(t, tm.colors.palette.mask.isSet(1), "t.colors.palette.mask.isSet(1)")
-	expect(t, tm.colors.palette.mask.isSet(2), "t.colors.palette.mask.isSet(2)")
+	expect(t, tm.Colors.Palette.Mask.isSet(0), "t.colors.palette.mask.isSet(0)")
+	expect(t, tm.Colors.Palette.Mask.isSet(1), "t.colors.palette.mask.isSet(1)")
+	expect(t, tm.Colors.Palette.Mask.isSet(2), "t.colors.palette.mask.isSet(2)")
 
 	// Reset all palette colors
 	zigTry(t, s.NextSlice([]uint8("\x1b]104\x1b\\")))
-	expectEqual(t, tm.colors.palette.original[0], tm.colors.palette.current[0])
-	expectEqual(t, tm.colors.palette.original[1], tm.colors.palette.current[1])
-	expectEqual(t, tm.colors.palette.original[2], tm.colors.palette.current[2])
-	expect(t, !tm.colors.palette.mask.isSet(0), "!t.colors.palette.mask.isSet(0)")
-	expect(t, !tm.colors.palette.mask.isSet(1), "!t.colors.palette.mask.isSet(1)")
-	expect(t, !tm.colors.palette.mask.isSet(2), "!t.colors.palette.mask.isSet(2)")
+	expectEqual(t, tm.Colors.Palette.Original[0], tm.Colors.Palette.Current[0])
+	expectEqual(t, tm.Colors.Palette.Original[1], tm.Colors.Palette.Current[1])
+	expectEqual(t, tm.Colors.Palette.Original[2], tm.Colors.Palette.Current[2])
+	expect(t, !tm.Colors.Palette.Mask.isSet(0), "!t.colors.palette.mask.isSet(0)")
+	expect(t, !tm.Colors.Palette.Mask.isSet(1), "!t.colors.palette.mask.isSet(1)")
+	expect(t, !tm.Colors.Palette.Mask.isSet(2), "!t.colors.palette.mask.isSet(2)")
 }
 
 // Zig: test "OSC 10 set and reset foreground color"
@@ -840,18 +840,18 @@ func TestStreamReadonly_OSC_10_set_and_reset_foreground_color(t *testing.T) {
 	defer s.Deinit()
 
 	// Initially unset
-	expect(t, !tm.colors.foreground.Get().Valid, "t.colors.foreground.get() == null")
+	expect(t, !tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() == null")
 
 	// Set foreground to red
 	zigTry(t, s.NextSlice([]uint8("\x1b]10;rgb:ff/00/00\x1b\\")))
-	fg := zigUnwrap(t, tm.colors.foreground.Get())
-	expectEqual(t, uint8(0xff), fg.r)
-	expectEqual(t, uint8(0x00), fg.g)
-	expectEqual(t, uint8(0x00), fg.b)
+	fg := zigUnwrap(t, tm.Colors.Foreground.Get())
+	expectEqual(t, uint8(0xff), fg.R)
+	expectEqual(t, uint8(0x00), fg.G)
+	expectEqual(t, uint8(0x00), fg.B)
 
 	// Reset foreground
 	zigTry(t, s.NextSlice([]uint8("\x1b]110\x1b\\")))
-	expect(t, !tm.colors.foreground.Get().Valid, "t.colors.foreground.get() == null")
+	expect(t, !tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() == null")
 }
 
 // Zig: test "OSC 11 set and reset background color"
@@ -867,14 +867,14 @@ func TestStreamReadonly_OSC_11_set_and_reset_background_color(t *testing.T) {
 
 	// Set background to green
 	zigTry(t, s.NextSlice([]uint8("\x1b]11;rgb:00/ff/00\x1b\\")))
-	bg := zigUnwrap(t, tm.colors.background.Get())
-	expectEqual(t, uint8(0x00), bg.r)
-	expectEqual(t, uint8(0xff), bg.g)
-	expectEqual(t, uint8(0x00), bg.b)
+	bg := zigUnwrap(t, tm.Colors.Background.Get())
+	expectEqual(t, uint8(0x00), bg.R)
+	expectEqual(t, uint8(0xff), bg.G)
+	expectEqual(t, uint8(0x00), bg.B)
 
 	// Reset background
 	zigTry(t, s.NextSlice([]uint8("\x1b]111\x1b\\")))
-	expect(t, !tm.colors.background.Get().Valid, "t.colors.background.get() == null")
+	expect(t, !tm.Colors.Background.Get().Valid, "t.colors.background.get() == null")
 }
 
 // Zig: test "OSC 12 set and reset cursor color"
@@ -890,10 +890,10 @@ func TestStreamReadonly_OSC_12_set_and_reset_cursor_color(t *testing.T) {
 
 	// Set cursor to blue
 	zigTry(t, s.NextSlice([]uint8("\x1b]12;rgb:00/00/ff\x1b\\")))
-	cursor := zigUnwrap(t, tm.colors.cursor.Get())
-	expectEqual(t, uint8(0x00), cursor.r)
-	expectEqual(t, uint8(0x00), cursor.g)
-	expectEqual(t, uint8(0xff), cursor.b)
+	cursor := zigUnwrap(t, tm.Colors.Cursor.Get())
+	expectEqual(t, uint8(0x00), cursor.R)
+	expectEqual(t, uint8(0x00), cursor.G)
+	expectEqual(t, uint8(0xff), cursor.B)
 
 	// Reset cursor
 	zigTry(t, s.NextSlice([]uint8("\x1b]112\x1b\\")))
@@ -913,11 +913,11 @@ func TestStreamReadonly_kitty_color_protocol_set_palette(t *testing.T) {
 
 	// Set palette color 5 to magenta using kitty protocol
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;5=rgb:ff/00/ff\x1b\\")))
-	expectEqual(t, uint8(0xff), tm.colors.palette.current[5].r)
-	expectEqual(t, uint8(0x00), tm.colors.palette.current[5].g)
-	expectEqual(t, uint8(0xff), tm.colors.palette.current[5].b)
-	expect(t, tm.colors.palette.mask.isSet(5), "t.colors.palette.mask.isSet(5)")
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expectEqual(t, uint8(0xff), tm.Colors.Palette.Current[5].R)
+	expectEqual(t, uint8(0x00), tm.Colors.Palette.Current[5].G)
+	expectEqual(t, uint8(0xff), tm.Colors.Palette.Current[5].B)
+	expect(t, tm.Colors.Palette.Mask.isSet(5), "t.colors.palette.mask.isSet(5)")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 }
 
 // Zig: test "kitty color protocol reset palette"
@@ -932,13 +932,13 @@ func TestStreamReadonly_kitty_color_protocol_reset_palette(t *testing.T) {
 	defer s.Deinit()
 
 	// Set and then reset palette color
-	original := tm.colors.palette.original[7]
+	original := tm.Colors.Palette.Original[7]
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;7=rgb:aa/bb/cc\x1b\\")))
-	expect(t, tm.colors.palette.mask.isSet(7), "t.colors.palette.mask.isSet(7)")
+	expect(t, tm.Colors.Palette.Mask.isSet(7), "t.colors.palette.mask.isSet(7)")
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;7=\x1b\\")))
-	expectEqual(t, original, tm.colors.palette.current[7])
-	expect(t, !tm.colors.palette.mask.isSet(7), "!t.colors.palette.mask.isSet(7)")
+	expectEqual(t, original, tm.Colors.Palette.Current[7])
+	expect(t, !tm.Colors.Palette.Mask.isSet(7), "!t.colors.palette.mask.isSet(7)")
 }
 
 // Zig: test "kitty color protocol set foreground"
@@ -954,10 +954,10 @@ func TestStreamReadonly_kitty_color_protocol_set_foreground(t *testing.T) {
 
 	// Set foreground using kitty protocol
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;foreground=rgb:12/34/56\x1b\\")))
-	fg := zigUnwrap(t, tm.colors.foreground.Get())
-	expectEqual(t, uint8(0x12), fg.r)
-	expectEqual(t, uint8(0x34), fg.g)
-	expectEqual(t, uint8(0x56), fg.b)
+	fg := zigUnwrap(t, tm.Colors.Foreground.Get())
+	expectEqual(t, uint8(0x12), fg.R)
+	expectEqual(t, uint8(0x34), fg.G)
+	expectEqual(t, uint8(0x56), fg.B)
 }
 
 // Zig: test "kitty color protocol set background"
@@ -973,10 +973,10 @@ func TestStreamReadonly_kitty_color_protocol_set_background(t *testing.T) {
 
 	// Set background using kitty protocol
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;background=rgb:78/9a/bc\x1b\\")))
-	bg := zigUnwrap(t, tm.colors.background.Get())
-	expectEqual(t, uint8(0x78), bg.r)
-	expectEqual(t, uint8(0x9a), bg.g)
-	expectEqual(t, uint8(0xbc), bg.b)
+	bg := zigUnwrap(t, tm.Colors.Background.Get())
+	expectEqual(t, uint8(0x78), bg.R)
+	expectEqual(t, uint8(0x9a), bg.G)
+	expectEqual(t, uint8(0xbc), bg.B)
 }
 
 // Zig: test "kitty color protocol set cursor"
@@ -992,10 +992,10 @@ func TestStreamReadonly_kitty_color_protocol_set_cursor(t *testing.T) {
 
 	// Set cursor using kitty protocol
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;cursor=rgb:de/f0/12\x1b\\")))
-	cursor := zigUnwrap(t, tm.colors.cursor.Get())
-	expectEqual(t, uint8(0xde), cursor.r)
-	expectEqual(t, uint8(0xf0), cursor.g)
-	expectEqual(t, uint8(0x12), cursor.b)
+	cursor := zigUnwrap(t, tm.Colors.Cursor.Get())
+	expectEqual(t, uint8(0xde), cursor.R)
+	expectEqual(t, uint8(0xf0), cursor.G)
+	expectEqual(t, uint8(0x12), cursor.B)
 }
 
 // Zig: test "kitty color protocol reset foreground"
@@ -1011,11 +1011,11 @@ func TestStreamReadonly_kitty_color_protocol_reset_foreground(t *testing.T) {
 
 	// Set and reset foreground
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;foreground=rgb:11/22/33\x1b\\")))
-	expect(t, tm.colors.foreground.Get().Valid, "t.colors.foreground.get() != null")
+	expect(t, tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() != null")
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;foreground=\x1b\\")))
 	// After reset, should be unset
-	expect(t, !tm.colors.foreground.Get().Valid, "t.colors.foreground.get() == null")
+	expect(t, !tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() == null")
 }
 
 // Zig: test "palette dirty flag set on color change"
@@ -1030,21 +1030,21 @@ func TestStreamReadonly_palette_dirty_flag_set_on_color_change(t *testing.T) {
 	defer s.Deinit()
 
 	// Clear dirty flag
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	// Setting palette color should set dirty flag
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;0;rgb:ff/00/00\x1b\\")))
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 	// Clear and test reset
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	zigTry(t, s.NextSlice([]uint8("\x1b]104;0\x1b\\")))
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 	// Clear and test kitty protocol
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;1=rgb:00/ff/00\x1b\\")))
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 }
 
 // Zig: test "semantic prompt fresh line"
@@ -1060,8 +1060,8 @@ func TestStreamReadonly_semantic_prompt_fresh_line(t *testing.T) {
 
 	zigTry(t, s.NextSlice([]uint8("Hello")))
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;L\x07")))
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 1, tm.screens.active.cursor.y)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 1, tm.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "semantic prompt fresh line new prompt"
@@ -1080,16 +1080,16 @@ func TestStreamReadonly_semantic_prompt_fresh_line_new_prompt(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;A\x07")))
 
 	// Should do a fresh line (carriage return + index)
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 1, tm.screens.active.cursor.y)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 1, tm.Screens.Active.Cursor.Y)
 
 	// Should set cursor semantic_content to prompt
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
 
 	// Test with redraw option
 	zigTry(t, s.NextSlice([]uint8("prompt$ ")))
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;A;redraw=1\x07")))
-	expect(t, tm.flags.shell_redraws_prompt == OSCParsersSemanticPromptRedrawTrue, "t.flags.shell_redraws_prompt == .true")
+	expect(t, tm.Flags.ShellRedrawsPrompt == OSCParsersSemanticPromptRedrawTrue, "t.flags.shell_redraws_prompt == .true")
 }
 
 // Zig: test "semantic prompt end of input, then start output"
@@ -1108,9 +1108,9 @@ func TestStreamReadonly_semantic_prompt_end_of_input_then_start_output(t *testin
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;A\x07")))
 	zigTry(t, s.NextSlice([]uint8("prompt$ ")))
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;B\x07")))
-	expectEqual(t, PageCellSemanticContentInput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentInput, tm.Screens.Active.Cursor.SemanticContent)
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;C\x07")))
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "semantic prompt prompt_start"
@@ -1129,9 +1129,9 @@ func TestStreamReadonly_semantic_prompt_prompt_start(t *testing.T) {
 
 	// OSC 133;P marks the start of a prompt (without fresh line behavior)
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;P\x07")))
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
-	expectEqual(t, 5, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
+	expectEqual(t, 5, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "semantic prompt new_command"
@@ -1151,9 +1151,9 @@ func TestStreamReadonly_semantic_prompt_new_command(t *testing.T) {
 
 	// Should behave like fresh_line_new_prompt - cursor moves to column 0
 	// on next line since we had content
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 1, tm.screens.active.cursor.y)
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 1, tm.Screens.Active.Cursor.Y)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "semantic prompt new_command at column zero"
@@ -1169,9 +1169,9 @@ func TestStreamReadonly_semantic_prompt_new_command_at_column_zero(t *testing.T)
 
 	// OSC 133;N when already at column 0 should stay on same line
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;N\x07")))
-	expectEqual(t, 0, tm.screens.active.cursor.x)
-	expectEqual(t, 0, tm.screens.active.cursor.y)
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.X)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.Y)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "semantic prompt end_prompt_start_input_terminate_eol clears on linefeed"
@@ -1187,11 +1187,11 @@ func TestStreamReadonly_semantic_prompt_end_prompt_start_input_terminate_eol_cle
 
 	// Set input terminated by EOL
 	zigTry(t, s.NextSlice([]uint8("\x1b]133;I\x07")))
-	expectEqual(t, PageCellSemanticContentInput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentInput, tm.Screens.Active.Cursor.SemanticContent)
 
 	// Linefeed should reset semantic content to output
 	zigTry(t, s.NextSlice([]uint8("\n")))
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "stream: CSI W with intermediate but no params"
@@ -1200,7 +1200,7 @@ func TestStreamReadonly_stream_CSI_W_with_intermediate_but_no_params(t *testing.
 	// Regression test from AFL++ crash. CSI ? W without
 	// parameters caused an out-of-bounds access on input.params[0].
 	opts := terminalOptionsDefault(80, 24)
-	opts.max_scrollback = 100
+	opts.MaxScrollback = 100
 	tm, err := TerminalInit(opts)
 	zigTry(t, err)
 	defer tm.Deinit()
@@ -1305,11 +1305,11 @@ func TestStreamReadonly_term51_Handler_vt_actions_that_need_a_reply_are_ignored(
 	sroExpectIgnored(t, &tm, &h, sroModeAct(StreamActionKeyRequestMode, ModesModeInsert))
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:                StreamActionKeyRequestModeUnknown,
-		RequestModeUnknown: StreamActionRawMode{mode: 9999, ansi: false},
+		RequestModeUnknown: StreamActionRawMode{Mode: 9999, Ansi: false},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:                StreamActionKeyRequestModeUnknown,
-		RequestModeUnknown: StreamActionRawMode{mode: 77, ansi: true},
+		RequestModeUnknown: StreamActionRawMode{Mode: 77, Ansi: true},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{Tag: StreamActionKeySizeReport, SizeReport: CSISizeReportStyleCsi14T})
 	sroExpectIgnored(t, &tm, &h, StreamAction{Tag: StreamActionKeySizeReport, SizeReport: CSISizeReportStyleCsi16T})
@@ -1321,15 +1321,15 @@ func TestStreamReadonly_term51_Handler_vt_actions_that_need_a_reply_are_ignored(
 	sroExpectIgnored(t, &tm, &h, StreamAction{Tag: StreamActionKeyDeviceAttributes, DeviceAttributes: ANSIDeviceAttributeReqTertiary})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:          StreamActionKeyDeviceStatus,
-		DeviceStatus: StreamActionDeviceStatus{request: DeviceStatusRequestOperatingStatus},
+		DeviceStatus: StreamActionDeviceStatus{Request: DeviceStatusRequestOperatingStatus},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:          StreamActionKeyDeviceStatus,
-		DeviceStatus: StreamActionDeviceStatus{request: DeviceStatusRequestCursorPosition},
+		DeviceStatus: StreamActionDeviceStatus{Request: DeviceStatusRequestCursorPosition},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:          StreamActionKeyDeviceStatus,
-		DeviceStatus: StreamActionDeviceStatus{request: DeviceStatusRequestColorScheme},
+		DeviceStatus: StreamActionDeviceStatus{Request: DeviceStatusRequestColorScheme},
 	})
 	sroExpectIgnored(t, &tm, &h, sroAct(StreamActionKeyKittyKeyboardQuery))
 }
@@ -1345,36 +1345,36 @@ func TestStreamReadonly_term51_Handler_vt_UI_and_notification_actions_are_ignore
 	sroExpectIgnored(t, &tm, &h, sroAct(StreamActionKeyBell))
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:         StreamActionKeyWindowTitle,
-		WindowTitle: StreamActionWindowTitle{title: []uint8("a title")},
+		WindowTitle: StreamActionWindowTitle{Title: []uint8("a title")},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:         StreamActionKeyWindowTitle,
-		WindowTitle: StreamActionWindowTitle{title: []uint8("")},
+		WindowTitle: StreamActionWindowTitle{Title: []uint8("")},
 	})
 	// The pwd reported by OSC 7 is not stored by the readonly handler.
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:       StreamActionKeyReportPwd,
-		ReportPwd: StreamActionReportPwd{url: []uint8("file:///tmp")},
+		ReportPwd: StreamActionReportPwd{URL: []uint8("file:///tmp")},
 	})
-	expectEqual(t, 0, len(tm.pwd))
+	expectEqual(t, 0, len(tm.Pwd))
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:                     StreamActionKeyShowDesktopNotification,
-		ShowDesktopNotification: StreamActionShowDesktopNotification{title: []uint8("t"), body: []uint8("b")},
+		ShowDesktopNotification: StreamActionShowDesktopNotification{Title: []uint8("t"), Body: []uint8("b")},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag: StreamActionKeyProgressReport,
 		ProgressReport: OSCCommandProgressReport{
-			state:    OSCCommandProgressReportStateSet,
-			progress: Some(uint8(50)),
+			State:    OSCCommandProgressReportStateSet,
+			Progress: Some(uint8(50)),
 		},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:            StreamActionKeyProgressReport,
-		ProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateRemove},
+		ProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateRemove},
 	})
 	sroExpectIgnored(t, &tm, &h, StreamAction{
 		Tag:               StreamActionKeyClipboardContents,
-		ClipboardContents: StreamActionClipboardContents{kind: 'c', data: []uint8("Zm9v")},
+		ClipboardContents: StreamActionClipboardContents{Kind: 'c', Data: []uint8("Zm9v")},
 	})
 	sroExpectIgnored(t, &tm, &h, sroU16Act(StreamActionKeyTitlePush, 0))
 	sroExpectIgnored(t, &tm, &h, sroU16Act(StreamActionKeyTitlePush, 65535))
@@ -1419,20 +1419,20 @@ func sroExpectTabTable(
 	expected []uint8,
 ) {
 	t.Helper()
-	expectEqual(t, uint(tm.cols), uint(len(expected)))
+	expectEqual(t, uint(tm.Cols), uint(len(expected)))
 	for x, want := range expected {
 		sroAt(tm, SizeCellCountInt(x), 1)
-		tm.screens.active.cursor.pending_wrap = false
+		tm.Screens.Active.Cursor.PendingWrap = false
 		if back {
 			h.horizontalTabBack(count)
 		} else {
 			h.horizontalTab(count)
 		}
-		if uint(tm.screens.active.cursor.x) != uint(want) {
-			t.Fatalf("back=%v count=%d start x=%d: got %d, want %d", back, count, x, tm.screens.active.cursor.x, want)
+		if uint(tm.Screens.Active.Cursor.X) != uint(want) {
+			t.Fatalf("back=%v count=%d start x=%d: got %d, want %d", back, count, x, tm.Screens.Active.Cursor.X, want)
 		}
 		// The row never changes.
-		expectEqual(t, 1, tm.screens.active.cursor.y)
+		expectEqual(t, 1, tm.Screens.Active.Cursor.Y)
 	}
 }
 
@@ -1500,8 +1500,8 @@ func TestStreamReadonly_term51_Handler_horizontalTab_stops_at_the_right_margin_a
 	// Left margin column 4, right margin column 14 (0-indexed).
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, true))
 	sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, 5, 15))
-	expectEqual(t, 4, tm.scrolling_region.left)
-	expectEqual(t, 14, tm.scrolling_region.right)
+	expectEqual(t, 4, tm.ScrollingRegion.Left)
+	expectEqual(t, 14, tm.ScrollingRegion.Right)
 
 	// The stop at 16 is beyond the margin, so 14 wins. From the margin or
 	// beyond it the cursor does not move at all.
@@ -1528,7 +1528,7 @@ func TestStreamReadonly_term51_Handler_horizontalTabBack_left_limit_is_column_0_
 	// Origin mode on (set directly so that the cursor is not homed): the
 	// cursor stops at the left margin (column 4) and never moves when it
 	// is at or left of it.
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	sroExpectTabTable(t, &tm, &h, true, 0, []uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19})
 	sroExpectTabTable(t, &tm, &h, true, 1, []uint8{0, 1, 2, 3, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8, 16, 16, 16})
 	sroExpectTabTable(t, &tm, &h, true, 2, []uint8{0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8})
@@ -1592,33 +1592,33 @@ func TestStreamReadonly_term51_Handler_horizontalTab_pending_wrap_is_not_cleared
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroPrintString(t, &tm, "0123456789")
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	sroExpectCursor(t, &tm, 9, 0)
 
 	// At the right margin the loop does not move, so the flag remains.
 	h.horizontalTab(1)
 	sroExpectCursor(t, &tm, 9, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	h.horizontalTab(65535)
 	sroExpectCursor(t, &tm, 9, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	sroExpectText(t, &tm, "0123456789")
 
 	// Going backwards from a pending wrap state moves the cursor and
 	// leaves the pending wrap flag set (upstream behaviour).
 	h.horizontalTabBack(1)
 	sroExpectCursor(t, &tm, 8, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	h.horizontalTabBack(1)
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	sroExpectText(t, &tm, "0123456789")
 
 	// A forward tab with the flag set and the cursor away from the margin
 	// also keeps it.
 	h.horizontalTab(1)
 	sroExpectCursor(t, &tm, 8, 0)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 }
 
 // Zig: test "term51: Handler.vt: horizontal_tab and horizontal_tab_back pass their count"
@@ -1686,26 +1686,26 @@ func TestStreamReadonly_term51_Handler_vt_tab_set_tab_clear_current_tab_clear_al
 
 	// Defaults.
 	for i := uint(0); i < 20; i++ {
-		expectEqual(t, i == 8 || i == 16, tm.tabstops.Get(i))
+		expectEqual(t, i == 8 || i == 16, tm.Tabstops.Get(i))
 	}
 
 	// tab_set at the cursor, idempotent, does not move the cursor.
 	sroAt(&tm, 3, 2)
 	sroVt(t, &h, sroAct(StreamActionKeyTabSet))
-	expect(t, tm.tabstops.Get(3), "t.tabstops.get(3)")
+	expect(t, tm.Tabstops.Get(3), "t.tabstops.get(3)")
 	sroVt(t, &h, sroAct(StreamActionKeyTabSet))
-	expect(t, tm.tabstops.Get(3), "t.tabstops.get(3)")
+	expect(t, tm.Tabstops.Get(3), "t.tabstops.get(3)")
 	sroExpectCursor(t, &tm, 3, 2)
 
 	// tab_clear_current clears the stop under the cursor and only that one.
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearCurrent))
-	expect(t, !tm.tabstops.Get(3), "!t.tabstops.get(3)")
-	expect(t, tm.tabstops.Get(8), "t.tabstops.get(8)")
-	expect(t, tm.tabstops.Get(16), "t.tabstops.get(16)")
+	expect(t, !tm.Tabstops.Get(3), "!t.tabstops.get(3)")
+	expect(t, tm.Tabstops.Get(8), "t.tabstops.get(8)")
+	expect(t, tm.Tabstops.Get(16), "t.tabstops.get(16)")
 	sroAt(&tm, 8, 2)
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearCurrent))
 	for i := uint(0); i < 20; i++ {
-		expectEqual(t, i == 16, tm.tabstops.Get(i))
+		expectEqual(t, i == 16, tm.Tabstops.Get(i))
 	}
 	sroExpectCursor(t, &tm, 8, 2)
 
@@ -1713,11 +1713,11 @@ func TestStreamReadonly_term51_Handler_vt_tab_set_tab_clear_current_tab_clear_al
 	sroVt(t, &h, sroAct(StreamActionKeyTabSet))
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearAll))
 	for i := uint(0); i < 20; i++ {
-		expect(t, !tm.tabstops.Get(i), "!t.tabstops.get(i)")
+		expect(t, !tm.Tabstops.Get(i), "!t.tabstops.get(i)")
 	}
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearAll))
 	for i := uint(0); i < 20; i++ {
-		expect(t, !tm.tabstops.Get(i), "!t.tabstops.get(i)")
+		expect(t, !tm.Tabstops.Get(i), "!t.tabstops.get(i)")
 	}
 	sroExpectCursor(t, &tm, 8, 2)
 
@@ -1728,14 +1728,14 @@ func TestStreamReadonly_term51_Handler_vt_tab_set_tab_clear_current_tab_clear_al
 	sroVt(t, &h, sroAct(StreamActionKeyTabSet))
 	sroVt(t, &h, sroAct(StreamActionKeyTabReset))
 	for i := uint(0); i < 20; i++ {
-		expectEqual(t, i == 8 || i == 16, tm.tabstops.Get(i))
+		expectEqual(t, i == 8 || i == 16, tm.Tabstops.Get(i))
 	}
 	sroExpectCursor(t, &tm, 5, 0)
 
 	// Resetting again changes nothing.
 	sroVt(t, &h, sroAct(StreamActionKeyTabReset))
 	for i := uint(0); i < 20; i++ {
-		expectEqual(t, i == 8 || i == 16, tm.tabstops.Get(i))
+		expectEqual(t, i == 8 || i == 16, tm.Tabstops.Get(i))
 	}
 }
 
@@ -1749,11 +1749,11 @@ func TestStreamReadonly_term51_Handler_vt_tab_clear_current_on_a_column_without_
 	// Tabstops.unset toggles the bit with an xor, so clearing a column
 	// that has no stop creates one.
 	sroAt(&tm, 3, 0)
-	expect(t, !tm.tabstops.Get(3), "!t.tabstops.get(3)")
+	expect(t, !tm.Tabstops.Get(3), "!t.tabstops.get(3)")
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearCurrent))
-	expect(t, tm.tabstops.Get(3), "t.tabstops.get(3)")
+	expect(t, tm.Tabstops.Get(3), "t.tabstops.get(3)")
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearCurrent))
-	expect(t, !tm.tabstops.Get(3), "!t.tabstops.get(3)")
+	expect(t, !tm.Tabstops.Get(3), "!t.tabstops.get(3)")
 
 	// The cell is observable through horizontal tabs.
 	sroVt(t, &h, sroAct(StreamActionKeyTabClearCurrent))
@@ -1777,12 +1777,12 @@ func TestStreamReadonly_term51_Handler_vt_tab_stops_are_per_terminal_width_and_r
 	// tabstops from the defaults.
 	zigTry(t, h.setMode(ModesModeEnableMode3, true))
 	zigTry(t, h.setMode(ModesMode132Column, true))
-	expectEqual(t, 132, tm.cols)
-	expect(t, !tm.tabstops.Get(5), "!t.tabstops.get(5)")
-	expect(t, tm.tabstops.Get(8), "t.tabstops.get(8)")
-	expect(t, tm.tabstops.Get(128), "t.tabstops.get(128)")
-	expect(t, !tm.tabstops.Get(131), "!t.tabstops.get(131)")
-	expect(t, !tm.tabstops.Get(130), "!t.tabstops.get(130)")
+	expectEqual(t, 132, tm.Cols)
+	expect(t, !tm.Tabstops.Get(5), "!t.tabstops.get(5)")
+	expect(t, tm.Tabstops.Get(8), "t.tabstops.get(8)")
+	expect(t, tm.Tabstops.Get(128), "t.tabstops.get(128)")
+	expect(t, !tm.Tabstops.Get(131), "!t.tabstops.get(131)")
+	expect(t, !tm.Tabstops.Get(130), "!t.tabstops.get(130)")
 }
 
 // sroCharsetDec is term51DCharsetDec.
@@ -1873,7 +1873,7 @@ func TestStreamReadonly_term51_Handler_setMode_plain_modes_only_change_their_own
 		for _, enabled := range []bool{true, false, true, true, false, false} {
 			before := sroSnapshot(t, &tm)
 			zigTry(t, h.setMode(mode, enabled))
-			expectEqual(t, enabled, tm.modes.Get(mode))
+			expectEqual(t, enabled, tm.Modes.Get(mode))
 			expected := before
 			expected.modes = sroModesWith(before.modes, mode, enabled)
 			expectEqual(t, expected, sroSnapshot(t, &tm))
@@ -1892,13 +1892,13 @@ func TestStreamReadonly_term51_Handler_vt_set_mode_and_reset_mode_on_plain_modes
 	for _, mode := range sroPlainModes {
 		before := sroSnapshot(t, &tm)
 		sroVt(t, &h, sroModeAct(StreamActionKeySetMode, mode))
-		expect(t, tm.modes.Get(mode), "t.modes.get(mode)")
+		expect(t, tm.Modes.Get(mode), "t.modes.get(mode)")
 		expected := before
 		expected.modes = sroModesWith(before.modes, mode, true)
 		expectEqual(t, expected, sroSnapshot(t, &tm))
 
 		sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, mode))
-		expect(t, !tm.modes.Get(mode), "!t.modes.get(mode)")
+		expect(t, !tm.Modes.Get(mode), "!t.modes.get(mode)")
 		expected.modes = sroModesWith(before.modes, mode, false)
 		expectEqual(t, expected, sroSnapshot(t, &tm))
 	}
@@ -1922,10 +1922,10 @@ func TestStreamReadonly_term51_Handler_setMode_defaults_of_the_plain_modes(t *te
 			ModesModeAltEscPrefix:
 			want = true
 		}
-		expectEqual(t, want, tm.modes.Get(mode))
+		expectEqual(t, want, tm.Modes.Get(mode))
 	}
 	for _, mode := range sroSpecialModes {
-		expect(t, !tm.modes.Get(mode), "!t.modes.get(mode)")
+		expect(t, !tm.Modes.Get(mode), "!t.modes.get(mode)")
 	}
 }
 
@@ -1937,13 +1937,13 @@ func TestStreamReadonly_term51_Handler_setMode_reverse_colors_does_not_mark_the_
 	h := StreamReadonlyHandlerInit(&tm)
 
 	zigTry(t, h.setMode(ModesModeReverseColors, true))
-	expect(t, tm.modes.Get(ModesModeReverseColors), "t.modes.get(.reverse_colors)")
-	expect(t, !tm.flags.dirty.reverse_colors, "!t.flags.dirty.reverse_colors")
-	expect(t, !tm.flags.dirty.clear, "!t.flags.dirty.clear")
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, tm.Modes.Get(ModesModeReverseColors), "t.modes.get(.reverse_colors)")
+	expect(t, !tm.Flags.Dirty.ReverseColors, "!t.flags.dirty.reverse_colors")
+	expect(t, !tm.Flags.Dirty.Clear, "!t.flags.dirty.clear")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 	zigTry(t, h.setMode(ModesModeReverseColors, false))
-	expect(t, !tm.modes.Get(ModesModeReverseColors), "!t.modes.get(.reverse_colors)")
-	expect(t, !tm.flags.dirty.reverse_colors, "!t.flags.dirty.reverse_colors")
+	expect(t, !tm.Modes.Get(ModesModeReverseColors), "!t.modes.get(.reverse_colors)")
+	expect(t, !tm.Flags.Dirty.ReverseColors, "!t.flags.dirty.reverse_colors")
 }
 
 // Zig: test "term51: Handler.setMode: origin homes the cursor relative to the margins when set, absolute when reset"
@@ -1956,22 +1956,22 @@ func TestStreamReadonly_term51_Handler_setMode_origin_homes_the_cursor_relative_
 	// No margins: both directions home to (0,0), pending wrap is cleared.
 	sroPrintString(t, &tm, "0123456789")
 	sroAt(&tm, 19, 7)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, h.setMode(ModesModeOrigin, true))
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// Top/bottom margins rows 3..8 (1-indexed).
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	tm.SetTopAndBottomMargin(3, 8)
-	expectEqual(t, 2, tm.scrolling_region.top)
-	expectEqual(t, 7, tm.scrolling_region.bottom)
+	expectEqual(t, 2, tm.ScrollingRegion.Top)
+	expectEqual(t, 7, tm.ScrollingRegion.Bottom)
 	sroAt(&tm, 7, 5)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, h.setMode(ModesModeOrigin, true))
 	sroExpectCursor(t, &tm, 0, 2)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// Left/right margins as well: home is the margin corner.
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, true))
@@ -1983,17 +1983,17 @@ func TestStreamReadonly_term51_Handler_setMode_origin_homes_the_cursor_relative_
 
 	// Resetting goes to the absolute top-left, ignoring the margins.
 	sroAt(&tm, 12, 6)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	zigTry(t, h.setMode(ModesModeOrigin, false))
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// The margins and the text are untouched.
-	expectEqual(t, 2, tm.scrolling_region.top)
-	expectEqual(t, 7, tm.scrolling_region.bottom)
-	expectEqual(t, 5, tm.scrolling_region.left)
-	expectEqual(t, 14, tm.scrolling_region.right)
+	expectEqual(t, 2, tm.ScrollingRegion.Top)
+	expectEqual(t, 7, tm.ScrollingRegion.Bottom)
+	expectEqual(t, 5, tm.ScrollingRegion.Left)
+	expectEqual(t, 14, tm.ScrollingRegion.Right)
 	sroExpectText(t, &tm, "0123456789")
 }
 
@@ -2006,30 +2006,30 @@ func TestStreamReadonly_term51_Handler_setMode_enable_left_and_right_margin_rese
 
 	// Resetting when already default is harmless.
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, false))
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 19, tm.scrolling_region.right)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 19, tm.ScrollingRegion.Right)
 
 	// Setting does not touch the margins.
 	tm.SetTopAndBottomMargin(3, 8)
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, true))
-	expect(t, tm.modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 19, tm.scrolling_region.right)
+	expect(t, tm.Modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 19, tm.ScrollingRegion.Right)
 	tm.SetLeftAndRightMargin(5, 15)
-	expectEqual(t, 4, tm.scrolling_region.left)
-	expectEqual(t, 14, tm.scrolling_region.right)
+	expectEqual(t, 4, tm.ScrollingRegion.Left)
+	expectEqual(t, 14, tm.ScrollingRegion.Right)
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, true))
-	expectEqual(t, 4, tm.scrolling_region.left)
-	expectEqual(t, 14, tm.scrolling_region.right)
+	expectEqual(t, 4, tm.ScrollingRegion.Left)
+	expectEqual(t, 14, tm.ScrollingRegion.Right)
 
 	// Resetting restores left/right only; top/bottom and the cursor stay.
 	sroAt(&tm, 10, 5)
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, false))
-	expect(t, !tm.modes.Get(ModesModeEnableLeftAndRightMargin), "!t.modes.get(.enable_left_and_right_margin)")
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 19, tm.scrolling_region.right)
-	expectEqual(t, 2, tm.scrolling_region.top)
-	expectEqual(t, 7, tm.scrolling_region.bottom)
+	expect(t, !tm.Modes.Get(ModesModeEnableLeftAndRightMargin), "!t.modes.get(.enable_left_and_right_margin)")
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 19, tm.ScrollingRegion.Right)
+	expectEqual(t, 2, tm.ScrollingRegion.Top)
+	expectEqual(t, 7, tm.ScrollingRegion.Bottom)
 	sroExpectCursor(t, &tm, 10, 5)
 
 	// With the mode off DECSLRM is ignored.
@@ -2047,22 +2047,22 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_legacy_47_switches_scr
 
 	sroPrintString(t, &tm, "Primary")
 	sroVt(t, &h, sroStartHyperlinkAct("http://a", None[[]uint8]()))
-	expect(t, tm.screens.active.cursor.hyperlink_id != 0, "t.screens.active.cursor.hyperlink_id != 0")
+	expect(t, tm.Screens.Active.Cursor.HyperlinkID != 0, "t.screens.active.cursor.hyperlink_id != 0")
 	sroVt(t, &h, sroConfigureCharsetAct(CharsetsSlotsG0, CharsetsCharsetDecSpecial))
 	sroExpectCursor(t, &tm, 7, 0)
-	tm.flags.dirty.clear = false
+	tm.Flags.Dirty.Clear = false
 
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
-	expect(t, tm.modes.Get(ModesModeAltScreenLegacy), "t.modes.get(.alt_screen_legacy)")
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
-	expect(t, tm.flags.dirty.clear, "t.flags.dirty.clear")
+	expect(t, tm.Modes.Get(ModesModeAltScreenLegacy), "t.modes.get(.alt_screen_legacy)")
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
+	expect(t, tm.Flags.Dirty.Clear, "t.flags.dirty.clear")
 	// Cursor position copied, alt screen starts blank, hyperlink ended on
 	// the primary, charset state carried over.
 	sroExpectCursor(t, &tm, 7, 0)
 	sroExpectText(t, &tm, "")
-	expectEqual(t, 0, sroScreen(t, &tm, ScreenSetKeyPrimary).cursor.hyperlink_id)
-	expectEqual(t, 0, tm.screens.active.cursor.hyperlink_id)
-	expectEqual(t, sroCharsetDec, tm.screens.active.charset.charsets.Get(CharsetsSlotsG0))
+	expectEqual(t, 0, sroScreen(t, &tm, ScreenSetKeyPrimary).Cursor.HyperlinkID)
+	expectEqual(t, 0, tm.Screens.Active.Cursor.HyperlinkID)
+	expectEqual(t, sroCharsetDec, tm.Screens.Active.Charset.charsets.Get(CharsetsSlotsG0))
 
 	// Print on the alt screen, then enable again: nothing happens.
 	zigTry(t, tm.Print('X'))
@@ -2074,14 +2074,14 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_legacy_47_switches_scr
 
 	// Leaving copies the cursor back and keeps both screens' content.
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, false))
-	expect(t, !tm.modes.Get(ModesModeAltScreenLegacy), "!t.modes.get(.alt_screen_legacy)")
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expect(t, !tm.Modes.Get(ModesModeAltScreenLegacy), "!t.modes.get(.alt_screen_legacy)")
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 	sroExpectCursor(t, &tm, 8, 0)
 	sroExpectText(t, &tm, "Primary")
 
 	// Entering again does not clear the alt screen (47 never clears).
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroExpectText(t, &tm, "       X")
 	sroExpectCursor(t, &tm, 8, 0)
 
@@ -2101,8 +2101,8 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_1047_clears_the_alt_sc
 
 	sroPrintString(t, &tm, "Primary")
 	zigTry(t, h.setMode(ModesModeAltScreen, true))
-	expect(t, tm.modes.Get(ModesModeAltScreen), "t.modes.get(.alt_screen)")
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expect(t, tm.Modes.Get(ModesModeAltScreen), "t.modes.get(.alt_screen)")
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroExpectCursor(t, &tm, 7, 0)
 	sroExpectText(t, &tm, "")
 
@@ -2111,15 +2111,15 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_1047_clears_the_alt_sc
 
 	// Entering again while on the alt screen does not clear it.
 	zigTry(t, h.setMode(ModesModeAltScreen, true))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroExpectText(t, &tm, "       Al")
 
 	// Leaving clears the alt screen, switches and copies the cursor.
 	zigTry(t, h.setMode(ModesModeAltScreen, false))
-	expect(t, !tm.modes.Get(ModesModeAltScreen), "!t.modes.get(.alt_screen)")
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expect(t, !tm.Modes.Get(ModesModeAltScreen), "!t.modes.get(.alt_screen)")
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 	sroExpectText(t, &tm, "Primary")
-	expect(t, tm.screens.Get(ScreenSetKeyAlternate) != nil, "t.screens.get(.alternate) != null")
+	expect(t, tm.Screens.Get(ScreenSetKeyAlternate) != nil, "t.screens.get(.alternate) != null")
 
 	// The alt screen really was cleared.
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
@@ -2153,16 +2153,16 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_save_cursor_clear_ente
 	sroAt(&tm, 0, 0)
 	sroPrintString(t, &tm, "Primary")
 	sroAt(&tm, 4, 3)
-	expect(t, !tm.screens.active.saved_cursor.Valid, "t.screens.active.saved_cursor == null")
+	expect(t, !tm.Screens.Active.SavedCursor.Valid, "t.screens.active.saved_cursor == null")
 
 	zigTry(t, h.setMode(ModesModeAltScreenSaveCursorClearEnter, true))
-	expect(t, tm.modes.Get(ModesModeAltScreenSaveCursorClearEnter), "t.modes.get(.alt_screen_save_cursor_clear_enter)")
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expect(t, tm.Modes.Get(ModesModeAltScreenSaveCursorClearEnter), "t.modes.get(.alt_screen_save_cursor_clear_enter)")
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	// The cursor of the primary screen was saved, the alt screen is blank
 	// and the cursor was copied over.
-	saved := zigUnwrap(t, sroScreen(t, &tm, ScreenSetKeyPrimary).saved_cursor)
-	expectEqual(t, 4, saved.x)
-	expectEqual(t, 3, saved.y)
+	saved := zigUnwrap(t, sroScreen(t, &tm, ScreenSetKeyPrimary).SavedCursor)
+	expectEqual(t, 4, saved.X)
+	expectEqual(t, 3, saved.Y)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 4, 3)
 
@@ -2171,21 +2171,21 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_save_cursor_clear_ente
 	sroPrintString(t, &tm, "again")
 	sroAt(&tm, 2, 1)
 	zigTry(t, h.setMode(ModesModeAltScreenSaveCursorClearEnter, true))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 2, 1)
-	alt_saved := zigUnwrap(t, tm.screens.active.saved_cursor)
-	expectEqual(t, 2, alt_saved.x)
-	expectEqual(t, 1, alt_saved.y)
-	saved_again := zigUnwrap(t, sroScreen(t, &tm, ScreenSetKeyPrimary).saved_cursor)
-	expectEqual(t, 4, saved_again.x)
-	expectEqual(t, 3, saved_again.y)
+	alt_saved := zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	expectEqual(t, 2, alt_saved.X)
+	expectEqual(t, 1, alt_saved.Y)
+	saved_again := zigUnwrap(t, sroScreen(t, &tm, ScreenSetKeyPrimary).SavedCursor)
+	expectEqual(t, 4, saved_again.X)
+	expectEqual(t, 3, saved_again.Y)
 
 	// Leaving restores the primary cursor and does not clear the alt screen.
 	sroPrintString(t, &tm, "alt")
 	zigTry(t, h.setMode(ModesModeAltScreenSaveCursorClearEnter, false))
-	expect(t, !tm.modes.Get(ModesModeAltScreenSaveCursorClearEnter), "!t.modes.get(.alt_screen_save_cursor_clear_enter)")
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expect(t, !tm.Modes.Get(ModesModeAltScreenSaveCursorClearEnter), "!t.modes.get(.alt_screen_save_cursor_clear_enter)")
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 	sroExpectCursor(t, &tm, 4, 3)
 	sroExpectText(t, &tm, "Primary")
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
@@ -2201,14 +2201,14 @@ func TestStreamReadonly_term51_Handler_setMode_alt_screen_save_cursor_clear_ente
 
 	sroPrintString(t, &tm, "Primary")
 	sroAt(&tm, 5, 3)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	// Nothing was saved, so the restore goes to the defaults.
 	zigTry(t, h.setMode(ModesModeAltScreenSaveCursorClearEnter, false))
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	sroExpectText(t, &tm, "Primary")
-	expect(t, tm.screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
+	expect(t, tm.Screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
 }
 
 // Zig: test "term51: Handler.setMode: save_cursor (1048) saves on set and restores on reset"
@@ -2221,37 +2221,37 @@ func TestStreamReadonly_term51_Handler_setMode_save_cursor_1048_saves_on_set_and
 	// Reset without a previous save restores the defaults.
 	sroAt(&tm, 6, 6)
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagBold))
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	zigTry(t, h.setMode(ModesModeSaveCursor, false))
-	expect(t, !tm.modes.Get(ModesModeSaveCursor), "!t.modes.get(.save_cursor)")
+	expect(t, !tm.Modes.Get(ModesModeSaveCursor), "!t.modes.get(.save_cursor)")
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, !tm.screens.active.cursor.style.flags.bold, "!t.screens.active.cursor.style.flags.bold")
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Bold, "!t.screens.active.cursor.style.flags.bold")
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
 
 	// Set saves, and does not move or change anything else.
 	sroAt(&tm, 4, 2)
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagBold))
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	zigTry(t, h.setMode(ModesModeSaveCursor, true))
-	expect(t, tm.modes.Get(ModesModeSaveCursor), "t.modes.get(.save_cursor)")
+	expect(t, tm.Modes.Get(ModesModeSaveCursor), "t.modes.get(.save_cursor)")
 	sroExpectCursor(t, &tm, 4, 2)
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	saved := zigUnwrap(t, tm.screens.active.saved_cursor)
-	expectEqual(t, 4, saved.x)
-	expectEqual(t, 2, saved.y)
-	expect(t, saved.origin, "saved.origin")
-	expect(t, saved.style.flags.bold, "saved.style.flags.bold")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	saved := zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	expectEqual(t, 4, saved.X)
+	expectEqual(t, 2, saved.Y)
+	expect(t, saved.Origin, "saved.origin")
+	expect(t, saved.Style.Flags.Bold, "saved.style.flags.bold")
 
 	// Move away, clear the attribute and origin mode, then restore.
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	sroAt(&tm, 0, 0)
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagResetBold))
-	expect(t, !tm.screens.active.cursor.style.flags.bold, "!t.screens.active.cursor.style.flags.bold")
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Bold, "!t.screens.active.cursor.style.flags.bold")
 	zigTry(t, h.setMode(ModesModeSaveCursor, false))
-	expect(t, !tm.modes.Get(ModesModeSaveCursor), "!t.modes.get(.save_cursor)")
+	expect(t, !tm.Modes.Get(ModesModeSaveCursor), "!t.modes.get(.save_cursor)")
 	sroExpectCursor(t, &tm, 4, 2)
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
 
 	// The saved state is kept after a restore.
 	sroAt(&tm, 9, 9)
@@ -2259,7 +2259,7 @@ func TestStreamReadonly_term51_Handler_setMode_save_cursor_1048_saves_on_set_and
 	sroExpectCursor(t, &tm, 4, 2)
 
 	// A second save overwrites the first.
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	sroAt(&tm, 1, 1)
 	zigTry(t, h.setMode(ModesModeSaveCursor, true))
 	sroAt(&tm, 2, 2)
@@ -2300,12 +2300,12 @@ func TestStreamReadonly_term51_Handler_setMode_132_column_without_mode_40_is_ign
 	before := sroSnapshot(t, &tm)
 
 	zigTry(t, h.setMode(ModesMode132Column, true))
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expectEqual(t, 20, tm.cols)
+	expectEqual(t, 20, tm.Cols)
 
 	zigTry(t, h.setMode(ModesMode132Column, false))
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
 	expectEqual(t, before, sroSnapshot(t, &tm))
 	sroExpectText(t, &tm, "Hello")
 	sroExpectCursor(t, &tm, 3, 2)
@@ -2320,69 +2320,69 @@ func TestStreamReadonly_term51_Handler_setMode_132_column_with_mode_40_resizes_t
 
 	// Enabling mode 40 alone does nothing visible.
 	zigTry(t, h.setMode(ModesModeEnableMode3, true))
-	expectEqual(t, 20, tm.cols)
+	expectEqual(t, 20, tm.Cols)
 
 	zigTry(t, h.setMode(ModesModeEnableLeftAndRightMargin, true))
 	tm.SetTopAndBottomMargin(2, 4)
 	tm.SetLeftAndRightMargin(3, 10)
 	sroPrintString(t, &tm, "hello")
 	sroAt(&tm, 6, 3)
-	tm.flags.dirty.clear = false
+	tm.Flags.Dirty.Clear = false
 
 	zigTry(t, h.setMode(ModesMode132Column, true))
-	expect(t, tm.modes.Get(ModesMode132Column), "t.modes.get(.@\"132_column\")")
-	expectEqual(t, 132, tm.cols)
-	expectEqual(t, 5, tm.rows)
-	expectEqual(t, 132, tm.screens.active.pages.cols)
+	expect(t, tm.Modes.Get(ModesMode132Column), "t.modes.get(.@\"132_column\")")
+	expectEqual(t, 132, tm.Cols)
+	expectEqual(t, 5, tm.Rows)
+	expectEqual(t, 132, tm.Screens.Active.Pages.cols)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, tm.flags.dirty.clear, "t.flags.dirty.clear")
+	expect(t, tm.Flags.Dirty.Clear, "t.flags.dirty.clear")
 	// Margins are reset by the resize but the mode stays on.
-	expectEqual(t, 0, tm.scrolling_region.top)
-	expectEqual(t, 4, tm.scrolling_region.bottom)
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 131, tm.scrolling_region.right)
-	expect(t, tm.modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
+	expectEqual(t, 0, tm.ScrollingRegion.Top)
+	expectEqual(t, 4, tm.ScrollingRegion.Bottom)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 131, tm.ScrollingRegion.Right)
+	expect(t, tm.Modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
 	// Tabstops follow the new width.
-	expect(t, tm.tabstops.Get(8), "t.tabstops.get(8)")
-	expect(t, tm.tabstops.Get(128), "t.tabstops.get(128)")
-	expect(t, !tm.tabstops.Get(129), "!t.tabstops.get(129)")
+	expect(t, tm.Tabstops.Get(8), "t.tabstops.get(8)")
+	expect(t, tm.Tabstops.Get(128), "t.tabstops.get(128)")
+	expect(t, !tm.Tabstops.Get(129), "!t.tabstops.get(129)")
 
 	// Setting it again clears and homes again even though the size is
 	// unchanged.
 	sroPrintString(t, &tm, "abc")
 	zigTry(t, h.setMode(ModesMode132Column, true))
-	expect(t, tm.modes.Get(ModesMode132Column), "t.modes.get(.@\"132_column\")")
-	expectEqual(t, 132, tm.cols)
+	expect(t, tm.Modes.Get(ModesMode132Column), "t.modes.get(.@\"132_column\")")
+	expectEqual(t, 132, tm.Cols)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 0, 0)
 
 	// Reset goes to 80 columns.
 	sroPrintString(t, &tm, "abc")
 	zigTry(t, h.setMode(ModesMode132Column, false))
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
-	expectEqual(t, 80, tm.cols)
-	expectEqual(t, 80, tm.screens.active.pages.cols)
-	expectEqual(t, 79, tm.scrolling_region.right)
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expectEqual(t, 80, tm.Cols)
+	expectEqual(t, 80, tm.Screens.Active.Pages.cols)
+	expectEqual(t, 79, tm.ScrollingRegion.Right)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 0, 0)
 
 	// Reset at 80 columns still clears and homes.
 	sroPrintString(t, &tm, "abc")
 	zigTry(t, h.setMode(ModesMode132Column, false))
-	expectEqual(t, 80, tm.cols)
+	expectEqual(t, 80, tm.Cols)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 0, 0)
 
 	// Resetting mode 40 does not undo the 132 state.
 	zigTry(t, h.setMode(ModesMode132Column, true))
 	zigTry(t, h.setMode(ModesModeEnableMode3, false))
-	expect(t, tm.modes.Get(ModesMode132Column), "t.modes.get(.@\"132_column\")")
-	expectEqual(t, 132, tm.cols)
+	expect(t, tm.Modes.Get(ModesMode132Column), "t.modes.get(.@\"132_column\")")
+	expectEqual(t, 132, tm.Cols)
 	// But with mode 40 off a further change is ignored and clears the bit.
 	zigTry(t, h.setMode(ModesMode132Column, false))
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
-	expectEqual(t, 132, tm.cols)
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expectEqual(t, 132, tm.Cols)
 }
 
 // Zig: test "term51: Handler.setMode: 132_column with mode 40 resizes both screens, and origin mode homes to 0,0"
@@ -2394,17 +2394,17 @@ func TestStreamReadonly_term51_Handler_setMode_132_column_with_mode_40_resizes_b
 
 	zigTry(t, h.setMode(ModesModeEnableMode3, true))
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroPrintString(t, &tm, "alt")
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 
 	zigTry(t, h.setMode(ModesMode132Column, true))
-	expectEqual(t, 132, sroScreen(t, &tm, ScreenSetKeyPrimary).pages.cols)
-	expectEqual(t, 132, sroScreen(t, &tm, ScreenSetKeyAlternate).pages.cols)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, 132, sroScreen(t, &tm, ScreenSetKeyPrimary).Pages.cols)
+	expectEqual(t, 132, sroScreen(t, &tm, ScreenSetKeyAlternate).Pages.cols)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroExpectText(t, &tm, "")
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
 }
 
 // Zig: test "term51: Handler.setMode: mouse event modes set the event flag, reset clears it"
@@ -2414,7 +2414,7 @@ func TestStreamReadonly_term51_Handler_setMode_mouse_event_modes_set_the_event_f
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 	for _, pair := range []struct {
 		mode  ModesMode
 		event TerminalMouseEvents
@@ -2425,17 +2425,17 @@ func TestStreamReadonly_term51_Handler_setMode_mouse_event_modes_set_the_event_f
 		{ModesModeMouseEventAny, TerminalMouseEventsAny},
 	} {
 		zigTry(t, h.setMode(pair.mode, true))
-		expect(t, tm.modes.Get(pair.mode), "t.modes.get(pair[0])")
-		expectEqual(t, pair.event, tm.flags.mouse_event)
-		expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
+		expect(t, tm.Modes.Get(pair.mode), "t.modes.get(pair[0])")
+		expectEqual(t, pair.event, tm.Flags.MouseEvent)
+		expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
 		zigTry(t, h.setMode(pair.mode, true))
-		expectEqual(t, pair.event, tm.flags.mouse_event)
+		expectEqual(t, pair.event, tm.Flags.MouseEvent)
 		zigTry(t, h.setMode(pair.mode, false))
-		expect(t, !tm.modes.Get(pair.mode), "!t.modes.get(pair[0])")
-		expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+		expect(t, !tm.Modes.Get(pair.mode), "!t.modes.get(pair[0])")
+		expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 		// Resetting when already off stays off.
 		zigTry(t, h.setMode(pair.mode, false))
-		expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+		expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 	}
 }
 
@@ -2448,35 +2448,35 @@ func TestStreamReadonly_term51_Handler_setMode_mouse_event_flag_follows_the_last
 
 	zigTry(t, h.setMode(ModesModeMouseEventX10, true))
 	zigTry(t, h.setMode(ModesModeMouseEventNormal, true))
-	expectEqual(t, TerminalMouseEventsNormal, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNormal, tm.Flags.MouseEvent)
 	zigTry(t, h.setMode(ModesModeMouseEventButton, true))
-	expectEqual(t, TerminalMouseEventsButton, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsButton, tm.Flags.MouseEvent)
 	zigTry(t, h.setMode(ModesModeMouseEventAny, true))
-	expectEqual(t, TerminalMouseEventsAny, tm.flags.mouse_event)
-	expect(t, tm.modes.Get(ModesModeMouseEventX10), "t.modes.get(.mouse_event_x10)")
-	expect(t, tm.modes.Get(ModesModeMouseEventNormal), "t.modes.get(.mouse_event_normal)")
-	expect(t, tm.modes.Get(ModesModeMouseEventButton), "t.modes.get(.mouse_event_button)")
-	expect(t, tm.modes.Get(ModesModeMouseEventAny), "t.modes.get(.mouse_event_any)")
+	expectEqual(t, TerminalMouseEventsAny, tm.Flags.MouseEvent)
+	expect(t, tm.Modes.Get(ModesModeMouseEventX10), "t.modes.get(.mouse_event_x10)")
+	expect(t, tm.Modes.Get(ModesModeMouseEventNormal), "t.modes.get(.mouse_event_normal)")
+	expect(t, tm.Modes.Get(ModesModeMouseEventButton), "t.modes.get(.mouse_event_button)")
+	expect(t, tm.Modes.Get(ModesModeMouseEventAny), "t.modes.get(.mouse_event_any)")
 
 	// Resetting a different mode than the one in effect still clears the
 	// flag, even though the mode that is in effect is still set.
 	zigTry(t, h.setMode(ModesModeMouseEventX10, false))
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
-	expect(t, tm.modes.Get(ModesModeMouseEventAny), "t.modes.get(.mouse_event_any)")
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
+	expect(t, tm.Modes.Get(ModesModeMouseEventAny), "t.modes.get(.mouse_event_any)")
 
 	// Even a mode that was never set.
 	zigTry(t, h.setMode(ModesModeMouseEventNormal, true))
-	expectEqual(t, TerminalMouseEventsNormal, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNormal, tm.Flags.MouseEvent)
 	zigTry(t, h.setMode(ModesModeMouseEventAny, false))
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 
 	// Events and formats are tracked independently.
 	zigTry(t, h.setMode(ModesModeMouseFormatSgr, true))
 	zigTry(t, h.setMode(ModesModeMouseEventButton, true))
-	expectEqual(t, TerminalMouseEventsButton, tm.flags.mouse_event)
-	expectEqual(t, TerminalMouseFormatSgr, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseEventsButton, tm.Flags.MouseEvent)
+	expectEqual(t, TerminalMouseFormatSgr, tm.Flags.MouseFormat)
 	zigTry(t, h.setMode(ModesModeMouseEventButton, false))
-	expectEqual(t, TerminalMouseFormatSgr, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatSgr, tm.Flags.MouseFormat)
 }
 
 // Zig: test "term51: Handler.setMode: mouse format modes set the format flag, reset goes back to x10"
@@ -2486,7 +2486,7 @@ func TestStreamReadonly_term51_Handler_setMode_mouse_format_modes_set_the_format
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
 	for _, pair := range []struct {
 		mode   ModesMode
 		format TerminalMouseFormat
@@ -2497,12 +2497,12 @@ func TestStreamReadonly_term51_Handler_setMode_mouse_format_modes_set_the_format
 		{ModesModeMouseFormatSgrPixels, TerminalMouseFormatSgrPixels},
 	} {
 		zigTry(t, h.setMode(pair.mode, true))
-		expect(t, tm.modes.Get(pair.mode), "t.modes.get(pair[0])")
-		expectEqual(t, pair.format, tm.flags.mouse_format)
-		expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+		expect(t, tm.Modes.Get(pair.mode), "t.modes.get(pair[0])")
+		expectEqual(t, pair.format, tm.Flags.MouseFormat)
+		expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 		zigTry(t, h.setMode(pair.mode, false))
-		expect(t, !tm.modes.Get(pair.mode), "!t.modes.get(pair[0])")
-		expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
+		expect(t, !tm.Modes.Get(pair.mode), "!t.modes.get(pair[0])")
+		expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
 	}
 
 	// Last one set wins, and resetting any of them clears the format.
@@ -2510,12 +2510,12 @@ func TestStreamReadonly_term51_Handler_setMode_mouse_format_modes_set_the_format
 	zigTry(t, h.setMode(ModesModeMouseFormatSgr, true))
 	zigTry(t, h.setMode(ModesModeMouseFormatUrxvt, true))
 	zigTry(t, h.setMode(ModesModeMouseFormatSgrPixels, true))
-	expectEqual(t, TerminalMouseFormatSgrPixels, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatSgrPixels, tm.Flags.MouseFormat)
 	zigTry(t, h.setMode(ModesModeMouseFormatUtf8, false))
-	expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
-	expect(t, tm.modes.Get(ModesModeMouseFormatSgrPixels), "t.modes.get(.mouse_format_sgr_pixels)")
-	expect(t, tm.modes.Get(ModesModeMouseFormatUrxvt), "t.modes.get(.mouse_format_urxvt)")
-	expect(t, tm.modes.Get(ModesModeMouseFormatSgr), "t.modes.get(.mouse_format_sgr)")
+	expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
+	expect(t, tm.Modes.Get(ModesModeMouseFormatSgrPixels), "t.modes.get(.mouse_format_sgr_pixels)")
+	expect(t, tm.Modes.Get(ModesModeMouseFormatUrxvt), "t.modes.get(.mouse_format_urxvt)")
+	expect(t, tm.Modes.Get(ModesModeMouseFormatSgr), "t.modes.get(.mouse_format_sgr)")
 }
 
 // Zig: test "term51: Handler.vt: set_mode and reset_mode run the side effects of special modes"
@@ -2530,38 +2530,38 @@ func TestStreamReadonly_term51_Handler_vt_set_mode_and_reset_mode_run_the_side_e
 	sroAt(&tm, 9, 9)
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeOrigin))
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
 	sroExpectCursor(t, &tm, 0, 2)
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeOrigin))
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
 	sroExpectCursor(t, &tm, 0, 0)
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeAltScreenSaveCursorClearEnter))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeAltScreenSaveCursorClearEnter))
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeMouseEventAny))
-	expectEqual(t, TerminalMouseEventsAny, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsAny, tm.Flags.MouseEvent)
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeMouseEventAny))
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeMouseFormatUrxvt))
-	expectEqual(t, TerminalMouseFormatUrxvt, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatUrxvt, tm.Flags.MouseFormat)
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeMouseFormatUrxvt))
-	expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableLeftAndRightMargin))
 	tm.SetLeftAndRightMargin(2, 5)
-	expectEqual(t, 4, tm.scrolling_region.right)
+	expectEqual(t, 4, tm.ScrollingRegion.Right)
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeEnableLeftAndRightMargin))
-	expectEqual(t, 19, tm.scrolling_region.right)
-	expectEqual(t, 0, tm.scrolling_region.left)
+	expectEqual(t, 19, tm.ScrollingRegion.Right)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
 
 	// 132 columns without mode 40.
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesMode132Column))
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
-	expectEqual(t, 20, tm.cols)
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expectEqual(t, 20, tm.Cols)
 }
 
 // Zig: test "term51: Handler.vt: save_mode and restore_mode round trip through setMode"
@@ -2576,46 +2576,46 @@ func TestStreamReadonly_term51_Handler_vt_save_mode_and_restore_mode_round_trip_
 	before := sroSnapshot(t, &tm)
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeCursorKeys))
 	after := sroSnapshot(t, &tm)
-	expect(t, tm.modes.saved.cursor_keys, "t.modes.saved.cursor_keys")
-	expect(t, tm.modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
+	expect(t, tm.Modes.Saved.cursor_keys, "t.modes.saved.cursor_keys")
+	expect(t, tm.Modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
 	before.saved_modes = after.saved_modes
 	expectEqual(t, before, after)
 
 	// Change then restore.
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeCursorKeys))
-	expect(t, !tm.modes.Get(ModesModeCursorKeys), "!t.modes.get(.cursor_keys)")
+	expect(t, !tm.Modes.Get(ModesModeCursorKeys), "!t.modes.get(.cursor_keys)")
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeCursorKeys))
-	expect(t, tm.modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
+	expect(t, tm.Modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
 	// Restoring twice gives the same value (the saved bit is kept).
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeCursorKeys))
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeCursorKeys))
-	expect(t, tm.modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
+	expect(t, tm.Modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
 
 	// A second save replaces the first.
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeCursorKeys))
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeCursorKeys))
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeCursorKeys))
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeCursorKeys))
-	expect(t, !tm.modes.Get(ModesModeCursorKeys), "!t.modes.get(.cursor_keys)")
+	expect(t, !tm.Modes.Get(ModesModeCursorKeys), "!t.modes.get(.cursor_keys)")
 
 	// Modes are saved independently.
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeBracketedPaste))
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeBracketedPaste))
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeBracketedPaste))
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeCursorKeys))
-	expect(t, !tm.modes.Get(ModesModeBracketedPaste), "!t.modes.get(.bracketed_paste)")
-	expect(t, !tm.modes.Get(ModesModeCursorKeys), "!t.modes.get(.cursor_keys)")
+	expect(t, !tm.Modes.Get(ModesModeBracketedPaste), "!t.modes.get(.bracketed_paste)")
+	expect(t, !tm.Modes.Get(ModesModeCursorKeys), "!t.modes.get(.cursor_keys)")
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeBracketedPaste))
-	expect(t, tm.modes.Get(ModesModeBracketedPaste), "t.modes.get(.bracketed_paste)")
+	expect(t, tm.Modes.Get(ModesModeBracketedPaste), "t.modes.get(.bracketed_paste)")
 
 	// Restoring a mode that was never saved restores its default value.
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeWraparound))
-	expect(t, !tm.modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
+	expect(t, !tm.Modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeWraparound))
-	expect(t, tm.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+	expect(t, tm.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeInsert))
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeInsert))
-	expect(t, !tm.modes.Get(ModesModeInsert), "!t.modes.get(.insert)")
+	expect(t, !tm.Modes.Get(ModesModeInsert), "!t.modes.get(.insert)")
 
 	// Restore does not change anything but the mode.
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeKeypadKeys))
@@ -2643,7 +2643,7 @@ func TestStreamReadonly_term51_Handler_vt_restore_mode_runs_the_side_effects_of_
 	sroExpectCursor(t, &tm, 0, 2)
 	sroAt(&tm, 5, 5)
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeOrigin))
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
 	sroExpectCursor(t, &tm, 0, 0)
 
 	// Alternate screen: save while on primary, enter 1049, restore leaves.
@@ -2651,44 +2651,44 @@ func TestStreamReadonly_term51_Handler_vt_restore_mode_runs_the_side_effects_of_
 	sroAt(&tm, 3, 3)
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeAltScreenSaveCursorClearEnter))
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeAltScreenSaveCursorClearEnter))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 	sroAt(&tm, 8, 8)
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeAltScreenSaveCursorClearEnter))
-	expect(t, !tm.modes.Get(ModesModeAltScreenSaveCursorClearEnter), "!t.modes.get(.alt_screen_save_cursor_clear_enter)")
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expect(t, !tm.Modes.Get(ModesModeAltScreenSaveCursorClearEnter), "!t.modes.get(.alt_screen_save_cursor_clear_enter)")
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 	sroExpectCursor(t, &tm, 3, 3)
 
 	// Restoring a saved "on" value enters the alt screen.
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeAltScreen))
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeAltScreen))
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeAltScreen))
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeAltScreen))
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
-	expect(t, tm.modes.Get(ModesModeAltScreen), "t.modes.get(.alt_screen)")
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
+	expect(t, tm.Modes.Get(ModesModeAltScreen), "t.modes.get(.alt_screen)")
 
 	// Mouse flags.
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeMouseEventNormal))
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeMouseEventNormal))
-	expectEqual(t, TerminalMouseEventsNormal, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNormal, tm.Flags.MouseEvent)
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeMouseEventNormal))
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeMouseFormatSgr))
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeMouseFormatSgr))
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeMouseFormatSgr))
-	expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeMouseFormatSgr))
-	expectEqual(t, TerminalMouseFormatSgr, tm.flags.mouse_format)
+	expectEqual(t, TerminalMouseFormatSgr, tm.Flags.MouseFormat)
 
 	// Left and right margin mode: restoring "off" resets the margins.
 	sroVt(t, &h, sroModeAct(StreamActionKeyResetMode, ModesModeAltScreen))
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeEnableLeftAndRightMargin))
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableLeftAndRightMargin))
 	tm.SetLeftAndRightMargin(3, 6)
-	expectEqual(t, 5, tm.scrolling_region.right)
+	expectEqual(t, 5, tm.ScrollingRegion.Right)
 	sroVt(t, &h, sroModeAct(StreamActionKeyRestoreMode, ModesModeEnableLeftAndRightMargin))
-	expect(t, !tm.modes.Get(ModesModeEnableLeftAndRightMargin), "!t.modes.get(.enable_left_and_right_margin)")
-	expectEqual(t, 19, tm.scrolling_region.right)
+	expect(t, !tm.Modes.Get(ModesModeEnableLeftAndRightMargin), "!t.modes.get(.enable_left_and_right_margin)")
+	expectEqual(t, 19, tm.ScrollingRegion.Right)
 }
 
 // Zig: test "term51: Handler.vt: unknown modes and ANSI versus DEC mode numbers through a stream"
@@ -2710,34 +2710,34 @@ func TestStreamReadonly_term51_Handler_vt_unknown_modes_and_ANSI_versus_DEC_mode
 
 	// ANSI and DEC numbering are different modes.
 	zigTry(t, s.NextSlice([]uint8("\x1b[4h")))
-	expect(t, tm.modes.Get(ModesModeInsert), "t.modes.get(.insert)")
-	expect(t, !tm.modes.Get(ModesModeSlowScroll), "!t.modes.get(.slow_scroll)")
+	expect(t, tm.Modes.Get(ModesModeInsert), "t.modes.get(.insert)")
+	expect(t, !tm.Modes.Get(ModesModeSlowScroll), "!t.modes.get(.slow_scroll)")
 	zigTry(t, s.NextSlice([]uint8("\x1b[4l\x1b[?4h")))
-	expect(t, !tm.modes.Get(ModesModeInsert), "!t.modes.get(.insert)")
-	expect(t, tm.modes.Get(ModesModeSlowScroll), "t.modes.get(.slow_scroll)")
+	expect(t, !tm.Modes.Get(ModesModeInsert), "!t.modes.get(.insert)")
+	expect(t, tm.Modes.Get(ModesModeSlowScroll), "t.modes.get(.slow_scroll)")
 	zigTry(t, s.NextSlice([]uint8("\x1b[12l")))
-	expect(t, !tm.modes.Get(ModesModeSendReceiveMode), "!t.modes.get(.send_receive_mode)")
-	expect(t, !tm.modes.Get(ModesModeCursorBlinking), "!t.modes.get(.cursor_blinking)")
+	expect(t, !tm.Modes.Get(ModesModeSendReceiveMode), "!t.modes.get(.send_receive_mode)")
+	expect(t, !tm.Modes.Get(ModesModeCursorBlinking), "!t.modes.get(.cursor_blinking)")
 	zigTry(t, s.NextSlice([]uint8("\x1b[?12h")))
-	expect(t, tm.modes.Get(ModesModeCursorBlinking), "t.modes.get(.cursor_blinking)")
+	expect(t, tm.Modes.Get(ModesModeCursorBlinking), "t.modes.get(.cursor_blinking)")
 	zigTry(t, s.NextSlice([]uint8("\x1b[20h")))
-	expect(t, tm.modes.Get(ModesModeLinefeed), "t.modes.get(.linefeed)")
+	expect(t, tm.Modes.Get(ModesModeLinefeed), "t.modes.get(.linefeed)")
 
 	// Several modes in one sequence are applied in order.
 	zigTry(t, s.NextSlice([]uint8("\x1b[?1000;1006;2004h")))
-	expectEqual(t, TerminalMouseEventsNormal, tm.flags.mouse_event)
-	expectEqual(t, TerminalMouseFormatSgr, tm.flags.mouse_format)
-	expect(t, tm.modes.Get(ModesModeBracketedPaste), "t.modes.get(.bracketed_paste)")
+	expectEqual(t, TerminalMouseEventsNormal, tm.Flags.MouseEvent)
+	expectEqual(t, TerminalMouseFormatSgr, tm.Flags.MouseFormat)
+	expect(t, tm.Modes.Get(ModesModeBracketedPaste), "t.modes.get(.bracketed_paste)")
 	zigTry(t, s.NextSlice([]uint8("\x1b[?1000;1006;2004l")))
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
-	expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
-	expect(t, !tm.modes.Get(ModesModeBracketedPaste), "!t.modes.get(.bracketed_paste)")
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
+	expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
+	expect(t, !tm.Modes.Get(ModesModeBracketedPaste), "!t.modes.get(.bracketed_paste)")
 
 	// XTSAVE/XTRESTORE.
 	zigTry(t, s.NextSlice([]uint8("\x1b[?25l\x1b[?25s\x1b[?25h")))
-	expect(t, tm.modes.Get(ModesModeCursorVisible), "t.modes.get(.cursor_visible)")
+	expect(t, tm.Modes.Get(ModesModeCursorVisible), "t.modes.get(.cursor_visible)")
 	zigTry(t, s.NextSlice([]uint8("\x1b[?25r")))
-	expect(t, !tm.modes.Get(ModesModeCursorVisible), "!t.modes.get(.cursor_visible)")
+	expect(t, !tm.Modes.Get(ModesModeCursorVisible), "!t.modes.get(.cursor_visible)")
 }
 
 // Zig: test "term51: Handler.vt: print writes the codepoint and advances the cursor"
@@ -2750,13 +2750,13 @@ func TestStreamReadonly_term51_Handler_vt_print_writes_the_codepoint_and_advance
 	sroVt(t, &h, sroPrintAct('A'))
 	sroExpectText(t, &tm, "A")
 	sroExpectCursor(t, &tm, 1, 0)
-	expectEqual(t, Some(uint32('A')), tm.previous_char)
+	expectEqual(t, Some(uint32('A')), tm.PreviousChar)
 
 	// A wide character takes two cells.
 	sroVt(t, &h, sroPrintAct(0x4E2D))
 	sroExpectText(t, &tm, "A中")
 	sroExpectCursor(t, &tm, 3, 0)
-	expectEqual(t, Some(uint32(0x4E2D)), tm.previous_char)
+	expectEqual(t, Some(uint32(0x4E2D)), tm.PreviousChar)
 
 	// The maximum codepoint is accepted.
 	sroVt(t, &h, sroPrintAct('z'))
@@ -2774,10 +2774,10 @@ func TestStreamReadonly_term51_Handler_vt_print_wraps_at_the_last_column_or_over
 			sroVt(t, &h, sroPrintAct(uint32(c)))
 		}
 		sroExpectCursor(t, &tm, 9, 0)
-		expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+		expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 		sroVt(t, &h, sroPrintAct('B'))
 		sroExpectCursor(t, &tm, 1, 1)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		sroExpectText(t, &tm, "0123456789\nB")
 	}()
 	func() {
@@ -2877,10 +2877,10 @@ func TestStreamReadonly_term51_Handler_vt_backspace_moves_left_stops_at_column_0
 	// to column 8 (wrap mode without reverse wrap) and the flag clears.
 	sroPrintString(t, &tm, "0123456789")
 	// ^ the row above is row 1, the print started at x=0 on row 1.
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	sroVt(t, &h, sroAct(StreamActionKeyBackspace))
 	sroExpectCursor(t, &tm, 8, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// Backspace does not erase.
 	sroExpectText(t, &tm, "\n0123456789")
@@ -2894,10 +2894,10 @@ func TestStreamReadonly_term51_Handler_vt_carriage_return_goes_to_column_0_or_th
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroAt(&tm, 5, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroAct(StreamActionKeyCarriageReturn))
 	sroExpectCursor(t, &tm, 0, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	sroVt(t, &h, sroAct(StreamActionKeyCarriageReturn))
 	sroExpectCursor(t, &tm, 0, 1)
 
@@ -2919,7 +2919,7 @@ func TestStreamReadonly_term51_Handler_vt_carriage_return_goes_to_column_0_or_th
 	sroExpectCursor(t, &tm, 3, 1)
 
 	// Origin mode always goes to the left margin.
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	sroAt(&tm, 1, 1)
 	sroVt(t, &h, sroAct(StreamActionKeyCarriageReturn))
 	sroExpectCursor(t, &tm, 3, 1)
@@ -2933,10 +2933,10 @@ func TestStreamReadonly_term51_Handler_vt_linefeed_moves_down_with_newline_mode_
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroAt(&tm, 5, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroAct(StreamActionKeyLinefeed))
 	sroExpectCursor(t, &tm, 5, 2)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeLinefeed))
 	sroVt(t, &h, sroAct(StreamActionKeyLinefeed))
@@ -2992,10 +2992,10 @@ func TestStreamReadonly_term51_Handler_vt_next_line_is_an_index_followed_by_a_ca
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroAt(&tm, 5, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroAct(StreamActionKeyNextLine))
 	sroExpectCursor(t, &tm, 0, 2)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// At the bottom: scrolls and the cursor ends in column 0.
 	sroAt(&tm, 6, 4)
@@ -3074,10 +3074,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_up_and_cursor_down_clamp_0_acts
 	}
 	for _, c := range up {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorUp, c.n))
 		sroExpectCursor(t, &tm, 5, c.y)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 	down := []struct {
 		n uint16
@@ -3091,10 +3091,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_up_and_cursor_down_clamp_0_acts
 	}
 	for _, c := range down {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorDown, c.n))
 		sroExpectCursor(t, &tm, 5, c.y)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 }
 
@@ -3147,10 +3147,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_left_and_cursor_right_clamp_0_a
 	}
 	for _, c := range left {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorLeft, c.n))
 		sroExpectCursor(t, &tm, c.x, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 	right := []struct {
 		n uint16
@@ -3165,10 +3165,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_left_and_cursor_right_clamp_0_a
 	}
 	for _, c := range right {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorRight, c.n))
 		sroExpectCursor(t, &tm, c.x, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 }
 
@@ -3262,10 +3262,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_pos_is_1_indexed_0_acts_as_1_an
 	}
 	for _, c := range cases {
 		sroAt(&tm, 7, 3)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroCursorPosAct(c.row, c.col))
 		sroExpectCursor(t, &tm, c.x, c.y)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 }
 
@@ -3320,10 +3320,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_col_and_cursor_row_keep_the_oth
 	}
 	for _, c := range cols {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorCol, c.v))
 		sroExpectCursor(t, &tm, c.x, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 	rows := []struct {
 		v uint16
@@ -3338,10 +3338,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_col_and_cursor_row_keep_the_oth
 	}
 	for _, c := range rows {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorRow, c.v))
 		sroExpectCursor(t, &tm, 5, c.y)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 }
 
@@ -3365,10 +3365,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_col_relative_and_cursor_row_rel
 	}
 	for _, c := range cols {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorColRelative, c.v))
 		sroExpectCursor(t, &tm, c.x, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 	rows := []struct {
 		v uint16
@@ -3382,10 +3382,10 @@ func TestStreamReadonly_term51_Handler_vt_cursor_col_relative_and_cursor_row_rel
 	}
 	for _, c := range rows {
 		sroAt(&tm, 5, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMoveAct(StreamActionKeyCursorRowRelative, c.v))
 		sroExpectCursor(t, &tm, 5, c.y)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}
 }
 
@@ -3458,19 +3458,19 @@ func TestStreamReadonly_term51_Handler_vt_cursor_style_sets_the_shape_and_the_bl
 	}{}, cases...), cases...)
 	for _, c := range twice {
 		sroVt(t, &h, StreamAction{Tag: StreamActionKeyCursorStyle, CursorStyle: c.v})
-		expectEqual(t, c.style, tm.screens.active.cursor.cursor_style)
-		expectEqual(t, c.blink, tm.modes.Get(ModesModeCursorBlinking))
+		expectEqual(t, c.style, tm.Screens.Active.Cursor.CursorStyle)
+		expectEqual(t, c.blink, tm.Modes.Get(ModesModeCursorBlinking))
 	}
 	for _, c := range cases {
-		tm.modes.Set(ModesModeCursorBlinking, !c.blink)
+		tm.Modes.Set(ModesModeCursorBlinking, !c.blink)
 		if c.style == ScreenCursorStyleBar {
-			tm.screens.active.cursor.cursor_style = ScreenCursorStyleBlock
+			tm.Screens.Active.Cursor.CursorStyle = ScreenCursorStyleBlock
 		} else {
-			tm.screens.active.cursor.cursor_style = ScreenCursorStyleBar
+			tm.Screens.Active.Cursor.CursorStyle = ScreenCursorStyleBar
 		}
 		sroVt(t, &h, StreamAction{Tag: StreamActionKeyCursorStyle, CursorStyle: c.v})
-		expectEqual(t, c.style, tm.screens.active.cursor.cursor_style)
-		expectEqual(t, c.blink, tm.modes.Get(ModesModeCursorBlinking))
+		expectEqual(t, c.style, tm.Screens.Active.Cursor.CursorStyle)
+		expectEqual(t, c.blink, tm.Modes.Get(ModesModeCursorBlinking))
 	}
 
 	// The cursor position and text are not affected.
@@ -3486,35 +3486,35 @@ func TestStreamReadonly_term51_Handler_vt_erase_display_below_above_and_complete
 		defer tm.Deinit()
 		h := StreamReadonlyHandlerInit(&tm)
 		sroAt(&tm, 4, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroBoolAct(StreamActionKeyEraseDisplayBelow, false))
 		sroExpectText(t, &tm, "0123456789\nabcdefghij\nABCD")
 		sroExpectCursor(t, &tm, 4, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}()
 	func() {
 		tm := sroNewFilled(t)
 		defer tm.Deinit()
 		h := StreamReadonlyHandlerInit(&tm)
 		sroAt(&tm, 4, 2)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroBoolAct(StreamActionKeyEraseDisplayAbove, false))
 		sroExpectText(t, &tm, "\n\n     FGHIJ\nklmnopqrst\nKLMNOPQRST")
 		sroExpectCursor(t, &tm, 4, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}()
 	func() {
 		tm := sroNewFilled(t)
 		defer tm.Deinit()
 		h := StreamReadonlyHandlerInit(&tm)
 		sroAt(&tm, 4, 2)
-		tm.screens.active.cursor.pending_wrap = true
-		tm.flags.dirty.clear = false
+		tm.Screens.Active.Cursor.PendingWrap = true
+		tm.Flags.Dirty.Clear = false
 		sroVt(t, &h, sroBoolAct(StreamActionKeyEraseDisplayComplete, false))
 		sroExpectText(t, &tm, "")
 		sroExpectCursor(t, &tm, 4, 2)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
-		expect(t, tm.flags.dirty.clear, "t.flags.dirty.clear")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, tm.Flags.Dirty.Clear, "t.flags.dirty.clear")
 	}()
 }
 
@@ -3555,10 +3555,10 @@ func TestStreamReadonly_term51_Handler_vt_erase_display_scroll_complete_moves_th
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroPrintString(t, &tm, "a\nb\nc")
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroBoolAct(StreamActionKeyEraseDisplayScrollComplete, false))
 	sroExpectText(t, &tm, "")
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	all := sroDumpScreen(t, &tm)
 	// Zig-only: defer testing.allocator.free(all)
 	expectEqualStrings(t, "a\nb\nc", all)
@@ -3650,33 +3650,33 @@ func TestStreamReadonly_term51_Handler_vt_erase_line_right_left_and_complete(t *
 		defer tm.Deinit()
 		h := StreamReadonlyHandlerInit(&tm)
 		sroAt(&tm, 4, 1)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroBoolAct(StreamActionKeyEraseLineRight, false))
 		sroExpectText(t, &tm, "0123456789\nabcd\nABCDEFGHIJ\nklmnopqrst\nKLMNOPQRST")
 		sroExpectCursor(t, &tm, 4, 1)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}()
 	func() {
 		tm := sroNewFilled(t)
 		defer tm.Deinit()
 		h := StreamReadonlyHandlerInit(&tm)
 		sroAt(&tm, 4, 1)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroBoolAct(StreamActionKeyEraseLineLeft, false))
 		sroExpectText(t, &tm, "0123456789\n     fghij\nABCDEFGHIJ\nklmnopqrst\nKLMNOPQRST")
 		sroExpectCursor(t, &tm, 4, 1)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}()
 	func() {
 		tm := sroNewFilled(t)
 		defer tm.Deinit()
 		h := StreamReadonlyHandlerInit(&tm)
 		sroAt(&tm, 4, 1)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroBoolAct(StreamActionKeyEraseLineComplete, false))
 		sroExpectText(t, &tm, "0123456789\n\nABCDEFGHIJ\nklmnopqrst\nKLMNOPQRST")
 		sroExpectCursor(t, &tm, 4, 1)
-		expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+		expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	}()
 }
 
@@ -3734,27 +3734,27 @@ func TestStreamReadonly_term51_Handler_vt_protected_mode_off_iso_and_dec(t *test
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeOff, tm.screens.active.protected_mode)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeOff, tm.Screens.Active.ProtectedMode)
 	// Off from the initial state changes nothing.
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeOff))
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeOff, tm.screens.active.protected_mode)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeOff, tm.Screens.Active.ProtectedMode)
 
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeIso))
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, tm.screens.active.protected_mode)
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, tm.Screens.Active.ProtectedMode)
 	// The last mode stays after switching protection off.
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeOff))
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, tm.screens.active.protected_mode)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, tm.Screens.Active.ProtectedMode)
 
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeDec))
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeDec, tm.screens.active.protected_mode)
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeDec, tm.Screens.Active.ProtectedMode)
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeOff))
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeDec, tm.screens.active.protected_mode)
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeDec, tm.Screens.Active.ProtectedMode)
 
 	// Printed cells carry the protection of the cursor.
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeDec))
@@ -3763,8 +3763,8 @@ func TestStreamReadonly_term51_Handler_vt_protected_mode_off_iso_and_dec(t *test
 	sroVt(t, &h, sroPrintAct('U'))
 	p := sroGetCell(t, &tm, 0, 0)
 	u := sroGetCell(t, &tm, 1, 0)
-	expect(t, p.cell.protected, "p.cell.protected")
-	expect(t, !u.cell.protected, "!u.cell.protected")
+	expect(t, p.Cell.protected, "p.cell.protected")
+	expect(t, !u.Cell.protected, "!u.cell.protected")
 }
 
 // Zig: test "term51: Handler.vt: delete_chars shifts the rest of the line left"
@@ -3834,26 +3834,26 @@ func TestStreamReadonly_term51_Handler_vt_delete_chars_at_the_last_column_with_p
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroAt(&tm, 9, 0)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroCountAct(StreamActionKeyDeleteChars, 1))
 	sroExpectText(t, &tm, "012345678\nabcdefghij\nABCDEFGHIJ\nklmnopqrst\nKLMNOPQRST")
 	sroExpectCursor(t, &tm, 9, 0)
 	// A delete that happens clears the pending wrap state.
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// A count of 0 does nothing, including leaving the flag alone.
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroCountAct(StreamActionKeyDeleteChars, 0))
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	sroExpectText(t, &tm, "012345678\nabcdefghij\nABCDEFGHIJ\nklmnopqrst\nKLMNOPQRST")
 
 	// So does a cursor outside the margins.
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableLeftAndRightMargin))
 	sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, 2, 5))
 	sroAt(&tm, 9, 0)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroCountAct(StreamActionKeyDeleteChars, 1))
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 }
 
 // Zig: test "term51: Handler.vt: erase_chars blanks cells without shifting, 0 acts as 1"
@@ -3877,7 +3877,7 @@ func TestStreamReadonly_term51_Handler_vt_erase_chars_blanks_cells_without_shift
 			defer tm.Deinit()
 			h := StreamReadonlyHandlerInit(&tm)
 			sroAt(&tm, 2, 0)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			sroVt(t, &h, sroCountAct(StreamActionKeyEraseChars, c.n))
 			expected := c.row + rest
 			sroExpectText(t, &tm, expected)
@@ -3928,13 +3928,13 @@ func TestStreamReadonly_term51_Handler_vt_insert_blanks_shifts_the_rest_of_the_l
 			defer tm.Deinit()
 			h := StreamReadonlyHandlerInit(&tm)
 			sroAt(&tm, 2, 0)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			sroVt(t, &h, sroCountAct(StreamActionKeyInsertBlanks, c.n))
 			expected := c.row + rest
 			sroExpectText(t, &tm, expected)
 			sroExpectCursor(t, &tm, 2, 0)
 			// Always clears pending wrap, even for a count of 0.
-			expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+			expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		}()
 	}
 }
@@ -3961,11 +3961,11 @@ func TestStreamReadonly_term51_Handler_vt_insert_blanks_respects_margins_and_cle
 			sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableLeftAndRightMargin))
 			sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, 4, 8))
 			sroAt(&tm, c.x, 0)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			sroVt(t, &h, sroCountAct(StreamActionKeyInsertBlanks, 1))
 			sroExpectText(t, &tm, c.row+rest)
 			sroExpectCursor(t, &tm, uint(c.x), 0)
-			expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+			expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		}()
 	}
 }
@@ -4007,11 +4007,11 @@ func TestStreamReadonly_term51_Handler_vt_insert_lines_within_a_scroll_region_ou
 
 	sroVt(t, &h, sroMarginAct(StreamActionKeyTopAndBottomMargin, 2, 4))
 	sroAt(&tm, 3, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroCountAct(StreamActionKeyInsertLines, 1))
 	sroExpectText(t, &tm, "0123456789\n\nabcdefghij\nABCDEFGHIJ\nKLMNOPQRST")
 	sroExpectCursor(t, &tm, 0, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// Above and below the region: ignored, cursor untouched.
 	before := sroSnapshot(t, &tm)
@@ -4060,11 +4060,11 @@ func TestStreamReadonly_term51_Handler_vt_delete_lines_within_a_scroll_region_ou
 
 	sroVt(t, &h, sroMarginAct(StreamActionKeyTopAndBottomMargin, 2, 4))
 	sroAt(&tm, 3, 1)
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroCountAct(StreamActionKeyDeleteLines, 1))
 	sroExpectText(t, &tm, "0123456789\nABCDEFGHIJ\nklmnopqrst\n\nKLMNOPQRST")
 	sroExpectCursor(t, &tm, 0, 1)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	before := sroSnapshot(t, &tm)
 	sroAt(&tm, 3, 0)
@@ -4095,12 +4095,12 @@ func TestStreamReadonly_term51_Handler_vt_scroll_up_moves_the_top_line_into_the_
 			defer tm.Deinit()
 			h := StreamReadonlyHandlerInit(&tm)
 			sroAt(&tm, 3, 2)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			sroVt(t, &h, sroCountAct(StreamActionKeyScrollUp, c.n))
 			sroExpectText(t, &tm, c.text)
 			// The cursor does not move, nor does the pending wrap state change.
 			sroExpectCursor(t, &tm, 3, 2)
-			expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+			expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 			// Everything that scrolled out is in the history.
 			all := sroDumpScreen(t, &tm)
 			// Zig-only: defer testing.allocator.free(all)
@@ -4151,11 +4151,11 @@ func TestStreamReadonly_term51_Handler_vt_scroll_down_moves_lines_down_and_keeps
 			defer tm.Deinit()
 			h := StreamReadonlyHandlerInit(&tm)
 			sroAt(&tm, 3, 2)
-			tm.screens.active.cursor.pending_wrap = true
+			tm.Screens.Active.Cursor.PendingWrap = true
 			sroVt(t, &h, sroCountAct(StreamActionKeyScrollDown, c.n))
 			sroExpectText(t, &tm, c.text)
 			sroExpectCursor(t, &tm, 3, 2)
-			expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+			expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 		}()
 	}
 }
@@ -4212,22 +4212,22 @@ func TestStreamReadonly_term51_Handler_vt_top_and_bottom_margin_accepts_only_top
 	for _, c := range cases {
 		sroVt(t, &h, sroMarginAct(StreamActionKeyTopAndBottomMargin, 2, 4))
 		sroAt(&tm, 6, 3)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMarginAct(StreamActionKeyTopAndBottomMargin, c.top, c.bottom))
 		if c.ok {
-			expectEqual(t, c.t, tm.scrolling_region.top)
-			expectEqual(t, c.b, tm.scrolling_region.bottom)
+			expectEqual(t, c.t, tm.ScrollingRegion.Top)
+			expectEqual(t, c.b, tm.ScrollingRegion.Bottom)
 			sroExpectCursor(t, &tm, 0, 0)
-			expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+			expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		} else {
-			expectEqual(t, 1, tm.scrolling_region.top)
-			expectEqual(t, 3, tm.scrolling_region.bottom)
+			expectEqual(t, 1, tm.ScrollingRegion.Top)
+			expectEqual(t, 3, tm.ScrollingRegion.Bottom)
 			sroExpectCursor(t, &tm, 6, 3)
-			expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+			expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 		}
 		// Margins never change the left and right.
-		expectEqual(t, 0, tm.scrolling_region.left)
-		expectEqual(t, 9, tm.scrolling_region.right)
+		expectEqual(t, 0, tm.ScrollingRegion.Left)
+		expectEqual(t, 9, tm.ScrollingRegion.Right)
 	}
 }
 
@@ -4238,7 +4238,7 @@ func TestStreamReadonly_term51_Handler_vt_top_and_bottom_margin_homes_to_the_reg
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	sroVt(t, &h, sroMarginAct(StreamActionKeyTopAndBottomMargin, 3, 5))
 	sroExpectCursor(t, &tm, 0, 2)
 }
@@ -4253,8 +4253,8 @@ func TestStreamReadonly_term51_Handler_vt_left_and_right_margin_needs_mode_69_an
 	// Without the mode it is ignored.
 	sroAt(&tm, 6, 3)
 	sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, 2, 5))
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 9, tm.scrolling_region.right)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 9, tm.ScrollingRegion.Right)
 	sroExpectCursor(t, &tm, 6, 3)
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableLeftAndRightMargin))
@@ -4283,24 +4283,24 @@ func TestStreamReadonly_term51_Handler_vt_left_and_right_margin_needs_mode_69_an
 	}
 	for _, c := range cases {
 		sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, 3, 7))
-		expectEqual(t, 2, tm.scrolling_region.left)
+		expectEqual(t, 2, tm.ScrollingRegion.Left)
 		sroAt(&tm, 6, 3)
-		tm.screens.active.cursor.pending_wrap = true
+		tm.Screens.Active.Cursor.PendingWrap = true
 		sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, c.l, c.r))
 		if c.ok {
-			expectEqual(t, c.left, tm.scrolling_region.left)
-			expectEqual(t, c.right, tm.scrolling_region.right)
+			expectEqual(t, c.left, tm.ScrollingRegion.Left)
+			expectEqual(t, c.right, tm.ScrollingRegion.Right)
 			sroExpectCursor(t, &tm, 0, 0)
-			expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+			expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 		} else {
-			expectEqual(t, 2, tm.scrolling_region.left)
-			expectEqual(t, 6, tm.scrolling_region.right)
+			expectEqual(t, 2, tm.ScrollingRegion.Left)
+			expectEqual(t, 6, tm.ScrollingRegion.Right)
 			sroExpectCursor(t, &tm, 6, 3)
-			expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+			expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 		}
 		// Top and bottom are not touched.
-		expectEqual(t, 0, tm.scrolling_region.top)
-		expectEqual(t, 4, tm.scrolling_region.bottom)
+		expectEqual(t, 0, tm.ScrollingRegion.Top)
+		expectEqual(t, 4, tm.ScrollingRegion.Bottom)
 	}
 }
 
@@ -4313,26 +4313,26 @@ func TestStreamReadonly_term51_Handler_vt_left_and_right_margin_ambiguous_resets
 
 	// Without the mode it is DECSC.
 	sroAt(&tm, 4, 2)
-	expect(t, !tm.screens.active.saved_cursor.Valid, "t.screens.active.saved_cursor == null")
+	expect(t, !tm.Screens.Active.SavedCursor.Valid, "t.screens.active.saved_cursor == null")
 	sroVt(t, &h, sroAct(StreamActionKeyLeftAndRightMarginAmbiguous))
 	sroExpectCursor(t, &tm, 4, 2)
-	saved := zigUnwrap(t, tm.screens.active.saved_cursor)
-	expectEqual(t, 4, saved.x)
-	expectEqual(t, 2, saved.y)
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 9, tm.scrolling_region.right)
+	saved := zigUnwrap(t, tm.Screens.Active.SavedCursor)
+	expectEqual(t, 4, saved.X)
+	expectEqual(t, 2, saved.Y)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 9, tm.ScrollingRegion.Right)
 
 	// With the mode it resets the margins and homes the cursor.
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableLeftAndRightMargin))
 	sroVt(t, &h, sroMarginAct(StreamActionKeyLeftAndRightMargin, 3, 7))
-	expectEqual(t, 2, tm.scrolling_region.left)
+	expectEqual(t, 2, tm.ScrollingRegion.Left)
 	sroAt(&tm, 6, 3)
 	sroVt(t, &h, sroAct(StreamActionKeyLeftAndRightMarginAmbiguous))
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 9, tm.scrolling_region.right)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 9, tm.ScrollingRegion.Right)
 	sroExpectCursor(t, &tm, 0, 0)
 	// The saved cursor was not overwritten.
-	expectEqual(t, 4, zigUnwrap(t, tm.screens.active.saved_cursor).x)
+	expectEqual(t, 4, zigUnwrap(t, tm.Screens.Active.SavedCursor).X)
 }
 
 // Zig: test "term51: Handler.vt: save_cursor and restore_cursor keep position, style and flags"
@@ -4345,13 +4345,13 @@ func TestStreamReadonly_term51_Handler_vt_save_cursor_and_restore_cursor_keep_po
 	// Restoring without a save gives the defaults.
 	sroAt(&tm, 5, 3)
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagBold))
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeDec))
 	sroVt(t, &h, sroAct(StreamActionKeyRestoreCursor))
 	sroExpectCursor(t, &tm, 0, 0)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expect(t, !tm.screens.active.cursor.style.flags.bold, "!t.screens.active.cursor.style.flags.bold")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Bold, "!t.screens.active.cursor.style.flags.bold")
 
 	// Save a rich state.
 	sroAt(&tm, 4, 2)
@@ -4360,17 +4360,17 @@ func TestStreamReadonly_term51_Handler_vt_save_cursor_and_restore_cursor_keep_po
 		Tag:          StreamActionKeySetAttribute,
 		SetAttribute: SGRAttribute{Tag: SGRAttributeTag8Fg, X8Fg: ColorNameRed},
 	})
-	tm.screens.active.cursor.pending_wrap = true
+	tm.Screens.Active.Cursor.PendingWrap = true
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeDec))
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	sroVt(t, &h, sroConfigureCharsetAct(CharsetsSlotsG0, CharsetsCharsetDecSpecial))
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGL, CharsetsSlotsG1, false))
 	sroVt(t, &h, sroAct(StreamActionKeySaveCursor))
 
 	// Change everything.
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	sroAt(&tm, 0, 0)
-	tm.screens.active.cursor.pending_wrap = false
+	tm.Screens.Active.Cursor.PendingWrap = false
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagUnset))
 	sroVt(t, &h, sroAct(StreamActionKeyProtectedModeOff))
 	sroVt(t, &h, sroConfigureCharsetAct(CharsetsSlotsG0, CharsetsCharsetAscii))
@@ -4378,15 +4378,15 @@ func TestStreamReadonly_term51_Handler_vt_save_cursor_and_restore_cursor_keep_po
 
 	sroVt(t, &h, sroAct(StreamActionKeyRestoreCursor))
 	sroExpectCursor(t, &tm, 4, 2)
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	expectEqual(t, TerminalColorsDefault.palette.current[0], tm.colors.palette.current[0])
-	expectEqual(t, StyleColorPalette, tm.screens.active.cursor.style.fg_color.Tag)
-	expectEqual(t, 1, tm.screens.active.cursor.style.fg_color.Palette)
-	expectEqual(t, sroCharsetDec, tm.screens.active.charset.charsets.Get(CharsetsSlotsG0))
-	expectEqual(t, CharsetsSlotsG1, tm.screens.active.charset.gl)
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	expectEqual(t, TerminalColorsDefault.Palette.Current[0], tm.Colors.Palette.Current[0])
+	expectEqual(t, StyleColorPalette, tm.Screens.Active.Cursor.Style.FgColor.Tag)
+	expectEqual(t, 1, tm.Screens.Active.Cursor.Style.FgColor.Palette)
+	expectEqual(t, sroCharsetDec, tm.Screens.Active.Charset.charsets.Get(CharsetsSlotsG0))
+	expectEqual(t, CharsetsSlotsG1, tm.Screens.Active.Charset.Gl)
 
 	// The saved state stays available.
 	sroAt(&tm, 8, 4)
@@ -4419,7 +4419,7 @@ func TestStreamReadonly_term51_Handler_vt_configure_charset_sets_every_slot_to_e
 		for _, cs := range charsets {
 			before := sroSnapshot(t, &tm)
 			sroVt(t, &h, sroConfigureCharsetAct(slot, cs))
-			expectEqual(t, cs, tm.screens.active.charset.charsets.Get(slot))
+			expectEqual(t, cs, tm.Screens.Active.Charset.charsets.Get(slot))
 			// Nothing else changed.
 			expected := before
 			expected.charset.charsets.Set(slot, cs)
@@ -4435,36 +4435,36 @@ func TestStreamReadonly_term51_Handler_vt_invoke_charset_the_locking_field_is_in
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	expectEqual(t, CharsetsSlotsG0, tm.screens.active.charset.gl)
-	expectEqual(t, CharsetsSlotsG2, tm.screens.active.charset.gr)
+	expectEqual(t, CharsetsSlotsG0, tm.Screens.Active.Charset.Gl)
+	expectEqual(t, CharsetsSlotsG2, tm.Screens.Active.Charset.Gr)
 
 	// Upstream names the third argument "locking" but the handler passes it
 	// to Terminal.invokeCharset as "single": the stream sends locking=false
 	// for SO/SI and the locking shifts, locking=true for SS2 and SS3.
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGL, CharsetsSlotsG1, false))
-	expectEqual(t, CharsetsSlotsG1, tm.screens.active.charset.gl)
-	expectEqual(t, CharsetsSlotsG2, tm.screens.active.charset.gr)
+	expectEqual(t, CharsetsSlotsG1, tm.Screens.Active.Charset.Gl)
+	expectEqual(t, CharsetsSlotsG2, tm.Screens.Active.Charset.Gr)
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGL, CharsetsSlotsG3, false))
-	expectEqual(t, CharsetsSlotsG3, tm.screens.active.charset.gl)
+	expectEqual(t, CharsetsSlotsG3, tm.Screens.Active.Charset.Gl)
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGR, CharsetsSlotsG1, false))
-	expectEqual(t, CharsetsSlotsG1, tm.screens.active.charset.gr)
-	expectEqual(t, CharsetsSlotsG3, tm.screens.active.charset.gl)
+	expectEqual(t, CharsetsSlotsG1, tm.Screens.Active.Charset.Gr)
+	expectEqual(t, CharsetsSlotsG3, tm.Screens.Active.Charset.Gl)
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGR, CharsetsSlotsG3, false))
-	expectEqual(t, CharsetsSlotsG3, tm.screens.active.charset.gr)
+	expectEqual(t, CharsetsSlotsG3, tm.Screens.Active.Charset.Gr)
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGL, CharsetsSlotsG0, false))
-	expectEqual(t, CharsetsSlotsG0, tm.screens.active.charset.gl)
-	expectEqual(t, None[CharsetsSlots](), tm.screens.active.charset.single_shift)
+	expectEqual(t, CharsetsSlotsG0, tm.Screens.Active.Charset.Gl)
+	expectEqual(t, None[CharsetsSlots](), tm.Screens.Active.Charset.SingleShift)
 
 	// A single shift is recorded without changing GL and applies to the
 	// next printed character only.
 	sroVt(t, &h, sroConfigureCharsetAct(CharsetsSlotsG2, CharsetsCharsetDecSpecial))
 	sroVt(t, &h, sroInvokeCharsetAct(CharsetsActiveSlotGL, CharsetsSlotsG2, true))
-	expectEqual(t, Some(CharsetsSlotsG2), tm.screens.active.charset.single_shift)
-	expectEqual(t, CharsetsSlotsG0, tm.screens.active.charset.gl)
+	expectEqual(t, Some(CharsetsSlotsG2), tm.Screens.Active.Charset.SingleShift)
+	expectEqual(t, CharsetsSlotsG0, tm.Screens.Active.Charset.Gl)
 	sroVt(t, &h, sroPrintAct('`'))
 	sroVt(t, &h, sroPrintAct('`'))
 	sroExpectText(t, &tm, "◆`")
-	expectEqual(t, None[CharsetsSlots](), tm.screens.active.charset.single_shift)
+	expectEqual(t, None[CharsetsSlots](), tm.Screens.Active.Charset.SingleShift)
 
 	// A locking shift to a DEC special graphics slot.
 	sroVt(t, &h, sroConfigureCharsetAct(CharsetsSlotsG1, CharsetsCharsetDecSpecial))
@@ -4487,32 +4487,32 @@ func TestStreamReadonly_term51_Handler_vt_set_attribute_applies_attributes_ignor
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	c := &tm.screens.active.cursor
+	c := &tm.Screens.Active.Cursor
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagBold))
-	expect(t, c.style.flags.bold, "c.style.flags.bold")
+	expect(t, c.Style.Flags.Bold, "c.style.flags.bold")
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagItalic))
-	expect(t, c.style.flags.italic, "c.style.flags.italic")
+	expect(t, c.Style.Flags.Italic, "c.style.flags.italic")
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagFaint))
-	expect(t, c.style.flags.faint, "c.style.flags.faint")
+	expect(t, c.Style.Flags.Faint, "c.style.flags.faint")
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagInverse))
-	expect(t, c.style.flags.inverse, "c.style.flags.inverse")
+	expect(t, c.Style.Flags.Inverse, "c.style.flags.inverse")
 	sroVt(t, &h, StreamAction{
 		Tag:          StreamActionKeySetAttribute,
 		SetAttribute: SGRAttribute{Tag: SGRAttributeTagUnderline, Underline: SGRAttributeUnderlineCurly},
 	})
-	expectEqual(t, SGRAttributeUnderlineCurly, c.style.flags.underline)
+	expectEqual(t, SGRAttributeUnderlineCurly, c.Style.Flags.Underline)
 	sroVt(t, &h, StreamAction{
 		Tag:          StreamActionKeySetAttribute,
-		SetAttribute: SGRAttribute{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{r: 1, g: 2, b: 3}},
+		SetAttribute: SGRAttribute{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{R: 1, G: 2, B: 3}},
 	})
-	expectEqual(t, StyleColorRgb, c.style.fg_color.Tag)
-	expectEqual(t, uint8(2), c.style.fg_color.Rgb.g)
+	expectEqual(t, StyleColorRgb, c.Style.FgColor.Tag)
+	expectEqual(t, uint8(2), c.Style.FgColor.Rgb.G)
 	sroVt(t, &h, StreamAction{
 		Tag:          StreamActionKeySetAttribute,
 		SetAttribute: SGRAttribute{Tag: SGRAttributeTag256Bg, X256Bg: 200},
 	})
-	expectEqual(t, StyleColorPalette, c.style.bg_color.Tag)
-	expectEqual(t, uint8(200), c.style.bg_color.Palette)
+	expectEqual(t, StyleColorPalette, c.Style.BgColor.Tag)
+	expectEqual(t, uint8(200), c.Style.BgColor.Palette)
 
 	// Unknown attributes do nothing at all.
 	before := sroSnapshot(t, &tm)
@@ -4520,27 +4520,27 @@ func TestStreamReadonly_term51_Handler_vt_set_attribute_applies_attributes_ignor
 		Tag: StreamActionKeySetAttribute,
 		SetAttribute: SGRAttribute{
 			Tag:     SGRAttributeTagUnknown,
-			Unknown: SGRAttributeUnknown{full: []uint16{38, 99}, partial: []uint16{99}},
+			Unknown: SGRAttributeUnknown{Full: []uint16{38, 99}, Partial: []uint16{99}},
 		},
 	})
 	expectEqual(t, before, sroSnapshot(t, &tm))
 
 	// Resets.
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagResetBold))
-	expect(t, !c.style.flags.bold, "!c.style.flags.bold")
-	expect(t, c.style.flags.italic, "c.style.flags.italic")
+	expect(t, !c.Style.Flags.Bold, "!c.style.flags.bold")
+	expect(t, c.Style.Flags.Italic, "c.style.flags.italic")
 
 	// A printed cell carries the style.
 	sroVt(t, &h, sroPrintAct('A'))
 	cell := sroGetCell(t, &tm, 0, 0)
-	expect(t, cell.cell.style_id != 0, "cell.cell.style_id != 0")
+	expect(t, cell.Cell.style_id != 0, "cell.cell.style_id != 0")
 
 	// Unset clears everything.
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagUnset))
-	expect(t, c.style.Default(), "c.style.default()")
+	expect(t, c.Style.Default(), "c.style.default()")
 	sroVt(t, &h, sroPrintAct('B'))
 	cell2 := sroGetCell(t, &tm, 1, 0)
-	expectEqual(t, 0, cell2.cell.style_id)
+	expectEqual(t, 0, cell2.Cell.style_id)
 }
 
 // Zig: test "term51: Handler.vt: mouse_shift_capture, active_status_display and mouse_shape"
@@ -4550,27 +4550,27 @@ func TestStreamReadonly_term51_Handler_vt_mouse_shift_capture_active_status_disp
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	expectEqual(t, TerminalFlagsMouseShiftCaptureNull, tm.flags.mouse_shift_capture)
+	expectEqual(t, TerminalFlagsMouseShiftCaptureNull, tm.Flags.MouseShiftCapture)
 	sroVt(t, &h, sroBoolAct(StreamActionKeyMouseShiftCapture, true))
-	expectEqual(t, TerminalFlagsMouseShiftCaptureTrue, tm.flags.mouse_shift_capture)
+	expectEqual(t, TerminalFlagsMouseShiftCaptureTrue, tm.Flags.MouseShiftCapture)
 	sroVt(t, &h, sroBoolAct(StreamActionKeyMouseShiftCapture, false))
-	expectEqual(t, TerminalFlagsMouseShiftCaptureFalse, tm.flags.mouse_shift_capture)
+	expectEqual(t, TerminalFlagsMouseShiftCaptureFalse, tm.Flags.MouseShiftCapture)
 	sroVt(t, &h, sroBoolAct(StreamActionKeyMouseShiftCapture, true))
-	expectEqual(t, TerminalFlagsMouseShiftCaptureTrue, tm.flags.mouse_shift_capture)
+	expectEqual(t, TerminalFlagsMouseShiftCaptureTrue, tm.Flags.MouseShiftCapture)
 
-	expectEqual(t, ANSIStatusDisplayMain, tm.status_display)
+	expectEqual(t, ANSIStatusDisplayMain, tm.StatusDisplay)
 	sroVt(t, &h, StreamAction{Tag: StreamActionKeyActiveStatusDisplay, ActiveStatusDisplay: ANSIStatusDisplayStatusLine})
-	expectEqual(t, ANSIStatusDisplayStatusLine, tm.status_display)
+	expectEqual(t, ANSIStatusDisplayStatusLine, tm.StatusDisplay)
 	sroVt(t, &h, StreamAction{Tag: StreamActionKeyActiveStatusDisplay, ActiveStatusDisplay: ANSIStatusDisplayMain})
-	expectEqual(t, ANSIStatusDisplayMain, tm.status_display)
+	expectEqual(t, ANSIStatusDisplayMain, tm.StatusDisplay)
 
-	expectEqual(t, MouseShapeText, tm.mouse_shape)
+	expectEqual(t, MouseShapeText, tm.MouseShape)
 	sroVt(t, &h, StreamAction{Tag: StreamActionKeyMouseShape, MouseShape: MouseShapePointer})
-	expectEqual(t, MouseShapePointer, tm.mouse_shape)
+	expectEqual(t, MouseShapePointer, tm.MouseShape)
 	sroVt(t, &h, StreamAction{Tag: StreamActionKeyMouseShape, MouseShape: MouseShapeDefault})
-	expectEqual(t, MouseShapeDefault, tm.mouse_shape)
+	expectEqual(t, MouseShapeDefault, tm.MouseShape)
 	sroVt(t, &h, StreamAction{Tag: StreamActionKeyMouseShape, MouseShape: MouseShapeText})
-	expectEqual(t, MouseShapeText, tm.mouse_shape)
+	expectEqual(t, MouseShapeText, tm.MouseShape)
 }
 
 // Zig: test "term51: Handler.vt: modify_key_format sets modify_other_keys_2 only for other_keys_numeric"
@@ -4588,16 +4588,16 @@ func TestStreamReadonly_term51_Handler_vt_modify_key_format_sets_modify_other_ke
 		ANSIModifyKeyFormatOtherKeysNumericExcept,
 		ANSIModifyKeyFormatOtherKeysNumeric,
 	}
-	expect(t, !tm.flags.modify_other_keys_2, "!t.flags.modify_other_keys_2")
+	expect(t, !tm.Flags.ModifyOtherKeys2, "!t.flags.modify_other_keys_2")
 	for _, v := range formats {
 		want := v == ANSIModifyKeyFormatOtherKeysNumeric
 		// From both previous states the result is the same.
-		tm.flags.modify_other_keys_2 = false
+		tm.Flags.ModifyOtherKeys2 = false
 		sroVt(t, &h, StreamAction{Tag: StreamActionKeyModifyKeyFormat, ModifyKeyFormat: v})
-		expectEqual(t, want, tm.flags.modify_other_keys_2)
-		tm.flags.modify_other_keys_2 = true
+		expectEqual(t, want, tm.Flags.ModifyOtherKeys2)
+		tm.Flags.ModifyOtherKeys2 = true
 		sroVt(t, &h, StreamAction{Tag: StreamActionKeyModifyKeyFormat, ModifyKeyFormat: v})
-		expectEqual(t, want, tm.flags.modify_other_keys_2)
+		expectEqual(t, want, tm.Flags.ModifyOtherKeys2)
 	}
 	expectEqual(t, 6, len(formats))
 }
@@ -4609,13 +4609,13 @@ func TestStreamReadonly_term51_Handler_vt_kitty_keyboard_push_pop_and_set_operat
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	kb := &tm.screens.active.kitty_keyboard
+	kb := &tm.Screens.Active.KittyKeyboard
 	expectEqual(t, uint8(0), kb.Current().Int())
 
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{disambiguate: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{Disambiguate: true}))
 	expectEqual(t, uint8(1), kb.Current().Int())
 	expectEqual(t, uint8(1), kb.idx)
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{report_events: true, report_all: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{ReportEvents: true, ReportAll: true}))
 	expectEqual(t, uint8(10), kb.Current().Int())
 	expectEqual(t, uint8(2), kb.idx)
 
@@ -4627,11 +4627,11 @@ func TestStreamReadonly_term51_Handler_vt_kitty_keyboard_push_pop_and_set_operat
 	expectEqual(t, uint8(1), kb.idx)
 
 	// set / or / not apply to the current entry only.
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSet, KittyKeyFlags{report_all: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSet, KittyKeyFlags{ReportAll: true}))
 	expectEqual(t, uint8(8), kb.Current().Int())
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSetOr, KittyKeyFlags{disambiguate: true, report_associated: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSetOr, KittyKeyFlags{Disambiguate: true, ReportAssociated: true}))
 	expectEqual(t, uint8(8|1|16), kb.Current().Int())
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSetNot, KittyKeyFlags{report_all: true, report_events: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSetNot, KittyKeyFlags{ReportAll: true, ReportEvents: true}))
 	expectEqual(t, uint8(1|16), kb.Current().Int())
 	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardSet, KittyKeyFlags{}))
 	expectEqual(t, uint8(0), kb.Current().Int())
@@ -4647,7 +4647,7 @@ func TestStreamReadonly_term51_Handler_vt_kitty_keyboard_pop_with_large_counts_r
 	tm := sroNew(t, 10, 3)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	kb := &tm.screens.active.kitty_keyboard
+	kb := &tm.Screens.Active.KittyKeyboard
 
 	// Pop on an empty stack keeps the flags disabled but the index wraps
 	// around to the last entry (upstream behaviour).
@@ -4668,15 +4668,15 @@ func TestStreamReadonly_term51_Handler_vt_kitty_keyboard_pop_with_large_counts_r
 	expectEqual(t, uint8(2), kb.Current().Int())
 
 	// 8 or more clears the whole stack.
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{disambiguate: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{Disambiguate: true}))
 	sroVt(t, &h, sroU16Act(StreamActionKeyKittyKeyboardPop, 8))
 	expectEqual(t, uint8(0), kb.idx)
 	for _, f := range kb.flags {
 		expectEqual(t, uint8(0), f.Int())
 	}
 
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{disambiguate: true}))
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{disambiguate: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{Disambiguate: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{Disambiguate: true}))
 	sroVt(t, &h, sroU16Act(StreamActionKeyKittyKeyboardPop, 65535))
 	expectEqual(t, uint8(0), kb.idx)
 	expectEqual(t, uint8(0), kb.Current().Int())
@@ -4692,17 +4692,17 @@ func TestStreamReadonly_term51_Handler_vt_kitty_keyboard_flags_are_per_screen(t 
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{disambiguate: true}))
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{Disambiguate: true}))
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
-	expectEqual(t, uint8(0), tm.screens.active.kitty_keyboard.Current().Int())
-	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{report_all: true}))
-	expectEqual(t, uint8(8), tm.screens.active.kitty_keyboard.Current().Int())
+	expectEqual(t, uint8(0), tm.Screens.Active.KittyKeyboard.Current().Int())
+	sroVt(t, &h, sroKittyAct(StreamActionKeyKittyKeyboardPush, KittyKeyFlags{ReportAll: true}))
+	expectEqual(t, uint8(8), tm.Screens.Active.KittyKeyboard.Current().Int())
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, false))
-	expectEqual(t, uint8(1), tm.screens.active.kitty_keyboard.Current().Int())
+	expectEqual(t, uint8(1), tm.Screens.Active.KittyKeyboard.Current().Int())
 	sroVt(t, &h, sroU16Act(StreamActionKeyKittyKeyboardPop, 1))
-	expectEqual(t, uint8(0), tm.screens.active.kitty_keyboard.Current().Int())
+	expectEqual(t, uint8(0), tm.Screens.Active.KittyKeyboard.Current().Int())
 	zigTry(t, h.setMode(ModesModeAltScreenLegacy, true))
-	expectEqual(t, uint8(8), tm.screens.active.kitty_keyboard.Current().Int())
+	expectEqual(t, uint8(8), tm.Screens.Active.KittyKeyboard.Current().Int())
 }
 
 // Zig: test "term51: Handler.vt: decaln fills with E, resets margins and origin, homes the cursor"
@@ -4728,22 +4728,22 @@ func TestStreamReadonly_term51_Handler_vt_decaln_fills_with_E_resets_margins_and
 	sroVt(t, &h, sroAct(StreamActionKeyDecaln))
 	sroExpectText(t, &tm, "EEEEEEEEEE\nEEEEEEEEEE\nEEEEEEEEEE")
 	sroExpectCursor(t, &tm, 0, 0)
-	expectEqual(t, 0, tm.scrolling_region.top)
-	expectEqual(t, 2, tm.scrolling_region.bottom)
-	expectEqual(t, 0, tm.scrolling_region.left)
-	expectEqual(t, 9, tm.scrolling_region.right)
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expectEqual(t, 0, tm.ScrollingRegion.Top)
+	expectEqual(t, 2, tm.ScrollingRegion.Bottom)
+	expectEqual(t, 0, tm.ScrollingRegion.Left)
+	expectEqual(t, 9, tm.ScrollingRegion.Right)
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
 	// The left/right margin mode itself is not touched.
-	expect(t, tm.modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
+	expect(t, tm.Modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
 	// Attributes other than the colours are cleared; colours are kept.
-	expect(t, !tm.screens.active.cursor.style.flags.bold, "!t.screens.active.cursor.style.flags.bold")
-	expectEqual(t, StyleColorPalette, tm.screens.active.cursor.style.bg_color.Tag)
-	expectEqual(t, uint8(4), tm.screens.active.cursor.style.bg_color.Palette)
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Bold, "!t.screens.active.cursor.style.flags.bold")
+	expectEqual(t, StyleColorPalette, tm.Screens.Active.Cursor.Style.BgColor.Tag)
+	expectEqual(t, uint8(4), tm.Screens.Active.Cursor.Style.BgColor.Palette)
 
 	// Cells do not carry the protection.
 	cell := sroGetCell(t, &tm, 3, 1)
-	expect(t, !cell.cell.protected, "!cell.cell.protected")
-	expectEqual(t, uint32('E'), cell.cell.content.codepoint)
+	expect(t, !cell.Cell.protected, "!cell.cell.protected")
+	expectEqual(t, uint32('E'), cell.Cell.content.codepoint)
 }
 
 // Zig: test "term51: Handler.vt: full_reset restores a pristine terminal but keeps colors and size"
@@ -4774,24 +4774,24 @@ func TestStreamReadonly_term51_Handler_vt_full_reset_restores_a_pristine_termina
 	sroVt(t, &h, sroAct(StreamActionKeySaveCursor))
 	sroVt(t, &h, sroPrintAct('x'))
 	zigTry(t, tm.SetPwd([]uint8("/tmp")))
-	colors_before := tm.colors
-	tm.mouse_shape = MouseShapePointer
+	colors_before := tm.Colors
+	tm.MouseShape = MouseShapePointer
 
 	sroVt(t, &h, sroAct(StreamActionKeyFullReset))
 
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
-	expect(t, tm.screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
+	expect(t, tm.Screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
 	expected := pristine
 	// The renderer is told to redraw everything.
 	flags := terminalFlagsDefault()
-	flags.dirty.clear = true
+	flags.Dirty.Clear = true
 	expected.flags = flags
 	// Colors are not reset, neither is the mouse shape.
 	expected.colors = colors_before
 	expected.mouse_shape = MouseShapePointer
 	expectEqual(t, expected, sroSnapshot(t, &tm))
-	expectEqual(t, 0, len(tm.pwd))
-	expectEqual(t, None[uint32](), tm.previous_char)
+	expectEqual(t, 0, len(tm.Pwd))
+	expectEqual(t, None[uint32](), tm.PreviousChar)
 }
 
 // Zig: test "term51: Handler.vt: full_reset keeps the size set by DECCOLM and reset modes return to the defaults"
@@ -4803,14 +4803,14 @@ func TestStreamReadonly_term51_Handler_vt_full_reset_keeps_the_size_set_by_DECCO
 
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesModeEnableMode3))
 	sroVt(t, &h, sroModeAct(StreamActionKeySetMode, ModesMode132Column))
-	expectEqual(t, 132, tm.cols)
+	expectEqual(t, 132, tm.Cols)
 	sroVt(t, &h, sroAct(StreamActionKeyFullReset))
-	expectEqual(t, 132, tm.cols)
-	expectEqual(t, 131, tm.scrolling_region.right)
-	expect(t, !tm.modes.Get(ModesModeEnableMode3), "!t.modes.get(.enable_mode_3)")
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
-	expect(t, tm.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
-	expect(t, tm.tabstops.Get(128), "t.tabstops.get(128)")
+	expectEqual(t, 132, tm.Cols)
+	expectEqual(t, 131, tm.ScrollingRegion.Right)
+	expect(t, !tm.Modes.Get(ModesModeEnableMode3), "!t.modes.get(.enable_mode_3)")
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expect(t, tm.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+	expect(t, tm.Tabstops.Get(128), "t.tabstops.get(128)")
 }
 
 // Zig: test "term51: Handler.vt: start_hyperlink and end_hyperlink"
@@ -4820,8 +4820,8 @@ func TestStreamReadonly_term51_Handler_vt_start_hyperlink_and_end_hyperlink(t *t
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	c := &tm.screens.active.cursor
-	expectEqual(t, 0, c.hyperlink_id)
+	c := &tm.Screens.Active.Cursor
+	expectEqual(t, 0, c.HyperlinkID)
 
 	// Ending nothing is harmless.
 	before := sroSnapshot(t, &tm)
@@ -4830,34 +4830,34 @@ func TestStreamReadonly_term51_Handler_vt_start_hyperlink_and_end_hyperlink(t *t
 
 	// Explicit id.
 	sroVt(t, &h, sroStartHyperlinkAct("http://a.example", Some([]uint8("myid"))))
-	expect(t, c.hyperlink_id != 0, "c.hyperlink_id != 0")
-	expectEqualStrings(t, "http://a.example", string(c.hyperlink.uri))
-	expectEqual(t, HyperlinkHyperlinkIdExplicit, c.hyperlink.id.Tag)
-	expectEqualStrings(t, "myid", string(c.hyperlink.id.Explicit))
-	expectEqual(t, 0, c.hyperlink_implicit_id)
+	expect(t, c.HyperlinkID != 0, "c.hyperlink_id != 0")
+	expectEqualStrings(t, "http://a.example", string(c.Hyperlink.URI))
+	expectEqual(t, HyperlinkHyperlinkIdExplicit, c.Hyperlink.ID.Tag)
+	expectEqualStrings(t, "myid", string(c.Hyperlink.ID.Explicit))
+	expectEqual(t, 0, c.HyperlinkImplicitID)
 	sroVt(t, &h, sroPrintAct('A'))
 	sroVt(t, &h, sroAct(StreamActionKeyEndHyperlink))
-	expectEqual(t, 0, c.hyperlink_id)
-	expect(t, c.hyperlink == nil, "c.hyperlink == null")
+	expectEqual(t, 0, c.HyperlinkID)
+	expect(t, c.Hyperlink == nil, "c.hyperlink == null")
 	sroVt(t, &h, sroPrintAct('B'))
 	a := sroGetCell(t, &tm, 0, 0)
 	b := sroGetCell(t, &tm, 1, 0)
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
-	expect(t, !b.cell.hyperlink, "!b.cell.hyperlink")
+	expect(t, a.Cell.hyperlink, "a.cell.hyperlink")
+	expect(t, !b.Cell.hyperlink, "!b.cell.hyperlink")
 
 	// Implicit ids count up.
 	sroVt(t, &h, sroStartHyperlinkAct("http://b.example", None[[]uint8]()))
-	expectEqual(t, HyperlinkHyperlinkIdImplicit, c.hyperlink.id.Tag)
-	expectEqual(t, 0, c.hyperlink.id.Implicit)
-	expectEqual(t, 1, c.hyperlink_implicit_id)
+	expectEqual(t, HyperlinkHyperlinkIdImplicit, c.Hyperlink.ID.Tag)
+	expectEqual(t, 0, c.Hyperlink.ID.Implicit)
+	expectEqual(t, 1, c.HyperlinkImplicitID)
 	// Starting another replaces the first.
 	sroVt(t, &h, sroStartHyperlinkAct("http://c.example", None[[]uint8]()))
-	expectEqualStrings(t, "http://c.example", string(c.hyperlink.uri))
-	expectEqual(t, HyperlinkHyperlinkIdImplicit, c.hyperlink.id.Tag)
-	expectEqual(t, 1, c.hyperlink.id.Implicit)
-	expectEqual(t, 2, c.hyperlink_implicit_id)
+	expectEqualStrings(t, "http://c.example", string(c.Hyperlink.URI))
+	expectEqual(t, HyperlinkHyperlinkIdImplicit, c.Hyperlink.ID.Tag)
+	expectEqual(t, 1, c.Hyperlink.ID.Implicit)
+	expectEqual(t, 2, c.HyperlinkImplicitID)
 	sroVt(t, &h, sroAct(StreamActionKeyEndHyperlink))
-	expect(t, c.hyperlink == nil, "c.hyperlink == null")
+	expect(t, c.Hyperlink == nil, "c.hyperlink == null")
 }
 
 // sroSP is `Action.SemanticPrompt.init(action)` (SP.init).
@@ -4878,62 +4878,62 @@ func TestStreamReadonly_term51_Handler_vt_semantic_prompt_actions(t *testing.T) 
 	sroPrintString(t, &tm, "abc")
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionFreshLine))
 	sroExpectCursor(t, &tm, 0, 1)
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 
 	// fresh_line_new_prompt: fresh line plus prompt content, and the
 	// redraw option.
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt))
 	sroExpectCursor(t, &tm, 0, 1)
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
-	expect(t, tm.flags.shell_redraws_prompt == OSCParsersSemanticPromptRedrawTrue, "t.flags.shell_redraws_prompt == .true")
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
+	expect(t, tm.Flags.ShellRedrawsPrompt == OSCParsersSemanticPromptRedrawTrue, "t.flags.shell_redraws_prompt == .true")
 	sroPrintString(t, &tm, "$ ")
 	sroVt(t, &h, sroSemanticPromptAct(OSCParsersSemanticPromptCommand{
-		action:              OSCParsersSemanticPromptCommandActionFreshLineNewPrompt,
-		options_unvalidated: []uint8("redraw=0"),
+		Action:             OSCParsersSemanticPromptCommandActionFreshLineNewPrompt,
+		OptionsUnvalidated: []uint8("redraw=0"),
 	}))
 	sroExpectCursor(t, &tm, 0, 2)
-	expect(t, tm.flags.shell_redraws_prompt == OSCParsersSemanticPromptRedrawFalse, "t.flags.shell_redraws_prompt == .false")
+	expect(t, tm.Flags.ShellRedrawsPrompt == OSCParsersSemanticPromptRedrawFalse, "t.flags.shell_redraws_prompt == .false")
 	sroVt(t, &h, sroSemanticPromptAct(OSCParsersSemanticPromptCommand{
-		action:              OSCParsersSemanticPromptCommandActionFreshLineNewPrompt,
-		options_unvalidated: []uint8("redraw=1"),
+		Action:             OSCParsersSemanticPromptCommandActionFreshLineNewPrompt,
+		OptionsUnvalidated: []uint8("redraw=1"),
 	}))
-	expect(t, tm.flags.shell_redraws_prompt == OSCParsersSemanticPromptRedrawTrue, "t.flags.shell_redraws_prompt == .true")
+	expect(t, tm.Flags.ShellRedrawsPrompt == OSCParsersSemanticPromptRedrawTrue, "t.flags.shell_redraws_prompt == .true")
 
 	// new_command behaves like fresh_line_new_prompt.
 	sroPrintString(t, &tm, "x")
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionNewCommand))
 	sroExpectCursor(t, &tm, 0, 3)
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
 
 	// end_prompt_start_input and the end-of-line variant.
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionEndPromptStartInput))
-	expectEqual(t, PageCellSemanticContentInput, tm.screens.active.cursor.semantic_content)
-	expect(t, !tm.screens.active.cursor.semantic_content_clear_eol, "!t.screens.active.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentInput, tm.Screens.Active.Cursor.SemanticContent)
+	expect(t, !tm.Screens.Active.Cursor.SemanticContentClearEol, "!t.screens.active.cursor.semantic_content_clear_eol")
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol))
-	expectEqual(t, PageCellSemanticContentInput, tm.screens.active.cursor.semantic_content)
-	expect(t, tm.screens.active.cursor.semantic_content_clear_eol, "t.screens.active.cursor.semantic_content_clear_eol")
+	expectEqual(t, PageCellSemanticContentInput, tm.Screens.Active.Cursor.SemanticContent)
+	expect(t, tm.Screens.Active.Cursor.SemanticContentClearEol, "t.screens.active.cursor.semantic_content_clear_eol")
 	sroVt(t, &h, sroAct(StreamActionKeyLinefeed))
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 
 	// end_input_start_output and end_command.
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionPromptStart))
 	sroExpectCursor(t, &tm, 0, 4)
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionEndInputStartOutput))
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionPromptStart))
 	sroVt(t, &h, sroSP(OSCParsersSemanticPromptCommandActionEndCommand))
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 	// None of these moved the cursor.
 	sroExpectCursor(t, &tm, 0, 4)
 }
 
 var (
-	sroRed   = ColorRGB{r: 255, g: 0, b: 0}        // term51D_red
-	sroGreen = ColorRGB{r: 0, g: 255, b: 0}        // term51D_green
-	sroBlue  = ColorRGB{r: 0, g: 0, b: 255}        // term51D_blue
-	sroC1    = ColorRGB{r: 0x11, g: 0x22, b: 0x33} // term51D_c1
-	sroC2    = ColorRGB{r: 0x44, g: 0x55, b: 0x66} // term51D_c2
+	sroRed   = ColorRGB{R: 255, G: 0, B: 0}        // term51D_red
+	sroGreen = ColorRGB{R: 0, G: 255, B: 0}        // term51D_green
+	sroBlue  = ColorRGB{R: 0, G: 0, B: 255}        // term51D_blue
+	sroC1    = ColorRGB{R: 0x11, G: 0x22, B: 0x33} // term51D_c1
+	sroC2    = ColorRGB{R: 0x44, G: 0x55, B: 0x66} // term51D_c2
 )
 
 // sroNewWithDefaults is term51DNewWithDefaults: a terminal with configured
@@ -4942,14 +4942,14 @@ var (
 func sroNewWithDefaults(t *testing.T) Terminal {
 	t.Helper()
 	palette := ColorDefault
-	palette[1] = ColorRGB{r: 0x10, g: 0x20, b: 0x30}
-	palette[200] = ColorRGB{r: 0x01, g: 0x02, b: 0x03}
+	palette[1] = ColorRGB{R: 0x10, G: 0x20, B: 0x30}
+	palette[200] = ColorRGB{R: 0x01, G: 0x02, B: 0x03}
 	opts := terminalOptionsDefault(10, 3)
-	opts.colors = TerminalColors{
-		background: ColorDynamicRGBInit(ColorRGB{r: 0xb1, g: 0xb2, b: 0xb3}),
-		foreground: ColorDynamicRGBInit(ColorRGB{r: 0xf1, g: 0xf2, b: 0xf3}),
-		cursor:     ColorDynamicRGBInit(ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}),
-		palette:    ColorDynamicPaletteInit(palette),
+	opts.Colors = TerminalColors{
+		Background: ColorDynamicRGBInit(ColorRGB{R: 0xb1, G: 0xb2, B: 0xb3}),
+		Foreground: ColorDynamicRGBInit(ColorRGB{R: 0xf1, G: 0xf2, B: 0xf3}),
+		Cursor:     ColorDynamicRGBInit(ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}),
+		Palette:    ColorDynamicPaletteInit(palette),
 	}
 	tm, err := TerminalInit(opts)
 	zigTry(t, err)
@@ -4973,7 +4973,7 @@ func sroTSpecial(s ColorSpecial) OSCParsersColorTarget {
 func sroCSet(target OSCParsersColorTarget, color ColorRGB) OSCParsersColorRequest {
 	return OSCParsersColorRequest{
 		Tag: OSCParsersColorRequestSet,
-		Set: OSCParsersColorColoredTarget{target: target, color: color},
+		Set: OSCParsersColorColoredTarget{Target: target, Color: color},
 	}
 }
 
@@ -5003,7 +5003,7 @@ func sroKSpecial(s KittyColorSpecial) KittyColorKind {
 func sroKSet(key KittyColorKind, color ColorRGB) KittyColorOSCRequest {
 	return KittyColorOSCRequest{
 		Tag: KittyColorOSCRequestSet,
-		Set: KittyColorOSCRequestSetPayload{key: key, color: color},
+		Set: KittyColorOSCRequestSetPayload{Key: key, Color: color},
 	}
 }
 
@@ -5033,7 +5033,7 @@ func sroKittyOp(t *testing.T, h *StreamReadonlyHandler, items []KittyColorOSCReq
 	t.Helper()
 	osc := KittyColorOSC{}
 	// Zig-only: defer osc.deinit(testing.allocator)
-	osc.list = append(osc.list, items...)
+	osc.List = append(osc.List, items...)
 	zigTry(t, h.kittyColorOperation(osc))
 }
 
@@ -5047,12 +5047,12 @@ func sroExpectPaletteOnly(t *testing.T, tm *Terminal, changed []uint8) {
 				is_changed = true
 			}
 		}
-		expectEqual(t, is_changed, tm.colors.palette.mask.isSet(i))
+		expectEqual(t, is_changed, tm.Colors.Palette.Mask.isSet(i))
 		if !is_changed {
-			expectEqual(t, tm.colors.palette.original[i], tm.colors.palette.current[i])
+			expectEqual(t, tm.Colors.Palette.Original[i], tm.Colors.Palette.Current[i])
 		}
 	}
-	expectEqual(t, len(changed), tm.colors.palette.mask.count())
+	expectEqual(t, len(changed), tm.Colors.Palette.Mask.count())
 }
 
 // Zig: test "term51: Handler.colorOperation: an empty request list changes nothing"
@@ -5068,7 +5068,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_an_empty_request_list_chan
 	sroColorOp(t, &h, OSCParsersColorOperationOsc104, nil)
 	sroColorOp(t, &h, OSCParsersColorOperationOsc10, nil)
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: set palette entries at the boundaries"
@@ -5080,29 +5080,29 @@ func TestStreamReadonly_term51_Handler_colorOperation_set_palette_entries_at_the
 			defer tm.Deinit()
 			h := StreamReadonlyHandlerInit(&tm)
 
-			expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+			expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 			sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCSet(sroTPalette(idx), sroC1)})
-			expectEqual(t, sroC1, tm.colors.palette.current[idx])
+			expectEqual(t, sroC1, tm.Colors.Palette.Current[idx])
 			sroExpectPaletteOnly(t, &tm, []uint8{idx})
-			expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+			expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 			// The "original" is not touched.
-			expect(t, sroC1 != tm.colors.palette.original[idx], "!std.meta.eql(term51D_c1, t.colors.palette.original[idx])")
+			expect(t, sroC1 != tm.Colors.Palette.Original[idx], "!std.meta.eql(term51D_c1, t.colors.palette.original[idx])")
 			// Nothing else was affected.
-			expect(t, zigUnwrap(t, tm.colors.foreground.Get()).r == 0xf1, "t.colors.foreground.get().?.r == 0xf1")
-			expectEqual(t, Optional[ColorRGB]{}, tm.colors.foreground.override)
-			expectEqual(t, Optional[ColorRGB]{}, tm.colors.background.override)
-			expectEqual(t, Optional[ColorRGB]{}, tm.colors.cursor.override)
+			expect(t, zigUnwrap(t, tm.Colors.Foreground.Get()).R == 0xf1, "t.colors.foreground.get().?.r == 0xf1")
+			expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Foreground.Override)
+			expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Background.Override)
+			expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Cursor.Override)
 
 			// Setting again replaces the color, the mask stays a single entry.
 			sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCSet(sroTPalette(idx), sroC2)})
-			expectEqual(t, sroC2, tm.colors.palette.current[idx])
+			expectEqual(t, sroC2, tm.Colors.Palette.Current[idx])
 			sroExpectPaletteOnly(t, &tm, []uint8{idx})
 
 			// Setting a color to the value it already has still marks it.
-			orig := tm.colors.palette.original[idx]
+			orig := tm.Colors.Palette.Original[idx]
 			sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCReset(sroTPalette(idx))})
 			sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCSet(sroTPalette(idx), orig)})
-			expectEqual(t, orig, tm.colors.palette.current[idx])
+			expectEqual(t, orig, tm.Colors.Palette.Current[idx])
 			sroExpectPaletteOnly(t, &tm, []uint8{idx})
 		}()
 	}
@@ -5121,8 +5121,8 @@ func TestStreamReadonly_term51_Handler_colorOperation_the_operation_argument_is_
 				sroCSet(sroTPalette(9), sroC1),
 				sroCSet(sroTDynamic(ColorDynamicBackground), sroC2),
 			})
-			expectEqual(t, sroC1, tm.colors.palette.current[9])
-			expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
+			expectEqual(t, sroC1, tm.Colors.Palette.Current[9])
+			expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
 			sroColorOp(t, &h, op, []OSCParsersColorRequest{sroCReset(sroTPalette(9))})
 			sroExpectPaletteOnly(t, &tm, []uint8{})
 		}()
@@ -5137,24 +5137,24 @@ func TestStreamReadonly_term51_Handler_colorOperation_set_dynamic_colors_only_fo
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroColorOp(t, &h, OSCParsersColorOperationOsc10, []OSCParsersColorRequest{sroCSet(sroTDynamic(ColorDynamicForeground), sroC1)})
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, Some(sroC1), tm.colors.foreground.override)
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, Some(sroC1), tm.Colors.Foreground.Override)
 	// The configured default is untouched.
-	expectEqual(t, Some(ColorRGB{r: 0xf1, g: 0xf2, b: 0xf3}), tm.colors.foreground.default_)
-	expectEqual(t, Optional[ColorRGB]{}, tm.colors.background.override)
-	expectEqual(t, Optional[ColorRGB]{}, tm.colors.cursor.override)
+	expectEqual(t, Some(ColorRGB{R: 0xf1, G: 0xf2, B: 0xf3}), tm.Colors.Foreground.Default)
+	expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Background.Override)
+	expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Cursor.Override)
 
 	sroColorOp(t, &h, OSCParsersColorOperationOsc11, []OSCParsersColorRequest{sroCSet(sroTDynamic(ColorDynamicBackground), sroC2)})
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
 
 	sroColorOp(t, &h, OSCParsersColorOperationOsc12, []OSCParsersColorRequest{sroCSet(sroTDynamic(ColorDynamicCursor), sroRed)})
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.cursor.Get()))
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Cursor.Get()))
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
 
 	// Dynamic colors never touch the palette or its dirty flag.
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 	sroExpectPaletteOnly(t, &tm, []uint8{})
 }
 
@@ -5165,7 +5165,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_the_other_dynamic_colors_a
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 	sroBusy(t, &tm, &h)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	for _, d := range []ColorDynamic{
@@ -5193,7 +5193,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_the_other_dynamic_colors_a
 		sroColorOp(t, &h, OSCParsersColorOperationOsc5, []OSCParsersColorRequest{sroCQuery(sroTSpecial(sp))})
 	}
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: reset palette entry restores the original and clears the mask bit"
@@ -5207,13 +5207,13 @@ func TestStreamReadonly_term51_Handler_colorOperation_reset_palette_entry_restor
 
 			sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCSet(sroTPalette(idx), sroC1)})
 			sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCSet(sroTPalette(5), sroC2)})
-			tm.flags.dirty.palette = false
+			tm.Flags.Dirty.Palette = false
 			sroColorOp(t, &h, OSCParsersColorOperationOsc104, []OSCParsersColorRequest{sroCReset(sroTPalette(idx))})
-			expectEqual(t, tm.colors.palette.original[idx], tm.colors.palette.current[idx])
-			expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+			expectEqual(t, tm.Colors.Palette.Original[idx], tm.Colors.Palette.Current[idx])
+			expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 			// Only the entry that was reset changed back.
 			sroExpectPaletteOnly(t, &tm, []uint8{5})
-			expectEqual(t, sroC2, tm.colors.palette.current[5])
+			expectEqual(t, sroC2, tm.Colors.Palette.Current[5])
 		}()
 	}
 	// The configured base palette is what a reset returns to.
@@ -5222,7 +5222,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_reset_palette_entry_restor
 	h := StreamReadonlyHandlerInit(&tm)
 	sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{sroCSet(sroTPalette(1), sroC1)})
 	sroColorOp(t, &h, OSCParsersColorOperationOsc104, []OSCParsersColorRequest{sroCReset(sroTPalette(1))})
-	expectEqual(t, ColorRGB{r: 0x10, g: 0x20, b: 0x30}, tm.colors.palette.current[1])
+	expectEqual(t, ColorRGB{R: 0x10, G: 0x20, B: 0x30}, tm.Colors.Palette.Current[1])
 }
 
 // Zig: test "term51: Handler.colorOperation: resetting an entry that was never set still marks the palette dirty"
@@ -5232,9 +5232,9 @@ func TestStreamReadonly_term51_Handler_colorOperation_resetting_an_entry_that_wa
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 	sroColorOp(t, &h, OSCParsersColorOperationOsc104, []OSCParsersColorRequest{sroCReset(sroTPalette(77))})
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 	sroExpectPaletteOnly(t, &tm, []uint8{})
 }
 
@@ -5253,15 +5253,15 @@ func TestStreamReadonly_term51_Handler_colorOperation_reset_dynamic_colors_retur
 			sroCSet(sroTDynamic(ColorDynamicCursor), sroC1),
 		})
 		sroColorOp(t, &h, OSCParsersColorOperationOsc110, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicForeground))})
-		expectEqual(t, ColorRGB{r: 0xf1, g: 0xf2, b: 0xf3}, zigUnwrap(t, tm.colors.foreground.Get()))
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.background.Get()))
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.cursor.Get()))
+		expectEqual(t, ColorRGB{R: 0xf1, G: 0xf2, B: 0xf3}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Background.Get()))
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Cursor.Get()))
 		sroColorOp(t, &h, OSCParsersColorOperationOsc111, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicBackground))})
-		expectEqual(t, ColorRGB{r: 0xb1, g: 0xb2, b: 0xb3}, zigUnwrap(t, tm.colors.background.Get()))
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.cursor.Get()))
+		expectEqual(t, ColorRGB{R: 0xb1, G: 0xb2, B: 0xb3}, zigUnwrap(t, tm.Colors.Background.Get()))
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Cursor.Get()))
 		sroColorOp(t, &h, OSCParsersColorOperationOsc112, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicCursor))})
-		expectEqual(t, ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}, zigUnwrap(t, tm.colors.cursor.Get()))
-		expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+		expectEqual(t, ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
+		expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 	}()
 	// Without defaults a reset leaves the color unset.
 	func() {
@@ -5275,16 +5275,16 @@ func TestStreamReadonly_term51_Handler_colorOperation_reset_dynamic_colors_retur
 			sroCSet(sroTDynamic(ColorDynamicCursor), sroC1),
 		})
 		sroColorOp(t, &h, OSCParsersColorOperationOsc110, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicForeground))})
-		expect(t, !tm.colors.foreground.Get().Valid, "t.colors.foreground.get() == null")
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.background.Get()))
+		expect(t, !tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() == null")
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Background.Get()))
 		sroColorOp(t, &h, OSCParsersColorOperationOsc111, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicBackground))})
-		expect(t, !tm.colors.background.Get().Valid, "t.colors.background.get() == null")
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.cursor.Get()))
+		expect(t, !tm.Colors.Background.Get().Valid, "t.colors.background.get() == null")
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Cursor.Get()))
 		sroColorOp(t, &h, OSCParsersColorOperationOsc112, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicCursor))})
-		expect(t, !tm.colors.cursor.Get().Valid, "t.colors.cursor.get() == null")
+		expect(t, !tm.Colors.Cursor.Get().Valid, "t.colors.cursor.get() == null")
 		// Resetting an unset color is fine.
 		sroColorOp(t, &h, OSCParsersColorOperationOsc112, []OSCParsersColorRequest{sroCReset(sroTDynamic(ColorDynamicCursor))})
-		expect(t, !tm.colors.cursor.Get().Valid, "t.colors.cursor.get() == null")
+		expect(t, !tm.Colors.Cursor.Get().Valid, "t.colors.cursor.get() == null")
 	}()
 }
 
@@ -5304,26 +5304,26 @@ func TestStreamReadonly_term51_Handler_colorOperation_reset_palette_resets_exact
 	})
 	sroExpectPaletteOnly(t, &tm, []uint8{0, 1, 3, 17, 255})
 	// An entry that differs without being in the mask is left alone.
-	tm.colors.palette.current[100] = sroBlue
-	tm.flags.dirty.palette = false
+	tm.Colors.Palette.Current[100] = sroBlue
+	tm.Flags.Dirty.Palette = false
 
 	sroColorOp(t, &h, OSCParsersColorOperationOsc104, []OSCParsersColorRequest{sroCResetPalette})
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
-	expectEqual(t, 0, tm.colors.palette.mask.count())
-	expectEqual(t, sroBlue, tm.colors.palette.current[100])
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
+	expectEqual(t, 0, tm.Colors.Palette.Mask.count())
+	expectEqual(t, sroBlue, tm.Colors.Palette.Current[100])
 	for i := 0; i < 256; i++ {
 		if i == 100 {
 			continue
 		}
-		expectEqual(t, tm.colors.palette.original[i], tm.colors.palette.current[i])
+		expectEqual(t, tm.Colors.Palette.Original[i], tm.Colors.Palette.Current[i])
 	}
-	expectEqual(t, ColorRGB{r: 0x10, g: 0x20, b: 0x30}, tm.colors.palette.current[1])
+	expectEqual(t, ColorRGB{R: 0x10, G: 0x20, B: 0x30}, tm.Colors.Palette.Current[1])
 
 	// With an empty mask nothing is dirtied.
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	sroColorOp(t, &h, OSCParsersColorOperationOsc104, []OSCParsersColorRequest{sroCResetPalette})
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
-	expectEqual(t, sroBlue, tm.colors.palette.current[100])
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
+	expectEqual(t, sroBlue, tm.Colors.Palette.Current[100])
 }
 
 // Zig: test "term51: Handler.colorOperation: queries and reset_special do nothing"
@@ -5333,7 +5333,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_queries_and_reset_special_
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 	sroBusy(t, &tm, &h)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	sroColorOp(t, &h, OSCParsersColorOperationOsc4, []OSCParsersColorRequest{
@@ -5348,7 +5348,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_queries_and_reset_special_
 	})
 	sroColorOp(t, &h, OSCParsersColorOperationOsc105, []OSCParsersColorRequest{sroCResetSpecial})
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: several requests apply in order"
@@ -5369,10 +5369,10 @@ func TestStreamReadonly_term51_Handler_colorOperation_several_requests_apply_in_
 		sroCSet(sroTDynamic(ColorDynamicForeground), sroC2),
 	})
 	sroExpectPaletteOnly(t, &tm, []uint8{2, 3})
-	expectEqual(t, ColorRGB{r: 0x10, g: 0x20, b: 0x30}, tm.colors.palette.current[1])
-	expectEqual(t, sroC1, tm.colors.palette.current[2])
-	expectEqual(t, sroBlue, tm.colors.palette.current[3])
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.foreground.Get()))
+	expectEqual(t, ColorRGB{R: 0x10, G: 0x20, B: 0x30}, tm.Colors.Palette.Current[1])
+	expectEqual(t, sroC1, tm.Colors.Palette.Current[2])
+	expectEqual(t, sroBlue, tm.Colors.Palette.Current[3])
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Foreground.Get()))
 
 	// A reset_palette in the middle only affects what was set before it.
 	sroColorOp(t, &h, OSCParsersColorOperationOsc104, []OSCParsersColorRequest{
@@ -5381,7 +5381,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_several_requests_apply_in_
 		sroCSet(sroTPalette(8), sroGreen),
 	})
 	sroExpectPaletteOnly(t, &tm, []uint8{8})
-	expectEqual(t, sroGreen, tm.colors.palette.current[8])
+	expectEqual(t, sroGreen, tm.Colors.Palette.Current[8])
 }
 
 // Zig: test "term51: Handler.vt: color_operation runs the requests whatever the terminator"
@@ -5399,18 +5399,18 @@ func TestStreamReadonly_term51_Handler_vt_color_operation_runs_the_requests_what
 			zigTry(t, list.append(sroCSet(sroTDynamic(ColorDynamicCursor), sroC2)))
 			sroVt(t, &h, StreamAction{
 				Tag:            StreamActionKeyColorOperation,
-				ColorOperation: StreamActionColorOperation{op: OSCParsersColorOperationOsc4, requests: list, terminator: term},
+				ColorOperation: StreamActionColorOperation{Op: OSCParsersColorOperationOsc4, Requests: list, Terminator: term},
 			})
-			expectEqual(t, sroC1, tm.colors.palette.current[6])
-			expectEqual(t, sroC2, zigUnwrap(t, tm.colors.cursor.Get()))
-			expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+			expectEqual(t, sroC1, tm.Colors.Palette.Current[6])
+			expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Cursor.Get()))
+			expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 			// An empty list is accepted too.
 			var empty OSCParsersColorList
 			// Zig-only: defer empty.deinit(testing.allocator)
 			sroVt(t, &h, StreamAction{
 				Tag:            StreamActionKeyColorOperation,
-				ColorOperation: StreamActionColorOperation{op: OSCParsersColorOperationOsc104, requests: empty, terminator: term},
+				ColorOperation: StreamActionColorOperation{Op: OSCParsersColorOperationOsc104, Requests: empty, Terminator: term},
 			})
 			sroExpectPaletteOnly(t, &tm, []uint8{6})
 		}()
@@ -5424,12 +5424,12 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_an_empty_request_list
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 	sroBusy(t, &tm, &h)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	sroKittyOp(t, &h, nil)
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.kittyColorOperation: set palette entries at the boundaries"
@@ -5442,15 +5442,15 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_set_palette_entries_a
 			h := StreamReadonlyHandlerInit(&tm)
 
 			sroKittyOp(t, &h, []KittyColorOSCRequest{sroKSet(sroKPalette(idx), sroC1)})
-			expectEqual(t, sroC1, tm.colors.palette.current[idx])
+			expectEqual(t, sroC1, tm.Colors.Palette.Current[idx])
 			sroExpectPaletteOnly(t, &tm, []uint8{idx})
-			expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
-			expectEqual(t, Optional[ColorRGB]{}, tm.colors.foreground.override)
-			expectEqual(t, Optional[ColorRGB]{}, tm.colors.background.override)
-			expectEqual(t, Optional[ColorRGB]{}, tm.colors.cursor.override)
+			expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
+			expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Foreground.Override)
+			expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Background.Override)
+			expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Cursor.Override)
 
 			sroKittyOp(t, &h, []KittyColorOSCRequest{sroKSet(sroKPalette(idx), sroC2)})
-			expectEqual(t, sroC2, tm.colors.palette.current[idx])
+			expectEqual(t, sroC2, tm.Colors.Palette.Current[idx])
 			sroExpectPaletteOnly(t, &tm, []uint8{idx})
 		}()
 	}
@@ -5464,16 +5464,16 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_set_foreground_backgr
 	h := StreamReadonlyHandlerInit(&tm)
 
 	sroKittyOp(t, &h, []KittyColorOSCRequest{sroKSet(sroKSpecial(KittyColorSpecialForeground), sroC1)})
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, Optional[ColorRGB]{}, tm.colors.background.override)
-	expectEqual(t, Optional[ColorRGB]{}, tm.colors.cursor.override)
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Background.Override)
+	expectEqual(t, Optional[ColorRGB]{}, tm.Colors.Cursor.Override)
 	sroKittyOp(t, &h, []KittyColorOSCRequest{sroKSet(sroKSpecial(KittyColorSpecialBackground), sroC2)})
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
 	sroKittyOp(t, &h, []KittyColorOSCRequest{sroKSet(sroKSpecial(KittyColorSpecialCursor), sroRed)})
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.cursor.Get()))
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Cursor.Get()))
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 	sroExpectPaletteOnly(t, &tm, []uint8{})
 }
 
@@ -5484,7 +5484,7 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_the_other_special_key
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 	sroBusy(t, &tm, &h)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	for _, sp := range []KittyColorSpecial{
@@ -5501,7 +5501,7 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_the_other_special_key
 		})
 	}
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.kittyColorOperation: every special key, only foreground, background and cursor take effect"
@@ -5514,16 +5514,16 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_every_special_key_onl
 			h := StreamReadonlyHandlerInit(&tm)
 
 			sroKittyOp(t, &h, []KittyColorOSCRequest{sroKSet(sroKSpecial(sp), sroC1)})
-			expectEqual(t, sp == KittyColorSpecialForeground, tm.colors.foreground.Get().Valid)
-			expectEqual(t, sp == KittyColorSpecialBackground, tm.colors.background.Get().Valid)
-			expectEqual(t, sp == KittyColorSpecialCursor, tm.colors.cursor.Get().Valid)
-			expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+			expectEqual(t, sp == KittyColorSpecialForeground, tm.Colors.Foreground.Get().Valid)
+			expectEqual(t, sp == KittyColorSpecialBackground, tm.Colors.Background.Get().Valid)
+			expectEqual(t, sp == KittyColorSpecialCursor, tm.Colors.Cursor.Get().Valid)
+			expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 			sroExpectPaletteOnly(t, &tm, []uint8{})
 
 			sroKittyOp(t, &h, []KittyColorOSCRequest{sroKReset(sroKSpecial(sp))})
-			expect(t, !tm.colors.foreground.Get().Valid, "t.colors.foreground.get() == null")
-			expect(t, !tm.colors.background.Get().Valid, "t.colors.background.get() == null")
-			expect(t, !tm.colors.cursor.Get().Valid, "t.colors.cursor.get() == null")
+			expect(t, !tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() == null")
+			expect(t, !tm.Colors.Background.Get().Valid, "t.colors.background.get() == null")
+			expect(t, !tm.Colors.Cursor.Get().Valid, "t.colors.cursor.get() == null")
 		}()
 	}
 	expectEqual(t, 8, kittyColorSpecialCount)
@@ -5542,11 +5542,11 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_reset_palette_entries
 				sroKSet(sroKPalette(idx), sroC1),
 				sroKSet(sroKPalette(5), sroC2),
 			})
-			tm.flags.dirty.palette = false
+			tm.Flags.Dirty.Palette = false
 			sroKittyOp(t, &h, []KittyColorOSCRequest{sroKReset(sroKPalette(idx))})
-			expectEqual(t, tm.colors.palette.original[idx], tm.colors.palette.current[idx])
+			expectEqual(t, tm.Colors.Palette.Original[idx], tm.Colors.Palette.Current[idx])
 			sroExpectPaletteOnly(t, &tm, []uint8{5})
-			expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+			expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 		}()
 	}
 
@@ -5555,7 +5555,7 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_reset_palette_entries
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
 	sroKittyOp(t, &h, []KittyColorOSCRequest{sroKReset(sroKPalette(99))})
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 	sroExpectPaletteOnly(t, &tm, []uint8{})
 }
 
@@ -5572,15 +5572,15 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_reset_foreground_back
 			sroKSet(sroKSpecial(KittyColorSpecialCursor), sroC1),
 		})
 		sroKittyOp(t, &h, []KittyColorOSCRequest{sroKReset(sroKSpecial(KittyColorSpecialForeground))})
-		expectEqual(t, ColorRGB{r: 0xf1, g: 0xf2, b: 0xf3}, zigUnwrap(t, tm.colors.foreground.Get()))
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.background.Get()))
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.cursor.Get()))
+		expectEqual(t, ColorRGB{R: 0xf1, G: 0xf2, B: 0xf3}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Background.Get()))
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Cursor.Get()))
 		sroKittyOp(t, &h, []KittyColorOSCRequest{sroKReset(sroKSpecial(KittyColorSpecialBackground))})
-		expectEqual(t, ColorRGB{r: 0xb1, g: 0xb2, b: 0xb3}, zigUnwrap(t, tm.colors.background.Get()))
-		expectEqual(t, sroC1, zigUnwrap(t, tm.colors.cursor.Get()))
+		expectEqual(t, ColorRGB{R: 0xb1, G: 0xb2, B: 0xb3}, zigUnwrap(t, tm.Colors.Background.Get()))
+		expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Cursor.Get()))
 		sroKittyOp(t, &h, []KittyColorOSCRequest{sroKReset(sroKSpecial(KittyColorSpecialCursor))})
-		expectEqual(t, ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}, zigUnwrap(t, tm.colors.cursor.Get()))
-		expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+		expectEqual(t, ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
+		expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 	}()
 	func() {
 		tm := sroNew(t, 10, 3)
@@ -5596,9 +5596,9 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_reset_foreground_back
 			sroKReset(sroKSpecial(KittyColorSpecialBackground)),
 			sroKReset(sroKSpecial(KittyColorSpecialCursor)),
 		})
-		expect(t, !tm.colors.foreground.Get().Valid, "t.colors.foreground.get() == null")
-		expect(t, !tm.colors.background.Get().Valid, "t.colors.background.get() == null")
-		expect(t, !tm.colors.cursor.Get().Valid, "t.colors.cursor.get() == null")
+		expect(t, !tm.Colors.Foreground.Get().Valid, "t.colors.foreground.get() == null")
+		expect(t, !tm.Colors.Background.Get().Valid, "t.colors.background.get() == null")
+		expect(t, !tm.Colors.Cursor.Get().Valid, "t.colors.cursor.get() == null")
 	}()
 }
 
@@ -5629,9 +5629,9 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_queries_do_nothing_an
 		sroKReset(sroKSpecial(KittyColorSpecialCursor)),
 	})
 	sroExpectPaletteOnly(t, &tm, []uint8{2, 3})
-	expectEqual(t, sroC1, tm.colors.palette.current[2])
-	expectEqual(t, sroBlue, tm.colors.palette.current[3])
-	expectEqual(t, ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, sroC1, tm.Colors.Palette.Current[2])
+	expectEqual(t, sroBlue, tm.Colors.Palette.Current[3])
+	expectEqual(t, ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 }
 
 // Zig: test "term51: Handler.vt: kitty_color_report runs the requests whatever the terminator"
@@ -5643,14 +5643,14 @@ func TestStreamReadonly_term51_Handler_vt_kitty_color_report_runs_the_requests_w
 			defer tm.Deinit()
 			h := StreamReadonlyHandlerInit(&tm)
 
-			osc := KittyColorOSC{terminator: term}
+			osc := KittyColorOSC{Terminator: term}
 			// Zig-only: defer osc.deinit(testing.allocator)
-			osc.list = append(osc.list, sroKSet(sroKPalette(6), sroC1))
-			osc.list = append(osc.list, sroKSet(sroKSpecial(KittyColorSpecialBackground), sroC2))
+			osc.List = append(osc.List, sroKSet(sroKPalette(6), sroC1))
+			osc.List = append(osc.List, sroKSet(sroKSpecial(KittyColorSpecialBackground), sroC2))
 			sroVt(t, &h, StreamAction{Tag: StreamActionKeyKittyColorReport, KittyColorReport: osc})
-			expectEqual(t, sroC1, tm.colors.palette.current[6])
-			expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
-			expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+			expectEqual(t, sroC1, tm.Colors.Palette.Current[6])
+			expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
+			expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 			empty := KittyColorOSC{}
 			sroVt(t, &h, StreamAction{Tag: StreamActionKeyKittyColorReport, KittyColorReport: empty})
@@ -5682,13 +5682,13 @@ func TestStreamReadonly_term51_Handler_colorOperation_the_request_list_stays_own
 
 	// Two requests fit the preallocated segment, three do not.
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;1;red;2;red\x07")))
-	expectEqual(t, 2, s.parser.osc_parser.command.ColorOperation.requests.count())
+	expectEqual(t, 2, s.parser.osc_parser.command.ColorOperation.Requests.count())
 	// Zig-only: try testing.expectEqual(@as(usize, 0), s.parser.osc_parser.command.color_operation.requests.dynamic_segments.len)
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;1;red;2;red;3;red\x07")))
-	expectEqual(t, 3, s.parser.osc_parser.command.ColorOperation.requests.count())
+	expectEqual(t, 3, s.parser.osc_parser.command.ColorOperation.Requests.count())
 	// The handler already applied them, and the heap segments are still
 	// allocated, so the caller of the stream has to free them.
-	expectEqual(t, sroRed, tm.colors.palette.current[3])
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[3])
 	// Zig-only: try testing.expect(s.parser.osc_parser.command.color_operation.requests.dynamic_segments.len > 0)
 	// Zig-only: s.parser.osc_parser.command.color_operation.requests.deinit(testing.allocator)
 	s.parser.osc_parser.command = OSCCommand{Tag: OSCCommandKeyInvalid}
@@ -5704,32 +5704,32 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_4_through_a_stream(t *
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]4;1;rgb:ff/00/00;2;#00ff00\x1b\\")
-	expectEqual(t, sroRed, tm.colors.palette.current[1])
-	expectEqual(t, sroGreen, tm.colors.palette.current[2])
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[1])
+	expectEqual(t, sroGreen, tm.Colors.Palette.Current[2])
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2})
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 	// BEL terminator, a named color.
 	sroSend(t, &s, "\x1b]4;3;rgb:00/00/ff\x07\x1b]4;9;red\x07")
-	expectEqual(t, sroBlue, tm.colors.palette.current[3])
-	expectEqual(t, sroRed, tm.colors.palette.current[9])
+	expectEqual(t, sroBlue, tm.Colors.Palette.Current[3])
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[9])
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2, 3, 9})
 
 	// Queries and special color indexes (256..260) have no effect.
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	sroSend(t, &s, "\x1b]4;5;?\x07\x1b]4;256;red\x07\x1b]4;260;red\x07\x1b]4;258;?\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2, 3, 9})
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 
 	// A special entry does not stop the list, an unknown one (261) does.
 	sroSend(t, &s, "\x1b]4;256;red;4;rgb:11/22/33\x07")
-	expectEqual(t, sroC1, tm.colors.palette.current[4])
+	expectEqual(t, sroC1, tm.Colors.Palette.Current[4])
 	sroSend(t, &s, "\x1b]4;261;red;5;rgb:11/22/33\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2, 3, 4, 9})
 
 	// An invalid color stops the list but keeps what came before.
 	sroSend(t, &s, "\x1b]4;6;rgb:44/55/66;7;notacolor;8;red\x07")
-	expectEqual(t, sroC2, tm.colors.palette.current[6])
+	expectEqual(t, sroC2, tm.Colors.Palette.Current[6])
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2, 3, 4, 6, 9})
 
 	// An invalid first color, a missing spec, an index out of range and a
@@ -5746,10 +5746,10 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_4_through_a_stream(t *
 
 	// The one digit form is scaled, indexes with leading zeros are decimal.
 	sroSend(t, &s, "\x1b]4;012;rgb:f/0/0\x07")
-	expectEqual(t, sroRed, tm.colors.palette.current[12])
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[12])
 	// The highest index.
 	sroSend(t, &s, "\x1b]4;255;rgb:11/22/33\x07")
-	expectEqual(t, sroC1, tm.colors.palette.current[255])
+	expectEqual(t, sroC1, tm.Colors.Palette.Current[255])
 }
 
 // Zig: test "term51: Handler.colorOperation: OSC 5 special colors have no effect"
@@ -5761,13 +5761,13 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_5_special_colors_have_
 	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	sroSend(t, &s, "\x1b]5;0;rgb:11/22/33;1;red;4;blue\x07")
 	sroSend(t, &s, "\x1b]5;2;?\x07")
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: OSC 10, 11 and 12 set successive dynamic colors"
@@ -5780,50 +5780,50 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_10_11_and_12_set_succe
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]10;rgb:11/22/33\x1b\\")
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
-	expect(t, !tm.colors.background.Get().Valid, "t.colors.background.get() == null")
-	expect(t, !tm.colors.cursor.Get().Valid, "t.colors.cursor.get() == null")
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expect(t, !tm.Colors.Background.Get().Valid, "t.colors.background.get() == null")
+	expect(t, !tm.Colors.Cursor.Get().Valid, "t.colors.cursor.get() == null")
 
 	sroSend(t, &s, "\x1b]11;rgb:44/55/66\x07")
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
 	sroSend(t, &s, "\x1b]12;#ff0000\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Cursor.Get()))
 
 	// Several colors in one sequence continue with the next dynamic color.
 	sroSend(t, &s, "\x1b]10;rgb:ff/00/00;rgb:00/ff/00;rgb:00/00/ff\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroGreen, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, sroBlue, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroGreen, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, sroBlue, zigUnwrap(t, tm.Colors.Cursor.Get()))
 	sroSend(t, &s, "\x1b]11;rgb:11/22/33;rgb:44/55/66;rgb:ff/00/00\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Cursor.Get()))
 
 	// The fourth color is the pointer foreground, which is ignored.
 	sroSend(t, &s, "\x1b]10;rgb:00/00/01;rgb:00/00/02;rgb:00/00/03;rgb:00/00/04;rgb:00/00/05\x07")
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 1}, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 2}, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 1}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 2}, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 
 	// A query takes the place of a color without changing it.
 	sroSend(t, &s, "\x1b]10;?;rgb:ff/00/00\x07")
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 1}, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 1}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Background.Get()))
 	sroSend(t, &s, "\x1b]10;?\x07\x1b]11;?\x07\x1b]12;?\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Background.Get()))
 
 	// An invalid spec stops the list.
 	sroSend(t, &s, "\x1b]10;rgb:01/01/01;bogus;rgb:02/02/02\x07")
-	expectEqual(t, ColorRGB{r: 1, g: 1, b: 1}, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 1, G: 1, B: 1}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 	sroSend(t, &s, "\x1b]11;bogus;rgb:03/03/03\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Background.Get()))
 	sroSend(t, &s, "\x1b]12;\x07\x1b]12;#12\x07")
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 
 	// The palette is not involved.
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: OSC 13 to 19 are ignored"
@@ -5835,7 +5835,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_13_to_19_are_ignored(t
 	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	sroSend(t, &s, "\x1b]13;rgb:11/22/33\x07\x1b]14;red\x07\x1b]15;red\x07\x1b]16;red\x07")
@@ -5859,21 +5859,21 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_104_resets_palette_ent
 
 	sroSend(t, &s, "\x1b]104;1\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{2, 3, 4, 5})
-	expectEqual(t, ColorRGB{r: 0x10, g: 0x20, b: 0x30}, tm.colors.palette.current[1])
+	expectEqual(t, ColorRGB{R: 0x10, G: 0x20, B: 0x30}, tm.Colors.Palette.Current[1])
 
 	// Several entries; empty parameters, out of range and non numeric ones
 	// are skipped, special ones (256..260) have no effect.
 	sroSend(t, &s, "\x1b]104;2;;x;3;999;256;260\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{4, 5})
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	sroSend(t, &s, "\x1b]104;256\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{4, 5})
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 
 	// Without parameters everything is reset.
 	sroSend(t, &s, "\x1b]104\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{})
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 	// An empty parameter list also resets everything, and so does a list
 	// with only invalid entries (upstream behaviour).
@@ -5889,10 +5889,10 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_104_resets_palette_ent
 
 	// OSC 105 (reset special colors) does nothing.
 	sroSend(t, &s, "\x1b]4;1;red\x07")
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	sroSend(t, &s, "\x1b]105\x07\x1b]105;0\x07")
 	sroExpectPaletteOnly(t, &tm, []uint8{1})
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: OSC 110, 111 and 112 reset the dynamic colors, 113 to 119 are ignored"
@@ -5905,29 +5905,29 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_110_111_and_112_reset_
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]10;red;green;blue\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.foreground.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Foreground.Get()))
 	sroSend(t, &s, "\x1b]110\x07")
-	expectEqual(t, ColorRGB{r: 0xf1, g: 0xf2, b: 0xf3}, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroGreen, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, ColorRGB{R: 0xf1, G: 0xf2, B: 0xf3}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroGreen, zigUnwrap(t, tm.Colors.Background.Get()))
 	sroSend(t, &s, "\x1b]111\x1b\\")
-	expectEqual(t, ColorRGB{r: 0xb1, g: 0xb2, b: 0xb3}, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, sroBlue, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 0xb1, G: 0xb2, B: 0xb3}, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, sroBlue, zigUnwrap(t, tm.Colors.Cursor.Get()))
 	sroSend(t, &s, "\x1b]112\x07")
-	expectEqual(t, ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 
 	// A parameter makes the whole request empty, so nothing is reset.
 	sroSend(t, &s, "\x1b]10;red;green;blue\x07")
 	sroSend(t, &s, "\x1b]110;1\x07\x1b]111;x\x07\x1b]112;\x07")
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, sroGreen, zigUnwrap(t, tm.colors.background.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, sroGreen, zigUnwrap(t, tm.Colors.Background.Get()))
 	// The empty parameter is skipped by the tokenizer so this one resets.
-	expectEqual(t, ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 
 	// The others change nothing.
 	before := sroSnapshot(t, &tm)
 	sroSend(t, &s, "\x1b]113\x07\x1b]114\x07\x1b]115\x07\x1b]116\x07\x1b]117\x07\x1b]118\x07\x1b]119\x07")
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 }
 
 // Zig: test "term51: Handler.colorOperation: without an allocator the color OSCs are dropped"
@@ -5939,7 +5939,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_without_an_allocator_the_c
 	s := StreamInit[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 
 	before := sroSnapshot(t, &tm)
 	sroSend(t, &s, "\x1b]4;1;red\x07")
@@ -5948,7 +5948,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_without_an_allocator_the_c
 	sroSend(t, &s, "\x1b]110\x07\x1b]111\x07\x1b]112\x07")
 	sroSend(t, &s, "\x1b]21;1=rgb:ff/00/00;foreground=red\x07")
 	expectEqual(t, before, sroSnapshot(t, &tm))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 
 	// Everything else still works.
 	sroSend(t, &s, "\x1b[1;1HZ")
@@ -5965,23 +5965,23 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_OSC_21_through_a_stre
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;1=rgb:ff/00/00;foreground=#112233\x1b\\")))
-	expectEqual(t, sroRed, tm.colors.palette.current[1])
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[1])
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
 	sroExpectPaletteOnly(t, &tm, []uint8{1})
-	expect(t, tm.flags.dirty.palette, "t.flags.dirty.palette")
+	expect(t, tm.Flags.Dirty.Palette, "t.flags.dirty.palette")
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;background=rgb:44/55/66;cursor=rgb:ff/00/00;255=rgb:00/00/ff\x07")))
-	expectEqual(t, sroC2, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, sroRed, zigUnwrap(t, tm.colors.cursor.Get()))
-	expectEqual(t, sroBlue, tm.colors.palette.current[255])
+	expectEqual(t, sroC2, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, sroRed, zigUnwrap(t, tm.Colors.Cursor.Get()))
+	expectEqual(t, sroBlue, tm.Colors.Palette.Current[255])
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 255})
 
 	// Queries do nothing.
-	tm.flags.dirty.palette = false
+	tm.Flags.Dirty.Palette = false
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;1=?;foreground=?;background=?;cursor=?;7=?\x07")))
-	expectEqual(t, sroRed, tm.colors.palette.current[1])
-	expectEqual(t, sroC1, zigUnwrap(t, tm.colors.foreground.Get()))
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[1])
+	expectEqual(t, sroC1, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
 
 	// Other special keys do nothing.
 	before := sroSnapshot(t, &tm)
@@ -5993,11 +5993,11 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_OSC_21_through_a_stre
 	// An empty value resets.
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;1=\x07")))
 	sroExpectPaletteOnly(t, &tm, []uint8{255})
-	expectEqual(t, ColorRGB{r: 0x10, g: 0x20, b: 0x30}, tm.colors.palette.current[1])
+	expectEqual(t, ColorRGB{R: 0x10, G: 0x20, B: 0x30}, tm.Colors.Palette.Current[1])
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;foreground=;background=;cursor=\x07")))
-	expectEqual(t, ColorRGB{r: 0xf1, g: 0xf2, b: 0xf3}, zigUnwrap(t, tm.colors.foreground.Get()))
-	expectEqual(t, ColorRGB{r: 0xb1, g: 0xb2, b: 0xb3}, zigUnwrap(t, tm.colors.background.Get()))
-	expectEqual(t, ColorRGB{r: 0xc1, g: 0xc2, b: 0xc3}, zigUnwrap(t, tm.colors.cursor.Get()))
+	expectEqual(t, ColorRGB{R: 0xf1, G: 0xf2, B: 0xf3}, zigUnwrap(t, tm.Colors.Foreground.Get()))
+	expectEqual(t, ColorRGB{R: 0xb1, G: 0xb2, B: 0xb3}, zigUnwrap(t, tm.Colors.Background.Get()))
+	expectEqual(t, ColorRGB{R: 0xc1, G: 0xc2, B: 0xc3}, zigUnwrap(t, tm.Colors.Cursor.Get()))
 }
 
 // Zig: test "term51: Handler.kittyColorOperation: OSC 21 skips invalid keys and values but keeps going"
@@ -6012,13 +6012,13 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_OSC_21_skips_invalid_
 	// Out of range index, unknown name, wrong case, bad color, missing key:
 	// each is skipped and the following ones are still applied.
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;256=red;1=rgb:ff/00/00\x07")))
-	expectEqual(t, sroRed, tm.colors.palette.current[1])
+	expectEqual(t, sroRed, tm.Colors.Palette.Current[1])
 	sroExpectPaletteOnly(t, &tm, []uint8{1})
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;nothing=red;2=rgb:00/ff/00\x07")))
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2})
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;Foreground=red;3=rgb:00/00/ff\x07")))
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2, 3})
-	expect(t, !tm.colors.foreground.override.Valid, "t.colors.foreground.override == null")
+	expect(t, !tm.Colors.Foreground.Override.Valid, "t.colors.foreground.override == null")
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;4=notacolor;5=rgb:11/22/33\x07")))
 	sroExpectPaletteOnly(t, &tm, []uint8{1, 2, 3, 5})
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;=red;6=rgb:11/22/33\x07")))
@@ -6028,7 +6028,7 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_OSC_21_skips_invalid_
 
 	// The value may have surrounding spaces.
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;7= rgb:11/22/33 \x07")))
-	expectEqual(t, sroC1, tm.colors.palette.current[7])
+	expectEqual(t, sroC1, tm.Colors.Palette.Current[7])
 }
 
 // Zig: test "term51: Handler.vt: charset sequences through a stream"
@@ -6046,13 +6046,13 @@ func TestStreamReadonly_term51_Handler_vt_charset_sequences_through_a_stream(t *
 	// SO/SI are locking shifts to G1/G0.
 	zigTry(t, s.NextSlice([]uint8("\x1b)0\x0e`\x0f`")))
 	sroExpectText(t, &tm, "◆`◆`")
-	expectEqual(t, CharsetsSlotsG0, tm.screens.active.charset.gl)
+	expectEqual(t, CharsetsSlotsG0, tm.Screens.Active.Charset.Gl)
 	// ESC N is a single shift to G2.
 	zigTry(t, s.NextSlice([]uint8("\x1b*0\x1bN``")))
 	sroExpectText(t, &tm, "◆`◆`◆`")
-	expectEqual(t, CharsetsSlotsG0, tm.screens.active.charset.gl)
+	expectEqual(t, CharsetsSlotsG0, tm.Screens.Active.Charset.Gl)
 	// ESC n is a locking shift to G2, ESC o to G3.
 	zigTry(t, s.NextSlice([]uint8("\x1bn`\x1bo`")))
-	expectEqual(t, CharsetsSlotsG3, tm.screens.active.charset.gl)
-	expectEqual(t, CharsetsSlotsG2, tm.screens.active.charset.gr)
+	expectEqual(t, CharsetsSlotsG3, tm.Screens.Active.Charset.Gl)
+	expectEqual(t, CharsetsSlotsG2, tm.Screens.Active.Charset.Gr)
 }

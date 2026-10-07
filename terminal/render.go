@@ -159,14 +159,14 @@ type RenderState struct {
 	//
 	// The viewport is always exactly equal to the active area size so this
 	// is also the viewport size.
-	rows SizeCellCountInt
-	cols SizeCellCountInt
+	Rows SizeCellCountInt
+	Cols SizeCellCountInt
 
 	// The color state for the terminal.
-	colors RenderStateColors
+	Colors RenderStateColors
 
 	// Cursor state within the viewport.
-	cursor RenderStateCursor
+	Cursor RenderStateCursor
 
 	// The rows (y=0 is top) of the viewport. Guaranteed to be `rows` length.
 	//
@@ -177,23 +177,23 @@ type RenderState struct {
 	//
 	// Zig: std.MultiArrayList(Row). Go: a slice of the struct; see the file
 	// header.
-	row_data []RenderStateRow
+	RowData []RenderStateRow
 
 	// The dirty state of the render state. This is set by the update method.
 	// The renderer/caller should set this to false when it has handled
 	// the dirty state.
-	dirty RenderStateDirty
+	Dirty RenderStateDirty
 
 	// The screen type that this state represents. This is used primarily
 	// to detect changes.
-	screen ScreenSetKey
+	Screen ScreenSetKey
 
 	// The last viewport pin used to generate this state. This is NOT
 	// a tracked pin and is generally NOT safe to read other than the direct
 	// values for comparison.
 	//
 	// Zig: ?PageList.Pin, default null.
-	viewport_pin Optional[PageListPin]
+	ViewportPin Optional[PageListPin]
 
 	// The cached selection so we can avoid expensive selection calculations
 	// if possible.
@@ -218,27 +218,27 @@ type RenderState struct {
 // start-up (Go's package initialisation runs ColorDefault's initialiser
 // first).
 var RenderStateEmpty = RenderState{
-	rows: 0,
-	cols: 0,
-	colors: RenderStateColors{
-		background: ColorRGB{},
-		foreground: ColorRGB{},
-		cursor:     None[ColorRGB](),
-		palette:    ColorDefault,
+	Rows: 0,
+	Cols: 0,
+	Colors: RenderStateColors{
+		Background: ColorRGB{},
+		Foreground: ColorRGB{},
+		Cursor:     None[ColorRGB](),
+		Palette:    ColorDefault,
 	},
-	cursor: RenderStateCursor{
-		active:         PointCoordinate{x: 0, y: 0},
-		viewport:       None[RenderStateCursorViewport](),
-		cell:           PageCell{},
-		style:          Style{}, // Zig: undefined.
-		visual_style:   CursorStyleBlock,
-		password_input: false,
-		visible:        true,
-		blinking:       false,
+	Cursor: RenderStateCursor{
+		Active:        PointCoordinate{X: 0, Y: 0},
+		Viewport:      None[RenderStateCursorViewport](),
+		Cell:          PageCell{},
+		Style:         Style{}, // Zig: undefined.
+		VisualStyle:   CursorStyleBlock,
+		PasswordInput: false,
+		Visible:       true,
+		Blinking:      false,
 	},
-	row_data: nil,
-	dirty:    RenderStateDirtyFalse,
-	screen:   ScreenSetKeyPrimary,
+	RowData: nil,
+	Dirty:   RenderStateDirtyFalse,
+	Screen:  ScreenSetKeyPrimary,
 }
 
 // RenderStateColors is render.RenderState.Colors.
@@ -248,57 +248,57 @@ var RenderStateEmpty = RenderState{
 // The background/foreground will be reversed if the terminal reverse
 // color mode is on! You do not need to handle that manually!
 type RenderStateColors struct {
-	background ColorRGB
-	foreground ColorRGB
+	Background ColorRGB
+	Foreground ColorRGB
 	// Zig: ?color.RGB.
-	cursor  Optional[ColorRGB]
-	palette ColorPalette
+	Cursor  Optional[ColorRGB]
+	Palette ColorPalette
 }
 
 // RenderStateCursor is render.RenderState.Cursor.
 type RenderStateCursor struct {
 	// The x/y position of the cursor within the active area.
-	active PointCoordinate
+	Active PointCoordinate
 
 	// The x/y position of the cursor within the viewport. This
 	// may be null if the cursor is not visible within the viewport.
 	//
 	// Zig: ?Viewport.
-	viewport Optional[RenderStateCursorViewport]
+	Viewport Optional[RenderStateCursorViewport]
 
 	// The cell data for the cursor position. Managed memory is not
 	// safe to access from this.
-	cell PageCell
+	Cell PageCell
 
 	// The style, always valid even if the cell is default style.
-	style Style
+	Style Style
 
 	// The visual style of the cursor itself, such as a block or
 	// bar.
 	//
 	// Zig: cursor.Style.
-	visual_style CursorStyle
+	VisualStyle CursorStyle
 
 	// True if the cursor is detected to be at a password input field.
-	password_input bool
+	PasswordInput bool
 
 	// Cursor visibility state determined by the terminal mode.
-	visible bool
+	Visible bool
 
 	// Cursor blink state determined by the terminal mode.
-	blinking bool
+	Blinking bool
 }
 
 // RenderStateCursorViewport is render.RenderState.Cursor.Viewport.
 type RenderStateCursorViewport struct {
 	// The x/y position of the cursor within the viewport.
-	x SizeCellCountInt
-	y SizeCellCountInt
+	X SizeCellCountInt
+	Y SizeCellCountInt
 
 	// Whether the cursor is part of a wide character and
 	// on the tail of it. If so, some renderers may use this
 	// to move the cursor back one.
-	wide_tail bool
+	WideTail bool
 }
 
 // RenderStateRow is render.RenderState.Row.
@@ -314,45 +314,45 @@ type RenderStateCursorViewport struct {
 type RenderStateRow struct {
 	// The page pin. This is not safe to read unless you can guarantee
 	// the terminal state hasn't changed since the last `update` call.
-	pin PageListPin
+	Pin PageListPin
 
 	// Raw row data.
 	//
 	// Zig: page.Row.
-	raw PageRow
+	Raw PageRow
 
 	// The cells in this row. Guaranteed to be `cols` length.
 	//
 	// Zig: std.MultiArrayList(Cell). Go: a slice of the struct; see the file
 	// header.
-	cells []RenderStateCell
+	Cells []RenderStateCell
 
 	// A dirty flag that can be used by the renderer to track
 	// its own draw state. `update` will mark this true whenever
 	// this row is changed, too.
-	dirty bool
+	Dirty bool
 
 	// The x range of the selection within this row.
 	//
 	// Zig: ?[2]size.CellCountInt.
-	selection Optional[[2]SizeCellCountInt]
+	Selection Optional[[2]SizeCellCountInt]
 
 	// The highlights within this row.
 	//
 	// Zig: std.ArrayList(Highlight). Go: a slice; see the file header.
-	highlights []RenderStateHighlight
+	Highlights []RenderStateHighlight
 }
 
 // RenderStateHighlight is render.RenderState.Highlight.
 type RenderStateHighlight struct {
 	// A special tag that can be used by the caller to differentiate
 	// different highlight types. The value is opaque to the RenderState.
-	tag uint8
+	Tag uint8
 
 	// The x ranges of highlights within this row.
 	//
 	// Zig: `range: [2]size.CellCountInt`. `range` is a Go keyword.
-	range_ [2]SizeCellCountInt
+	Range [2]SizeCellCountInt
 }
 
 // RenderStateCell is render.RenderState.Cell.
@@ -363,17 +363,17 @@ type RenderStateCell struct {
 	// it exists.
 	//
 	// Zig: page.Cell.
-	raw PageCell
+	Raw PageCell
 
 	// Grapheme data for the cell. This is undefined unless the
 	// raw cell's content_tag is `codepoint_grapheme`.
 	//
 	// Zig: []const u21.
-	grapheme []uint32
+	Grapheme []uint32
 
 	// The style data for the cell. This is undefined unless
 	// the style_id is non-default on raw.
-	style Style
+	Style Style
 }
 
 // RenderStateDirty is render.RenderState.Dirty.
@@ -424,10 +424,10 @@ func (self *RenderState) Deinit() {
 	// list deinitialised, then row_data is deinitialised. The memory is
 	// Go's; the lists are left at their zero value (docs/mapping.md:
 	// deinit leaves a list undefined, which is the Go zero value).
-	for i := range self.row_data {
-		self.row_data[i].cells = nil
+	for i := range self.RowData {
+		self.RowData[i].Cells = nil
 	}
-	self.row_data = nil
+	self.RowData = nil
 }
 
 // Update is render.RenderState.update.
@@ -440,14 +440,14 @@ func (self *RenderState) Deinit() {
 // Zig: pub fn update(self: *RenderState, alloc: Allocator, t: *Terminal)
 // Allocator.Error!void. The error is ErrOutOfMemory (dcs.go).
 func (self *RenderState) Update(t *Terminal) error {
-	s := t.screens.active
-	viewport_pin := s.pages.GetTopLeft(PointTagViewport)
+	s := t.Screens.Active
+	viewport_pin := s.Pages.GetTopLeft(PointTagViewport)
 	var redraw bool
 	// redraw:
 	{
 		// If our screen key changed, we need to do a full rebuild
 		// because our render state is viewport-specific.
-		if t.screens.active_key != self.screen {
+		if t.Screens.ActiveKey != self.Screen {
 			redraw = true
 			goto redraw_done
 		}
@@ -457,7 +457,7 @@ func (self *RenderState) Update(t *Terminal) error {
 		//
 		// Zig: the packed struct's backing integer > 0, that is any flag
 		// set.
-		if t.flags.dirty != (TerminalDirty{}) {
+		if t.Flags.Dirty != (TerminalDirty{}) {
 			redraw = true
 			goto redraw_done
 		}
@@ -467,21 +467,21 @@ func (self *RenderState) Update(t *Terminal) error {
 		//
 		// Zig: the packed struct's backing integer > 0, that is any flag
 		// set.
-		if t.screens.active.dirty != (ScreenDirty{}) {
+		if t.Screens.Active.Dirty != (ScreenDirty{}) {
 			redraw = true
 			goto redraw_done
 		}
 
 		// If our dimensions changed, we do a full rebuild.
-		if self.rows != s.pages.rows ||
-			self.cols != s.pages.cols {
+		if self.Rows != s.Pages.rows ||
+			self.Cols != s.Pages.cols {
 			redraw = true
 			goto redraw_done
 		}
 
 		// If our viewport pin changed, we do a full rebuild.
-		if self.viewport_pin.Valid {
-			old := self.viewport_pin.Value
+		if self.ViewportPin.Valid {
+			old := self.ViewportPin.Value
 			if !old.Eql(viewport_pin) {
 				redraw = true
 				goto redraw_done
@@ -493,45 +493,45 @@ func (self *RenderState) Update(t *Terminal) error {
 redraw_done:
 
 	// Always set our cheap fields, its more expensive to compare
-	self.rows = s.pages.rows
-	self.cols = s.pages.cols
-	self.viewport_pin = Some(viewport_pin)
-	self.cursor.active = PointCoordinate{x: s.cursor.x, y: uint32(s.cursor.y)}
-	self.cursor.cell = *s.cursor.page_cell
-	self.cursor.style = s.cursor.style
-	self.cursor.visual_style = s.cursor.cursor_style
-	self.cursor.password_input = t.flags.password_input
-	self.cursor.visible = t.modes.Get(ModesModeCursorVisible)
-	self.cursor.blinking = t.modes.Get(ModesModeCursorBlinking)
+	self.Rows = s.Pages.rows
+	self.Cols = s.Pages.cols
+	self.ViewportPin = Some(viewport_pin)
+	self.Cursor.Active = PointCoordinate{X: s.Cursor.X, Y: uint32(s.Cursor.Y)}
+	self.Cursor.Cell = *s.Cursor.PageCell
+	self.Cursor.Style = s.Cursor.Style
+	self.Cursor.VisualStyle = s.Cursor.CursorStyle
+	self.Cursor.PasswordInput = t.Flags.PasswordInput
+	self.Cursor.Visible = t.Modes.Get(ModesModeCursorVisible)
+	self.Cursor.Blinking = t.Modes.Get(ModesModeCursorBlinking)
 
 	// Always reset the cursor viewport position. In the future we can
 	// probably cache this by comparing the cursor pin and viewport pin
 	// but may not be worth it.
-	self.cursor.viewport = None[RenderStateCursorViewport]()
+	self.Cursor.Viewport = None[RenderStateCursorViewport]()
 
 	// Colors.
-	self.colors.cursor = t.colors.cursor.Get()
-	self.colors.palette = t.colors.palette.current
+	self.Colors.Cursor = t.Colors.Cursor.Get()
+	self.Colors.Palette = t.Colors.Palette.Current
 	// bg_fg:
 	{
 		// Background/foreground can be unset initially which would
 		// depend on "default" background/foreground. The expected use
 		// case of Terminal is that the caller set their own configured
 		// defaults on load so this doesn't happen.
-		bg := t.colors.background.Get()
+		bg := t.Colors.Background.Get()
 		if !bg.Valid {
 			goto bg_fg_done
 		}
-		fg := t.colors.foreground.Get()
+		fg := t.Colors.Foreground.Get()
 		if !fg.Valid {
 			goto bg_fg_done
 		}
-		if t.modes.Get(ModesModeReverseColors) {
-			self.colors.background = fg.Value
-			self.colors.foreground = bg.Value
+		if t.Modes.Get(ModesModeReverseColors) {
+			self.Colors.Background = fg.Value
+			self.Colors.Foreground = bg.Value
 		} else {
-			self.colors.background = bg.Value
-			self.colors.foreground = fg.Value
+			self.Colors.Background = bg.Value
+			self.Colors.Foreground = fg.Value
 		}
 	}
 bg_fg_done:
@@ -539,35 +539,35 @@ bg_fg_done:
 	// Ensure our row length is exactly our height, freeing or allocating
 	// data as necessary. In most cases we'll have a perfectly matching
 	// size.
-	if len(self.row_data) != int(self.rows) {
-		if len(self.row_data) < int(self.rows) {
+	if len(self.RowData) != int(self.Rows) {
+		if len(self.RowData) < int(self.Rows) {
 			// Resize our rows to the desired length, marking any added
 			// values undefined.
-			old_len := len(self.row_data)
-			self.row_data = renderResize(self.row_data, int(self.rows))
+			old_len := len(self.RowData)
+			self.RowData = renderResize(self.RowData, int(self.Rows))
 
 			// Initialize all our values. Its faster to use slice() + set()
 			// because appendAssumeCapacity does this multiple times.
-			row_data := self.row_data
-			for y := old_len; y < int(self.rows); y++ {
+			row_data := self.RowData
+			for y := old_len; y < int(self.Rows); y++ {
 				row_data[y] = RenderStateRow{
 					// Zig: .arena = .{} (dropped).
-					pin:        PageListPin{}, // Zig: undefined.
-					raw:        PageRow{},     // Zig: undefined.
-					cells:      nil,
-					dirty:      true,
-					selection:  None[[2]SizeCellCountInt](),
-					highlights: nil,
+					Pin:        PageListPin{}, // Zig: undefined.
+					Raw:        PageRow{},     // Zig: undefined.
+					Cells:      nil,
+					Dirty:      true,
+					Selection:  None[[2]SizeCellCountInt](),
+					Highlights: nil,
 				}
 			}
 		} else {
-			row_data := self.row_data
-			for i := range row_data[self.rows:] {
+			row_data := self.RowData
+			for i := range row_data[self.Rows:] {
 				// Zig: the row's arena is promoted and deinitialised and
 				// its cells list deinitialised.
-				row_data[int(self.rows)+i].cells = nil
+				row_data[int(self.Rows)+i].Cells = nil
 			}
-			self.row_data = self.row_data[:self.rows]
+			self.RowData = self.RowData[:self.Rows]
 		}
 	}
 
@@ -576,14 +576,14 @@ bg_fg_done:
 	// Zig: row_data.items(.<field>) for arena, pin, raw, cells,
 	// selection, highlights and dirty. Go: row_data[y].<field>; the arena
 	// is dropped.
-	row_data := self.row_data
+	row_data := self.RowData
 
 	// Track the last page that we know was dirty. This lets us
 	// more quickly do the full-page dirty check.
 	var last_dirty_page *Page = nil
 
 	// Go through and setup our rows.
-	row_it := s.pages.RowIterator(
+	row_it := s.Pages.RowIterator(
 		PageListDirectionRightDown,
 		Point{Tag: PointTagViewport, Viewport: PointCoordinate{}},
 		None[Point](),
@@ -595,22 +595,22 @@ bg_fg_done:
 
 		// Find our cursor if we haven't found it yet. We do this even
 		// if the row is not dirty because the cursor is unrelated.
-		if !self.cursor.viewport.Valid &&
-			row_pin.node == s.cursor.page_pin.node &&
-			row_pin.y == s.cursor.page_pin.y {
+		if !self.Cursor.Viewport.Valid &&
+			row_pin.Node == s.Cursor.PagePin.Node &&
+			row_pin.Y == s.Cursor.PagePin.Y {
 			var wide_tail bool
-			if s.cursor.x > 0 {
+			if s.Cursor.X > 0 {
 				wide_tail = s.CursorCellLeft(1).wide == PageCellWideWide
 			} else {
 				wide_tail = false
 			}
-			self.cursor.viewport = Some(RenderStateCursorViewport{
-				y: y,
-				x: s.cursor.x,
+			self.Cursor.Viewport = Some(RenderStateCursorViewport{
+				Y: y,
+				X: s.Cursor.X,
 
 				// Future: we should use our own state here to look this
 				// up rather than calling this.
-				wide_tail: wide_tail,
+				WideTail: wide_tail,
 			})
 		}
 
@@ -618,10 +618,10 @@ bg_fg_done:
 		// because dirty is only a renderer optimization. It doesn't
 		// apply to memory movement. This will let us remap any cell
 		// pins back to an exact entry in our RenderState.
-		row_data[y].pin = row_pin
+		row_data[y].Pin = row_pin
 
 		// Get all our cells in the page.
-		p := &row_pin.node.data
+		p := &row_pin.Node.data
 		page_rac := row_pin.RowAndCell()
 
 		// dirty:
@@ -670,20 +670,20 @@ bg_fg_done:
 		// row_arenas[y] = arena.state;`. The arena is dropped.
 
 		// Reset our cells if we're rebuilding this row.
-		if len(row_data[y].cells) > 0 {
+		if len(row_data[y].Cells) > 0 {
 			// Zig: _ = arena.reset(.retain_capacity) (dropped).
-			row_data[y].cells = row_data[y].cells[:0]
-			row_data[y].selection = None[[2]SizeCellCountInt]()
-			row_data[y].highlights = nil
+			row_data[y].Cells = row_data[y].Cells[:0]
+			row_data[y].Selection = None[[2]SizeCellCountInt]()
+			row_data[y].Highlights = nil
 		}
-		row_data[y].dirty = true
+		row_data[y].Dirty = true
 
 		// Get all our cells in the page.
 		page_cells := p.GetCells(page_rac.row)
-		assert(len(page_cells) == int(self.cols))
+		assert(len(page_cells) == int(self.Cols))
 
 		// Copy our raw row data
-		row_data[y].raw = *page_rac.row
+		row_data[y].Raw = *page_rac.row
 
 		// Note: our cells MultiArrayList uses our general allocator.
 		// We do this on purpose because as rows become dirty, we do
@@ -692,8 +692,8 @@ bg_fg_done:
 		//
 		// Our per-row arena is only used for temporary allocations
 		// pertaining to cells directly (e.g. graphemes, hyperlinks).
-		cells := &row_data[y].cells
-		*cells = renderResize(*cells, int(self.cols))
+		cells := &row_data[y].Cells
+		*cells = renderResize(*cells, int(self.Cols))
 
 		// We always copy our raw cell data. In the case we have no
 		// managed memory, we can skip setting any other fields.
@@ -704,7 +704,7 @@ bg_fg_done:
 		cells_slice := *cells
 		// Zig: fastmem.copy(page.Cell, cells_slice.items(.raw), page_cells).
 		for x := range page_cells {
-			cells_slice[x].raw = page_cells[x]
+			cells_slice[x].Raw = page_cells[x]
 		}
 		if !page_rac.row.ManagedMemory() {
 			continue
@@ -715,7 +715,7 @@ bg_fg_done:
 			// Append assuming its a single-codepoint, styled cell
 			// (most common by far).
 			if page_cell.style_id > 0 {
-				cells_slice[x].style = *p.styles.Get(
+				cells_slice[x].Style = *p.styles.Get(
 					page_cell.style_id,
 				)
 			}
@@ -738,17 +738,17 @@ bg_fg_done:
 				}
 				dup := make([]uint32, len(src))
 				copy(dup, src)
-				cells_slice[x].grapheme = dup
+				cells_slice[x].Grapheme = dup
 
 			case PageCellContentTagBgColorRgb:
-				cells_slice[x].style = Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-					r: page_cell.content.color_rgb.r,
-					g: page_cell.content.color_rgb.g,
-					b: page_cell.content.color_rgb.b,
+				cells_slice[x].Style = Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+					R: page_cell.content.color_rgb.R,
+					G: page_cell.content.color_rgb.G,
+					B: page_cell.content.color_rgb.B,
 				}}}
 
 			case PageCellContentTagBgColorPalette:
-				cells_slice[x].style = Style{bg_color: StyleColor{
+				cells_slice[x].Style = Style{BgColor: StyleColor{
 					Tag:     StyleColorPalette,
 					Palette: page_cell.content.color_palette,
 				}}
@@ -758,7 +758,7 @@ bg_fg_done:
 			}
 		}
 	}
-	assert(y == self.rows)
+	assert(y == self.Rows)
 
 	// If our screen has a selection, then mark the rows with the
 	// selection. We do this outside of the loop above because its unlikely
@@ -771,8 +771,8 @@ bg_fg_done:
 	// There are performance improvements that can be made here, though.
 	// For example, `containedRow` recalculates a bunch of information
 	// we can cache.
-	if s.selection.Valid {
-		sel := &s.selection.Value
+	if s.Selection.Valid {
+		sel := &s.Selection.Value
 		// selection:
 		{
 			// Populate our selection cache to avoid some expensive
@@ -811,7 +811,7 @@ bg_fg_done:
 				tl_pin := sel.TopLeft(s)
 				br_pin := sel.BottomRight(s)
 				self.selection_cache = Some(renderStateSelectionCache{
-					selection: SelectionInit(tl_pin, br_pin, sel.rectangle),
+					selection: SelectionInit(tl_pin, br_pin, sel.Rectangle),
 					tl_pin:    tl_pin,
 					br_pin:    br_pin,
 				})
@@ -821,10 +821,10 @@ bg_fg_done:
 
 			// Grab the inefficient data we need from the selection. At
 			// least we can cache it.
-			tl_ := s.pages.PointFromPin(PointTagScreen, cache.tl_pin)
+			tl_ := s.Pages.PointFromPin(PointTagScreen, cache.tl_pin)
 			assert(tl_.Valid) // .?
 			tl := tl_.Value.Screen
-			br_ := s.pages.PointFromPin(PointTagScreen, cache.br_pin)
+			br_ := s.Pages.PointFromPin(PointTagScreen, cache.br_pin)
 			assert(br_.Valid) // .?
 			br := br_.Value.Screen
 
@@ -833,9 +833,9 @@ bg_fg_done:
 			// do this is to traverse the viewport pages and check for the
 			// matching selection pages.
 			for i := range row_data {
-				pin := row_data[i].pin
-				sel_bounds := &row_data[i].selection
-				p_ := s.pages.PointFromPin(PointTagScreen, pin)
+				pin := row_data[i].Pin
+				sel_bounds := &row_data[i].Selection
+				p_ := s.Pages.PointFromPin(PointTagScreen, pin)
 				assert(p_.Valid) // .?
 				p := p_.Value.Screen
 				row_sel_ := sel.ContainedRowCached(
@@ -853,10 +853,10 @@ bg_fg_done:
 				row_sel := row_sel_.Value
 				start := row_sel.Start()
 				end := row_sel.End()
-				assert(start.node == end.node)
-				assert(start.x <= end.x)
-				assert(start.y == end.y)
-				*sel_bounds = Some([2]SizeCellCountInt{start.x, end.x})
+				assert(start.Node == end.Node)
+				assert(start.X <= end.X)
+				assert(start.Y == end.Y)
+				*sel_bounds = Some([2]SizeCellCountInt{start.X, end.X})
 			}
 		}
 	selection_done:
@@ -865,13 +865,13 @@ bg_fg_done:
 	// Handle dirty state.
 	if redraw {
 		// Fully redraw resets some other state.
-		self.screen = t.screens.active_key
-		self.dirty = RenderStateDirtyFull
+		self.Screen = t.Screens.ActiveKey
+		self.Dirty = RenderStateDirtyFull
 
 		// Note: we don't clear any row_data here because our rebuild
 		// above did this.
-	} else if any_dirty && self.dirty == RenderStateDirtyFalse {
-		self.dirty = RenderStateDirtyPartial
+	} else if any_dirty && self.Dirty == RenderStateDirtyFalse {
+		self.Dirty = RenderStateDirtyPartial
 	}
 
 	// Finalize our final dirty page
@@ -880,8 +880,8 @@ bg_fg_done:
 	}
 
 	// Clear our dirty flags
-	t.flags.dirty = TerminalDirty{}
-	s.dirty = ScreenDirty{}
+	t.Flags.Dirty = TerminalDirty{}
+	s.Dirty = ScreenDirty{}
 	return nil
 }
 
@@ -939,21 +939,21 @@ func (self *RenderState) UpdateHighlightsFlattened(tag uint8, hls []HighlightFla
 
 	// Zig: row_data.items(.arena), (.dirty), (.pin), (.highlights). Go:
 	// row_data[r].<field>; the arena is dropped.
-	row_data := self.row_data
+	row_data := self.RowData
 	for r := range row_data {
-		row_pin := row_data[r].pin
-		row_highlights := &row_data[r].highlights
-		dirty := &row_data[r].dirty
+		row_pin := row_data[r].Pin
+		row_highlights := &row_data[r].Highlights
+		dirty := &row_data[r].Dirty
 		for _, hl := range hls {
 			// Zig: hl.chunks.slice().items(.node), (.start), (.end).
-			chunks := hl.chunks
+			chunks := hl.Chunks
 			for i := range chunks {
-				node := chunks[i].node
+				node := chunks[i].Node
 				// If this node doesn't match or we're not within
 				// the row range, skip it.
-				if node != row_pin.node ||
-					row_pin.y < chunks[i].start ||
-					row_pin.y >= chunks[i].end {
+				if node != row_pin.Node ||
+					row_pin.Y < chunks[i].Start ||
+					row_pin.Y >= chunks[i].End {
 					continue
 				}
 
@@ -963,24 +963,24 @@ func (self *RenderState) UpdateHighlightsFlattened(tag uint8, hls []HighlightFla
 				// row_arena.* = arena.state;` (dropped).
 				var lo, hi SizeCellCountInt
 				if i == 0 &&
-					row_pin.y == chunks[0].start {
-					lo = hl.top_x
+					row_pin.Y == chunks[0].Start {
+					lo = hl.TopX
 				} else {
 					lo = 0
 				}
 				// Zig: `ends[nodes.len - 1] - 1` on u16 cannot trap here:
 				// this chunk's end is above row_pin.y.
 				if i == len(chunks)-1 &&
-					row_pin.y == chunks[len(chunks)-1].end-1 {
-					hi = hl.bot_x
+					row_pin.Y == chunks[len(chunks)-1].End-1 {
+					hi = hl.BotX
 				} else {
 					// Zig: `self.cols - 1` on u16; cols > 0 when there
 					// are rows.
-					hi = self.cols - 1
+					hi = self.Cols - 1
 				}
 				*row_highlights = append(*row_highlights, RenderStateHighlight{
-					tag:    tag,
-					range_: [2]SizeCellCountInt{lo, hi},
+					Tag:   tag,
+					Range: [2]SizeCellCountInt{lo, hi},
 				})
 
 				*dirty = true
@@ -990,8 +990,8 @@ func (self *RenderState) UpdateHighlightsFlattened(tag uint8, hls []HighlightFla
 	}
 
 	// Mark our dirty state.
-	if any_dirty && self.dirty == RenderStateDirtyFalse {
-		self.dirty = RenderStateDirtyPartial
+	if any_dirty && self.Dirty == RenderStateDirtyFalse {
+		self.Dirty = RenderStateDirtyPartial
 	}
 	return nil
 }
@@ -1012,7 +1012,7 @@ type RenderStateStringMap = []PointCoordinate
 type RenderStateStringMapParam struct {
 	// Zig: `map: *StringMap`. `map` is a Go keyword. A pointer to the
 	// caller's slice; the function appends through it.
-	map_ *RenderStateStringMap
+	Map *RenderStateStringMap
 }
 
 // String is render.RenderState.string.
@@ -1035,17 +1035,17 @@ type RenderStateStringMapParam struct {
 // oscWriter (osc.go); the error is ErrWriteFailed (osc.go) or
 // ErrOutOfMemory (dcs.go). This is not a fmt.Stringer `String() string`:
 // the Zig name `string` capitalised.
-func (self *RenderState) String(writer *oscWriter, map_ Optional[RenderStateStringMapParam]) error {
+func (self *RenderState) stringW(writer *oscWriter, map_ Optional[RenderStateStringMapParam]) error {
 	// Zig: row_slice.items(.raw), (.cells). Go: row_data[y].raw, .cells.
-	row_data := self.row_data
+	row_data := self.RowData
 
 	for y := range row_data {
-		row := row_data[y].raw
-		cells := row_data[y].cells
+		row := row_data[y].Raw
+		cells := row_data[y].Cells
 		cells_slice := cells
 		for x := range cells_slice {
-			cell := cells_slice[x].raw
-			graphemes := cells_slice[x].grapheme
+			cell := cells_slice[x].Raw
+			graphemes := cells_slice[x].Grapheme
 			len__, err := stdUnicodeUtf8CodepointSequenceLength(cell.Codepoint())
 			if err != nil {
 				return ErrWriteFailed
@@ -1073,9 +1073,9 @@ func (self *RenderState) String(writer *oscWriter, map_ Optional[RenderStateStri
 				m := map_.Value
 				// Zig: @intCast(x) to u16 and @intCast(y) to u32; x < cols
 				// and y < rows, so both fit.
-				formatterAppendNTimes(m.map_, PointCoordinate{
-					x: SizeCellCountInt(x),
-					y: uint32(y),
+				formatterAppendNTimes(m.Map, PointCoordinate{
+					X: SizeCellCountInt(x),
+					Y: uint32(y),
 				}, uint64(len_))
 			}
 		}
@@ -1086,9 +1086,9 @@ func (self *RenderState) String(writer *oscWriter, map_ Optional[RenderStateStri
 			}
 			if map_.Valid {
 				m := map_.Value
-				*m.map_ = append(*m.map_, PointCoordinate{
-					x: SizeCellCountInt(len(cells_slice)),
-					y: uint32(y),
+				*m.Map = append(*m.Map, PointCoordinate{
+					X: SizeCellCountInt(len(cells_slice)),
+					Y: uint32(y),
 				})
 			}
 		}
@@ -1164,25 +1164,25 @@ func (self *RenderState) LinkCells(viewport_point PointCoordinate) (RenderStateC
 	// Zig: errdefer result.deinit(alloc) (memory only).
 
 	// Zig: row_slice.items(.pin), (.cells). Go: row_data[y].pin, .cells.
-	row_data := self.row_data
+	row_data := self.RowData
 
 	// Our viewport point is sent in by the caller and can't be trusted.
 	// If it is outside the valid area then just return empty because
 	// we can't possibly have a link there.
-	if viewport_point.x >= self.cols ||
-		uint(viewport_point.y) >= uint(len(row_data)) {
+	if viewport_point.X >= self.Cols ||
+		uint(viewport_point.Y) >= uint(len(row_data)) {
 		return result, nil
 	}
 
 	// Grab our link ID
-	link_pin := row_data[viewport_point.y].pin
-	link_page := &link_pin.node.data
+	link_pin := row_data[viewport_point.Y].Pin
+	link_page := &link_pin.Node.data
 	var link *HyperlinkPageEntry
 	// link:
 	{
 		rac := link_page.GetRowAndCell(
-			uint(viewport_point.x),
-			uint(link_pin.y),
+			uint(viewport_point.X),
+			uint(link_pin.Y),
 		)
 
 		// The likely scenario is that our mouse isn't even over a link.
@@ -1200,19 +1200,19 @@ func (self *RenderState) LinkCells(viewport_point PointCoordinate) (RenderStateC
 	}
 
 	for y := range row_data {
-		pin := row_data[y].pin
-		cells := row_data[y].cells
+		pin := row_data[y].Pin
+		cells := row_data[y].Cells
 		for x := range cells {
-			cell := cells[x].raw
+			cell := cells[x].Raw
 			if !cell.hyperlink {
 				continue
 			}
 
-			other_page := &pin.node.data
+			other_page := &pin.Node.data
 			var other *HyperlinkPageEntry
 			// link:
 			{
-				rac := other_page.GetRowAndCell(uint(x), uint(pin.y))
+				rac := other_page.GetRowAndCell(uint(x), uint(pin.Y))
 				link_id := other_page.LookupHyperlink(rac.cell)
 				if !link_id.Valid {
 					continue
@@ -1228,8 +1228,8 @@ func (self *RenderState) LinkCells(viewport_point PointCoordinate) (RenderStateC
 			) {
 				// Zig: @intCast(y) to u32 and @intCast(x) to u16; both fit.
 				if err := result.Put(PointCoordinate{
-					y: uint32(y),
-					x: SizeCellCountInt(x),
+					Y: uint32(y),
+					X: SizeCellCountInt(x),
 				}); err != nil {
 					return RenderStateCellSet{}, err
 				}

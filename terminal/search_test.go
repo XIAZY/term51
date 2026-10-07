@@ -80,18 +80,18 @@ func saExpectHighlight(
 	want []saChunk,
 ) {
 	t.Helper()
-	expectEqual(t, top_x, h.top_x)
-	expectEqual(t, bot_x, h.bot_x)
-	expectEqual(t, uint(len(want)), uint(len(h.chunks)))
+	expectEqual(t, top_x, h.TopX)
+	expectEqual(t, bot_x, h.BotX)
+	expectEqual(t, uint(len(want)), uint(len(h.Chunks)))
 	for i, c := range want {
-		expectEqual(t, c.node, h.chunks[i].node)
+		expectEqual(t, c.node, h.Chunks[i].Node)
 		wantSerial := c.node.serial
 		if c.serial.Valid {
 			wantSerial = c.serial.Value
 		}
-		expectEqual(t, wantSerial, h.chunks[i].serial)
-		expectEqual(t, c.start, h.chunks[i].start)
-		expectEqual(t, c.end, h.chunks[i].end)
+		expectEqual(t, wantSerial, h.Chunks[i].Serial)
+		expectEqual(t, c.start, h.Chunks[i].Start)
+		expectEqual(t, c.end, h.Chunks[i].End)
 	}
 }
 
@@ -101,7 +101,7 @@ func saExpectHighlight(
 func saTerminal(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Terminal {
 	t.Helper()
 	opts := terminalOptionsDefault(cols, rows)
-	opts.max_scrollback = 100 * 1024 * 1024
+	opts.MaxScrollback = 100 * 1024 * 1024
 	term, err := TerminalInit(opts)
 	zigTry(t, err)
 	return &term
@@ -159,23 +159,23 @@ func saNewlines(t *testing.T, term *Terminal, n uint) {
 
 // saCap is term51ALCap: the row capacity of the first (standard) page.
 func saCap(term *Terminal) uint {
-	return uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	return uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 }
 
 // saScreen is term51ALScreen: the screen coordinate of a pin.
 func saScreen(t *testing.T, term *Terminal, p PageListPin) PointCoordinate {
 	t.Helper()
-	return zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, p)).Screen
+	return zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagScreen, p)).Screen
 }
 
 // saActivePoint is `point.Point{ .active = .{ .x = x, .y = y } }`.
 func saActivePoint(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 // saScreenPoint is `point.Point{ .screen = .{ .x = x, .y = y } }`.
 func saScreenPoint(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 // saWrapLast is term51ALWrapLast: sets the soft-wrap flag of the last row of
@@ -285,7 +285,7 @@ func TestSaSearch_term51_search_exported_Active_and_Viewport_searches_work_throu
 	active, err := SearchActiveInit([]uint8("fizz"))
 	zigTry(t, err)
 	defer active.Deinit()
-	_, err = active.Update(&term.screens.active.pages)
+	_, err = active.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, active.Next().Valid, "active.next() != null")
 	expect(t, !active.Next().Valid, "active.next() == null")
@@ -293,13 +293,13 @@ func TestSaSearch_term51_search_exported_Active_and_Viewport_searches_work_throu
 	viewport, err := SearchViewportInit([]uint8("fizz"))
 	zigTry(t, err)
 	defer viewport.Deinit()
-	changed, err := viewport.Update(&term.screens.active.pages)
+	changed, err := viewport.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try viewport.update(&t.screens.active.pages)")
 	expect(t, viewport.Next().Valid, "viewport.next() != null")
 	expect(t, !viewport.Next().Valid, "viewport.next() == null")
 
-	pagelist, err := SearchPagelistInit([]uint8("fizz"), &term.screens.active.pages, term.screens.active.pages.pages.last)
+	pagelist, err := SearchPagelistInit([]uint8("fizz"), &term.Screens.Active.Pages, term.Screens.Active.Pages.pages.last)
 	zigTry(t, err)
 	defer pagelist.Deinit()
 	expect(t, pagelist.Next().Valid, "pagelist.next() != null")

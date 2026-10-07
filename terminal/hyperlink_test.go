@@ -168,8 +168,8 @@ func TestHyperlink_term51_Hyperlink_deinit_frees_explicit_id_and_uri(t *testing.
 	// Zig-only: alloc.dupe(u8, ...) of both strings and the leak detection of
 	// testing.allocator (the Go strings are plain slices).
 	link := Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("my-id")},
-		uri: []uint8("https://example.com"),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("my-id")},
+		URI: []uint8("https://example.com"),
 	}
 	link.Deinit()
 }
@@ -179,8 +179,8 @@ func TestHyperlink_term51_Hyperlink_deinit_implicit_id_frees_only_the_uri(t *tes
 	// The implicit id owns no memory; freeing it would be detected.
 	// Zig-only: the detection (testing.allocator).
 	link := Hyperlink{
-		id:  hlImplicit(7),
-		uri: []uint8("https://example.com"),
+		ID:  hlImplicit(7),
+		URI: []uint8("https://example.com"),
 	}
 	link.Deinit()
 }
@@ -188,8 +188,8 @@ func TestHyperlink_term51_Hyperlink_deinit_implicit_id_frees_only_the_uri(t *tes
 // Zig: test "term51: Hyperlink.deinit: empty strings"
 func TestHyperlink_term51_Hyperlink_deinit_empty_strings(t *testing.T) {
 	link := Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8{}},
-		uri: []uint8{},
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8{}},
+		URI: []uint8{},
 	}
 	link.Deinit()
 }
@@ -197,42 +197,42 @@ func TestHyperlink_term51_Hyperlink_deinit_empty_strings(t *testing.T) {
 // Zig: test "term51: Hyperlink.dupe: explicit id"
 func TestHyperlink_term51_Hyperlink_dupe_explicit_id(t *testing.T) {
 	orig := Hyperlink{
-		id:  hlExplicit("my-id"),
-		uri: []uint8("https://example.com"),
+		ID:  hlExplicit("my-id"),
+		URI: []uint8("https://example.com"),
 	}
 	cp, err := orig.Dupe()
 	zigTry(t, err)
 	defer cp.Deinit()
 
-	expectEqualStrings(t, "https://example.com", string(cp.uri))
-	expectEqualStrings(t, "my-id", string(cp.id.Explicit))
-	expect(t, &cp.uri[0] != &orig.uri[0], "copy.uri.ptr != orig.uri.ptr")
-	expect(t, &cp.id.Explicit[0] != &orig.id.Explicit[0], "copy.id.explicit.ptr != orig.id.explicit.ptr")
+	expectEqualStrings(t, "https://example.com", string(cp.URI))
+	expectEqualStrings(t, "my-id", string(cp.ID.Explicit))
+	expect(t, &cp.URI[0] != &orig.URI[0], "copy.uri.ptr != orig.uri.ptr")
+	expect(t, &cp.ID.Explicit[0] != &orig.ID.Explicit[0], "copy.id.explicit.ptr != orig.id.explicit.ptr")
 }
 
 // Zig: test "term51: Hyperlink.dupe: implicit id copied by value"
 func TestHyperlink_term51_Hyperlink_dupe_implicit_id_copied_by_value(t *testing.T) {
 	for _, n := range []SizeOffsetInt{0, 1, hlMaxImplicit} {
 		func() {
-			orig := Hyperlink{id: hlImplicit(n), uri: []uint8("https://a.b")}
+			orig := Hyperlink{ID: hlImplicit(n), URI: []uint8("https://a.b")}
 			cp, err := orig.Dupe()
 			zigTry(t, err)
 			defer cp.Deinit()
-			expectEqual(t, n, cp.id.Implicit)
-			expectEqualStrings(t, "https://a.b", string(cp.uri))
-			expect(t, &cp.uri[0] != &orig.uri[0], "copy.uri.ptr != orig.uri.ptr")
+			expectEqual(t, n, cp.ID.Implicit)
+			expectEqualStrings(t, "https://a.b", string(cp.URI))
+			expect(t, &cp.URI[0] != &orig.URI[0], "copy.uri.ptr != orig.uri.ptr")
 		}()
 	}
 }
 
 // Zig: test "term51: Hyperlink.dupe: empty uri and empty id"
 func TestHyperlink_term51_Hyperlink_dupe_empty_uri_and_empty_id(t *testing.T) {
-	orig := Hyperlink{id: hlExplicit(""), uri: []uint8("")}
+	orig := Hyperlink{ID: hlExplicit(""), URI: []uint8("")}
 	cp, err := orig.Dupe()
 	zigTry(t, err)
 	defer cp.Deinit()
-	expectEqual(t, 0, len(cp.uri))
-	expectEqual(t, 0, len(cp.id.Explicit))
+	expectEqual(t, 0, len(cp.URI))
+	expectEqual(t, 0, len(cp.ID.Explicit))
 }
 
 // Zig: test "term51: Hyperlink.dupe: very long uri and id"
@@ -250,14 +250,14 @@ func TestHyperlink_term51_Hyperlink_dupe_very_long_uri_and_id(t *testing.T) {
 	}
 
 	orig := Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: id},
-		uri: uri,
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: id},
+		URI: uri,
 	}
 	cp, err := orig.Dupe()
 	zigTry(t, err)
 	defer cp.Deinit()
-	expectEqualSlices(t, uri, cp.uri)
-	expectEqualSlices(t, id, cp.id.Explicit)
+	expectEqualSlices(t, uri, cp.URI)
+	expectEqualSlices(t, id, cp.ID.Explicit)
 }
 
 // Not translated (std.testing.FailingAllocator has no Go counterpart): see scripts/not-translated.txt.
@@ -697,9 +697,9 @@ func TestHyperlink_term51_deleted_set_layout_and_id_space(t *testing.T) {
 	// reflected types. `Offset(Cell)` is SizeOffsetInt in Go (the Offset type
 	// is omitted); `Set.Id` is the type parameter of HyperlinkSet, seen
 	// through the element type of its `table`.
-	expect(t, reflect.TypeOf(HyperlinkId(0)) == reflect.TypeOf(uint16(0)), "Id == u16")
-	expect(t, reflect.TypeOf(HyperlinkId(0)) == reflect.TypeOf(SizeHyperlinkCountInt(0)), "Id == size.HyperlinkCountInt")
-	expect(t, reflect.TypeOf(HyperlinkSet{}.table).Elem() == reflect.TypeOf(HyperlinkId(0)), "Set.Id == Id")
+	expect(t, reflect.TypeOf(HyperlinkID(0)) == reflect.TypeOf(uint16(0)), "Id == u16")
+	expect(t, reflect.TypeOf(HyperlinkID(0)) == reflect.TypeOf(SizeHyperlinkCountInt(0)), "Id == size.HyperlinkCountInt")
+	expect(t, reflect.TypeOf(HyperlinkSet{}.table).Elem() == reflect.TypeOf(HyperlinkID(0)), "Set.Id == Id")
 	expect(t, reflect.TypeOf(HyperlinkMap{}) == reflect.TypeOf(HashMapAutoOffsetHashMap[SizeOffsetInt, uint16]{}), "Map == AutoOffsetHashMap(Offset(Cell), u16)")
 	expect(t, reflect.TypeOf(SizeOffsetInt(0)) == reflect.TypeOf(uint32(0)), "size.OffsetInt == u32")
 
@@ -713,7 +713,7 @@ func TestHyperlink_term51_deleted_set_layout_and_id_space(t *testing.T) {
 		{req: 65535, cap: 53248},
 	}
 	for _, c := range cases {
-		l := RefCountedSetLayoutInit[HyperlinkId](c.req, hyperlinkSetItemSizes)
+		l := RefCountedSetLayoutInit[HyperlinkID](c.req, hyperlinkSetItemSizes)
 		expectEqual(t, c.cap, l.cap)
 	}
 }
@@ -723,10 +723,10 @@ func TestHyperlink_term51_deleted_insertHyperlink_dedupes_equal_links_and_frees_
 	page := hlPage(t, 2048, 8)
 	defer page.Deinit()
 
-	link := Hyperlink{id: hlExplicit("id"), uri: []uint8("https://a.b")}
+	link := Hyperlink{ID: hlExplicit("id"), URI: []uint8("https://a.b")}
 	id1, err := page.InsertHyperlink(link)
 	zigTry(t, err)
-	expectEqual(t, HyperlinkId(1), id1)
+	expectEqual(t, HyperlinkID(1), id1)
 	expectEqual(t, uint64(64), hlUsed(&page))
 
 	// The same link: same id, ref bumped, and the strings that were
@@ -744,7 +744,7 @@ func TestHyperlink_term51_deleted_links_differing_in_one_field_get_different_ids
 	page := hlPage(t, 2048, 16)
 	defer page.Deinit()
 
-	ids := make([]HyperlinkId, len(hlDistinct)-3)
+	ids := make([]HyperlinkID, len(hlDistinct)-3)
 	n := 0
 	// The first entries only (those with non-empty uris), since the page
 	// string allocator cannot allocate empty strings.
@@ -755,11 +755,11 @@ func TestHyperlink_term51_deleted_links_differing_in_one_field_get_different_ids
 		if spec.id.Tag == HyperlinkHyperlinkIdExplicit && len(spec.id.Explicit) == 0 {
 			continue
 		}
-		link := Hyperlink{id: spec.id, uri: spec.uri}
+		link := Hyperlink{ID: spec.id, URI: spec.uri}
 		id, err := page.InsertHyperlink(link)
 		zigTry(t, err)
 		ids[n] = id
-		expectEqual(t, HyperlinkId(n+1), ids[n])
+		expectEqual(t, HyperlinkID(n+1), ids[n])
 		n += 1
 	}
 	expectEqual(t, 9, n)
@@ -774,7 +774,7 @@ func TestHyperlink_term51_deleted_links_differing_in_one_field_get_different_ids
 		if spec.id.Tag == HyperlinkHyperlinkIdExplicit && len(spec.id.Explicit) == 0 {
 			continue
 		}
-		link := Hyperlink{id: spec.id, uri: spec.uri}
+		link := Hyperlink{ID: spec.id, URI: spec.uri}
 		id, err := page.InsertHyperlink(link)
 		zigTry(t, err)
 		expectEqual(t, ids[n], id)
@@ -790,16 +790,16 @@ func TestHyperlink_term51_deleted_implicit_id_counter_values(t *testing.T) {
 
 	vals := []SizeOffsetInt{0, 1, 2, hlMaxImplicit - 1, hlMaxImplicit}
 	for i, v := range vals {
-		id, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(v), uri: []uint8("https://a.b")})
+		id, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(v), URI: []uint8("https://a.b")})
 		zigTry(t, err)
-		expectEqual(t, HyperlinkId(i+1), id)
+		expectEqual(t, HyperlinkID(i+1), id)
 		entry := page.hyperlink_set.Get(id)
 		expectEqual(t, v, entry.id.Implicit)
 	}
 	// Same counter and same uri dedupe.
-	id, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(hlMaxImplicit), uri: []uint8("https://a.b")})
+	id, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(hlMaxImplicit), URI: []uint8("https://a.b")})
 	zigTry(t, err)
-	expectEqual(t, HyperlinkId(5), id)
+	expectEqual(t, HyperlinkID(5), id)
 }
 
 // Zig: test "term51: deleted: set full reports SetOutOfMemory and frees strings"
@@ -808,23 +808,23 @@ func TestHyperlink_term51_deleted_set_full_reports_SetOutOfMemory_and_frees_stri
 	page := hlPage(t, 2048, 4)
 	defer page.Deinit()
 
-	_, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(1), uri: []uint8("https://a.b")})
+	_, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(1), URI: []uint8("https://a.b")})
 	zigTry(t, err)
-	_, err = page.InsertHyperlink(Hyperlink{id: hlExplicit("x"), uri: []uint8("https://c.d")})
+	_, err = page.InsertHyperlink(Hyperlink{ID: hlExplicit("x"), URI: []uint8("https://c.d")})
 	zigTry(t, err)
 	used := hlUsed(&page)
 	expectEqual(t, uint64(96), used)
 
-	_, err = page.InsertHyperlink(Hyperlink{id: hlExplicit("y"), uri: []uint8("https://e.f")})
+	_, err = page.InsertHyperlink(Hyperlink{ID: hlExplicit("y"), URI: []uint8("https://e.f")})
 	hlExpectError(t, ErrSetOutOfMemory, err)
 	// The uri and id strings of the failed insert were released.
 	expectEqual(t, used, hlUsed(&page))
 	expectEqual(t, uint(2), page.hyperlink_set.Count())
 
 	// Re-inserting an existing link still works at capacity.
-	id, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(1), uri: []uint8("https://a.b")})
+	id, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(1), URI: []uint8("https://a.b")})
 	zigTry(t, err)
-	expectEqual(t, HyperlinkId(1), id)
+	expectEqual(t, HyperlinkID(1), id)
 }
 
 // Zig: test "term51: deleted: set with dead items reports SetNeedsRehash"
@@ -832,14 +832,14 @@ func TestHyperlink_term51_deleted_set_with_dead_items_reports_SetNeedsRehash(t *
 	page := hlPage(t, 2048, 4)
 	defer page.Deinit()
 
-	a, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(1), uri: []uint8("https://a.b")})
+	a, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(1), URI: []uint8("https://a.b")})
 	zigTry(t, err)
-	_, err = page.InsertHyperlink(Hyperlink{id: hlImplicit(2), uri: []uint8("https://c.d")})
+	_, err = page.InsertHyperlink(Hyperlink{ID: hlImplicit(2), URI: []uint8("https://c.d")})
 	zigTry(t, err)
 	page.hyperlink_set.Release(a)
 
 	used := hlUsed(&page)
-	_, err = page.InsertHyperlink(Hyperlink{id: hlImplicit(3), uri: []uint8("https://e.f")})
+	_, err = page.InsertHyperlink(Hyperlink{ID: hlImplicit(3), URI: []uint8("https://e.f")})
 	hlExpectError(t, ErrSetNeedsRehash, err)
 	expectEqual(t, used, hlUsed(&page))
 }
@@ -849,10 +849,10 @@ func TestHyperlink_term51_deleted_dead_entry_is_reaped_when_its_slot_is_reused(t
 	page := hlPage(t, 2048, 8)
 	defer page.Deinit()
 
-	link := Hyperlink{id: hlExplicit("id"), uri: []uint8("https://a.b")}
+	link := Hyperlink{ID: hlExplicit("id"), URI: []uint8("https://a.b")}
 	id, err := page.InsertHyperlink(link)
 	zigTry(t, err)
-	other, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(1), uri: []uint8("https://c.d")})
+	other, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(1), URI: []uint8("https://c.d")})
 	zigTry(t, err)
 	expectEqual(t, uint64(96), hlUsed(&page))
 
@@ -883,11 +883,11 @@ func TestHyperlink_term51_deleted_string_capacity_limits_of_insertHyperlink(t *t
 	func() {
 		page := hlPage(t, 2048, 8)
 		defer page.Deinit()
-		id, err := page.InsertHyperlink(Hyperlink{id: hlImplicit(0), uri: big})
+		id, err := page.InsertHyperlink(Hyperlink{ID: hlImplicit(0), URI: big})
 		zigTry(t, err)
 		expectEqual(t, uint64(2048), hlUsed(&page))
 		expectEqual(t, 2048, len(page.hyperlink_set.Get(id).uri))
-		_, err = page.InsertHyperlink(Hyperlink{id: hlImplicit(1), uri: []uint8("u")})
+		_, err = page.InsertHyperlink(Hyperlink{ID: hlImplicit(1), URI: []uint8("u")})
 		hlExpectError(t, ErrStringsOutOfMemory, err)
 		expectEqual(t, uint64(2048), hlUsed(&page))
 		expectEqual(t, uint(1), page.hyperlink_set.Count())
@@ -899,13 +899,13 @@ func TestHyperlink_term51_deleted_string_capacity_limits_of_insertHyperlink(t *t
 		defer page.Deinit()
 		hog, err := page.string_alloc.Alloc(63 * 32)
 		zigTry(t, err)
-		_, err = page.InsertHyperlink(Hyperlink{id: hlExplicit("x"), uri: []uint8("u")})
+		_, err = page.InsertHyperlink(Hyperlink{ID: hlExplicit("x"), URI: []uint8("u")})
 		hlExpectError(t, ErrStringsOutOfMemory, err)
 		expectEqual(t, uint64(63*32), hlUsed(&page))
 		expectEqual(t, uint(0), page.hyperlink_set.Count())
 
 		// Without an explicit id the link fits in the last chunk.
-		_, err = page.InsertHyperlink(Hyperlink{id: hlImplicit(0), uri: []uint8("u")})
+		_, err = page.InsertHyperlink(Hyperlink{ID: hlImplicit(0), URI: []uint8("u")})
 		zigTry(t, err)
 		expectEqual(t, uint64(2048), hlUsed(&page))
 		page.string_alloc.Free(hog)
@@ -916,8 +916,8 @@ func TestHyperlink_term51_deleted_string_capacity_limits_of_insertHyperlink(t *t
 		page := hlPage(t, 2048, 8)
 		defer page.Deinit()
 		_, err := page.InsertHyperlink(Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: big[0:1024]},
-			uri: big[0:1024],
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: big[0:1024]},
+			URI: big[0:1024],
 		})
 		zigTry(t, err)
 		expectEqual(t, uint64(2048), hlUsed(&page))
@@ -931,7 +931,7 @@ func TestHyperlink_term51_deleted_lookup_finds_a_link_stored_in_another_page_via
 	dst := hlPage(t, 2048, 8)
 	defer dst.Deinit()
 
-	link := Hyperlink{id: hlExplicit("id"), uri: []uint8("https://a.b")}
+	link := Hyperlink{ID: hlExplicit("id"), URI: []uint8("https://a.b")}
 	dst_id, err := dst.InsertHyperlink(link)
 	zigTry(t, err)
 	src_id, err := src.InsertHyperlink(link)
@@ -945,10 +945,10 @@ func TestHyperlink_term51_deleted_lookup_finds_a_link_stored_in_another_page_via
 	expectEqual(t, Some(dst_id), found)
 
 	// A different link is not found.
-	other_id, err := src.InsertHyperlink(Hyperlink{id: hlExplicit("id"), uri: []uint8("https://other")})
+	other_id, err := src.InsertHyperlink(Hyperlink{ID: hlExplicit("id"), URI: []uint8("https://other")})
 	zigTry(t, err)
 	other := *src.hyperlink_set.Get(other_id)
-	expectEqual(t, None[HyperlinkId](), dst.hyperlink_set.LookupContext(
+	expectEqual(t, None[HyperlinkID](), dst.hyperlink_set.LookupContext(
 		other,
 		HyperlinkSetContext{page: &dst, src_page: &src},
 	))

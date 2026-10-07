@@ -69,7 +69,7 @@ func fm2Init(tt *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Termi
 
 // fm2Active is the Zig literal `.{ .active = .{ .x = x, .y = y } }`.
 func fm2Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 // fm2Clear is `builder.clearRetainingCapacity()`.
@@ -80,7 +80,7 @@ func fm2Clear(b *oscWriterAllocating) {
 // fm2FirstNode is `t.screens.active.pages.pages.first.?`.
 func fm2FirstNode(tt *testing.T, term *Terminal) *PageListNode {
 	tt.Helper()
-	node := term.screens.active.pages.pages.first
+	node := term.Screens.Active.Pages.pages.first
 	expect(tt, node != nil, "t.screens.active.pages.pages.first.?")
 	return node
 }
@@ -88,7 +88,7 @@ func fm2FirstNode(tt *testing.T, term *Terminal) *PageListNode {
 // fm2LastPage is `&t.screens.active.pages.pages.last.?.data`.
 func fm2LastPage(tt *testing.T, term *Terminal) *Page {
 	tt.Helper()
-	node := term.screens.active.pages.pages.last
+	node := term.Screens.Active.Pages.pages.last
 	expect(tt, node != nil, "pages.pages.last.?")
 	return &node.data
 }
@@ -109,7 +109,7 @@ func fm2Page(tt *testing.T, term *Terminal) *Page {
 
 // fm2Formatter is "any formatter that has a format method".
 type fm2Formatter interface {
-	Format(writer *oscWriter) error
+	format(writer *oscWriter) error
 }
 
 // fm2PageOut is term51ZPageOut: format the first page of the terminal with
@@ -119,7 +119,7 @@ func fm2PageOut(tt *testing.T, term *Terminal, opts FormatterOptions) []uint8 {
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
 	f := FormatterPageFormatterInit(fm2Page(tt, term), opts)
-	zigTry(tt, f.Format(&builder.writer))
+	zigTry(tt, f.format(&builder.writer))
 	return append([]uint8(nil), builder.writer.buffered()...)
 }
 
@@ -129,7 +129,7 @@ func fm2Out(tt *testing.T, f fm2Formatter) []uint8 {
 	tt.Helper()
 	builder := oscWriterAllocatingInit()
 	defer builder.deinit()
-	zigTry(tt, f.Format(&builder.writer))
+	zigTry(tt, f.format(&builder.writer))
 	return append([]uint8(nil), builder.writer.buffered()...)
 }
 
@@ -160,9 +160,9 @@ func fm2MapInit(entries []FormatterCodepointMap) []FormatterCodepointMap {
 // fm2Opts is `.{ .emit = emit }` with the Zig defaults of Options.
 func fm2Opts(emit FormatterFormat) FormatterOptions {
 	return FormatterOptions{
-		emit:          emit,
-		trim:          true,
-		codepoint_map: Optional[[]FormatterCodepointMap]{Valid: true},
+		Emit:         emit,
+		Trim:         true,
+		CodepointMap: Optional[[]FormatterCodepointMap]{Valid: true},
 	}
 }
 
@@ -207,7 +207,7 @@ func fm2Palette(n uint8) StyleColor {
 // fm2Rgb is the Zig literal `.{ .rgb = .{ .r = r, .g = g, .b = b } }` of
 // Style.Color.
 func fm2Rgb(r uint8, g uint8, b uint8) StyleColor {
-	return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: r, g: g, b: b}}
+	return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{R: r, G: g, B: b}}
 }
 
 // Zig: test "Screen plain with selection"
@@ -227,18 +227,18 @@ func TestFm2_Screen_plain_with_selection(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 	formatter.content = FormatterScreenFormatterContent{
 		Tag: FormatterScreenFormatterContentSelection,
 		Selection: Some(SelectionInit(
-			zigUnwrap(t, term.screens.active.pages.Pin(fm2Active(0, 1))),
-			zigUnwrap(t, term.screens.active.pages.Pin(fm2Active(4, 1))),
+			zigUnwrap(t, term.Screens.Active.Pages.Pin(fm2Active(0, 1))),
+			zigUnwrap(t, term.Screens.Active.Pages.Pin(fm2Active(4, 1))),
 			false,
 		)),
 	}
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "line2", string(output))
 
@@ -247,9 +247,9 @@ func TestFm2_Screen_plain_with_selection(t *testing.T) {
 	node := fm2FirstNode(t, term)
 	// "line2" (5 chars) from row 1
 	for i := 0; i < 5; i++ {
-		expectEqual(t, node, pin_map[i].node)
-		expectEqual(t, SizeCellCountInt(i), pin_map[i].x)
-		expectEqual(t, SizeCellCountInt(1), pin_map[i].y)
+		expectEqual(t, node, pin_map[i].Node)
+		expectEqual(t, SizeCellCountInt(i), pin_map[i].X)
+		expectEqual(t, SizeCellCountInt(1), pin_map[i].Y)
 	}
 }
 
@@ -271,11 +271,11 @@ func TestFm2_Screen_vt_with_cursor_position(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.cursor = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Cursor = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -288,8 +288,8 @@ func TestFm2_Screen_vt_with_cursor_position(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify cursor positions match
-	expectEqual(t, term.screens.active.cursor.x, term2.screens.active.cursor.x)
-	expectEqual(t, term.screens.active.cursor.y, term2.screens.active.cursor.y)
+	expectEqual(t, term.Screens.Active.Cursor.X, term2.Screens.Active.Cursor.X)
+	expectEqual(t, term.Screens.Active.Cursor.Y, term2.Screens.Active.Cursor.Y)
 
 	// Verify pin map - the extras should be mapped to the last pin
 	expectEqual(t, len(output), len(pin_map))
@@ -297,11 +297,11 @@ func TestFm2_Screen_vt_with_cursor_position(t *testing.T) {
 	content_len := len("hello\r\nworld")
 	// Content bytes map to their positions
 	for i := 0; i < content_len; i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 	// Extra bytes (cursor position) map to last content pin
 	for i := content_len; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -323,11 +323,11 @@ func TestFm2_Screen_vt_with_style(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.style = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Style = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -340,14 +340,14 @@ func TestFm2_Screen_vt_with_style(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify styles match
-	expect(t, term.screens.active.cursor.style.Eql(term2.screens.active.cursor.style),
+	expect(t, term.Screens.Active.Cursor.Style.Eql(term2.Screens.Active.Cursor.Style),
 		"t.screens.active.cursor.style.eql(t2.screens.active.cursor.style)")
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	node := fm2FirstNode(t, term)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -369,11 +369,11 @@ func TestFm2_Screen_vt_with_hyperlink(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.hyperlink = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Hyperlink = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -386,22 +386,22 @@ func TestFm2_Screen_vt_with_hyperlink(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify hyperlinks match
-	has_link1 := term.screens.active.cursor.hyperlink != nil
-	has_link2 := term2.screens.active.cursor.hyperlink != nil
+	has_link1 := term.Screens.Active.Cursor.Hyperlink != nil
+	has_link2 := term2.Screens.Active.Cursor.Hyperlink != nil
 	expectEqual(t, has_link1, has_link2)
 
 	if has_link1 {
-		link1 := term.screens.active.cursor.hyperlink
-		link2 := term2.screens.active.cursor.hyperlink
+		link1 := term.Screens.Active.Cursor.Hyperlink
+		link2 := term2.Screens.Active.Cursor.Hyperlink
 		expect(t, link2 != nil, "t2.screens.active.cursor.hyperlink.?")
-		expectEqualStrings(t, string(link1.uri), string(link2.uri))
+		expectEqualStrings(t, string(link1.URI), string(link2.URI))
 	}
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	node := fm2FirstNode(t, term)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -423,11 +423,11 @@ func TestFm2_Screen_vt_with_protection(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.protection = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Protection = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -440,13 +440,13 @@ func TestFm2_Screen_vt_with_protection(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify protection state matches
-	expectEqual(t, term.screens.active.cursor.protected, term2.screens.active.cursor.protected)
+	expectEqual(t, term.Screens.Active.Cursor.Protected, term2.Screens.Active.Cursor.Protected)
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	node := fm2FirstNode(t, term)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -468,11 +468,11 @@ func TestFm2_Screen_vt_with_kitty_keyboard(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.kitty_keyboard = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.KittyKeyboard = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -485,15 +485,15 @@ func TestFm2_Screen_vt_with_kitty_keyboard(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify kitty keyboard state matches
-	flags1 := term.screens.active.kitty_keyboard.Current().Int()
-	flags2 := term2.screens.active.kitty_keyboard.Current().Int()
+	flags1 := term.Screens.Active.KittyKeyboard.Current().Int()
+	flags2 := term2.Screens.Active.KittyKeyboard.Current().Int()
 	expectEqual(t, flags1, flags2)
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	node := fm2FirstNode(t, term)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -515,11 +515,11 @@ func TestFm2_Screen_vt_with_charsets(t *testing.T) {
 	var pin_map []PageListPin
 	// Zig-only: defer pin_map.deinit(alloc);
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.charsets = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Charsets = true
 	formatter.pin_map = Some(FormatterPinMap{map_: &pin_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -532,18 +532,18 @@ func TestFm2_Screen_vt_with_charsets(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify charset state matches
-	expectEqual(t, term.screens.active.charset.gl, term2.screens.active.charset.gl)
-	expectEqual(t, term.screens.active.charset.gr, term2.screens.active.charset.gr)
+	expectEqual(t, term.Screens.Active.Charset.Gl, term2.Screens.Active.Charset.Gl)
+	expectEqual(t, term.Screens.Active.Charset.Gr, term2.Screens.Active.Charset.Gr)
 	expectEqual(t,
-		term.screens.active.charset.charsets.Get(CharsetsSlotsG0),
-		term2.screens.active.charset.charsets.Get(CharsetsSlotsG0),
+		term.Screens.Active.Charset.charsets.Get(CharsetsSlotsG0),
+		term2.Screens.Active.Charset.charsets.Get(CharsetsSlotsG0),
 	)
 
 	// Verify pin map
 	expectEqual(t, len(output), len(pin_map))
 	node := fm2FirstNode(t, term)
 	for i := 0; i < len(output); i++ {
-		expectEqual(t, node, pin_map[i].node)
+		expectEqual(t, node, pin_map[i].Node)
 	}
 }
 
@@ -556,13 +556,13 @@ func TestFm2_panic_ScreenFormatter_format_charsets_gr_is_G0(t *testing.T) {
 	term := fm2Init(t, 80, 24)
 	defer term.Deinit()
 
-	term.screens.active.charset.gr = CharsetsSlotsG0
+	term.Screens.Active.Charset.Gr = CharsetsSlotsG0
 
-	formatter := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	formatter.extra.charsets = true
+	formatter := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	formatter.extra.Charsets = true
 
 	fm2ExpectPanic(t, func() {
-		_ = formatter.Format(&builder.writer)
+		_ = formatter.format(&builder.writer)
 	})
 }
 
@@ -582,9 +582,9 @@ func TestFm2_Terminal_vt_with_scrolling_region(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("\x1b[6;21rhello")))
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
-	formatter.extra.scrolling_region = true
+	formatter.extra.ScrollingRegion = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -597,10 +597,10 @@ func TestFm2_Terminal_vt_with_scrolling_region(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify scrolling regions match
-	expectEqual(t, term.scrolling_region.top, term2.scrolling_region.top)
-	expectEqual(t, term.scrolling_region.bottom, term2.scrolling_region.bottom)
-	expectEqual(t, term.scrolling_region.left, term2.scrolling_region.left)
-	expectEqual(t, term.scrolling_region.right, term2.scrolling_region.right)
+	expectEqual(t, term.ScrollingRegion.Top, term2.ScrollingRegion.Top)
+	expectEqual(t, term.ScrollingRegion.Bottom, term2.ScrollingRegion.Bottom)
+	expectEqual(t, term.ScrollingRegion.Left, term2.ScrollingRegion.Left)
+	expectEqual(t, term.ScrollingRegion.Right, term2.ScrollingRegion.Right)
 }
 
 // Zig: test "Terminal vt with modes"
@@ -622,9 +622,9 @@ func TestFm2_Terminal_vt_with_modes(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("hello")))
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
-	formatter.extra.modes = true
+	formatter.extra.Modes = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -637,9 +637,9 @@ func TestFm2_Terminal_vt_with_modes(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify modes match
-	expectEqual(t, term.modes.Get(ModesModeBracketedPaste), term2.modes.Get(ModesModeBracketedPaste))
-	expectEqual(t, term.modes.Get(ModesModeMouseEventNormal), term2.modes.Get(ModesModeMouseEventNormal))
-	expectEqual(t, term.modes.Get(ModesModeWraparound), term2.modes.Get(ModesModeWraparound))
+	expectEqual(t, term.Modes.Get(ModesModeBracketedPaste), term2.Modes.Get(ModesModeBracketedPaste))
+	expectEqual(t, term.Modes.Get(ModesModeMouseEventNormal), term2.Modes.Get(ModesModeMouseEventNormal))
+	expectEqual(t, term.Modes.Get(ModesModeWraparound), term2.Modes.Get(ModesModeWraparound))
 }
 
 // Zig: test "Terminal vt with tabstops"
@@ -662,9 +662,9 @@ func TestFm2_Terminal_vt_with_tabstops(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("hello")))
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
-	formatter.extra.tabstops = true
+	formatter.extra.Tabstops = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -677,13 +677,13 @@ func TestFm2_Terminal_vt_with_tabstops(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify tabstops match (columns are 0-indexed in the API)
-	expectEqual(t, term.tabstops.Get(4), term2.tabstops.Get(4))
-	expectEqual(t, term.tabstops.Get(14), term2.tabstops.Get(14))
-	expectEqual(t, term.tabstops.Get(29), term2.tabstops.Get(29))
-	expect(t, term2.tabstops.Get(4), "t2.tabstops.get(4)")   // Column 5 (1-indexed)
-	expect(t, term2.tabstops.Get(14), "t2.tabstops.get(14)") // Column 15 (1-indexed)
-	expect(t, term2.tabstops.Get(29), "t2.tabstops.get(29)") // Column 30 (1-indexed)
-	expect(t, !term2.tabstops.Get(8), "!t2.tabstops.get(8)") // Not a tab
+	expectEqual(t, term.Tabstops.Get(4), term2.Tabstops.Get(4))
+	expectEqual(t, term.Tabstops.Get(14), term2.Tabstops.Get(14))
+	expectEqual(t, term.Tabstops.Get(29), term2.Tabstops.Get(29))
+	expect(t, term2.Tabstops.Get(4), "t2.tabstops.get(4)")   // Column 5 (1-indexed)
+	expect(t, term2.Tabstops.Get(14), "t2.tabstops.get(14)") // Column 15 (1-indexed)
+	expect(t, term2.Tabstops.Get(29), "t2.tabstops.get(29)") // Column 30 (1-indexed)
+	expect(t, !term2.Tabstops.Get(8), "!t2.tabstops.get(8)") // Not a tab
 }
 
 // Zig: test "Terminal vt with keyboard modes"
@@ -703,9 +703,9 @@ func TestFm2_Terminal_vt_with_keyboard_modes(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("hello")))
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
-	formatter.extra.keyboard = true
+	formatter.extra.Keyboard = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -718,8 +718,8 @@ func TestFm2_Terminal_vt_with_keyboard_modes(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify keyboard mode matches
-	expectEqual(t, term.flags.modify_other_keys_2, term2.flags.modify_other_keys_2)
-	expect(t, term2.flags.modify_other_keys_2, "t2.flags.modify_other_keys_2")
+	expectEqual(t, term.Flags.ModifyOtherKeys2, term2.Flags.ModifyOtherKeys2)
+	expect(t, term2.Flags.ModifyOtherKeys2, "t2.flags.modify_other_keys_2")
 }
 
 // Zig: test "Terminal vt with pwd"
@@ -738,9 +738,9 @@ func TestFm2_Terminal_vt_with_pwd(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("\x1b]7;file://host/home/user\x1b\\hello")))
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
-	formatter.extra.pwd = true
+	formatter.extra.Pwd = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Create a second terminal and apply the output
@@ -753,7 +753,7 @@ func TestFm2_Terminal_vt_with_pwd(t *testing.T) {
 	zigTry(t, s2.NextSlice(output))
 
 	// Verify pwd matches
-	expectEqualStrings(t, string(term.pwd), string(term2.pwd))
+	expectEqualStrings(t, string(term.Pwd), string(term2.Pwd))
 }
 
 // Zig: test "Page html with multiple styles"
@@ -774,7 +774,7 @@ func TestFm2_Page_html_with_multiple_styles(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -804,7 +804,7 @@ func TestFm2_Page_html_plain_text(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Plain text without styles should be wrapped in monospace div
@@ -832,7 +832,7 @@ func TestFm2_Page_html_with_colors(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -862,9 +862,9 @@ func TestFm2_TerminalFormatter_html_with_palette(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("test")))
 
 	formatter := FormatterTerminalFormatterInit(term, FormatterOptionsHtml)
-	formatter.extra.palette = true
+	formatter.extra.Palette = true
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := string(builder.writer.buffered())
 
 	// Verify palette CSS variables are emitted
@@ -892,11 +892,11 @@ func TestFm2_Page_html_with_background_and_foreground_colors(t *testing.T) {
 
 	page := fm2LastPage(t, term)
 	opts := FormatterOptionsHtml
-	opts.background = Some(ColorRGB{r: 0x12, g: 0x34, b: 0x56})
-	opts.foreground = Some(ColorRGB{r: 0xab, g: 0xcd, b: 0xef})
+	opts.Background = Some(ColorRGB{R: 0x12, G: 0x34, B: 0x56})
+	opts.Foreground = Some(ColorRGB{R: 0xab, G: 0xcd, B: 0xef})
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -926,7 +926,7 @@ func TestFm2_Page_html_with_escaping(t *testing.T) {
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -941,45 +941,45 @@ func TestFm2_Page_html_with_escaping(t *testing.T) {
 	wrapper_start := "<div style=\"font-family: monospace; white-space: pre;\">"
 	wrapper_start_len := len(wrapper_start)
 	for i := 0; i < wrapper_start_len; i++ {
-		expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[i])
+		expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[i])
 	}
 
 	// Verify each character maps correctly, accounting for escaping
 	offset := wrapper_start_len
 	// < (4 bytes: &lt;) -> x=0
 	for i := 0; i < 4; i++ {
-		expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[offset+i])
+		expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[offset+i])
 	}
 	// t (1 byte) -> x=1
-	expectEqual(t, PointCoordinate{x: 1, y: 0}, point_map[offset+4])
+	expectEqual(t, PointCoordinate{X: 1, Y: 0}, point_map[offset+4])
 	// a (1 byte) -> x=2
-	expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[offset+5])
+	expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[offset+5])
 	// g (1 byte) -> x=3
-	expectEqual(t, PointCoordinate{x: 3, y: 0}, point_map[offset+6])
+	expectEqual(t, PointCoordinate{X: 3, Y: 0}, point_map[offset+6])
 	// > (4 bytes: &gt;) -> x=4
 	for i := 0; i < 4; i++ {
-		expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[offset+7+i])
+		expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[offset+7+i])
 	}
 	// & (5 bytes: &amp;) -> x=5
 	for i := 0; i < 5; i++ {
-		expectEqual(t, PointCoordinate{x: 5, y: 0}, point_map[offset+11+i])
+		expectEqual(t, PointCoordinate{X: 5, Y: 0}, point_map[offset+11+i])
 	}
 	// " (6 bytes: &quot;) -> x=6
 	for i := 0; i < 6; i++ {
-		expectEqual(t, PointCoordinate{x: 6, y: 0}, point_map[offset+16+i])
+		expectEqual(t, PointCoordinate{X: 6, Y: 0}, point_map[offset+16+i])
 	}
 	// ' (5 bytes: &#39;) -> x=7
 	for i := 0; i < 5; i++ {
-		expectEqual(t, PointCoordinate{x: 7, y: 0}, point_map[offset+22+i])
+		expectEqual(t, PointCoordinate{X: 7, Y: 0}, point_map[offset+22+i])
 	}
 	// t (1 byte) -> x=8
-	expectEqual(t, PointCoordinate{x: 8, y: 0}, point_map[offset+27])
+	expectEqual(t, PointCoordinate{X: 8, Y: 0}, point_map[offset+27])
 	// e (1 byte) -> x=9
-	expectEqual(t, PointCoordinate{x: 9, y: 0}, point_map[offset+28])
+	expectEqual(t, PointCoordinate{X: 9, Y: 0}, point_map[offset+28])
 	// x (1 byte) -> x=10
-	expectEqual(t, PointCoordinate{x: 10, y: 0}, point_map[offset+29])
+	expectEqual(t, PointCoordinate{X: 10, Y: 0}, point_map[offset+29])
 	// t (1 byte) -> x=11
-	expectEqual(t, PointCoordinate{x: 11, y: 0}, point_map[offset+30])
+	expectEqual(t, PointCoordinate{X: 11, Y: 0}, point_map[offset+30])
 }
 
 // Zig: test "Page html with unicode as numeric entities"
@@ -1000,7 +1000,7 @@ func TestFm2_Page_html_with_unicode_as_numeric_entities(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Expected: box drawing chars as numeric entities
@@ -1028,7 +1028,7 @@ func TestFm2_Page_html_ascii_characters_unchanged(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// ASCII should be emitted directly
@@ -1055,7 +1055,7 @@ func TestFm2_Page_html_mixed_ascii_and_unicode(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// Mix of ASCII and Unicode entities
@@ -1087,7 +1087,7 @@ func TestFm2_Page_VT_with_palette_option_emits_RGB(t *testing.T) {
 	{
 		fm2Clear(&builder)
 		formatter := FormatterPageFormatterInit(page, FormatterOptionsVt)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "\x1b[0m\x1b[38;5;1mred\x1b[0m", string(output))
 	}
@@ -1096,9 +1096,9 @@ func TestFm2_Page_VT_with_palette_option_emits_RGB(t *testing.T) {
 	{
 		fm2Clear(&builder)
 		opts := FormatterOptionsVt
-		opts.palette = &term.colors.palette.current
+		opts.Palette = &term.Colors.Palette.Current
 		formatter := FormatterPageFormatterInit(page, opts)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t, "\x1b[0m\x1b[38;2;171;205;239mred\x1b[0m", string(output))
 	}
@@ -1126,7 +1126,7 @@ func TestFm2_Page_html_with_palette_option_emits_RGB(t *testing.T) {
 	{
 		fm2Clear(&builder)
 		formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t,
 			"<div style=\"font-family: monospace; white-space: pre;\">"+
@@ -1140,9 +1140,9 @@ func TestFm2_Page_html_with_palette_option_emits_RGB(t *testing.T) {
 	{
 		fm2Clear(&builder)
 		opts := FormatterOptionsHtml
-		opts.palette = &term.colors.palette.current
+		opts.Palette = &term.Colors.Palette.Current
 		formatter := FormatterPageFormatterInit(page, opts)
-		zigTry(t, formatter.Format(&builder.writer))
+		zigTry(t, formatter.format(&builder.writer))
 		output := builder.writer.buffered()
 		expectEqualStrings(t,
 			"<div style=\"font-family: monospace; white-space: pre;\">"+
@@ -1172,7 +1172,7 @@ func TestFm2_Page_VT_style_reset_properly_closes_styles(t *testing.T) {
 
 	fm2Clear(&builder)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsVt)
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	// The reset should properly close the bold style
@@ -1204,14 +1204,14 @@ func TestFm2_Page_codepoint_map_single_replacement(t *testing.T) {
 	})
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	var point_map []PointCoordinate
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hellx wxrld", string(output))
 
@@ -1220,17 +1220,17 @@ func TestFm2_Page_codepoint_map_single_replacement(t *testing.T) {
 	// "hello world" -> "hellx wxrld"
 	// h e l l o   w o r l d
 	// 0 1 2 3 4 5 6 7 8 9 10
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[0])   // h
-	expectEqual(t, PointCoordinate{x: 1, y: 0}, point_map[1])   // e
-	expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[2])   // l
-	expectEqual(t, PointCoordinate{x: 3, y: 0}, point_map[3])   // l
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[4])   // x (was o)
-	expectEqual(t, PointCoordinate{x: 5, y: 0}, point_map[5])   // space
-	expectEqual(t, PointCoordinate{x: 6, y: 0}, point_map[6])   // w
-	expectEqual(t, PointCoordinate{x: 7, y: 0}, point_map[7])   // x (was o)
-	expectEqual(t, PointCoordinate{x: 8, y: 0}, point_map[8])   // r
-	expectEqual(t, PointCoordinate{x: 9, y: 0}, point_map[9])   // l
-	expectEqual(t, PointCoordinate{x: 10, y: 0}, point_map[10]) // d
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[0])   // h
+	expectEqual(t, PointCoordinate{X: 1, Y: 0}, point_map[1])   // e
+	expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[2])   // l
+	expectEqual(t, PointCoordinate{X: 3, Y: 0}, point_map[3])   // l
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[4])   // x (was o)
+	expectEqual(t, PointCoordinate{X: 5, Y: 0}, point_map[5])   // space
+	expectEqual(t, PointCoordinate{X: 6, Y: 0}, point_map[6])   // w
+	expectEqual(t, PointCoordinate{X: 7, Y: 0}, point_map[7])   // x (was o)
+	expectEqual(t, PointCoordinate{X: 8, Y: 0}, point_map[8])   // r
+	expectEqual(t, PointCoordinate{X: 9, Y: 0}, point_map[9])   // l
+	expectEqual(t, PointCoordinate{X: 10, Y: 0}, point_map[10]) // d
 }
 
 // Zig: test "Page codepoint_map conflicting replacement prefers last"
@@ -1262,10 +1262,10 @@ func TestFm2_Page_codepoint_map_conflicting_replacement_prefers_last(t *testing.
 	})
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "helly", string(output))
 }
@@ -1295,14 +1295,14 @@ func TestFm2_Page_codepoint_map_replace_with_string(t *testing.T) {
 	})
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	var point_map []PointCoordinate
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hellXYZ", string(output))
 
@@ -1311,14 +1311,14 @@ func TestFm2_Page_codepoint_map_replace_with_string(t *testing.T) {
 	// "hello" -> "hellXYZ"
 	// h e l l o
 	// 0 1 2 3 4
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, point_map[0]) // h
-	expectEqual(t, PointCoordinate{x: 1, y: 0}, point_map[1]) // e
-	expectEqual(t, PointCoordinate{x: 2, y: 0}, point_map[2]) // l
-	expectEqual(t, PointCoordinate{x: 3, y: 0}, point_map[3]) // l
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, point_map[0]) // h
+	expectEqual(t, PointCoordinate{X: 1, Y: 0}, point_map[1]) // e
+	expectEqual(t, PointCoordinate{X: 2, Y: 0}, point_map[2]) // l
+	expectEqual(t, PointCoordinate{X: 3, Y: 0}, point_map[3]) // l
 	// All bytes of the replacement string "XYZ" should point to position 4 (where 'o' was)
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[4]) // X
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[5]) // Y
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, point_map[6]) // Z
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[4]) // X
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[5]) // Y
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, point_map[6]) // Z
 }
 
 // Zig: test "Page codepoint_map range replacement"
@@ -1346,10 +1346,10 @@ func TestFm2_Page_codepoint_map_range_replacement(t *testing.T) {
 	})
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "aXXXXfg", string(output))
 }
@@ -1383,10 +1383,10 @@ func TestFm2_Page_codepoint_map_multiple_ranges(t *testing.T) {
 	})
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	// h e l l o   w o r l d
 	// A A A A Z   Z Z Z A A
@@ -1418,14 +1418,14 @@ func TestFm2_Page_codepoint_map_unicode_replacement(t *testing.T) {
 	})
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
 	var point_map []PointCoordinate
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello 🔥 world", string(output))
 
@@ -1437,7 +1437,7 @@ func TestFm2_Page_codepoint_map_unicode_replacement(t *testing.T) {
 	// Note: ⚡ is a wide character occupying cells 6-7
 	for i := 0; i < 6; i++ {
 		expectEqual(t,
-			PointCoordinate{x: SizeCellCountInt(i), y: 0},
+			PointCoordinate{X: SizeCellCountInt(i), Y: 0},
 			point_map[i],
 		)
 	}
@@ -1445,7 +1445,7 @@ func TestFm2_Page_codepoint_map_unicode_replacement(t *testing.T) {
 	fire_start := 6 // "hello " is 6 bytes
 	for i := 0; i < 4; i++ {
 		expectEqual(t,
-			PointCoordinate{x: 6, y: 0},
+			PointCoordinate{X: 6, Y: 0},
 			point_map[fire_start+i],
 		)
 	}
@@ -1453,7 +1453,7 @@ func TestFm2_Page_codepoint_map_unicode_replacement(t *testing.T) {
 	world_start := fire_start + 4
 	for i := 0; i < 6; i++ {
 		expectEqual(t,
-			PointCoordinate{x: SizeCellCountInt(8 + i), y: 0},
+			PointCoordinate{X: SizeCellCountInt(8 + i), Y: 0},
 			point_map[world_start+i],
 		)
 	}
@@ -1484,10 +1484,10 @@ func TestFm2_Page_codepoint_map_with_styled_formats(t *testing.T) {
 	})
 
 	opts := FormatterOptionsVt
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	// Should preserve styles while replacing text
 	// "red text" becomes "rXd tXxt"
@@ -1516,10 +1516,10 @@ func TestFm2_Page_codepoint_map_empty_map(t *testing.T) {
 	// Zig-only: defer map.deinit(alloc);
 
 	opts := FormatterOptionsPlain
-	opts.codepoint_map = Some(map_)
+	opts.CodepointMap = Some(map_)
 	formatter := FormatterPageFormatterInit(page, opts)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 	expectEqualStrings(t, "hello world", string(output))
 }
@@ -1549,9 +1549,9 @@ func TestFm2_Page_VT_background_color_on_trailing_blank_cells(t *testing.T) {
 	page := fm2LastPage(t, term)
 
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsVt)
-	formatter.opts.trim = false // Don't trim so we can see the trailing behavior
+	formatter.opts.Trim = false // Don't trim so we can see the trailing behavior
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := string(builder.writer.buffered())
 
 	// The output should preserve the red background SGR for trailing cells on line 1.
@@ -1592,7 +1592,7 @@ func TestFm2_Page_HTML_with_hyperlinks(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1622,7 +1622,7 @@ func TestFm2_Page_HTML_with_multiple_hyperlinks(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1653,7 +1653,7 @@ func TestFm2_Page_HTML_with_hyperlink_escaping(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1682,7 +1682,7 @@ func TestFm2_Page_HTML_with_styled_hyperlink(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1712,7 +1712,7 @@ func TestFm2_Page_HTML_hyperlink_closes_style_before_anchor(t *testing.T) {
 	page := fm2LastPage(t, term)
 	formatter := FormatterPageFormatterInit(page, FormatterOptionsHtml)
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	expectEqualStrings(t,
@@ -1745,7 +1745,7 @@ func TestFm2_Page_HTML_hyperlink_point_map_maps_closing_to_previous_cell(t *test
 	// Zig-only: defer point_map.deinit(alloc);
 	formatter.point_map = Some(FormatterPageFormatterPointMap{map_: &point_map})
 
-	zigTry(t, formatter.Format(&builder.writer))
+	zigTry(t, formatter.format(&builder.writer))
 	output := builder.writer.buffered()
 
 	const expected_output = "<div style=\"font-family: monospace; white-space: pre;\">" +
@@ -1770,9 +1770,9 @@ func TestFm2_Format_styled_only_plain_is_unstyled(t *testing.T) {
 	expect(t, FormatterFormatVt.Styled(), "Format.vt.styled()")
 	expect(t, FormatterFormatHtml.Styled(), "Format.html.styled()")
 	// Options presets carry the matching format.
-	expectEqual(t, FormatterFormatPlain, FormatterOptionsPlain.emit)
-	expectEqual(t, FormatterFormatVt, FormatterOptionsVt.emit)
-	expectEqual(t, FormatterFormatHtml, FormatterOptionsHtml.emit)
+	expectEqual(t, FormatterFormatPlain, FormatterOptionsPlain.Emit)
+	expectEqual(t, FormatterFormatVt, FormatterOptionsVt.Emit)
+	expectEqual(t, FormatterFormatHtml, FormatterOptionsHtml.Emit)
 }
 
 // Zig: test "term51: PageFormatter.init: defaults and option defaults"
@@ -1783,15 +1783,15 @@ func TestFm2_PageFormatter_init_defaults_and_option_defaults(t *testing.T) {
 
 	f := FormatterPageFormatterInit(fm2Page(t, term), FormatterOptionsHtml)
 	expect(t, f.page == fm2Page(t, term), "f.page == term51ZPage(&t)")
-	expectEqual(t, FormatterFormatHtml, f.opts.emit)
-	expect(t, !f.opts.unwrap, "!f.opts.unwrap")
-	expect(t, f.opts.trim, "f.opts.trim")
-	expect(t, !f.opts.background.Valid, "f.opts.background == null")
-	expect(t, !f.opts.foreground.Valid, "f.opts.foreground == null")
-	expect(t, f.opts.palette == nil, "f.opts.palette == null")
+	expectEqual(t, FormatterFormatHtml, f.opts.Emit)
+	expect(t, !f.opts.Unwrap, "!f.opts.unwrap")
+	expect(t, f.opts.Trim, "f.opts.trim")
+	expect(t, !f.opts.Background.Valid, "f.opts.background == null")
+	expect(t, !f.opts.Foreground.Valid, "f.opts.foreground == null")
+	expect(t, f.opts.Palette == nil, "f.opts.palette == null")
 	// The codepoint map defaults to an empty (non-null) list.
-	expect(t, f.opts.codepoint_map.Valid, "f.opts.codepoint_map != null")
-	expectEqual(t, 0, len(f.opts.codepoint_map.Value))
+	expect(t, f.opts.CodepointMap.Valid, "f.opts.codepoint_map != null")
+	expectEqual(t, 0, len(f.opts.CodepointMap.Value))
 	expectEqual(t, SizeCellCountInt(0), f.start_x)
 	expectEqual(t, SizeCellCountInt(0), f.start_y)
 	expect(t, !f.end_x.Valid, "f.end_x == null")
@@ -1815,10 +1815,10 @@ func TestFm2_PageListFormatter_init_defaults(t *testing.T) {
 	term := fm2Init(t, 5, 2)
 	defer term.Deinit()
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	f := FormatterPageListFormatterInit(pages, FormatterOptionsVt)
 	expect(t, f.list == pages, "f.list == pages")
-	expectEqual(t, FormatterFormatVt, f.opts.emit)
+	expectEqual(t, FormatterFormatVt, f.opts.Emit)
 	expect(t, !f.top_left.Valid, "f.top_left == null")
 	expect(t, !f.bottom_right.Valid, "f.bottom_right == null")
 	expect(t, !f.rectangle, "!f.rectangle")
@@ -1831,9 +1831,9 @@ func TestFm2_ScreenFormatter_init_defaults(t *testing.T) {
 	term := fm2Init(t, 5, 2)
 	defer term.Deinit()
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-	expect(t, f.screen == term.screens.active, "f.screen == t.screens.active")
-	expectEqual(t, FormatterFormatVt, f.opts.emit)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+	expect(t, f.screen == term.Screens.Active, "f.screen == t.screens.active")
+	expectEqual(t, FormatterFormatVt, f.opts.Emit)
 	expect(t, f.content.Tag == FormatterScreenFormatterContentSelection, "f.content == .selection")
 	expect(t, !f.content.Selection.Valid, "f.content.selection == null")
 	expectEqual(t, FormatterScreenFormatterExtraNone, f.extra)
@@ -1841,26 +1841,26 @@ func TestFm2_ScreenFormatter_init_defaults(t *testing.T) {
 
 	// The presets.
 	none := FormatterScreenFormatterExtraNone
-	expect(t, !none.cursor, "!none.cursor")
-	expect(t, !none.style, "!none.style")
-	expect(t, !none.hyperlink, "!none.hyperlink")
-	expect(t, !none.protection, "!none.protection")
-	expect(t, !none.kitty_keyboard, "!none.kitty_keyboard")
-	expect(t, !none.charsets, "!none.charsets")
+	expect(t, !none.Cursor, "!none.cursor")
+	expect(t, !none.Style, "!none.style")
+	expect(t, !none.Hyperlink, "!none.hyperlink")
+	expect(t, !none.Protection, "!none.protection")
+	expect(t, !none.KittyKeyboard, "!none.kitty_keyboard")
+	expect(t, !none.Charsets, "!none.charsets")
 	styles := FormatterScreenFormatterExtraStyles
-	expect(t, !styles.cursor, "!styles.cursor")
-	expect(t, styles.style, "styles.style")
-	expect(t, styles.hyperlink, "styles.hyperlink")
-	expect(t, !styles.protection, "!styles.protection")
-	expect(t, !styles.kitty_keyboard, "!styles.kitty_keyboard")
-	expect(t, !styles.charsets, "!styles.charsets")
+	expect(t, !styles.Cursor, "!styles.cursor")
+	expect(t, styles.Style, "styles.style")
+	expect(t, styles.Hyperlink, "styles.hyperlink")
+	expect(t, !styles.Protection, "!styles.protection")
+	expect(t, !styles.KittyKeyboard, "!styles.kitty_keyboard")
+	expect(t, !styles.Charsets, "!styles.charsets")
 	all := FormatterScreenFormatterExtraAll
-	expect(t, all.cursor, "all.cursor")
-	expect(t, all.style, "all.style")
-	expect(t, all.hyperlink, "all.hyperlink")
-	expect(t, all.protection, "all.protection")
-	expect(t, all.kitty_keyboard, "all.kitty_keyboard")
-	expect(t, all.charsets, "all.charsets")
+	expect(t, all.Cursor, "all.cursor")
+	expect(t, all.Style, "all.style")
+	expect(t, all.Hyperlink, "all.hyperlink")
+	expect(t, all.Protection, "all.protection")
+	expect(t, all.KittyKeyboard, "all.kitty_keyboard")
+	expect(t, all.Charsets, "all.charsets")
 }
 
 // Zig: test "term51: TerminalFormatter.init: defaults and extra presets"
@@ -1871,7 +1871,7 @@ func TestFm2_TerminalFormatter_init_defaults_and_extra_presets(t *testing.T) {
 
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsHtml)
 	expect(t, f.terminal == term, "f.terminal == &t")
-	expectEqual(t, FormatterFormatHtml, f.opts.emit)
+	expectEqual(t, FormatterFormatHtml, f.opts.Emit)
 	expect(t, f.content.Tag == FormatterScreenFormatterContentSelection, "f.content == .selection")
 	expect(t, !f.content.Selection.Valid, "f.content.selection == null")
 	expect(t, !f.pin_map.Valid, "f.pin_map == null")
@@ -1879,31 +1879,31 @@ func TestFm2_TerminalFormatter_init_defaults_and_extra_presets(t *testing.T) {
 	expectEqual(t, FormatterTerminalFormatterExtraStyles, f.extra)
 
 	none := FormatterTerminalFormatterExtraNone
-	expect(t, !none.palette, "!none.palette")
-	expect(t, !none.modes, "!none.modes")
-	expect(t, !none.scrolling_region, "!none.scrolling_region")
-	expect(t, !none.tabstops, "!none.tabstops")
-	expect(t, !none.pwd, "!none.pwd")
-	expect(t, !none.keyboard, "!none.keyboard")
-	expectEqual(t, FormatterScreenFormatterExtraNone, none.screen)
+	expect(t, !none.Palette, "!none.palette")
+	expect(t, !none.Modes, "!none.modes")
+	expect(t, !none.ScrollingRegion, "!none.scrolling_region")
+	expect(t, !none.Tabstops, "!none.tabstops")
+	expect(t, !none.Pwd, "!none.pwd")
+	expect(t, !none.Keyboard, "!none.keyboard")
+	expectEqual(t, FormatterScreenFormatterExtraNone, none.Screen)
 
 	styles := FormatterTerminalFormatterExtraStyles
-	expect(t, styles.palette, "styles.palette")
-	expect(t, !styles.modes, "!styles.modes")
-	expect(t, !styles.scrolling_region, "!styles.scrolling_region")
-	expect(t, !styles.tabstops, "!styles.tabstops")
-	expect(t, !styles.pwd, "!styles.pwd")
-	expect(t, !styles.keyboard, "!styles.keyboard")
-	expectEqual(t, FormatterScreenFormatterExtraStyles, styles.screen)
+	expect(t, styles.Palette, "styles.palette")
+	expect(t, !styles.Modes, "!styles.modes")
+	expect(t, !styles.ScrollingRegion, "!styles.scrolling_region")
+	expect(t, !styles.Tabstops, "!styles.tabstops")
+	expect(t, !styles.Pwd, "!styles.pwd")
+	expect(t, !styles.Keyboard, "!styles.keyboard")
+	expectEqual(t, FormatterScreenFormatterExtraStyles, styles.Screen)
 
 	all := FormatterTerminalFormatterExtraAll
-	expect(t, all.palette, "all.palette")
-	expect(t, all.modes, "all.modes")
-	expect(t, all.scrolling_region, "all.scrolling_region")
-	expect(t, all.tabstops, "all.tabstops")
-	expect(t, all.pwd, "all.pwd")
-	expect(t, all.keyboard, "all.keyboard")
-	expectEqual(t, FormatterScreenFormatterExtraAll, all.screen)
+	expect(t, all.Palette, "all.palette")
+	expect(t, all.Modes, "all.modes")
+	expect(t, all.ScrollingRegion, "all.scrolling_region")
+	expect(t, all.Tabstops, "all.tabstops")
+	expect(t, all.Pwd, "all.pwd")
+	expect(t, all.Keyboard, "all.keyboard")
+	expectEqual(t, FormatterScreenFormatterExtraAll, all.Screen)
 }
 
 // Zig: test "term51: ScreenFormatter.Extra.isSet: every field alone, presets"
@@ -1918,12 +1918,12 @@ func TestFm2_ScreenFormatter_Extra_isSet_every_field_alone_presets(t *testing.T)
 		name string
 		set  func(e *FormatterScreenFormatterExtra, v bool)
 	}{
-		{"cursor", func(e *FormatterScreenFormatterExtra, v bool) { e.cursor = v }},
-		{"style", func(e *FormatterScreenFormatterExtra, v bool) { e.style = v }},
-		{"hyperlink", func(e *FormatterScreenFormatterExtra, v bool) { e.hyperlink = v }},
-		{"protection", func(e *FormatterScreenFormatterExtra, v bool) { e.protection = v }},
-		{"kitty_keyboard", func(e *FormatterScreenFormatterExtra, v bool) { e.kitty_keyboard = v }},
-		{"charsets", func(e *FormatterScreenFormatterExtra, v bool) { e.charsets = v }},
+		{"cursor", func(e *FormatterScreenFormatterExtra, v bool) { e.Cursor = v }},
+		{"style", func(e *FormatterScreenFormatterExtra, v bool) { e.Style = v }},
+		{"hyperlink", func(e *FormatterScreenFormatterExtra, v bool) { e.Hyperlink = v }},
+		{"protection", func(e *FormatterScreenFormatterExtra, v bool) { e.Protection = v }},
+		{"kitty_keyboard", func(e *FormatterScreenFormatterExtra, v bool) { e.KittyKeyboard = v }},
+		{"charsets", func(e *FormatterScreenFormatterExtra, v bool) { e.Charsets = v }},
 	}
 	for _, field := range fields {
 		e := FormatterScreenFormatterExtraNone
@@ -2016,7 +2016,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_no_map_and_empty_map_pa
 	// Null map.
 	{
 		opts := fm2Opts(FormatterFormatPlain)
-		opts.codepoint_map = Optional[[]FormatterCodepointMap]{}
+		opts.CodepointMap = Optional[[]FormatterCodepointMap]{}
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "a")
 		fm2ExpectReplaced(t, f, 0x4e2d, "\xe4\xb8\xad")
@@ -2043,7 +2043,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_range_bounds_are_inclus
 	// Zig-only: defer m.deinit(alloc);
 
 	opts := fm2Opts(FormatterFormatPlain)
-	opts.codepoint_map = Some(m)
+	opts.CodepointMap = Some(m)
 	f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 	fm2ExpectReplaced(t, f, 0x40, "@")
 	fm2ExpectReplaced(t, f, 0x41, "X")
@@ -2070,7 +2070,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_last_matching_entry_win
 		})
 		// Zig-only: defer m.deinit(alloc);
 		opts := fm2Opts(FormatterFormatPlain)
-		opts.codepoint_map = Some(m)
+		opts.CodepointMap = Some(m)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'c', "Y")
 		fm2ExpectReplaced(t, f, 'd', "X")
@@ -2084,7 +2084,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_last_matching_entry_win
 		})
 		// Zig-only: defer m.deinit(alloc);
 		opts := fm2Opts(FormatterFormatPlain)
-		opts.codepoint_map = Some(m)
+		opts.CodepointMap = Some(m)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'c', "X")
 	}
@@ -2097,7 +2097,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_last_matching_entry_win
 		})
 		// Zig-only: defer m.deinit(alloc);
 		opts := fm2Opts(FormatterFormatPlain)
-		opts.codepoint_map = Some(m)
+		opts.CodepointMap = Some(m)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "b")
 		fm2ExpectReplaced(t, f, 'b', "c")
@@ -2120,7 +2120,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_string_replacements(t *
 
 	{
 		opts := fm2Opts(FormatterFormatPlain)
-		opts.codepoint_map = Some(m)
+		opts.CodepointMap = Some(m)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "xyz")
 		// The empty string replaces with nothing at all.
@@ -2133,7 +2133,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_string_replacements(t *
 	// For HTML each replacement codepoint is escaped on its own.
 	{
 		opts := fm2Opts(FormatterFormatHtml)
-		opts.codepoint_map = Some(m)
+		opts.CodepointMap = Some(m)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "xyz")
 		fm2ExpectReplaced(t, f, 'b', "")
@@ -2152,7 +2152,7 @@ func TestFm2_panic_writeCodepointWithReplacement_string_is_not_valid_UTF_8(t *te
 		fm2Entry('a', 'a', fm2ReplString("\xff")),
 	})
 	opts := fm2Opts(FormatterFormatPlain)
-	opts.codepoint_map = Some(m)
+	opts.CodepointMap = Some(m)
 	f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 	b := oscWriterAllocatingInit()
 	defer b.deinit()
@@ -2179,7 +2179,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_codepoint_replacements_
 	// The catch-all last entry hides all of the earlier ones.
 	{
 		opts := fm2Opts(FormatterFormatVt)
-		opts.codepoint_map = Some(m)
+		opts.CodepointMap = Some(m)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "?")
 		fm2ExpectReplaced(t, f, 0, "?")
@@ -2195,7 +2195,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_codepoint_replacements_
 	// Zig-only: defer m2.deinit(alloc);
 	{
 		opts := fm2Opts(FormatterFormatPlain)
-		opts.codepoint_map = Some(m2)
+		opts.CodepointMap = Some(m2)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "<")
 		fm2ExpectReplaced(t, f, 'b', "\xe4\xb8\xad")
@@ -2203,7 +2203,7 @@ func TestFm2_PageFormatter_writeCodepointWithReplacement_codepoint_replacements_
 	}
 	{
 		opts := fm2Opts(FormatterFormatHtml)
-		opts.codepoint_map = Some(m2)
+		opts.CodepointMap = Some(m2)
 		f := FormatterPageFormatterInit(fm2Page(t, term), opts)
 		fm2ExpectReplaced(t, f, 'a', "&lt;")
 		fm2ExpectReplaced(t, f, 'b', "&#20013;")
@@ -2294,7 +2294,7 @@ func TestFm2_PageFormatter_writeCell_replacement_applies_to_graphemes_and_not_to
 	})
 	// Zig-only: defer m.deinit(alloc);
 	opts := fm2Opts(FormatterFormatPlain)
-	opts.codepoint_map = Some(m)
+	opts.CodepointMap = Some(m)
 	f := FormatterPageFormatterInit(page, opts)
 
 	b := oscWriterAllocatingInit()
@@ -2318,7 +2318,7 @@ func TestFm2_PageFormatter_writeCell_replacement_applies_to_graphemes_and_not_to
 	expectEqualStrings(t, " ", string(b.writer.buffered()))
 	b.writer.end = 0
 	bg_cell.content_tag = PageCellContentTagBgColorRgb
-	bg_cell.content = PageCellContent{color_rgb: PageCellRGB{r: 'e', g: 'e', b: 'e'}}
+	bg_cell.content = PageCellContent{color_rgb: PageCellRGB{R: 'e', G: 'e', B: 'e'}}
 	zigTry(t, f.writeCell(PageCellContentTagBgColorRgb, &b.writer, &bg_cell))
 	expectEqualStrings(t, " ", string(b.writer.buffered()))
 }
@@ -2341,28 +2341,28 @@ func TestFm2_PageFormatter_cellStyle_unstyled_styled_and_background_cells(t *tes
 
 	s1 := f.cellStyle(fm2Cell(t, term, 1, 0))
 	expect(t, !s1.Default(), "!s1.default()")
-	expect(t, s1.flags.bold, "s1.flags.bold")
-	expectEqual(t, SGRAttributeUnderlineCurly, s1.flags.underline)
-	expect(t, !s1.flags.italic, "!s1.flags.italic")
-	expect(t, s1.fg_color.Eql(fm2Palette(1)), "s1.fg_color.eql(.{ .palette = 1 })")
-	expect(t, s1.bg_color.Eql(StyleColor{}), "s1.bg_color.eql(.none)")
+	expect(t, s1.Flags.Bold, "s1.flags.bold")
+	expectEqual(t, SGRAttributeUnderlineCurly, s1.Flags.Underline)
+	expect(t, !s1.Flags.Italic, "!s1.flags.italic")
+	expect(t, s1.FgColor.Eql(fm2Palette(1)), "s1.fg_color.eql(.{ .palette = 1 })")
+	expect(t, s1.BgColor.Eql(StyleColor{}), "s1.bg_color.eql(.none)")
 
 	s2 := f.cellStyle(fm2Cell(t, term, 2, 0))
 	expectEqual(t, PageCellContentTagCodepointGrapheme, fm2Cell(t, term, 2, 0).content_tag)
-	expect(t, s2.flags.italic, "s2.flags.italic")
-	expect(t, !s2.flags.bold, "!s2.flags.bold")
-	expect(t, s2.fg_color.Eql(StyleColor{}), "s2.fg_color.eql(.none)")
+	expect(t, s2.Flags.Italic, "s2.flags.italic")
+	expect(t, !s2.Flags.Bold, "!s2.flags.bold")
+	expect(t, s2.FgColor.Eql(StyleColor{}), "s2.fg_color.eql(.none)")
 
 	// Background palette cell: only the bg color, nothing else.
 	expectEqual(t, PageCellContentTagBgColorPalette, fm2Cell(t, term, 0, 1).content_tag)
 	s3 := f.cellStyle(fm2Cell(t, term, 0, 1))
-	expect(t, s3.Eql(Style{bg_color: fm2Palette(5)}), "s3.eql(.{ .bg_color = .{ .palette = 5 } })")
+	expect(t, s3.Eql(Style{BgColor: fm2Palette(5)}), "s3.eql(.{ .bg_color = .{ .palette = 5 } })")
 
 	// Background rgb cell.
 	expectEqual(t, PageCellContentTagBgColorRgb, fm2Cell(t, term, 2, 1).content_tag)
 	s4 := f.cellStyle(fm2Cell(t, term, 2, 1))
-	expect(t, s4.Eql(Style{bg_color: fm2Rgb(10, 20, 30)}), "s4.eql(.{ .bg_color = .{ .rgb = .{ .r = 10, .g = 20, .b = 30 } } })")
-	expect(t, s4.fg_color.Eql(StyleColor{}), "s4.fg_color.eql(.none)")
+	expect(t, s4.Eql(Style{BgColor: fm2Rgb(10, 20, 30)}), "s4.eql(.{ .bg_color = .{ .rgb = .{ .r = 10, .g = 20, .b = 30 } } })")
+	expect(t, s4.FgColor.Eql(StyleColor{}), "s4.fg_color.eql(.none)")
 	expect(t, s4.underline_color.Eql(StyleColor{}), "s4.underline_color.eql(.none)")
 
 	// A styled cell that is empty (e.g. erased with a background set) and
@@ -2378,31 +2378,31 @@ func TestFm2_PageFormatter_formatStyleOpen_vt_flags(t *testing.T) {
 	f := FormatterPageFormatterInit(fm2Page(t, term), FormatterOptionsVt)
 
 	fm2ExpectStyleOpen(t, f, Style{}, "\x1b[0m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{bold: true}}, "\x1b[0m\x1b[1m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{faint: true}}, "\x1b[0m\x1b[2m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{italic: true}}, "\x1b[0m\x1b[3m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{blink: true}}, "\x1b[0m\x1b[5m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{inverse: true}}, "\x1b[0m\x1b[7m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{invisible: true}}, "\x1b[0m\x1b[8m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{strikethrough: true}}, "\x1b[0m\x1b[9m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{overline: true}}, "\x1b[0m\x1b[53m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}}, "\x1b[0m\x1b[4m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineDouble}}, "\x1b[0m\x1b[4:2m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineCurly}}, "\x1b[0m\x1b[4:3m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineDotted}}, "\x1b[0m\x1b[4:4m")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineDashed}}, "\x1b[0m\x1b[4:5m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Bold: true}}, "\x1b[0m\x1b[1m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Faint: true}}, "\x1b[0m\x1b[2m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Italic: true}}, "\x1b[0m\x1b[3m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Blink: true}}, "\x1b[0m\x1b[5m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Inverse: true}}, "\x1b[0m\x1b[7m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Invisible: true}}, "\x1b[0m\x1b[8m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Strikethrough: true}}, "\x1b[0m\x1b[9m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Overline: true}}, "\x1b[0m\x1b[53m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}}, "\x1b[0m\x1b[4m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDouble}}, "\x1b[0m\x1b[4:2m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly}}, "\x1b[0m\x1b[4:3m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDotted}}, "\x1b[0m\x1b[4:4m")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDashed}}, "\x1b[0m\x1b[4:5m")
 
 	// All flags: fixed order regardless of how they were set.
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{
-		bold:          true,
-		italic:        true,
-		faint:         true,
-		blink:         true,
-		inverse:       true,
-		invisible:     true,
-		strikethrough: true,
-		overline:      true,
-		underline:     SGRAttributeUnderlineCurly,
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{
+		Bold:          true,
+		Italic:        true,
+		Faint:         true,
+		Blink:         true,
+		Inverse:       true,
+		Invisible:     true,
+		Strikethrough: true,
+		Overline:      true,
+		Underline:     SGRAttributeUnderlineCurly,
 	}}, "\x1b[0m\x1b[1m\x1b[2m\x1b[3m\x1b[5m\x1b[7m\x1b[8m\x1b[9m\x1b[53m\x1b[4:3m")
 }
 
@@ -2414,7 +2414,7 @@ func TestFm2_panic_formatStyleOpen_plain_format(t *testing.T) {
 	f := FormatterPageFormatterInit(fm2Page(t, term), FormatterOptionsPlain)
 	b := oscWriterAllocatingInit()
 	defer b.deinit()
-	style := Style{flags: styleFlags{bold: true}}
+	style := Style{Flags: StyleFlags{Bold: true}}
 
 	fm2ExpectPanic(t, func() {
 		_ = f.formatStyleOpen(&b.writer, &style)
@@ -2429,34 +2429,34 @@ func TestFm2_PageFormatter_formatStyleOpen_vt_colors_and_palette_option(t *testi
 	f := FormatterPageFormatterInit(fm2Page(t, term), FormatterOptionsVt)
 
 	// Palette indices stay indices without a palette option.
-	fm2ExpectStyleOpen(t, f, Style{fg_color: fm2Palette(0)}, "\x1b[0m\x1b[38;5;0m")
-	fm2ExpectStyleOpen(t, f, Style{fg_color: fm2Palette(255)}, "\x1b[0m\x1b[38;5;255m")
-	fm2ExpectStyleOpen(t, f, Style{bg_color: fm2Palette(7)}, "\x1b[0m\x1b[48;5;7m")
+	fm2ExpectStyleOpen(t, f, Style{FgColor: fm2Palette(0)}, "\x1b[0m\x1b[38;5;0m")
+	fm2ExpectStyleOpen(t, f, Style{FgColor: fm2Palette(255)}, "\x1b[0m\x1b[38;5;255m")
+	fm2ExpectStyleOpen(t, f, Style{BgColor: fm2Palette(7)}, "\x1b[0m\x1b[48;5;7m")
 	fm2ExpectStyleOpen(t, f, Style{underline_color: fm2Palette(9)}, "\x1b[0m\x1b[58;5;9m")
 	// RGB.
-	fm2ExpectStyleOpen(t, f, Style{fg_color: fm2Rgb(1, 2, 3)}, "\x1b[0m\x1b[38;2;1;2;3m")
-	fm2ExpectStyleOpen(t, f, Style{bg_color: fm2Rgb(255, 0, 128)}, "\x1b[0m\x1b[48;2;255;0;128m")
+	fm2ExpectStyleOpen(t, f, Style{FgColor: fm2Rgb(1, 2, 3)}, "\x1b[0m\x1b[38;2;1;2;3m")
+	fm2ExpectStyleOpen(t, f, Style{BgColor: fm2Rgb(255, 0, 128)}, "\x1b[0m\x1b[48;2;255;0;128m")
 	fm2ExpectStyleOpen(t, f, Style{underline_color: fm2Rgb(4, 5, 6)}, "\x1b[0m\x1b[58;2;4;5;6m")
 	// Order: flags, fg, bg, underline color.
 	fm2ExpectStyleOpen(t, f, Style{
-		fg_color:        fm2Palette(1),
-		bg_color:        fm2Rgb(9, 8, 7),
+		FgColor:         fm2Palette(1),
+		BgColor:         fm2Rgb(9, 8, 7),
 		underline_color: fm2Palette(2),
-		flags:           styleFlags{bold: true},
+		Flags:           StyleFlags{Bold: true},
 	}, "\x1b[0m\x1b[1m\x1b[38;5;1m\x1b[48;2;9;8;7m\x1b[58;5;2m")
 
 	// With a palette option, palette indices are resolved to RGB and the
 	// other kinds are unchanged.
 	palette := ColorDefault
-	palette[3] = ColorRGB{r: 30, g: 31, b: 32}
-	palette[200] = ColorRGB{r: 200, g: 201, b: 202}
+	palette[3] = ColorRGB{R: 30, G: 31, B: 32}
+	palette[200] = ColorRGB{R: 200, G: 201, B: 202}
 	fp_opts := FormatterOptionsVt
-	fp_opts.palette = &palette
+	fp_opts.Palette = &palette
 	fp := FormatterPageFormatterInit(fm2Page(t, term), fp_opts)
-	fm2ExpectStyleOpen(t, fp, Style{fg_color: fm2Palette(3)}, "\x1b[0m\x1b[38;2;30;31;32m")
-	fm2ExpectStyleOpen(t, fp, Style{bg_color: fm2Palette(200)}, "\x1b[0m\x1b[48;2;200;201;202m")
+	fm2ExpectStyleOpen(t, fp, Style{FgColor: fm2Palette(3)}, "\x1b[0m\x1b[38;2;30;31;32m")
+	fm2ExpectStyleOpen(t, fp, Style{BgColor: fm2Palette(200)}, "\x1b[0m\x1b[48;2;200;201;202m")
 	fm2ExpectStyleOpen(t, fp, Style{underline_color: fm2Palette(3)}, "\x1b[0m\x1b[58;2;30;31;32m")
-	fm2ExpectStyleOpen(t, fp, Style{fg_color: fm2Rgb(1, 2, 3)}, "\x1b[0m\x1b[38;2;1;2;3m")
+	fm2ExpectStyleOpen(t, fp, Style{FgColor: fm2Rgb(1, 2, 3)}, "\x1b[0m\x1b[38;2;1;2;3m")
 	fm2ExpectStyleOpen(t, fp, Style{}, "\x1b[0m")
 }
 
@@ -2469,32 +2469,32 @@ func TestFm2_PageFormatter_formatStyleOpen_html_flags(t *testing.T) {
 
 	const open = "<div style=\"display: inline;"
 	fm2ExpectStyleOpen(t, f, Style{}, open+"\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{bold: true}}, open+"font-weight: bold;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{italic: true}}, open+"font-style: italic;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{faint: true}}, open+"opacity: 0.5;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{invisible: true}}, open+"visibility: hidden;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{inverse: true}}, open+"filter: invert(100%);\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{blink: true}}, open+"text-decoration-line: blink;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{strikethrough: true}}, open+"text-decoration-line: line-through;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{overline: true}}, open+"text-decoration-line: overline;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}}, open+"text-decoration-line: underline;text-decoration-style: solid;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineDouble}}, open+"text-decoration-line: underline;text-decoration-style: double;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineCurly}}, open+"text-decoration-line: underline;text-decoration-style: wavy;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineDotted}}, open+"text-decoration-line: underline;text-decoration-style: dotted;\">")
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{underline: SGRAttributeUnderlineDashed}}, open+"text-decoration-line: underline;text-decoration-style: dashed;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Bold: true}}, open+"font-weight: bold;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Italic: true}}, open+"font-style: italic;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Faint: true}}, open+"opacity: 0.5;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Invisible: true}}, open+"visibility: hidden;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Inverse: true}}, open+"filter: invert(100%);\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Blink: true}}, open+"text-decoration-line: blink;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Strikethrough: true}}, open+"text-decoration-line: line-through;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Overline: true}}, open+"text-decoration-line: overline;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}}, open+"text-decoration-line: underline;text-decoration-style: solid;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDouble}}, open+"text-decoration-line: underline;text-decoration-style: double;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly}}, open+"text-decoration-line: underline;text-decoration-style: wavy;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDotted}}, open+"text-decoration-line: underline;text-decoration-style: dotted;\">")
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineDashed}}, open+"text-decoration-line: underline;text-decoration-style: dashed;\">")
 
 	// Everything at once: line list in fixed order, then style, then the
 	// simple properties.
-	fm2ExpectStyleOpen(t, f, Style{flags: styleFlags{
-		bold:          true,
-		italic:        true,
-		faint:         true,
-		blink:         true,
-		inverse:       true,
-		invisible:     true,
-		strikethrough: true,
-		overline:      true,
-		underline:     SGRAttributeUnderlineDouble,
+	fm2ExpectStyleOpen(t, f, Style{Flags: StyleFlags{
+		Bold:          true,
+		Italic:        true,
+		Faint:         true,
+		Blink:         true,
+		Inverse:       true,
+		Invisible:     true,
+		Strikethrough: true,
+		Overline:      true,
+		Underline:     SGRAttributeUnderlineDouble,
 	}}, open+"text-decoration-line: underline line-through overline blink;"+
 		"text-decoration-style: double;font-weight: bold;font-style: italic;"+
 		"opacity: 0.5;visibility: hidden;filter: invert(100%);\">")
@@ -2508,31 +2508,31 @@ func TestFm2_PageFormatter_formatStyleOpen_html_colors_and_palette_option(t *tes
 	f := FormatterPageFormatterInit(fm2Page(t, term), FormatterOptionsHtml)
 
 	const open = "<div style=\"display: inline;"
-	fm2ExpectStyleOpen(t, f, Style{fg_color: fm2Palette(0)}, open+"color: var(--vt-palette-0);\">")
-	fm2ExpectStyleOpen(t, f, Style{bg_color: fm2Palette(255)}, open+"background-color: var(--vt-palette-255);\">")
+	fm2ExpectStyleOpen(t, f, Style{FgColor: fm2Palette(0)}, open+"color: var(--vt-palette-0);\">")
+	fm2ExpectStyleOpen(t, f, Style{BgColor: fm2Palette(255)}, open+"background-color: var(--vt-palette-255);\">")
 	fm2ExpectStyleOpen(t, f, Style{underline_color: fm2Palette(12)}, open+"text-decoration-color: var(--vt-palette-12);\">")
-	fm2ExpectStyleOpen(t, f, Style{fg_color: fm2Rgb(1, 2, 3)}, open+"color: rgb(1, 2, 3);\">")
-	fm2ExpectStyleOpen(t, f, Style{bg_color: fm2Rgb(255, 255, 0)}, open+"background-color: rgb(255, 255, 0);\">")
+	fm2ExpectStyleOpen(t, f, Style{FgColor: fm2Rgb(1, 2, 3)}, open+"color: rgb(1, 2, 3);\">")
+	fm2ExpectStyleOpen(t, f, Style{BgColor: fm2Rgb(255, 255, 0)}, open+"background-color: rgb(255, 255, 0);\">")
 	fm2ExpectStyleOpen(t, f, Style{underline_color: fm2Rgb(0, 0, 9)}, open+"text-decoration-color: rgb(0, 0, 9);\">")
 	// Colors come first (fg, bg, underline) then the flags.
 	fm2ExpectStyleOpen(t, f, Style{
-		fg_color:        fm2Palette(3),
-		bg_color:        fm2Rgb(1, 2, 3),
+		FgColor:         fm2Palette(3),
+		BgColor:         fm2Rgb(1, 2, 3),
 		underline_color: fm2Rgb(4, 5, 6),
-		flags:           styleFlags{bold: true, underline: SGRAttributeUnderlineSingle},
+		Flags:           StyleFlags{Bold: true, Underline: SGRAttributeUnderlineSingle},
 	}, open+"color: var(--vt-palette-3);background-color: rgb(1, 2, 3);"+
 		"text-decoration-color: rgb(4, 5, 6);text-decoration-line: underline;"+
 		"text-decoration-style: solid;font-weight: bold;\">")
 
 	// Palette option resolves indices to rgb().
 	palette := ColorDefault
-	palette[3] = ColorRGB{r: 30, g: 31, b: 32}
+	palette[3] = ColorRGB{R: 30, G: 31, B: 32}
 	fp_opts := FormatterOptionsHtml
-	fp_opts.palette = &palette
+	fp_opts.Palette = &palette
 	fp := FormatterPageFormatterInit(fm2Page(t, term), fp_opts)
 	fm2ExpectStyleOpen(t, fp, Style{
-		fg_color:        fm2Palette(3),
-		bg_color:        fm2Palette(3),
+		FgColor:         fm2Palette(3),
+		BgColor:         fm2Palette(3),
 		underline_color: fm2Palette(3),
 	}, open+"color: rgb(30, 31, 32);background-color: rgb(30, 31, 32);"+
 		"text-decoration-color: rgb(30, 31, 32);\">")
@@ -2571,8 +2571,8 @@ func TestFm2_PageFormatter_formatStyleClose_per_format_and_point_map(t *testing.
 	// Point map: the closing bytes repeat the previous entry.
 	var pm []PointCoordinate
 	// Zig-only: defer pm.deinit(alloc);
-	pm = append(pm, PointCoordinate{x: 1, y: 0})
-	pm = append(pm, PointCoordinate{x: 3, y: 2})
+	pm = append(pm, PointCoordinate{X: 1, Y: 0})
+	pm = append(pm, PointCoordinate{X: 3, Y: 2})
 	{
 		f := FormatterPageFormatterInit(fm2Page(t, term), FormatterOptionsVt)
 		f.point_map = Some(FormatterPageFormatterPointMap{map_: &pm})
@@ -2580,7 +2580,7 @@ func TestFm2_PageFormatter_formatStyleClose_per_format_and_point_map(t *testing.
 		b.writer.end = 0
 		expectEqual(t, 2+4, len(pm))
 		for _, c := range pm[2:] {
-			expectEqual(t, PointCoordinate{x: 3, y: 2}, c)
+			expectEqual(t, PointCoordinate{X: 3, Y: 2}, c)
 		}
 	}
 	{
@@ -2590,7 +2590,7 @@ func TestFm2_PageFormatter_formatStyleClose_per_format_and_point_map(t *testing.
 		b.writer.end = 0
 		expectEqual(t, 6+6, len(pm))
 		for _, c := range pm[6:] {
-			expectEqual(t, PointCoordinate{x: 3, y: 2}, c)
+			expectEqual(t, PointCoordinate{X: 3, Y: 2}, c)
 		}
 	}
 	// Plain with a point map writes and maps nothing.

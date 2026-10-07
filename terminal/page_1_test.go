@@ -104,7 +104,7 @@ func pg1Clone(t *testing.T, page *Page) *Page {
 }
 
 // pg1StylesAdd is `try page.styles.add(page.memory, style)`.
-func pg1StylesAdd(t *testing.T, page *Page, style Style) StyleId {
+func pg1StylesAdd(t *testing.T, page *Page, style Style) StyleID {
 	t.Helper()
 	id, err := page.styles.Add(style)
 	zigTry(t, err)
@@ -112,7 +112,7 @@ func pg1StylesAdd(t *testing.T, page *Page, style Style) StyleId {
 }
 
 // pg1InsertHyperlink is `try page.insertHyperlink(link)`.
-func pg1InsertHyperlink(t *testing.T, page *Page, link Hyperlink) HyperlinkId {
+func pg1InsertHyperlink(t *testing.T, page *Page, link Hyperlink) HyperlinkID {
 	t.Helper()
 	id, err := page.InsertHyperlink(link)
 	zigTry(t, err)
@@ -452,7 +452,7 @@ func TestPg1_Page_clone_styles(t *testing.T) {
 
 	// Write with some styles
 	{
-		id := pg1StylesAdd(t, page, Style{flags: styleFlags{bold: true}})
+		id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Bold: true}})
 
 		for x := range uint(page.size.cols) {
 			rac := page.GetRowAndCell(x, 0)
@@ -482,7 +482,7 @@ func TestPg1_Page_clone_styles(t *testing.T) {
 		}
 
 		style := page.styles.Get(id)
-		expect(t, Style{flags: styleFlags{bold: true}}.Eql(*style), "(Style{ .flags = .{ .bold = true } }).eql(style.*)")
+		expect(t, Style{Flags: StyleFlags{Bold: true}}.Eql(*style), "(Style{ .flags = .{ .bold = true } }).eql(style.*)")
 	}
 }
 
@@ -589,8 +589,8 @@ func TestPg1_Page_cloneFrom_hyperlinks_exact_capacity(t *testing.T) {
 
 	// Create a hyperlink.
 	hyperlink_id := pg1InsertHyperlink(t, page, Hyperlink{
-		id:  pg1Implicit(0),
-		uri: []uint8("https://example.com"),
+		ID:  pg1Implicit(0),
+		URI: []uint8("https://example.com"),
 	})
 
 	// Fill the exact cap with cells.
@@ -1077,7 +1077,7 @@ func TestPg1_Page_verifyIntegrity_styles_good(t *testing.T) {
 	defer page.Deinit()
 
 	// Upsert a style we'll use
-	id := pg1StylesAdd(t, page, Style{flags: styleFlags{bold: true}})
+	id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Bold: true}})
 
 	// Write
 	for x := range uint(page.size.cols) {
@@ -1108,7 +1108,7 @@ func TestPg1_Page_verifyIntegrity_styles_ref_count_mismatch(t *testing.T) {
 	defer page.Deinit()
 
 	// Upsert a style we'll use
-	id := pg1StylesAdd(t, page, Style{flags: styleFlags{bold: true}})
+	id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Bold: true}})
 
 	// Write
 	for x := range uint(page.size.cols) {
@@ -1186,7 +1186,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	}
 
 	// Add one style to a cell
-	style1_id := pg1StylesAdd(t, page, Style{flags: styleFlags{bold: true}})
+	style1_id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Bold: true}})
 	{
 		rac := page.GetRowAndCell(0, 0)
 		rac.row.styled = true
@@ -1210,7 +1210,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	}
 
 	// Add a different style
-	style2_id := pg1StylesAdd(t, page, Style{flags: styleFlags{italic: true}})
+	style2_id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Italic: true}})
 	{
 		rac := page.GetRowAndCell(2, 0)
 		rac.cell.style_id = style2_id
@@ -1227,7 +1227,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	{
 		rac := page.GetRowAndCell(0, 7)
 		rac.row.styled = true
-		rac.cell.style_id = pg1StylesAdd(t, page, Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}})
+		rac.cell.style_id = pg1StylesAdd(t, page, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}})
 	}
 	{
 		got := page.ExactRowCapacity(0, 5)
@@ -1263,7 +1263,7 @@ func TestPg1_Page_exactRowCapacity_single_style_clone(t *testing.T) {
 	defer page.Deinit()
 
 	// Add exactly one style to row 0
-	style_id := pg1StylesAdd(t, page, Style{flags: styleFlags{bold: true}})
+	style_id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Bold: true}})
 	{
 		rac := page.GetRowAndCell(0, 0)
 		rac.row.styled = true
@@ -1286,7 +1286,7 @@ func TestPg1_Page_exactRowCapacity_single_style_clone(t *testing.T) {
 
 	// Verify the style was cloned correctly
 	cloned_cell := &cloned.GetCells(&cloned.rows[0])[0]
-	expect(t, cloned_cell.style_id != StyleDefaultId, "cloned_cell.style_id != stylepkg.default_id")
+	expect(t, cloned_cell.style_id != StyleDefaultID, "cloned_cell.style_id != stylepkg.default_id")
 }
 
 // Zig: test "Page exactRowCapacity styles max single row"
@@ -1311,10 +1311,10 @@ func TestPg1_Page_exactRowCapacity_styles_max_single_row(t *testing.T) {
 			break
 		}
 		style_id, err := page.styles.Add(Style{
-			fg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-				r: uint8(i & 0xFF),
-				g: uint8((i >> 8) & 0xFF),
-				b: 0,
+			FgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+				R: uint8(i & 0xFF),
+				G: uint8((i >> 8) & 0xFF),
+				B: 0,
 			}},
 		})
 		if err != nil {
@@ -1459,13 +1459,13 @@ func TestPg1_Page_exactRowCapacity_hyperlinks(t *testing.T) {
 
 	// Add one hyperlink with implicit ID
 	const uri1 = "https://example.com"
-	id1 := func() HyperlinkId {
+	id1 := func() HyperlinkID {
 		rac := page.GetRowAndCell(0, 0)
 
 		// Create and add hyperlink entry
 		id := pg1InsertHyperlink(t, page, Hyperlink{
-			id:  pg1Implicit(1),
-			uri: []uint8(uri1),
+			ID:  pg1Implicit(1),
+			URI: []uint8(uri1),
 		})
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, id))
 		return id
@@ -1499,8 +1499,8 @@ func TestPg1_Page_exactRowCapacity_hyperlinks(t *testing.T) {
 		rac := page.GetRowAndCell(2, 0)
 
 		id := pg1InsertHyperlink(t, page, Hyperlink{
-			id:  pg1Explicit(explicit_id),
-			uri: []uint8(uri2),
+			ID:  pg1Explicit(explicit_id),
+			URI: []uint8(uri2),
 		})
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, id))
 	}
@@ -1517,8 +1517,8 @@ func TestPg1_Page_exactRowCapacity_hyperlinks(t *testing.T) {
 		rac := page.GetRowAndCell(0, 7) // row 7 is outside range [0, 5)
 
 		id := pg1InsertHyperlink(t, page, Hyperlink{
-			id:  pg1Implicit(99),
-			uri: []uint8("https://outside.example.com"),
+			ID:  pg1Implicit(99),
+			URI: []uint8("https://outside.example.com"),
 		})
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, id))
 	}
@@ -1566,8 +1566,8 @@ func TestPg1_Page_exactRowCapacity_single_hyperlink_clone(t *testing.T) {
 	{
 		rac := page.GetRowAndCell(0, 0)
 		link_id := pg1InsertHyperlink(t, page, Hyperlink{
-			id:  pg1Implicit(1),
-			uri: []uint8(uri),
+			ID:  pg1Implicit(1),
+			URI: []uint8(uri),
 		})
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, link_id))
 	}
@@ -1604,11 +1604,11 @@ func TestPg1_Page_exactRowCapacity_hyperlink_map_capacity_for_many_cells(t *test
 
 	// Add one hyperlink spanning all 50 columns in row 0
 	const uri = "https://example.com"
-	id := func() HyperlinkId {
+	id := func() HyperlinkID {
 		rac := page.GetRowAndCell(0, 0)
 		link_id := pg1InsertHyperlink(t, page, Hyperlink{
-			id:  pg1Implicit(1),
-			uri: []uint8(uri),
+			ID:  pg1Implicit(1),
+			URI: []uint8(uri),
 		})
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, link_id))
 		return link_id
@@ -1691,9 +1691,9 @@ func pg1HGrapheme(t *testing.T, page *Page, x uint, y uint, cp uint32, extra []u
 // pg1HStyleCells is term51HStyleCells: add a style (distinguished by palette
 // fg n) and put it on the cells. After this the style's reference count is
 // exactly len(cells).
-func pg1HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleId {
+func pg1HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleID {
 	t.Helper()
-	id := pg1StylesAdd(t, page, Style{fg_color: StyleColor{Tag: StyleColorPalette, Palette: n}})
+	id := pg1StylesAdd(t, page, Style{FgColor: StyleColor{Tag: StyleColorPalette, Palette: n}})
 	for _, c := range cells {
 		rac := page.GetRowAndCell(c[0], c[1])
 		rac.row.styled = true
@@ -1706,7 +1706,7 @@ func pg1HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleId 
 
 // pg1HLinkCells is term51HLinkCells: insert a hyperlink and put it on the
 // cells. After this the link's reference count is exactly len(cells).
-func pg1HLinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) HyperlinkId {
+func pg1HLinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) HyperlinkID {
 	t.Helper()
 	id := pg1InsertHyperlink(t, page, link)
 	for _, c := range cells {
@@ -1720,7 +1720,7 @@ func pg1HLinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) Hy
 
 // pg1HLink is term51HLink.
 func pg1HLink(uri string) Hyperlink {
-	return Hyperlink{id: pg1Implicit(0), uri: []uint8(uri)}
+	return Hyperlink{ID: pg1Implicit(0), URI: []uint8(uri)}
 }
 
 // pg1HExpectRowsEqual is term51HExpectRowsEqual.
@@ -1757,7 +1757,7 @@ func pg1HPopulate(t *testing.T, page *Page) {
 	pg1HStyleCells(t, page, 7, [][2]uint{{2, 1}, {3, 1}})
 	pg1HStyleCells(t, page, 9, [][2]uint{{0, 3}})
 	pg1HLinkCells(t, page, pg1HLink("https://one.example/"), [][2]uint{{5, 4}, {6, 4}})
-	pg1HLinkCells(t, page, Hyperlink{id: pg1Explicit("my-id"), uri: []uint8("https://two.example/")}, [][2]uint{{7, 5}})
+	pg1HLinkCells(t, page, Hyperlink{ID: pg1Explicit("my-id"), URI: []uint8("https://two.example/")}, [][2]uint{{7, 5}})
 	page.GetRowAndCell(8, 1).cell.wide = PageCellWideWide
 	page.GetRowAndCell(9, 1).cell.wide = PageCellWideSpacerTail
 	page.GetRow(2).wrap = true
@@ -1983,9 +1983,9 @@ func TestPg1_term51_Page_reinit_wipes_all_content_and_restores_the_initial_state
 
 	// And the page is reusable, including the styles/hyperlinks tables.
 	sid := pg1HStyleCells(t, page, 4, [][2]uint{{0, 0}})
-	expectEqual(t, StyleId(1), sid)
+	expectEqual(t, StyleID(1), sid)
 	hid := pg1HLinkCells(t, page, pg1HLink("https://example.com"), [][2]uint{{1, 0}})
-	expectEqual(t, HyperlinkId(1), hid)
+	expectEqual(t, HyperlinkID(1), hid)
 	zigTry(t, page.VerifyIntegrity())
 }
 
@@ -2112,7 +2112,7 @@ func TestPg1_term51_Page_verifyIntegrity_empty_and_fully_featured_pages_are_vali
 	pg1HStyleCells(t, page, 1, [][2]uint{{1, 1}, {2, 1}, {3, 4}})
 	pg1HStyleCells(t, page, 2, [][2]uint{{5, 2}})
 	pg1HLinkCells(t, page, pg1HLink("https://a.example"), [][2]uint{{1, 3}, {2, 3}})
-	pg1HLinkCells(t, page, Hyperlink{id: pg1Explicit("id"), uri: []uint8("https://b")}, [][2]uint{{4, 3}})
+	pg1HLinkCells(t, page, Hyperlink{ID: pg1Explicit("id"), URI: []uint8("https://b")}, [][2]uint{{4, 3}})
 	// wide + tail
 	page.GetRowAndCell(6, 2).cell.wide = PageCellWideWide
 	page.GetRowAndCell(7, 2).cell.wide = PageCellWideSpacerTail
@@ -2124,7 +2124,7 @@ func TestPg1_term51_Page_verifyIntegrity_empty_and_fully_featured_pages_are_vali
 	// bg-color-only cells are fine
 	*page.GetRowAndCell(0, 4).cell = PageCell{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}},
+		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
 	}
 	zigTry(t, page.VerifyIntegrity())
 }
@@ -2524,7 +2524,7 @@ func TestPg1_term51_Page_clone_copies_every_cell_row_and_table(t *testing.T) {
 	expect(t, entry.id.Tag == HyperlinkPageEntryIdExplicit, "entry.id == .explicit")
 	expectEqualStrings(t, "my-id", string(entry.id.Explicit))
 	sid := cpy.GetRowAndCell(2, 1).cell.style_id
-	expect(t, Style{fg_color: StyleColor{Tag: StyleColorPalette, Palette: 7}}.Eql(*cpy.styles.Get(sid)), "(Style{ .fg_color = .{ .palette = 7 } }).eql(copy.styles.get(copy.memory, sid).*)")
+	expect(t, Style{FgColor: StyleColor{Tag: StyleColorPalette, Palette: 7}}.Eql(*cpy.styles.Get(sid)), "(Style{ .fg_color = .{ .palette = 7 } }).eql(copy.styles.get(copy.memory, sid).*)")
 }
 
 // Zig: test "term51: Page.clone: copy and original are independent"
@@ -2760,7 +2760,7 @@ func TestPg1_panic_Page_exactRowCapacity_styles_capacity_overflows_u16(t *testin
 	defer page.Deinit()
 	cells := page.GetCells(page.GetRow(0))
 	for i := range 54000 {
-		cells[i].style_id = StyleId(i + 1)
+		cells[i].style_id = StyleID(i + 1)
 	}
 	pg1ExpectPanic(t, func() {
 		page.ExactRowCapacity(0, 1)
@@ -3139,7 +3139,7 @@ func TestPg1_panic_Page_insertHyperlink_empty_uri(t *testing.T) {
 	defer page.Deinit()
 	// Zig: string_alloc.alloc asserts n > 0 for the URI.
 	pg1ExpectPanic(t, func() {
-		_, _ = page.InsertHyperlink(Hyperlink{id: pg1Implicit(0)})
+		_, _ = page.InsertHyperlink(Hyperlink{ID: pg1Implicit(0)})
 	})
 }
 

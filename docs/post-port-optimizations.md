@@ -117,9 +117,16 @@ running), so "same" and differences of that size are not results.
   and a mode check inlines to a bit test.
 - Item 36: erased cells are filled with a doubling `copy` (`pageCellsFill`)
   instead of a loop that assigns one cell at a time.
+- Item 37: `SGRParser.Next` increments its index before each of the two
+  returns at the end of a sequence instead of in a deferred closure, which
+  ran once per SGR sequence. Stream, SGR 27.7 -> 33.4; Terminal, SGR
+  11.7 -> 12.6.
 
 Through a terminal the port is now at 1.5 times upstream's plain build on
-plain text, 2.2 times on coloured text and 2.6 times on the full-screen mix.
+plain text, 2.1 times on coloured text and 2.6 times on the full-screen mix.
+After these the profile of the last two is flat: no function is above 20%,
+and what remains is the size of the cell (the erase fill is a block copy of
+20-byte cells, 14% of the full-screen run) and many small costs.
 
 ## Against upstream (2026-10-07)
 
@@ -188,3 +195,4 @@ There is no phone column: upstream's Zig is not built for the phone.
 | 34 | `Stream.NextSlice` | Every byte of plain text goes through `Next`, `nextUtf8`, the UTF-8 decoder and `handleCodepoint` before `Print`. Done: printable ASCII in the ground state is printed directly. | Zig's compiler merges the calls; upstream's SIMD path prints runs of plain text in bulk. |
 | 35 | `ModesModePacked` | A struct of 40 bools read through a table of accessor functions: a lookup and an indirect call per mode check. Done: one bit per mode. | Zig resolves the field at compile time; the first port resolved it at run time through the table. |
 | 36 | `Screen.ClearCells` and the scroll fill | `for i := range cells { cells[i] = blank }` is not compiled to a block operation. Done: `pageCellsFill`. | Zig's `@memset`. |
+| 37 | `SGRParser.Next` | A deferred closure at the end of every SGR sequence. Done: the increment is written before the two returns. | Zig's `defer` costs nothing. |

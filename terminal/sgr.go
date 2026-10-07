@@ -237,14 +237,20 @@ func (self *SGRParser) Next() Optional[SGRAttribute] {
 		// We're more likely to not be done than to be done.
 
 		// Add one to ensure we don't loop on unset
-		defer func() { self.idx += 1 }()
+		//
+		// Zig: `defer self.idx += 1;`. Go: the increment is written before
+		// each of the two returns below, after `self.idx == 0` is read; a
+		// deferred closure ran at the end of every SGR sequence
+		// (docs/post-port-optimizations.md item 37).
 
 		// If we're at index zero it means we must have an empty list
 		// and an empty list implicitly means unset, otherwise we're
 		// done and return null.
 		if self.idx == 0 {
+			self.idx += 1
 			return Some(SGRAttribute{Tag: SGRAttributeTagUnset})
 		}
+		self.idx += 1
 		return None[SGRAttribute]()
 	}
 

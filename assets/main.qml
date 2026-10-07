@@ -238,50 +238,80 @@ Page {
             }
 
             // The bar, the last thing on the page (right above the phone's
-            // on-screen keyboard rows when those are up): the tabs button, the
-            // keys, the three dots. Its buttons never take the focus: a focused
-            // button would take the next Enter or Space as a click. Ctrl and
-            // Alt are sticky: they apply to the next key and show in the
-            // primary colour until then.
+            // on-screen keyboard rows when those are up), after the
+            // browser's: one dark strip with the tabs button at the left end,
+            // the three dots at the right end, and between them, as flat
+            // cells, the keys the phone's keyboard lacks. Nothing on it takes
+            // the focus. Ctrl and Alt are sticky: they apply to the next key
+            // and stay in the primary colour until then. All sizes are in
+            // pixels, from the browser's bar on this phone.
             Container {
-                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
                 horizontalAlignment: HorizontalAlignment.Fill
+                Container { // the line on the strip's top edge
+                    background: Color.create("#141414")
+                    preferredHeight: 2
+                    horizontalAlignment: HorizontalAlignment.Fill
+                }
+                Container {
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                    background: Color.create("#1F1F1F")
+                    preferredHeight: 118
+                    horizontalAlignment: HorizontalAlignment.Fill
 
-                Button { text: "" + page.tabCount; imageSource: "asset:///images/tabs.png"
-                         layoutProperties: StackLayoutProperties { spaceQuota: 1.4 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.drawer = true }
-
-                Button { text: "Esc"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.send("bar", { name: "esc" }) }
-                Button { text: "Ctrl"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         appearance: page.ctrl ? ControlAppearance.Primary : ControlAppearance.Default
-                         onClicked: page.send("bar", { name: "ctrl" }) }
-                Button { text: "Alt"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         appearance: page.alt ? ControlAppearance.Primary : ControlAppearance.Default
-                         onClicked: page.send("bar", { name: "alt" }) }
-                Button { text: "Tab"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.send("bar", { name: "tab" }) }
-                Button { text: "←"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.send("bar", { name: "left" }) }
-                Button { text: "↓"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.send("bar", { name: "down" }) }
-                Button { text: "↑"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.send("bar", { name: "up" }) }
-                Button { text: "→"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.send("bar", { name: "right" }) }
-                Button { imageSource: "asset:///images/dots.png"
-                         layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                         focusPolicy: FocusPolicy.None
-                         onClicked: page.openActionMenu() }
+                    BarCell { text: "" + page.tabCount; icon: "asset:///images/tabs.png"
+                              preferredWidth: 144
+                              onPressed: page.drawer = true }
+                    Container { // a divider
+                        background: Color.create("#3C3C3C")
+                        preferredWidth: 2
+                        topMargin: 18
+                        bottomMargin: 18
+                        verticalAlignment: VerticalAlignment.Fill
+                    }
+                    Container {
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                        leftPadding: 8
+                        rightPadding: 8
+                        topPadding: 16
+                        bottomPadding: 16
+                        verticalAlignment: VerticalAlignment.Fill
+                        BarCell { text: "Esc"; plain: Color.create("#2E2E2E")
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  onPressed: page.send("bar", { name: "esc" }) }
+                        BarCell { text: "Ctrl"; plain: Color.create("#2E2E2E"); armed: page.ctrl
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "ctrl" }) }
+                        BarCell { text: "Alt"; plain: Color.create("#2E2E2E"); armed: page.alt
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "alt" }) }
+                        BarCell { text: "Tab"; plain: Color.create("#2E2E2E")
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "tab" }) }
+                        BarCell { text: "←"; plain: Color.create("#2E2E2E")
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "left" }) }
+                        BarCell { text: "↓"; plain: Color.create("#2E2E2E")
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "down" }) }
+                        BarCell { text: "↑"; plain: Color.create("#2E2E2E")
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "up" }) }
+                        BarCell { text: "→"; plain: Color.create("#2E2E2E")
+                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                  leftMargin: 8; onPressed: page.send("bar", { name: "right" }) }
+                    }
+                    Container { // a divider
+                        background: Color.create("#3C3C3C")
+                        preferredWidth: 2
+                        topMargin: 18
+                        bottomMargin: 18
+                        verticalAlignment: VerticalAlignment.Fill
+                    }
+                    BarCell { icon: "asset:///images/dots.png"
+                              preferredWidth: 144
+                              onPressed: page.openActionMenu() }
+                }
             }
 
             // The input field: while it has the focus the phone shows its

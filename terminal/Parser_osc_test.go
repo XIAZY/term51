@@ -88,10 +88,10 @@ func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 		// Zig passes these two in this order: (actual, expected).
 		expectEqual(t, cmd.ColorOperation.Terminator, OSCTerminatorBel)
 		expect(t, cmd.ColorOperation.Op == OSCParsersColorOperationOsc112, "cmd.color_operation.op == .osc_112")
-		expect(t, cmd.ColorOperation.Requests.count() == 1, "cmd.color_operation.requests.count() == 1")
-		it := cmd.ColorOperation.Requests.constIterator(0)
+		expect(t, cmd.ColorOperation.Requests.Count() == 1, "cmd.color_operation.requests.count() == 1")
+		it := cmd.ColorOperation.Requests.ConstIterator(0)
 		{
-			op := it.next()
+			op := it.Next()
 			expect(t, op != nil, "it.next().?")
 			expect(t, op.Tag == OSCParsersColorRequestReset, "op.* == .reset")
 			expectEqual(t,
@@ -99,7 +99,7 @@ func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 				*op,
 			)
 		}
-		expect(t, it.next() == nil, "it.next() == null")
+		expect(t, it.Next() == nil, "it.next() == null")
 	}
 }
 
@@ -127,14 +127,14 @@ func TestParser_osc_104_empty(t *testing.T) {
 		// Zig passes these two in this order: (actual, expected).
 		expectEqual(t, cmd.ColorOperation.Terminator, OSCTerminatorBel)
 		expect(t, cmd.ColorOperation.Op == OSCParsersColorOperationOsc104, "cmd.color_operation.op == .osc_104")
-		expect(t, cmd.ColorOperation.Requests.count() == 1, "cmd.color_operation.requests.count() == 1")
-		it := cmd.ColorOperation.Requests.constIterator(0)
+		expect(t, cmd.ColorOperation.Requests.Count() == 1, "cmd.color_operation.requests.count() == 1")
+		it := cmd.ColorOperation.Requests.ConstIterator(0)
 		{
-			op := it.next()
+			op := it.Next()
 			expect(t, op != nil, "it.next().?")
 			expect(t, op.Tag == OSCParsersColorRequestResetPalette, "op.* == .reset_palette")
 		}
-		expect(t, it.next() == nil, "it.next() == null")
+		expect(t, it.Next() == nil, "it.next() == null")
 	}
 }
 

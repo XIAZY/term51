@@ -21,6 +21,7 @@ Page {
     property bool created: false     // the terminal's window has been asked for
     property string termBackground: "#101418" // the theme's, around the terminal
     property bool bell: true         // a program's bell makes a sound
+    property bool covered: false     // a sheet is over the terminal
     property real cellW: 0           // a cell in pixels, from Go
     property real cellH: 0
 
@@ -175,13 +176,19 @@ Page {
         SystemToast { id: toast },
         SystemSound { id: bellSound; sound: SystemSound.GeneralNotification },
         ArrayDataModel { id: tabsModel },
-        SettingsSheet { id: settingsSheet },
+        SettingsSheet {
+            id: settingsSheet
+            onOpened: page.covered = true
+            onClosed: page.covered = false
+        },
 
         // The tabs: a tap shows one, a press and hold offers to close it.
         // The one on screen says "shown"; one whose bell rang while another
         // was shown says "bell".
         Sheet {
             id: tabsSheet
+            onOpened: page.covered = true
+            onClosed: page.covered = false
             Page {
                 titleBar: TitleBar {
                     title: "Tabs"
@@ -245,6 +252,10 @@ Page {
         ForeignWindowControl {
             id: fwc
             windowId: "term51"
+            // Under a sheet the terminal's window is taken off the screen:
+            // otherwise the phone blends the sheet's window with it on
+            // every frame, and the sheet scrolls slowly.
+            visible: !page.covered
             updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
             horizontalAlignment: HorizontalAlignment.Fill
             layoutProperties: StackLayoutProperties { spaceQuota: 1 }

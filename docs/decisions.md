@@ -7,6 +7,7 @@ deleted.
 
 | Date (UTC) | Decision | By | Why |
 |---|---|---|---|
+| 2026-10-07 | While a sheet (Tabs, Settings) covers the terminal, the terminal's window is taken off the screen. | AlphaToad, mitchellh | The owner found scrolling the settings sheet slow. The terminal shows through a hole in the page, so with its window on, the phone blends two full-screen windows for every frame of the sheet although only one can be seen. |
 | 2026-10-07 | The colour scheme a program is told (dark or light) is the one the colours make: dark when the background is darker than middle grey. The setting `identity.dark` is gone. | mitchellh | The terminal knows its own colours; a separate switch could only be wrong. |
 | 2026-10-07 | Four named themes on the settings sheet (Dark, Black, Light, Solarized dark). A theme is not a setting of its own: choosing one fills the file's colour settings, and the sheet shows the theme whose colours the file holds, or "Custom" for someone's own. It applies at once to every tab, replacing colours a program has set. | mitchellh (the list), anchron (how it is stored) | One place holds the colours, so a name and the colours can never disagree, and a hand-edited file keeps working. |
 | 2026-10-07 | The cursor's shape (block, bar, underline) is a setting, applied at once. It is the shape while no program asks for one; a program's own choice wins until it asks for the default again. | mitchellh, anchron | Editors change the cursor on purpose (vi's insert mode); the setting is the default, not an override. |

@@ -120,7 +120,7 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	a := New(cfg, p)
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
-	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0, "mono": true}})
+	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0}})
 	wait(t, "the first prompt", func() bool { return strings.Contains(p.screen(), "$") })
 	return a, p, done
 }
@@ -263,4 +263,24 @@ func TestCopyIsCapped(t *testing.T) {
 		t.Errorf("copied %d bytes (limit %d), end kept: %v, notices: %d", n, copyLimit, end, notices)
 	}
 	a.Quit()
+}
+
+// Characters typed into the page's input field arrive as "text"; the key
+// bar's sticky Ctrl applies to the next of them.
+func TestTextFromTheInputField(t *testing.T) {
+	a, p, done := startApp(t)
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "echo $((6*7))-typed"}})
+	a.Send(Command{Name: "key", Args: map[string]any{"down": true, "key": 13.0, "keycap": 13.0}})
+	wait(t, "the output", func() bool { return strings.Contains(p.screen(), "42-typed") })
+
+	// Sticky Ctrl, then "d" from the input field: the shell ends, and with
+	// it the app.
+	a.Send(Command{Name: "bar", Args: map[string]any{"name": "ctrl"}})
+	wait(t, "Ctrl shown as armed", func() bool { return p.get("ctrl") == true })
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "d"}})
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("Ctrl-D from the input field did not end the shell")
+	}
 }

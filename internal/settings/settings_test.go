@@ -35,7 +35,7 @@ func TestAnEmptyOrPartialFileKeepsTheDefaults(t *testing.T) {
 	}
 	s, warnings, err := Parse([]byte(`
 # what a person would type on the phone
-fontPx = 20
+fontPt = 8
   identity.terminal=xterm
 theme.cursor = #FF8000
 IDENTITY.DARK = no
@@ -45,7 +45,7 @@ identity.answerback = " hello "
 		t.Fatal(warnings, err)
 	}
 	want := Default()
-	want.FontPx = 20
+	want.FontPt = 8
 	want.Identity.Terminal = "xterm"
 	want.Theme.Cursor = "#FF8000"
 	want.Identity.Dark = false
@@ -80,12 +80,12 @@ func TestListsAreOneLinePerValue(t *testing.T) {
 // A newer app's file read by this one: the names it does not know are
 // warnings, and everything else is used.
 func TestAnUnknownNameIsAWarning(t *testing.T) {
-	s, warnings, err := Parse([]byte("fontPx = 20\ntabs.max = 8\nligatures = on\n"))
+	s, warnings, err := Parse([]byte("fontPt = 8\ntabs.max = 8\nligatures = on\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.FontPx != 20 {
-		t.Errorf("fontPx %v, want 20", s.FontPx)
+	if s.FontPt != 8 {
+		t.Errorf("fontPt %v, want 8", s.FontPt)
 	}
 	if len(warnings) != 2 || !strings.Contains(warnings[0], "line 2") || !strings.Contains(warnings[0], "tabs.max") || !strings.Contains(warnings[1], "ligatures") {
 		t.Errorf("warnings: %q", warnings)
@@ -94,16 +94,14 @@ func TestAnUnknownNameIsAWarning(t *testing.T) {
 
 func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 	cases := []struct{ in, names string }{
-		{"frontend = opengl", "frontend"},
-		{"fontPx = 0", "fontPx"},
-		{"fontPx = 1000", "fontPx"},
-		{"fontPx = big", "fontPx"},
+		{"fontPt = 0", "fontPt"},
+		{"fontPt = 1000", "fontPt"},
+		{"fontPt = big", "fontPt"},
 		{`shell = ""`, "shell"},
 		{"term = xterm 256", "term"},
 		{`term = ""`, "term"},
 		{"scrollbackBytes = 99999999999", "scrollbackBytes"},
 		{"scrollbackBytes = -1", "scrollbackBytes"},
-		{"rawKeys = maybe", "rawKeys"},
 		{"theme.foreground = red", "theme.foreground"},
 		{"theme.background = #12345", "theme.background"},
 		{"theme.cursor = #gggggg", "theme.cursor"},
@@ -112,8 +110,8 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 		{`identity.name = "x\u001b[2J"`, "identity.name"},
 		{`identity.answerback = "a\nb"`, "identity.answerback"},
 		{"identity.versionNumber = -1", "identity.versionNumber"},
-		{"fontPx = 20\nfontPx = 30", "fontPx is set twice"},
-		{"fontPx = 20\njust some words", "line 4"}, // two lines come before each case
+		{"fontPt = 8\nfontPt = 30", "fontPt is set twice"},
+		{"fontPt = 8\njust some words", "line 4"}, // two lines come before each case
 		{`identity.name = "unclosed`, "identity.name"},
 	}
 	for _, c := range cases {
@@ -146,9 +144,7 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Errorf("the default file read back: %+v, %v, %v", got, w, err)
 	}
 
-	s.Frontend = FrontendPixels
-	s.RawKeys = true
-	s.FontPx = 28.5
+	s.FontPt = 8.5
 	s.Shell = "/bin/bash"
 	s.Args = []string{"-l", "", " spaced ", `"quoted"`}
 	s.Term = "xterm"
@@ -182,16 +178,16 @@ func TestSaveAndLoad(t *testing.T) {
 
 	// Settings that make no sense are not written, and the file stays.
 	bad := s
-	bad.FontPx = -1
+	bad.FontPt = -1
 	if err := Save(path, bad); err == nil {
-		t.Error("Save accepted fontPx -1")
+		t.Error("Save accepted fontPt -1")
 	}
 	if again, _, _ := Load(path); !reflect.DeepEqual(again, s) {
 		t.Error("a refused Save changed the file")
 	}
 
 	// A damaged file: the defaults, with the error.
-	if err := os.WriteFile(path, []byte("fontPx 20\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("fontPt 8\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if s, _, err := Load(path); err == nil || !reflect.DeepEqual(s, Default()) {

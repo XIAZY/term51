@@ -47,9 +47,11 @@ import (
 	"syscall"
 )
 
-// openPOSIX opens a pseudo-terminal with posix_openpt, grantpt, unlockpt and
-// ptsname.
-func openPOSIX() (master, slave *os.File, err error) {
+// Open opens a new pseudo-terminal with posix_openpt, grantpt, unlockpt and
+// ptsname. It returns the master side, which this process reads the
+// program's output from and writes input to, and the slave side, which is
+// given to the program.
+func Open() (master, slave *os.File, err error) {
 	var name [256]C.char
 	fd, cerr := C.open_master(&name[0], C.size_t(len(name)))
 	if fd < 0 {

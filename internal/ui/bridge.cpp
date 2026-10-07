@@ -33,7 +33,7 @@ QString Bridge::paste() {
 void Bridge::postState(const QString &json) { emit state(json); }
 void Bridge::postEvent(const QString &json) { emit event(json); }
 
-extern "C" int ui_run(const char *page) {
+extern "C" int ui_run(void) {
     static int argc = 1;
     static char arg0[] = "term51";
     static char *argv[] = {arg0, 0};
@@ -42,7 +42,7 @@ extern "C" int ui_run(const char *page) {
     QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
     Application app(argc, argv);
     bridge = new Bridge;
-    QmlDocument *qml = QmlDocument::create(QString("asset:///%1.qml").arg(QString::fromUtf8(page))).parent(&app);
+    QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(&app);
     if (qml->hasErrors())
         return 1;
     qml->setContextProperty("bridge", bridge);

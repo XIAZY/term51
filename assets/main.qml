@@ -3,7 +3,7 @@ import bb.system 1.2
 
 // The terminal as a column of text labels, one per row, in a monospace
 // font. Go sends the rows that changed as rich text; this page only shows
-// them. The key bar and the keyboard work as on the pixel page.
+// them.
 //
 // The size of a cell is measured, not assumed: a hidden label holds 80
 // characters, and its laid-out size gives the width of one and the height
@@ -17,10 +17,9 @@ Page {
     property int tabCount: 1
     property int tabIndex: 0
 
-    property int fontPt: 7           // the labels' font size, in points
+    property real fontPt: 7          // the labels' font size, in points (from the settings)
     property real cellW: 0
     property real cellH: 0
-    property real narrowW: -1        // the width of 80 "i", to check the font
     property real areaW: 0
     property real areaH: 0
     property int cols: 0
@@ -44,9 +43,7 @@ Page {
             return
         cols = c
         rows = r
-        // In a monospace font 80 "i" are as wide as 80 "M".
-        var mono = narrowW < 0 || Math.abs(narrowW - cellW * 80) < 1
-        send("grid", { cols: c, rows: r, cw: Math.round(cellW), ch: Math.round(cellH), mono: mono })
+        send("grid", { cols: c, rows: r, cw: Math.round(cellW), ch: Math.round(cellH) })
     }
 
     // Makes the column hold exactly n labels.
@@ -66,11 +63,14 @@ Page {
     }
 
     onCreationCompleted: {
+        input.requestFocus()
+        page.send("ready")
         bridge.state.connect(function(json) {
             var s = JSON.parse(json)
             if (s.ctrl !== undefined) page.ctrl = s.ctrl
             if (s.alt !== undefined) page.alt = s.alt
             if (s.title !== undefined) page.termTitle = s.title
+            if (s.fontPt !== undefined) page.fontPt = s.fontPt
             if (s.tabs !== undefined) page.tabCount = s.tabs.length
             if (s.current !== undefined) page.tabIndex = s.current
         })
@@ -141,11 +141,17 @@ Page {
         }
     ]
 
-    keyListeners: KeyListener {
-        onKeyPressed: page.send("key", page.keyArgs(event, true))
-        onKeyReleased: page.send("key", page.keyArgs(event, false))
+    // Characters come through the input field at the bottom of the page (so
+    // that the phone shows its on-screen keyboard rows, and symbols can be
+    // typed). The field always has the focus; its key listener sends only
+    // the keys that are not characters: Backspace, Tab, Escape, the arrows.
+    // Enter is the field's "submitted".
+    function isCharacterKey(event) {
+        var k = event.key
+        if (k == 13 || k == 10 || k == 0xF00D)
+            return true // Enter: handled by the input field
+        return k >= 0x20 && k != 0x7F && k < 0xF000
     }
-
     attachedObjects: [
         SystemToast { id: toast },
         ComponentDefinition {
@@ -159,11 +165,6 @@ Page {
                 topMargin: 0
                 bottomMargin: 0
                 horizontalAlignment: HorizontalAlignment.Left
-                // Far wider than the screen: a single-line label that is one
-                // pixel too narrow would end its text with an ellipsis. The
-                // grid container clips.
-                minWidth: 4000
-                preferredWidth: 4000
             }
         }
     ]
@@ -206,9 +207,8 @@ Page {
                      onClicked: page.send("bar", { name: "right" }) }
         }
 
-        // The measuring label: 80 characters, never shown. (It and the one
-        // after it are invisible but still take two rows of space above
-        // the grid.)
+        // The measuring label: 80 characters, never shown (it is invisible
+        // but still takes a row of space above the grid).
         Label {
             id: probe
             text: "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
@@ -229,33 +229,11 @@ Page {
             }
         }
 
-        // A second one, of 80 narrow letters: in a monospace font it is as
-        // wide as the first. If the family name is not known to the phone,
-        // Cascades falls back to a proportional font without saying so.
-        Label {
-            text: "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
-            multiline: false
-            textStyle.fontFamily: "Monospace"
-            textStyle.fontSize: FontSize.PointValue
-            textStyle.fontSizeValue: page.fontPt
-            topMargin: 0
-            bottomMargin: 0
-            opacity: 0
-            horizontalAlignment: HorizontalAlignment.Left
-            attachedObjects: LayoutUpdateHandler {
-                onLayoutFrameChanged: {
-                    page.narrowW = layoutFrame.width
-                    page.fit()
-                }
-            }
-        }
-
         // The terminal: one label per row. A vertical drag scrolls the
         // scrollback.
         Container {
             id: grid
             layout: StackLayout {}
-            clipContentToBounds: true
             horizontalAlignment: HorizontalAlignment.Fill
             layoutProperties: StackLayoutProperties { spaceQuota: 1 }
             property real touchY: 0
@@ -282,6 +260,32 @@ Page {
                         page.send("scroll", { rows: -d })
                         grid.touchY += d * page.cellH
                     }
+                }
+            }
+        }
+
+        // The input field: it holds the focus, so the phone shows its
+        // on-screen keyboard rows as for any text field. What is typed goes
+        // to the shell at once and the field is emptied.
+        TextField {
+            id: input
+            hintText: "type here"
+            horizontalAlignment: HorizontalAlignment.Fill
+            inputMode: TextFieldInputMode.Text
+            input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff
+            input.submitKey: SubmitKey.EnterKey
+            input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
+            input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
+            onTextChanging: {
+                if (text.length > 0) {
+                    page.send("text", { text: text })
+                    input.text = ""
+                }
+            }
+            keyListeners: KeyListener {
+                onKeyPressed: {
+                    if (!page.isCharacterKey(event))
+                        page.send("key", page.keyArgs(event, true))
                 }
             }
         }

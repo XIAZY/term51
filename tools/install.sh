@@ -8,15 +8,17 @@
 #   ~/.ssh/config) and must reach a root shell on the phone. The package
 #   defaults to the one tools/build.sh writes.
 #
-# The package is copied to the phone's SD card (REMOTE_DIR), not its internal
-# storage, and removed after a successful install.
+# The package is copied to the phone's /tmp (REMOTE_DIR), which is memory
+# (/dev/shmem), and removed after a successful install. It cannot go to the
+# SD card: the phone's installer is not allowed to read from there (found on
+# the first install, 2026-10-07: "Permission denied").
 set -eu
 
 host=${1:?usage: $0 <ssh-host> [package.bar]}
 bar=${2:-$(cd "$(dirname "$0")/.." && pwd)/build/io.github.xiazy.term51.bar}
 [ -f "$bar" ] || { echo "error: no such package: $bar" >&2; exit 1; }
 
-remote_dir=${REMOTE_DIR:-/accounts/1000/removable/sdcard/term51}
+remote_dir=${REMOTE_DIR:-/tmp}
 remote="$remote_dir/$(basename "$bar")"
 scp -q "$bar" "$host:$remote"
 

@@ -2,10 +2,11 @@
 //
 // The master side stays in this process; the program gets the slave side as
 // its standard input, output and error and as its controlling terminal, in a
-// new session. The pty is opened with the POSIX calls posix_openpt, grantpt,
-// unlockpt and ptsname, which QNX (BlackBerry 10) and Linux both provide, so
-// the same code builds for the phone and for tests on the development
-// machine. creack/pty has no QNX support, which is why this package exists.
+// new session. How the pty is opened depends on the system, one way each: on
+// BlackBerry 10, whose C library has no posix_openpt, the BSD devices
+// /dev/pty[p-s]? (pty_qnx.go); elsewhere, where the tests run, the POSIX
+// calls (pty_posix.go). creack/pty has no QNX support, which is why this
+// package exists.
 package pty
 
 /*
@@ -40,30 +41,6 @@ type Size struct {
 	Rows, Cols     uint16
 	XPixel, YPixel uint16
 }
-
-// Open opens a new pseudo-terminal. It returns the master side, which this
-// process reads the program's output from and writes input to, and the slave
-// side, which is given to the program.
-//
-// It first tries the POSIX calls (posix_openpt), where the system has them
-// (pty_posix.go). BlackBerry 10 declares them in its headers but its C
-// library does not contain them, and it has only BSD-style pseudo-terminals
-// with no /dev/ptmx (found on a real phone on 2026-10-03, and at link time):
-// there openPOSIX fails at once (pty_qnx.go) and Open falls back to openBSD.
-func Open() (master, slave *os.File, err error) {
-	master, slave, perr := openPOSIXFunc()
-	if perr == nil {
-		return master, slave, nil
-	}
-	master, slave, berr := openBSD(bsdDevDir)
-	if berr == nil {
-		return master, slave, nil
-	}
-	return nil, nil, fmt.Errorf("pty: no pseudo-terminal: %v; %v", perr, berr)
-}
-
-// openPOSIXFunc is openPOSIX; tests replace it to force the BSD fallback.
-var openPOSIXFunc = openPOSIX
 
 // bsdDevDir is where BSD-style pseudo-terminals live; tests change it.
 var bsdDevDir = "/dev"

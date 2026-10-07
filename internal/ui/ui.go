@@ -21,15 +21,12 @@ import (
 
 var handler func(name, argsJSON string)
 
-// Run shows the UI, the page assets/<page>.qml, and returns when the app
-// exits. It must run on a goroutine locked to an OS thread for its whole
-// life; term51 uses the main thread. commands is called on the UI thread and
-// must not block.
-func Run(page string, commands func(name, argsJSON string)) int {
+// Run shows the UI (assets/main.qml) and returns when the app exits. It must
+// run on a goroutine locked to an OS thread for its whole life; term51 uses
+// the main thread. commands is called on the UI thread and must not block.
+func Run(commands func(name, argsJSON string)) int {
 	handler = commands
-	p := C.CString(page)
-	defer C.free(unsafe.Pointer(p))
-	return int(C.ui_run(p))
+	return int(C.ui_run())
 }
 
 //export goCommand

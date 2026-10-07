@@ -4,7 +4,7 @@
 // The file is plain text that a person can edit on the phone:
 //
 //	# a comment
-//	fontPx = 28
+//	fontPt = 7
 //	shell = /bin/sh
 //	arg = -l
 //	theme.background = #101418
@@ -37,22 +37,13 @@ import (
 	"term51/internal/session"
 )
 
-// The front ends (internal/app).
-const (
-	FrontendText   = "text"
-	FrontendPixels = "pixels"
-)
-
 // Settings is everything the user can set.
 type Settings struct {
-	// Frontend is how the terminal is shown: FrontendText (Cascades text
-	// labels) or FrontendPixels (a window drawn by the app).
-	Frontend string
-	// RawKeys makes the pixel front end read the window's raw key events
-	// instead of Cascades key events.
-	RawKeys bool
-	// FontPx is the font size in pixels.
-	FontPx float64
+	// LogInput writes every key and text command from the page to the log,
+	// to see what the phone really delivers.
+	LogInput bool
+	// FontPt is the size of the terminal's text, in points.
+	FontPt float64
 
 	// Shell is the program to run and Args its arguments. Term is the TERM
 	// it is given.
@@ -131,8 +122,7 @@ func Default() Settings {
 	r := replies.DefaultConfig()
 	t := session.DefaultTheme
 	return Settings{
-		Frontend:        FrontendText,
-		FontPx:          34,
+		FontPt:          7,
 		Shell:           "/bin/sh",
 		Args:            []string{},
 		Term:            session.DefaultTerm,
@@ -162,8 +152,8 @@ func Default() Settings {
 
 // The limits a value is checked against.
 const (
-	MinFontPx          = 6
-	MaxFontPx          = 200
+	MinFontPt          = 3
+	MaxFontPt          = 40
 	MaxScrollbackBytes = 256 << 20 // the phone has about 2 GB for everything
 	maxTextLen         = 256       // names, versions, the answerback
 )
@@ -209,11 +199,8 @@ func (s Settings) Validate() error {
 	bad := func(name, format string, args ...any) error {
 		return fmt.Errorf("settings: %s: %s", name, fmt.Sprintf(format, args...))
 	}
-	if s.Frontend != FrontendText && s.Frontend != FrontendPixels {
-		return bad("frontend", "%q is neither %q nor %q", s.Frontend, FrontendText, FrontendPixels)
-	}
-	if !(s.FontPx >= MinFontPx && s.FontPx <= MaxFontPx) {
-		return bad("fontPx", "%v is not between %d and %d", s.FontPx, MinFontPx, MaxFontPx)
+	if !(s.FontPt >= MinFontPt && s.FontPt <= MaxFontPt) {
+		return bad("fontPt", "%v is not between %d and %d", s.FontPt, MinFontPt, MaxFontPt)
 	}
 	if s.Shell == "" {
 		return bad("shell", "empty")
@@ -311,20 +298,17 @@ func textField(name, comment string, p func(*Settings) *string) field {
 
 // fields is every setting, in the order the file is written.
 var fields = []field{
-	textField("frontend", "How the terminal is shown: text (Cascades text labels) or pixels (a window drawn by the app).",
-		func(s *Settings) *string { return &s.Frontend }),
-	boolField("rawKeys", "With the pixels front end, read the window's raw key events instead of Cascades key events.",
-		func(s *Settings) *bool { return &s.RawKeys }),
-	{"fontPx", "The font size in pixels.",
+	boolField("logInput", "Write every key and text command from the page to the log (to see what the phone delivers).", func(s *Settings) *bool { return &s.LogInput }),
+	{"fontPt", "The size of the terminal's text, in points.",
 		func(s *Settings, v string) error {
 			f, err := strconv.ParseFloat(v, 64)
 			if err != nil {
 				return fmt.Errorf("%q is not a number", v)
 			}
-			s.FontPx = f
+			s.FontPt = f
 			return nil
 		},
-		func(s *Settings) []string { return []string{strconv.FormatFloat(s.FontPx, 'g', -1, 64)} }},
+		func(s *Settings) []string { return []string{strconv.FormatFloat(s.FontPt, 'g', -1, 64)} }},
 	textField("shell", "The program to run.", func(s *Settings) *string { return &s.Shell }),
 	{"arg", "An argument for the shell; one line per argument.",
 		func(s *Settings, v string) error { s.Args = append(s.Args, v); return nil },

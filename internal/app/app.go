@@ -1,16 +1,15 @@
-// Package app is the program on the phone: it owns the native window and
-// connects it to one terminal session.
+// Package app is the program behind the page: it runs the shells and tells
+// the page what to show.
 //
-// One goroutine, locked to its OS thread, owns the window. It takes the
-// commands QML sends (the window's size, key presses, the key bar), the
-// window's own events (raw keys, touch) and the session's news, and draws a
-// frame when something changed.
+// The page is a column of Cascades text labels, one per terminal row. It
+// measures its monospace font and says how many cells fit; the app answers
+// with the rows that changed, as rich text. Key presses, the key bar and the
+// menu come back as commands.
 package app
 
 import (
 	"encoding/json"
 	"log"
-	"time"
 
 	"term51/internal/keys"
 	"term51/internal/session"
@@ -30,14 +29,6 @@ type Command struct {
 	Name string
 	Args map[string]any
 }
-
-// The pixel loop's timing.
-const (
-	frameGap   = 16 * time.Millisecond  // at most one frame per gap
-	activeWait = 8 * time.Millisecond   // the wait for window events while busy
-	idleWait   = 50 * time.Millisecond  // and once it has been quiet
-	idleAfter  = 500 * time.Millisecond // for this long
-)
 
 // App is the running program.
 type App struct {
@@ -85,14 +76,6 @@ func (a *App) state(v map[string]any) {
 	if err == nil {
 		a.pub.State(string(b))
 	}
-}
-
-// Page is the QML page of the configured front end.
-func (a *App) Page() string {
-	if a.cfg.Frontend == settings.FrontendPixels {
-		return "pixels"
-	}
-	return "text"
 }
 
 // bar handles a key of the key bar.

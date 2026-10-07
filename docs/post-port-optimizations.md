@@ -122,11 +122,31 @@ running), so "same" and differences of that size are not results.
   ran once per SGR sequence. Stream, SGR 27.7 -> 33.4; Terminal, SGR
   11.7 -> 12.6.
 
+- Item 38: the cell is upstream's packed 64-bit value instead of a struct
+  of fields (8 bytes, not 20). The uses were rewritten by `scripts/packcell`.
+  Measured on top of item 37, Terminal ASCII / SGR / mixed:
+
+  | | Before | Item 38 |
+  |---|---|---|
+  | Development machine | 18.8 / 12.7 / 9.3 | 19.2 / 12.8 / 10.7 |
+  | Phone | 4.70 / 2.84 / 2.14 | 4.60 / 2.66 / 2.25 |
+
+  On the development machine it helps erase-heavy output (+15% on the mixed
+  input) and nothing else. On the phone it is not a speed gain: every
+  difference is inside the phone's run-to-run variation of about 10%, and
+  64-bit shifts and masks cost more on its 32-bit processor. It was merged
+  for upstream's layout and for memory (project lead, 2026-10-07): 10,000
+  lines of 80-column scrollback take about 6 MB of cells instead of 16 MB.
+
+The phone after item 37, for the record (best of 3, MB/s): Stream 28.7 /
+12.2 / 10.2, Terminal 4.70 / 2.84 / 2.14; at the baseline it was 5.46 / 1.93
+/ 1.48 and 1.45 / 1.02 / 0.83.
+
 Through a terminal the port is now at 1.5 times upstream's plain build on
-plain text, 2.1 times on coloured text and 2.6 times on the full-screen mix.
+plain text, 2.0 times on coloured text and 2.2 times on the full-screen mix.
 After these the profile of the last two is flat: no function is above 20%,
-and what remains is the size of the cell (the erase fill is a block copy of
-20-byte cells, 14% of the full-screen run) and many small costs.
+and what remains is many small costs (before item 38 the erase fill, a
+block copy of 20-byte cells, was 14% of the full-screen run).
 
 ## Against upstream (2026-10-07)
 
@@ -196,3 +216,4 @@ There is no phone column: upstream's Zig is not built for the phone.
 | 35 | `ModesModePacked` | A struct of 40 bools read through a table of accessor functions: a lookup and an indirect call per mode check. Done: one bit per mode. | Zig resolves the field at compile time; the first port resolved it at run time through the table. |
 | 36 | `Screen.ClearCells` and the scroll fill | `for i := range cells { cells[i] = blank }` is not compiled to a block operation. Done: `pageCellsFill`. | Zig's `@memset`. |
 | 37 | `SGRParser.Next` | A deferred closure at the end of every SGR sequence. Done: the increment is written before the two returns. | Zig's `defer` costs nothing. |
+| 38 | `PageCell` | A struct of fields, 20 bytes, where upstream has a packed 8-byte value: erasing, scrolling and copying move 2.5 times the memory. Done: the packed value (see "Second step"). | Mapping rule "packed structs become ordinary structs", applied to the cell without measuring. |

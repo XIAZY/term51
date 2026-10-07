@@ -1,5 +1,10 @@
 # Port status
 
+**The port is complete** (signed off 2026-10-06, `verification.md`): every
+file below is ported. The table is the record of how each file was verified
+at that time; what changed afterwards (the public API, the speed work) is in
+`public-api.md`, `post-port-optimizations.md` and `go-native-revisit.md`.
+
 One row per Zig file. A file is "ported" when its Go file exists, every
 upstream test and every project test for it is translated and passes, and the
 recorded cases that exercise it pass, on this machine and as a 32-bit ARM

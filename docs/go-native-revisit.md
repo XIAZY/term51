@@ -20,6 +20,37 @@ and optimise later"):
 
 A recommended order is at the end.
 
+## Outcome (2026-10-07)
+
+The list below was written before the revisit and is kept as the record of
+what was considered. The project owner's rule for it: **as close to upstream
+as possible while making sense as a Go library; faithful does not mean
+function by function, it means the same features and behaviour.** Each item
+was asked two things: what does upstream do, and does changing it make the
+library make more sense in Go? What came of it:
+
+| Item | Outcome |
+|---|---|
+| 1.1 no idiomatic API | **Done.** Package `vt` and one package per namespace, generated from upstream's own public list (`src/lib_vt.zig`): nothing invented. `public-api.md`. |
+| 1.2 one large package, 1.4 file names | **Kept.** Splitting means untangling files that refer to each other (a redesign); the `vt` packages give the short names. File names stay upstream's, to find things. |
+| 1.3 exported names | **Done differently:** exported fields only for the types a user reads or fills in; the cell, row and mode storage behind methods. |
+| 2.1 `Optional[T]` | **Kept.** The standard library has the same shape (`sql.Null[T]`). |
+| 2.2 tagged unions | **Kept**, except how the stream hands actions over: a pointer to one reused action (speed, and the public handler signature). |
+| 2.3 field names | **Done** for the exported fields (Go names, by tool); internal fields keep upstream's. |
+| 2.4 panics | **Done where input can reach:** a zero size is an error. A nil pointer, an undeclared enum value or an oversized code point stays a panic, as a programming mistake does in Go. |
+| 2.5 errors that cannot happen | **Kept.** They sit in signatures the translated tests check; an always-nil error costs a Go caller nothing. |
+| 2.6 allocator leftovers, `Deinit` | **Done** for the allocator stand-in (a `bool` where upstream's behaviour depends on it). `Deinit` methods kept: most do real work and upstream requires one on a stream handler. |
+| 2.7 to 2.12 generics, `@hasDecl` interfaces, fixed widths, `goto`, `errdefer`, `// Zig:` comments | **Kept.** Internal, correct, and what keeps each function traceable to upstream. |
+| 3.1 the Zig writer | **Done at the surface:** public output functions take an `io.Writer`; inside, the writer stays because output depends on its fixed-buffer behaviour. |
+| 3.2 to 3.6 Zig's number parsing, hashes, float maths, data structures | **Kept.** Results depend on them. |
+| 4.1 byte bookkeeping | **Kept** (decided at the start). |
+| 4.2 pointer stand-ins | **Kept**; not a measured cost. |
+| 5.1 package-level switches | **Kept.** Upstream fixes the same things at compile time, for the whole program; per-terminal settings would be a feature upstream does not have. They are not in the public API. |
+| 5.2, 5.3 run-time stand-ins, start-up tables | **Kept.** |
+| 6 tests | **Kept** one to one with upstream's; the replayer understands the exported names. |
+| 7.1 platform by build target | **Kept**, as upstream. |
+| Speed | `post-port-optimizations.md`: through a real terminal, from 4.6 to 7.6 times slower than upstream's plain build to 1.5 to 2.6 times. |
+
 ## The target: faithful in behaviour, Go in form (project owner, 2026-10-06)
 
 "A faithful port that makes sense in Go": the same behaviour as upstream,

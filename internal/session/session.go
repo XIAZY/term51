@@ -60,7 +60,8 @@ type RGB struct{ R, G, B uint8 }
 
 // Theme is the colours the terminal starts with. The library leaves the
 // default text and background colours unset, so an application has to give
-// them; the zero Theme is DefaultTheme.
+// them; the zero Theme is DefaultTheme. (So a theme of black text on a black
+// background with nothing else set cannot be asked for; nobody wants it.)
 type Theme struct {
 	Foreground, Background RGB
 	// Cursor is the cursor's colour; nil draws it in the text colour.

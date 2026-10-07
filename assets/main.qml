@@ -1,8 +1,10 @@
 import bb.cascades 1.4
 import bb.system 1.2
 
-// The terminal page: a key bar with the keys the phone's keyboard lacks, the
-// terminal, and a hidden input field. The terminal itself is not drawn by
+// The terminal page, made of what BlackBerry 10 gives every app: the
+// standard title bar, the terminal, and at the bottom a row of buttons for
+// the keys the phone's keyboard lacks. The app's menu (a swipe down from the
+// top edge) has the tabs, Paste and Settings. The terminal itself is not drawn by
 // Cascades: Go draws it with OpenGL into a window of its own, and the
 // ForeignWindowControl below is the place in the page where that window
 // shows.
@@ -63,48 +65,69 @@ Page {
         })
     }
 
-    // With several tabs the title says which one is shown.
+    // The standard title bar: the shown tab's title and, with several
+    // tabs, which one it is. There is no action bar: what would be in it is
+    // in the app's menu.
+    actionBarVisibility: ChromeVisibility.Hidden
     titleBar: TitleBar {
-        title: page.tabCount > 1 ? (page.tabIndex + 1) + "/" + page.tabCount + "  " + page.termTitle : page.termTitle
+        kind: TitleBarKind.FreeForm
+        kindProperties: FreeFormTitleBarKindProperties {
+            Container {
+                layout: DockLayout {}
+                leftPadding: ui.du(3)
+                rightPadding: ui.du(3)
+                Label {
+                    text: page.termTitle
+                    textStyle.base: SystemDefaults.TextStyles.TitleText
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Center
+                }
+                Label {
+                    visible: page.tabCount > 1
+                    text: "tab " + (page.tabIndex + 1) + " of " + page.tabCount
+                    textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                    textStyle.color: Color.Gray
+                    horizontalAlignment: HorizontalAlignment.Right
+                    verticalAlignment: VerticalAlignment.Center
+                }
+            }
+        }
     }
 
-    // Copy takes the selection (long press a word, or Select all). Go
-    // answers with the text; the page owns the clipboard.
-    actions: [
-        ActionItem {
-            title: "Copy"
-            onTriggered: page.send("copy")
-        },
-        ActionItem {
-            title: "Paste"
-            onTriggered: {
-                var text = bridge.paste()
-                if (text.length > 0)
-                    page.send("paste", { text: text })
+    // The app's menu. BlackBerry 10 has icons of its own for closing and
+    // for settings; the other three are ours (tools/icons).
+    Menu.definition: MenuDefinition {
+        actions: [
+            ActionItem {
+                title: "New tab"
+                imageSource: "asset:///images/newtab.png"
+                onTriggered: page.send("newtab")
+            },
+            DeleteActionItem {
+                title: "Close tab"
+                onTriggered: page.send("closetab")
+            },
+            ActionItem {
+                // Until the tabs sheet is built: the next tab.
+                title: "Tabs"
+                imageSource: "asset:///images/tabs.png"
+                enabled: page.tabCount > 1
+                onTriggered: page.send("tab", { index: (page.tabIndex + 1) % page.tabCount })
+            },
+            ActionItem {
+                title: "Paste"
+                imageSource: "asset:///images/paste.png"
+                onTriggered: {
+                    var text = bridge.paste()
+                    if (text.length > 0)
+                        page.send("paste", { text: text })
+                }
             }
-        },
-        ActionItem {
-            title: "New tab"
-            onTriggered: page.send("newtab")
-        },
-        ActionItem {
-            title: "Next tab"
-            enabled: page.tabCount > 1
-            onTriggered: page.send("tab", { index: (page.tabIndex + 1) % page.tabCount })
-        },
-        ActionItem {
-            title: "Close tab"
-            onTriggered: page.send("closetab")
-        },
-        ActionItem {
-            title: "Select all"
-            onTriggered: page.send("selectall")
-        },
-        ActionItem {
-            title: "Clear selection"
-            onTriggered: page.send("unselect")
+        ]
+        settingsAction: SettingsActionItem {
+            enabled: false // until the settings page is built
         }
-    ]
+    }
 
     // Keys reach the shell in one of two ways. Until the terminal is
     // tapped nothing has the focus, and the page's key listener below sends
@@ -134,40 +157,6 @@ Page {
     Container {
         layout: StackLayout {}
         background: Color.create("#101418")
-
-        // The key bar. Its buttons never take the focus: a focused button
-        // would take the next Enter or Space as a click. Ctrl and Alt are sticky: they apply to the next key
-        // and show as armed until then.
-        Container {
-            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-            horizontalAlignment: HorizontalAlignment.Fill
-            background: Color.create("#202428")
-
-            Button { text: "Esc"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "esc" }) }
-            Button { text: page.ctrl ? "[Ctrl]" : "Ctrl"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "ctrl" }) }
-            Button { text: page.alt ? "[Alt]" : "Alt"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "alt" }) }
-            Button { text: "Tab"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "tab" }) }
-            Button { text: "←"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "left" }) }
-            Button { text: "↓"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "down" }) }
-            Button { text: "↑"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "up" }) }
-            Button { text: "→"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                     focusPolicy: FocusPolicy.None
-                     onClicked: page.send("bar", { name: "right" }) }
-        }
 
         // The terminal. Position, Size and Visible: Cascades keeps Go's
         // window over this control's area. A vertical drag scrolls the
@@ -208,11 +197,47 @@ Page {
             }
         }
 
+        // The key row, the last thing on the page (right above the phone's
+        // on-screen keyboard rows when those are up). Its buttons never take
+        // the focus: a focused button would take the next Enter or Space as
+        // a click. Ctrl and Alt are sticky: they apply to the next key and
+        // show in the primary colour until then.
+        Container {
+            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+            horizontalAlignment: HorizontalAlignment.Fill
+
+            Button { text: "Esc"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     onClicked: page.send("bar", { name: "esc" }) }
+            Button { text: "Ctrl"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     appearance: page.ctrl ? ControlAppearance.Primary : ControlAppearance.Default
+                     onClicked: page.send("bar", { name: "ctrl" }) }
+            Button { text: "Alt"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     appearance: page.alt ? ControlAppearance.Primary : ControlAppearance.Default
+                     onClicked: page.send("bar", { name: "alt" }) }
+            Button { text: "Tab"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     onClicked: page.send("bar", { name: "tab" }) }
+            Button { text: "←"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     onClicked: page.send("bar", { name: "left" }) }
+            Button { text: "↓"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     onClicked: page.send("bar", { name: "down" }) }
+            Button { text: "↑"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     onClicked: page.send("bar", { name: "up" }) }
+            Button { text: "→"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
+                     onClicked: page.send("bar", { name: "right" }) }
+        }
+
         // The input field: while it has the focus the phone shows its
         // on-screen keyboard rows, as for any text field. What is typed
         // goes to the shell at once and the field is emptied. It is not
-        // seen and takes no room: the terminal reaches the bottom of the
-        // page.
+        // seen and takes no room.
         TextField {
             id: input
             opacity: 0

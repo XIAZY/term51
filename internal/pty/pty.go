@@ -9,43 +9,9 @@
 package pty
 
 /*
-// glibc declares posix_openpt, grantpt, unlockpt and ptsname only with these
-// feature macros; QNX declares them unconditionally.
-#ifdef __linux__
-#define _GNU_SOURCE
-#endif
-#include <fcntl.h>
-#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-
-// open_master opens a pty master and prepares its slave. On success it
-// returns the master descriptor and copies the slave's path into name; on
-// failure it returns -1 with errno set.
-static int open_master(char *name, size_t len) {
-	int fd = posix_openpt(O_RDWR | O_NOCTTY);
-	if (fd < 0) {
-		return -1;
-	}
-	if (grantpt(fd) != 0 || unlockpt(fd) != 0) {
-		int e = errno;
-		close(fd);
-		errno = e;
-		return -1;
-	}
-	char *p = ptsname(fd);
-	if (p == NULL || strlen(p) >= len) {
-		int e = (p == NULL) ? errno : ENAMETOOLONG;
-		close(fd);
-		errno = e;
-		return -1;
-	}
-	strcpy(name, p);
-	return fd;
-}
 
 static int set_size(int fd, unsigned short rows, unsigned short cols,
 		unsigned short xpixel, unsigned short ypixel) {
@@ -79,9 +45,11 @@ type Size struct {
 // process reads the program's output from and writes input to, and the slave
 // side, which is given to the program.
 //
-// It first tries the POSIX calls (posix_openpt). BlackBerry 10 may declare
-// them but provide only BSD-style pseudo-terminals with no /dev/ptmx (found
-// on a real phone on 2026-10-03), so when they fail it falls back to openBSD.
+// It first tries the POSIX calls (posix_openpt), where the system has them
+// (pty_posix.go). BlackBerry 10 declares them in its headers but its C
+// library does not contain them, and it has only BSD-style pseudo-terminals
+// with no /dev/ptmx (found on a real phone on 2026-10-03, and at link time):
+// there openPOSIX fails at once (pty_qnx.go) and Open falls back to openBSD.
 func Open() (master, slave *os.File, err error) {
 	master, slave, perr := openPOSIXFunc()
 	if perr == nil {
@@ -96,24 +64,6 @@ func Open() (master, slave *os.File, err error) {
 
 // openPOSIXFunc is openPOSIX; tests replace it to force the BSD fallback.
 var openPOSIXFunc = openPOSIX
-
-// openPOSIX opens a pseudo-terminal with posix_openpt, grantpt, unlockpt and
-// ptsname.
-func openPOSIX() (master, slave *os.File, err error) {
-	var name [256]C.char
-	fd, cerr := C.open_master(&name[0], C.size_t(len(name)))
-	if fd < 0 {
-		return nil, nil, fmt.Errorf("posix_openpt: %w", cerr)
-	}
-	master = os.NewFile(uintptr(fd), "/dev/ptmx")
-	path := C.GoString(&name[0])
-	slave, err = os.OpenFile(path, os.O_RDWR|syscall.O_NOCTTY, 0)
-	if err != nil {
-		master.Close()
-		return nil, nil, fmt.Errorf("opening the slave %s: %w", path, err)
-	}
-	return master, slave, nil
-}
 
 // bsdDevDir is where BSD-style pseudo-terminals live; tests change it.
 var bsdDevDir = "/dev"

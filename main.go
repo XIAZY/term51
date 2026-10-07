@@ -40,7 +40,8 @@ func main() {
 	// The settings: a text file in the app's data directory. A file with a
 	// mistake in it is not used at all, and the log says what is wrong.
 	// The first start writes the file with the defaults (settings.Load).
-	cfg, warnings, err := settings.Load("data/settings.conf")
+	const settingsFile = "data/settings.conf"
+	cfg, warnings, err := settings.Load(settingsFile)
 	for _, w := range warnings {
 		log.Printf("settings: %s", w)
 	}
@@ -56,7 +57,7 @@ func main() {
 	// could not be killed (found on the phone, 2026-10-07).
 	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
 		return gpu.Open(group, id, w, h)
-	}, phoneFonts())
+	}, phoneFonts(), func(s settings.Settings) error { return settings.Save(settingsFile, s) })
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()

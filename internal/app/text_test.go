@@ -25,6 +25,7 @@ type page struct {
 	state     map[string]any
 	clipboard string
 	notices   []string
+	saved     []settings.Settings // each time the app saved the settings
 	scr       *screen
 }
 
@@ -240,7 +241,12 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	a := New(cfg, p, func(group, id string, w, h int) (Screen, error) {
 		scr.Resize(w, h)
 		return scr, nil
-	}, fonts)
+	}, fonts, func(s settings.Settings) error {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		p.saved = append(p.saved, s)
+		return nil
+	})
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	// The page's place for the terminal: 40 by 8 cells and a few pixels over.
@@ -330,6 +336,60 @@ func TestTabs(t *testing.T) {
 	case <-done:
 	case <-time.After(10 * time.Second):
 		t.Fatal("the app did not end when its last shell exited")
+	}
+}
+
+// A setting changed on the settings sheet is saved at once; the text size
+// also changes what is on screen. A value that makes no sense changes
+// nothing and says so.
+func TestSettingsFromThePage(t *testing.T) {
+	a, p, done := startApp(t)
+	setting := func(name string) any {
+		m, _ := p.get("settings").(map[string]any)
+		return m[name]
+	}
+	lastSaved := func() (settings.Settings, int) {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		if len(p.saved) == 0 {
+			return settings.Settings{}, 0
+		}
+		return p.saved[len(p.saved)-1], len(p.saved)
+	}
+	wait(t, "the settings on the page", func() bool { return setting("fontPt") == "7" && setting("shell") == "/bin/bash" })
+	if p.get("cols") != 40.0 {
+		t.Fatalf("columns at the start: %v", p.get("cols"))
+	}
+
+	// Twice the text size: about half the columns in the same window (19:
+	// the cell is 17 pixels wide, the window 323).
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "fontPt", "value": "14"}})
+	wait(t, "the larger text", func() bool {
+		s, n := lastSaved()
+		cols, _ := p.scr.size()
+		return n == 1 && s.FontPt == 14 && setting("fontPt") == "14" && p.get("cols") == 19.0 && cols == 19
+	})
+
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "fontPt", "value": "400"}})
+	wait(t, "the refusal", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return len(p.notices) == 1 && strings.Contains(p.notices[0], "fontPt")
+	})
+	if _, n := lastSaved(); n != 1 || setting("fontPt") != "14" || p.get("cols") != 19.0 {
+		t.Errorf("a refused value changed something: saved %d times, fontPt %v, %v columns", n, setting("fontPt"), p.get("cols"))
+	}
+
+	// The program is for tabs opened from now on.
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "/bin/sh"}})
+	wait(t, "the program saved", func() bool {
+		s, n := lastSaved()
+		return n == 2 && s.Shell == "/bin/sh" && setting("shell") == "/bin/sh"
+	})
+
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
 	}
 }
 

@@ -126,6 +126,32 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 	}
 }
 
+func TestSetAndValues(t *testing.T) {
+	s := Default()
+	v := s.Values()
+	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["identity.dark"] != "true" {
+		t.Errorf("values: fontPt %q, shell %q, identity.dark %q", v["fontPt"], v["shell"], v["identity.dark"])
+	}
+	if _, ok := v["arg"]; ok {
+		t.Error("the list arg is among the single values")
+	}
+	if err := s.Set("fontPt", "5.5"); err != nil || s.FontPt != 5.5 {
+		t.Errorf("Set fontPt: %v, %v", s.FontPt, err)
+	}
+	// A value that makes no sense, a name that is not a setting and a list
+	// are refused, and nothing changes.
+	for _, bad := range [][2]string{{"fontPt", "400"}, {"fontPt", "big"}, {"shell", ""}, {"colour", "red"}, {"arg", "-l"}} {
+		before := s
+		before.Args, before.Theme.Palette = nil, nil
+		err := s.Set(bad[0], bad[1])
+		after := s
+		after.Args, after.Theme.Palette = nil, nil
+		if err == nil || !reflect.DeepEqual(before, after) {
+			t.Errorf("Set(%q, %q): error %v, changed %v", bad[0], bad[1], err, !reflect.DeepEqual(before, after))
+		}
+	}
+}
+
 func TestSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.conf")

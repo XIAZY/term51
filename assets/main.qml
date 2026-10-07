@@ -135,7 +135,7 @@ Page {
             }
         ]
         settingsAction: SettingsActionItem {
-            enabled: false // until the settings page is built
+            onTriggered: settingsSheet.open()
         }
     }
 
@@ -165,6 +165,7 @@ Page {
     attachedObjects: [
         SystemToast { id: toast },
         ArrayDataModel { id: tabsModel },
+        SettingsSheet { id: settingsSheet },
 
         // The tabs: a tap shows one, a press and hold offers to close it.
         // The one on screen says "shown"; one whose bell rang while another

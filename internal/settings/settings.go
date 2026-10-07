@@ -344,6 +344,38 @@ func fieldByName(name string) *field {
 	return nil
 }
 
+// Values is every setting that has one value, by its name in the file, as
+// the file would hold it. (The two lists, arg and theme.palette, are not in
+// it.)
+func (s Settings) Values() map[string]string {
+	out := make(map[string]string, len(fields))
+	for i := range fields {
+		if f := &fields[i]; !repeated[f.name] {
+			out[f.name] = f.get(&s)[0]
+		}
+	}
+	return out
+}
+
+// Set changes one setting, named and written as in the file. A name that is
+// not a single-valued setting, or a value that makes no sense, is an error
+// and changes nothing.
+func (s *Settings) Set(name, value string) error {
+	f := fieldByName(name)
+	if f == nil || repeated[f.name] {
+		return fmt.Errorf("settings: %q is not a setting", name)
+	}
+	next := *s
+	if err := f.set(&next, value); err != nil {
+		return fmt.Errorf("settings: %s: %v", f.name, err)
+	}
+	if err := next.Validate(); err != nil {
+		return err
+	}
+	*s = next
+	return nil
+}
+
 // quote writes a value so that Parse reads it back: in double quotes when it
 // is empty, has spaces at its ends, or starts with a quote.
 func quote(v string) string {

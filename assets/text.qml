@@ -17,6 +17,7 @@ Page {
     property int fontPt: 7           // the labels' font size, in points
     property real cellW: 0
     property real cellH: 0
+    property real narrowW: -1        // the width of 80 "i", to check the font
     property real areaW: 0
     property real areaH: 0
     property int cols: 0
@@ -40,7 +41,9 @@ Page {
             return
         cols = c
         rows = r
-        send("grid", { cols: c, rows: r, cw: Math.round(cellW), ch: Math.round(cellH) })
+        // In a monospace font 80 "i" are as wide as 80 "M".
+        var mono = narrowW < 0 || Math.abs(narrowW - cellW * 80) < 1
+        send("grid", { cols: c, rows: r, cw: Math.round(cellW), ch: Math.round(cellH), mono: mono })
     }
 
     // Makes the column hold exactly n labels.
@@ -72,10 +75,11 @@ Page {
                 return
             if (e.count != page.labels.length)
                 page.setCount(e.count)
+            var ls = page.labels // read once: each access converts the list
             for (var i = 0; i < e.rows.length; i++) {
                 var row = e.rows[i]
-                if (row.y < page.labels.length)
-                    page.labels[row.y].text = "<html>" + row.html + "</html>"
+                if (row.y < ls.length)
+                    ls[row.y].text = "<html>" + row.html + "</html>"
             }
         })
     }
@@ -99,6 +103,11 @@ Page {
                 topMargin: 0
                 bottomMargin: 0
                 horizontalAlignment: HorizontalAlignment.Left
+                // Far wider than the screen: a single-line label that is one
+                // pixel too narrow would end its text with an ellipsis. The
+                // grid container clips.
+                minWidth: 4000
+                preferredWidth: 4000
             }
         }
     ]
@@ -107,7 +116,8 @@ Page {
         layout: StackLayout {}
         background: Color.create("#101418")
 
-        // The key bar. Ctrl and Alt are sticky: they apply to the next key
+        // The key bar. Its buttons never take the focus: a focused button
+        // would take the next Enter or Space as a click. Ctrl and Alt are sticky: they apply to the next key
         // and show as armed until then.
         Container {
             layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
@@ -115,24 +125,34 @@ Page {
             background: Color.create("#202428")
 
             Button { text: "Esc"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "esc" }) }
             Button { text: page.ctrl ? "[Ctrl]" : "Ctrl"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "ctrl" }) }
             Button { text: page.alt ? "[Alt]" : "Alt"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "alt" }) }
             Button { text: "Tab"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "tab" }) }
             Button { text: "←"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "left" }) }
             Button { text: "↓"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "down" }) }
             Button { text: "↑"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "up" }) }
             Button { text: "→"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                     focusPolicy: FocusPolicy.None
                      onClicked: page.send("bar", { name: "right" }) }
         }
 
-        // The measuring label: 80 characters, never shown.
+        // The measuring label: 80 characters, never shown. (It and the one
+        // after it are invisible but still take two rows of space above
+        // the grid.)
         Label {
             id: probe
             text: "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
@@ -153,11 +173,33 @@ Page {
             }
         }
 
+        // A second one, of 80 narrow letters: in a monospace font it is as
+        // wide as the first. If the family name is not known to the phone,
+        // Cascades falls back to a proportional font without saying so.
+        Label {
+            text: "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            multiline: false
+            textStyle.fontFamily: "Monospace"
+            textStyle.fontSize: FontSize.PointValue
+            textStyle.fontSizeValue: page.fontPt
+            topMargin: 0
+            bottomMargin: 0
+            opacity: 0
+            horizontalAlignment: HorizontalAlignment.Left
+            attachedObjects: LayoutUpdateHandler {
+                onLayoutFrameChanged: {
+                    page.narrowW = layoutFrame.width
+                    page.fit()
+                }
+            }
+        }
+
         // The terminal: one label per row. A vertical drag scrolls the
         // scrollback.
         Container {
             id: grid
             layout: StackLayout {}
+            clipContentToBounds: true
             horizontalAlignment: HorizontalAlignment.Fill
             layoutProperties: StackLayoutProperties { spaceQuota: 1 }
             property real touchY: 0

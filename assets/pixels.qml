@@ -38,6 +38,12 @@ Page {
             if (s.ctrl !== undefined) page.ctrl = s.ctrl
             if (s.alt !== undefined) page.alt = s.alt
             if (s.title !== undefined) page.termTitle = s.title
+            // Raw keys: the control forwards Screen keyboard events to the
+            // native window (InputType.Keyboard = 1), where Go reads them.
+            if (s.rawKeys !== undefined) {
+                fwc.forwardedInputTypes = s.rawKeys ? 1 : 0
+                fwc.requestFocus()
+            }
         })
         fwc.requestFocus()
     }
@@ -59,7 +65,8 @@ Page {
             verticalAlignment: VerticalAlignment.Fill
             layout: StackLayout {}
 
-            // The key bar. Ctrl and Alt are sticky: they apply to the next
+            // The key bar. Its buttons never take the focus: a focused button
+            // would take the next Enter or Space as a click. Ctrl and Alt are sticky: they apply to the next
             // key and show as armed until then.
             Container {
                 layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
@@ -67,20 +74,28 @@ Page {
                 background: Color.create("#202428")
 
                 Button { text: "Esc"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "esc" }) }
                 Button { text: page.ctrl ? "[Ctrl]" : "Ctrl"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "ctrl" }) }
                 Button { text: page.alt ? "[Alt]" : "Alt"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "alt" }) }
                 Button { text: "Tab"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "tab" }) }
                 Button { text: "←"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "left" }) }
                 Button { text: "↓"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "down" }) }
                 Button { text: "↑"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "up" }) }
                 Button { text: "→"; layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                         focusPolicy: FocusPolicy.None
                          onClicked: page.send("bar", { name: "right" }) }
             }
 

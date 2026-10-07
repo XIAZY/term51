@@ -40,6 +40,11 @@ func main() {
 			cfg.Frontend = f
 		}
 	}
+	// data/rawkeys, when it exists, makes the pixel front end read raw
+	// Screen key events instead of Cascades key events.
+	if _, err := os.Stat("data/rawkeys"); err == nil {
+		cfg.RawKeys = true
+	}
 	a := app.New(cfg)
 	go func() {
 		err := a.Run()

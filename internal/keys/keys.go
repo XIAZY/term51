@@ -271,6 +271,16 @@ func isModifierKey(c rune) bool {
 	return false
 }
 
+// IsModifier reports whether the event is a modifier key by itself (Shift,
+// Ctrl, Alt, Caps Lock): a press that sends nothing to the program.
+func IsModifier(r Raw) bool {
+	sym := r.Sym
+	if sym == 0 {
+		sym = r.Cap
+	}
+	return isModifierKey(sym)
+}
+
 // Translator turns Raw events into the library's key events. It holds the
 // sticky modifiers of the on-screen key bar. It is not safe for use from
 // several goroutines.

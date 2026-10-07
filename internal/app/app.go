@@ -44,6 +44,12 @@ const (
 type Config struct {
 	// Frontend is FrontendText or FrontendPixels.
 	Frontend string
+	// RawKeys chooses where the pixel front end takes the keyboard from:
+	// false, the page's Cascades key events; true, raw Screen key events
+	// forwarded to the native window. Only one is served, so that a press
+	// the phone delivers both ways is not typed twice. Which one the
+	// phone needs is to be found out there.
+	RawKeys bool
 	// FontPx is the font size in pixels.
 	FontPx float64
 	// Shell is the program to run, with its arguments.
@@ -58,6 +64,14 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{Frontend: FrontendText, FontPx: 34, Shell: "/bin/sh", MaxScrollback: 8 << 20}
 }
+
+// The pixel loop's timing.
+const (
+	frameGap   = 16 * time.Millisecond  // at most one frame per gap
+	activeWait = 8 * time.Millisecond   // the wait for window events while busy
+	idleWait   = 50 * time.Millisecond  // and once it has been quiet
+	idleAfter  = 500 * time.Millisecond // for this long
+)
 
 // App is the running program.
 type App struct {
@@ -155,7 +169,7 @@ func (a *App) runPixels() error {
 		log.Printf("app: %v", err)
 	}
 	var tr keys.Translator
-	a.state(map[string]any{"cols": cols, "rows": rows, "ctrl": false, "alt": false})
+	a.state(map[string]any{"cols": cols, "rows": rows, "ctrl": false, "alt": false, "rawKeys": a.cfg.RawKeys})
 
 	resize := func(w, h int) {
 		if w <= 0 || h <= 0 || (w == win.Width && h == win.Height) {
@@ -172,20 +186,30 @@ func (a *App) runPixels() error {
 			a.state(map[string]any{"cols": c, "rows": rw})
 		}
 	}
+	stickyCtrl, stickyAlt := false, false
+	sticky := func() {
+		if c, al := tr.Sticky(); c != stickyCtrl || al != stickyAlt {
+			stickyCtrl, stickyAlt = c, al
+			a.state(map[string]any{"ctrl": c, "alt": al})
+		}
+	}
 	key := func(raw keys.Raw) {
 		ev, ok := tr.Translate(raw)
 		if !ok {
 			return
 		}
-		sess.ScrollToBottom()
+		if raw.Down && !keys.IsModifier(raw) {
+			sess.ScrollToBottom()
+		}
 		if err := sess.Key(ev); err != nil {
 			log.Printf("app: key: %v", err)
 		}
-		ctrl, alt := tr.Sticky()
-		a.state(map[string]any{"ctrl": ctrl, "alt": alt})
+		sticky()
 	}
 
 	dirty := true
+	lastActive := time.Now()
+	var lastFrame time.Time
 	var touchY int
 	touching := false
 	for {
@@ -197,8 +221,12 @@ func (a *App) runPixels() error {
 				case "size":
 					resize(num(c.Args["w"]), num(c.Args["h"]))
 					dirty = true
+					lastActive = time.Now()
 				case "key":
 					// A Cascades key event (the page's KeyListener).
+					if a.cfg.RawKeys {
+						break
+					}
 					text, _ := c.Args["unicode"].(string)
 					down, _ := c.Args["down"].(bool)
 					alt, _ := c.Args["alt"].(bool)
@@ -207,6 +235,7 @@ func (a *App) runPixels() error {
 					key(keys.FromCascades(num(c.Args["key"]), num(c.Args["keycap"]), text, down, alt, shift, ctrl))
 				case "bar":
 					a.bar(sess, &tr, key, c)
+					sticky()
 				case "paste":
 					if text, _ := c.Args["text"].(string); text != "" {
 						sess.ScrollToBottom()
@@ -218,12 +247,24 @@ func (a *App) runPixels() error {
 			}
 		}
 
-		// The window's own events. The wait is short because the session's
-		// news arrives on a Go channel, which this call cannot wait on.
-		ev := win.NextEvent(8 * time.Millisecond)
+		// The window's own events. The session's news arrives on a Go
+		// channel, which this call cannot wait on, so the wait is short
+		// while things are happening and longer once they have been quiet
+		// for a while (a phone should not wake 125 times a second to look
+		// at an idle screen).
+		wait := activeWait
+		if time.Since(lastActive) > idleAfter {
+			wait = idleWait
+		}
+		ev := win.NextEvent(wait)
+		if ev.Type != ui.EventNone {
+			lastActive = time.Now()
+		}
 		switch ev.Type {
 		case ui.EventKey:
-			key(keys.FromScreen(ev.KeyFlags, ev.KeySym, ev.KeyCap, ev.KeyMods))
+			if a.cfg.RawKeys {
+				key(keys.FromScreen(ev.KeyFlags, ev.KeySym, ev.KeyCap, ev.KeyMods))
+			}
 		case ui.EventSize:
 			resize(ev.W, ev.H)
 			dirty = true
@@ -252,6 +293,7 @@ func (a *App) runPixels() error {
 			select {
 			case <-sess.Changed():
 				dirty = true
+				lastActive = time.Now()
 			case e := <-sess.Events():
 				switch e.Kind {
 				case session.EventTitle:
@@ -266,8 +308,11 @@ func (a *App) runPixels() error {
 			}
 		}
 
-		if dirty {
+		// At most one frame per frameGap: under a flood of output, drawing
+		// every change would cost more than the output itself.
+		if dirty && time.Since(lastFrame) >= frameGap {
 			dirty = false
+			lastFrame = time.Now()
 			err := win.Frame(func(id int, pix []uint32, stride int) (int, int) {
 				y0, y1, err := v.Frame(id, pix, stride, win.Width, win.Height)
 				if err != nil {

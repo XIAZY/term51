@@ -35,6 +35,9 @@ func (a *App) runText() error {
 		if c.Name != "grid" {
 			continue
 		}
+		if mono, ok := c.Args["mono"].(bool); ok && !mono {
+			log.Printf("app: the page's font is not monospace: the grid will not line up")
+		}
 		cols, rows, cw, ch = num(c.Args["cols"]), num(c.Args["rows"]), num(c.Args["cw"]), num(c.Args["ch"])
 		var err error
 		sess, err = session.Start(session.Config{
@@ -51,19 +54,29 @@ func (a *App) runText() error {
 	defer sess.Close()
 	a.state(map[string]any{"cols": cols, "rows": rows, "ctrl": false, "alt": false})
 
+	stickyCtrl, stickyAlt := false, false
+	sticky := func() {
+		if c, al := tr.Sticky(); c != stickyCtrl || al != stickyAlt {
+			stickyCtrl, stickyAlt = c, al
+			a.state(map[string]any{"ctrl": c, "alt": al})
+		}
+	}
 	key := func(raw keys.Raw) {
 		ev, ok := tr.Translate(raw)
 		if !ok {
 			return
 		}
-		sess.ScrollToBottom()
+		if raw.Down && !keys.IsModifier(raw) {
+			sess.ScrollToBottom()
+		}
 		if err := sess.Key(ev); err != nil {
 			log.Printf("app: key: %v", err)
 		}
-		ctrl, alt := tr.Sticky()
-		a.state(map[string]any{"ctrl": ctrl, "alt": alt})
+		sticky()
 	}
+	var lastPost time.Time
 	post := func() {
+		lastPost = time.Now()
 		if err := sess.Snapshot(&rs); err != nil {
 			return
 		}
@@ -84,6 +97,9 @@ func (a *App) runText() error {
 		case c := <-a.cmds:
 			switch c.Name {
 			case "grid":
+				if mono, ok := c.Args["mono"].(bool); ok && !mono {
+					log.Printf("app: the page's font is not monospace: the grid will not line up")
+				}
 				nc, nr := num(c.Args["cols"]), num(c.Args["rows"])
 				if nc == cols && nr == rows {
 					break
@@ -94,6 +110,7 @@ func (a *App) runText() error {
 				}
 				cols, rows = nc, nr
 				a.state(map[string]any{"cols": cols, "rows": rows})
+				post() // the reflowed screen, without waiting for output
 			case "key":
 				text, _ := c.Args["unicode"].(string)
 				down, _ := c.Args["down"].(bool)
@@ -103,6 +120,7 @@ func (a *App) runText() error {
 				key(keys.FromCascades(num(c.Args["key"]), num(c.Args["keycap"]), text, down, alt, shift, ctrl))
 			case "bar":
 				a.bar(sess, &tr, key, c)
+				sticky()
 			case "paste":
 				if text, _ := c.Args["text"].(string); text != "" {
 					sess.ScrollToBottom()
@@ -112,8 +130,16 @@ func (a *App) runText() error {
 				sess.ScrollViewport(num(c.Args["rows"]))
 			}
 		case <-sess.Changed():
-			if pending == nil {
-				pending = time.After(textFrame)
+			// The first change after a quiet moment is shown at once (the
+			// echo of a typed key must not wait); changes that follow
+			// closely are merged until the frame time has passed.
+			if pending != nil {
+				break
+			}
+			if since := time.Since(lastPost); since >= textFrame {
+				post()
+			} else {
+				pending = time.After(textFrame - since)
 			}
 		case <-pending:
 			pending = nil
@@ -155,6 +181,4 @@ func (a *App) bar(sess *session.Session, tr *keys.Translator, key func(keys.Raw)
 	case "right":
 		key(keys.Raw{Down: true, Sym: keys.CodeRight, Cap: keys.CodeRight})
 	}
-	ctrl, alt := tr.Sticky()
-	a.state(map[string]any{"ctrl": ctrl, "alt": alt})
 }

@@ -582,7 +582,7 @@ func (self *Terminal) VtStream() StreamReadonlyStream {
 	// to the stream's own copy.
 	self.gpa()
 	handler := self.VtHandler()
-	return StreamInitAlloc[*StreamReadonlyHandler](terminalGpa{}, &handler)
+	return StreamInitAlloc[*StreamReadonlyHandler](&handler)
 }
 
 // terminalGpa is NOT a Zig declaration: the non-nil value VtStream passes to
@@ -3762,6 +3762,16 @@ func (self *Terminal) Deccolm(mode TerminalDeccolmMode) error {
 // parameter is dropped. The inferred error set is that of Tabstops.init and
 // Screen.resize: ErrOutOfMemory (dcs.go).
 func (self *Terminal) Resize(cols SizeCellCountInt, rows SizeCellCountInt) error {
+	// Go: a size of zero columns or rows is an error, before anything
+	// changes. Zig has no check (the caller never passes zero); a Go caller
+	// gets the error instead of a panic.
+	if cols == 0 {
+		return ErrZeroColCount
+	}
+	if rows == 0 {
+		return ErrZeroRowCount
+	}
+
 	// If our cols/rows didn't change then we're done
 	if self.Cols == cols && self.Rows == rows {
 		return nil

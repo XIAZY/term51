@@ -815,6 +815,16 @@ func PageListInit(
 	rows SizeCellCountInt,
 	max_size Optional[uint64],
 ) (PageList, error) {
+	// Go: a size of zero columns or rows is an error. Zig asserts further
+	// down (`assert(cap.rows > 0)`), which a release build does not check;
+	// a Go caller gets the error instead of a panic.
+	if cols == 0 {
+		return PageList{}, ErrZeroColCount
+	}
+	if rows == 0 {
+		return PageList{}, ErrZeroRowCount
+	}
+
 	// Zig: const tw = init_tw; the tw.check calls are omitted (see the
 	// file header).
 

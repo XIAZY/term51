@@ -2346,6 +2346,15 @@ type ScreenResize struct {
 // inferred error set is that of PageList.trackPin and PageList.resize:
 // ErrOutOfMemory (dcs.go).
 func (self *Screen) Resize(opts ScreenResize) (err error) {
+	// Go: a size of zero columns or rows is an error, before anything
+	// changes (see Terminal.Resize).
+	if opts.Cols == 0 {
+		return ErrZeroColCount
+	}
+	if opts.Rows == 0 {
+		return ErrZeroRowCount
+	}
+
 	defer self.AssertIntegrity()
 
 	// Zig: `if (comptime build_options.kitty_graphics)` block (mark the

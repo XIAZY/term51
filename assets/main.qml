@@ -143,25 +143,15 @@ Page {
 
     // Characters come through the input field at the bottom of the page (so
     // that the phone shows its on-screen keyboard rows, and symbols can be
-    // typed). Key events are used only for keys that are not characters:
-    // Backspace, Tab, Escape, the arrows. Enter is the field's "submitted".
+    // typed). The field always has the focus; its key listener sends only
+    // the keys that are not characters: Backspace, Tab, Escape, the arrows.
+    // Enter is the field's "submitted".
     function isCharacterKey(event) {
         var k = event.key
         if (k == 13 || k == 10 || k == 0xF00D)
             return true // Enter: handled by the input field
         return k >= 0x20 && k != 0x7F && k < 0xF000
     }
-    keyListeners: KeyListener {
-        onKeyPressed: {
-            if (!page.isCharacterKey(event))
-                page.send("key", page.keyArgs(event, true))
-        }
-        onKeyReleased: {
-            if (!page.isCharacterKey(event))
-                page.send("key", page.keyArgs(event, false))
-        }
-    }
-
     attachedObjects: [
         SystemToast { id: toast },
         ComponentDefinition {

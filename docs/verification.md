@@ -189,3 +189,23 @@ Phone (project lead's runs, BlackBerry 10 on the real 32-bit ARM chip,
   `text/style_split` cases fixed by the last merge (one `upstream_invalid`
   case checked by its own rule, as natively).
 
+## Since the sign-off: how changes are tested
+
+Rules set by the project owner on 2026-10-07, after the port was signed
+off:
+
+- **Every merge:** every test and every recorded case on the development
+  machine (`TERM51_FULL=1`), and the code compiled for 32-bit ARM.
+- **No emulated runs.**
+- **The phone** only when a change could behave differently on a 32-bit
+  processor: arithmetic on plain `int` or `uint`, or a changed integer
+  width. Then the unit tests run there once. Compiling for 32-bit does not
+  catch such a mistake (a change to `setCursorPos` once compiled, passed
+  natively and failed on 32-bit ARM only). The phone is also where speed is
+  measured.
+- **The split runs** (the same input fed in pieces) are sampled, and run
+  for changes to how the stream takes its input.
+
+Each merge is its own feature branch, reviewed by the other of the two
+developers, who reads the diff and reruns the tests.
+

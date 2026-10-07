@@ -29,8 +29,21 @@ type Command struct {
 	Args map[string]any
 }
 
+// The two front ends. Which one is better on the phone (an exact grid, the
+// phone's own fonts, speed) is to be found out there.
+const (
+	// FrontendText shows the terminal as a column of Cascades text labels,
+	// one per row (assets/text.qml, internal/textgrid).
+	FrontendText = "text"
+	// FrontendPixels draws the terminal into a native window inside the
+	// page (assets/pixels.qml, internal/render).
+	FrontendPixels = "pixels"
+)
+
 // Config is what the app starts with.
 type Config struct {
+	// Frontend is FrontendText or FrontendPixels.
+	Frontend string
 	// FontPx is the font size in pixels.
 	FontPx float64
 	// Shell is the program to run, with its arguments.
@@ -43,7 +56,7 @@ type Config struct {
 // DefaultConfig suits the Passport: a 1440 pixel wide screen at about 450
 // pixels per inch.
 func DefaultConfig() Config {
-	return Config{FontPx: 34, Shell: "/bin/sh", MaxScrollback: 8 << 20}
+	return Config{Frontend: FrontendText, FontPx: 34, Shell: "/bin/sh", MaxScrollback: 8 << 20}
 }
 
 // App is the running program.
@@ -80,10 +93,26 @@ func (a *App) state(v map[string]any) {
 	}
 }
 
-// Run waits for QML to give the window's place and size, opens the window
-// and the session, and serves them until the shell exits. It returns the
+// Page is the QML page of the configured front end.
+func (a *App) Page() string {
+	if a.cfg.Frontend == FrontendPixels {
+		return "pixels"
+	}
+	return "text"
+}
+
+// Run serves the configured front end until the shell exits. It returns the
 // reason it ended.
 func (a *App) Run() error {
+	if a.cfg.Frontend == FrontendPixels {
+		return a.runPixels()
+	}
+	return a.runText()
+}
+
+// runPixels waits for QML to give the window's place and size, opens the
+// window and the session, and serves them.
+func (a *App) runPixels() error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -177,30 +206,7 @@ func (a *App) Run() error {
 					ctrl, _ := c.Args["ctrl"].(bool)
 					key(keys.FromCascades(num(c.Args["key"]), num(c.Args["keycap"]), text, down, alt, shift, ctrl))
 				case "bar":
-					// The key bar.
-					switch name, _ := c.Args["name"].(string); name {
-					case "ctrl":
-						on, _ := tr.Sticky()
-						tr.StickyCtrl(!on)
-					case "alt":
-						_, on := tr.Sticky()
-						tr.StickyAlt(!on)
-					case "esc":
-						sess.ScrollToBottom()
-						_ = sess.Key(tr.Escape())
-					case "tab":
-						key(keys.Raw{Down: true, Sym: keys.CodeTab, Cap: keys.CodeTab})
-					case "up":
-						key(keys.Raw{Down: true, Sym: keys.CodeUp, Cap: keys.CodeUp})
-					case "down":
-						key(keys.Raw{Down: true, Sym: keys.CodeDown, Cap: keys.CodeDown})
-					case "left":
-						key(keys.Raw{Down: true, Sym: keys.CodeLeft, Cap: keys.CodeLeft})
-					case "right":
-						key(keys.Raw{Down: true, Sym: keys.CodeRight, Cap: keys.CodeRight})
-					}
-					ctrl, alt := tr.Sticky()
-					a.state(map[string]any{"ctrl": ctrl, "alt": alt})
+					a.bar(sess, &tr, key, c)
 				case "paste":
 					if text, _ := c.Args["text"].(string); text != "" {
 						sess.ScrollToBottom()

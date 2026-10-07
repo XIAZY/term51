@@ -20,8 +20,8 @@ import (
 
 // Row is one row's rich text.
 type Row struct {
-	Y    int
-	HTML string
+	Y    int    `json:"y"`
+	HTML string `json:"html"`
 }
 
 // Grid remembers what each row last looked like, so that only rows whose

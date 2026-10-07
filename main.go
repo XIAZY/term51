@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"strings"
 
 	"term51/internal/app"
 	"term51/internal/ui"
@@ -31,7 +32,15 @@ func main() {
 	}
 	log.SetFlags(log.Lmicroseconds)
 
-	a := app.New(app.DefaultConfig())
+	cfg := app.DefaultConfig()
+	// Which front end: the file data/frontend holds "text" or "pixels"
+	// (until there is a settings page).
+	if b, err := os.ReadFile("data/frontend"); err == nil {
+		if f := strings.TrimSpace(string(b)); f == app.FrontendText || f == app.FrontendPixels {
+			cfg.Frontend = f
+		}
+	}
+	a := app.New(cfg)
 	go func() {
 		err := a.Run()
 		log.Printf("the session ended: %v", err)
@@ -39,7 +48,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	rc := ui.Run(func(name, argsJSON string) {
+	rc := ui.Run(a.Page(), func(name, argsJSON string) {
 		var args map[string]any
 		if argsJSON != "" {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {

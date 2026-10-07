@@ -191,3 +191,80 @@ func BenchmarkDraw(b *testing.B) {
 		r.Draw(&rs, pix, w, w, h)
 	}
 }
+
+// DrawRows with a row list repaints exactly those rows and gives the same
+// picture as a full draw when every changed row is listed.
+func TestDrawRows(t *testing.T) {
+	r, err := New(28)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cw, ch := r.CellSize()
+	before := screen(t, 10, 3, "one\r\ntwo\r\nthree\x1b[?25l")
+	after := screen(t, 10, 3, "one\r\nTWO\r\nthree\x1b[?25l")
+	w, h := 10*cw+7, 3*ch+5
+
+	full := make([]uint32, w*h)
+	r.Draw(after, full, w, w, h)
+
+	part := make([]uint32, w*h)
+	r.Draw(before, part, w, w, h)
+	r.DrawRows(after, part, w, w, h, []bool{false, true, false})
+	for i := range full {
+		if full[i] != part[i] {
+			t.Fatalf("pixel %d,%d differs after redrawing the changed row", i%w, i/w)
+		}
+	}
+
+	// A row that is not listed is left alone, even when it changed.
+	r.Draw(before, part, w, w, h)
+	r.DrawRows(after, part, w, w, h, []bool{true, false, true})
+	same := true
+	for i := range full {
+		same = same && full[i] == part[i]
+	}
+	if same {
+		t.Error("the unlisted row was repainted")
+	}
+}
+
+func TestBufferTooSmallPanics(t *testing.T) {
+	r, _ := New(28)
+	rs := screen(t, 4, 1, "x")
+	defer func() {
+		if recover() == nil {
+			t.Error("no panic for a buffer smaller than its stated size")
+		}
+	}()
+	r.Draw(rs, make([]uint32, 10), 100, 100, 100)
+}
+
+func TestGlyphCacheIsBounded(t *testing.T) {
+	r, _ := New(28)
+	for ch := rune(0x4E00); ch < 0x4E00+3*maxGlyphs; ch++ {
+		r.glyph(ch, 0, 2)
+	}
+	if len(r.cache) > maxGlyphs {
+		t.Errorf("cache holds %d glyphs, limit %d", len(r.cache), maxGlyphs)
+	}
+}
+
+func BenchmarkDrawOneRow(b *testing.B) {
+	r, _ := New(28)
+	term, _ := vt.NewTerminal(vt.TerminalOptions{Cols: 80, Rows: 40, Colors: vt.TerminalColorsDefault(), DefaultModes: vt.NewModePacked()})
+	s := term.VtStream()
+	for i := 0; i < 40; i++ {
+		s.NextSlice([]byte("\x1b[32mdrwxr-xr-x\x1b[0m  2 user group  4096 Oct  7 03:00 \x1b[1;34msome-directory\x1b[0m and more text\r\n"))
+	}
+	rs := vt.RenderStateEmpty()
+	rs.Update(&term)
+	cw, ch := r.CellSize()
+	w, h := 80*cw, 40*ch
+	pix := make([]uint32, w*h)
+	rows := make([]bool, 40)
+	rows[20] = true
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.DrawRows(&rs, pix, w, w, h, rows)
+	}
+}

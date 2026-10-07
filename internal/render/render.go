@@ -35,6 +35,10 @@ type Renderer struct {
 	cache  map[glyphKey][]uint8
 }
 
+// maxGlyphs bounds the glyph cache: at a few kilobytes per mask, a few
+// megabytes.
+const maxGlyphs = 2048
+
 type glyphKey struct {
 	r     rune
 	face  uint8
@@ -85,6 +89,11 @@ func (r *Renderer) glyph(ch rune, face uint8, cells uint8) []uint8 {
 	if m, ok := r.cache[key]; ok {
 		return m
 	}
+	if len(r.cache) >= maxGlyphs {
+		// A session that scrolls through a large script (CJK, emoji) would
+		// grow the cache without bound; starting again is cheap.
+		clear(r.cache)
+	}
 	w := r.cellW * int(cells)
 	img := image.NewAlpha(image.Rect(0, 0, w, r.cellH))
 	f := r.faces[face]
@@ -123,15 +132,32 @@ type target struct {
 
 func (t *target) fill(x0, y0, x1, y1 int, c uint32) {
 	x0, y0, x1, y1 = max(x0, 0), max(y0, 0), min(x1, t.w), min(y1, t.h)
-	for y := y0; y < y1; y++ {
-		row := t.pix[y*t.stride+x0 : y*t.stride+x1]
-		for i := range row {
-			row[i] = c
-		}
+	if x0 >= x1 || y0 >= y1 {
+		return
+	}
+	first := t.pix[y0*t.stride+x0 : y0*t.stride+x1]
+	for i := range first {
+		first[i] = c
+	}
+	for y := y0 + 1; y < y1; y++ {
+		copy(t.pix[y*t.stride+x0:y*t.stride+x1], first)
 	}
 }
 
 func (t *target) mask(x0, y0, mw, mh int, m []uint8, fg uint32) {
+	if x0 >= 0 && y0 >= 0 && x0+mw <= t.w && y0+mh <= t.h {
+		// Wholly inside the buffer, the usual case: no per-pixel clipping.
+		for my := 0; my < mh; my++ {
+			row := t.pix[(y0+my)*t.stride+x0 : (y0+my)*t.stride+x0+mw]
+			src := m[my*mw : my*mw+mw]
+			for i, a := range src {
+				if a != 0 {
+					row[i] = blend(row[i], fg, uint32(a))
+				}
+			}
+		}
+		return
+	}
 	for my := 0; my < mh; my++ {
 		y := y0 + my
 		if y < 0 || y >= t.h {
@@ -149,18 +175,51 @@ func (t *target) mask(x0, y0, mw, mh int, m []uint8, fg uint32) {
 	}
 }
 
-// Draw paints the whole render state into pix: w by h pixels, stride
-// pixels per row. Pixels outside the grid get the background colour.
+// Draw paints the whole render state into pix: w by h pixels, stride pixels
+// per row. Pixels outside the grid get the background colour.
+//
+// A pixel is 0x00RRGGBB with the top byte zero. Whether the window the
+// buffer belongs to wants that byte order, and how it treats the zero top
+// byte, is the caller's to check (on BlackBerry 10: RGBX8888, to be
+// confirmed on the phone).
 func (r *Renderer) Draw(rs *vt.RenderState, pix []uint32, stride, w, h int) {
+	r.DrawRows(rs, pix, stride, w, h, nil)
+}
+
+// DrawRows paints only the rows y for which rows[y] is true, each across the
+// whole width of the buffer, and leaves every other pixel as it is; with a
+// nil rows it paints everything, the margin outside the grid included.
+//
+// The caller decides which rows changed: the render state marks them
+// (RowData[y].Dirty), and the row the cursor left and the row it is on now
+// have to be added. A window that swaps between several buffers has to
+// redraw a row in each of them.
+//
+// pix must hold at least stride*(h-1)+w pixels; DrawRows panics otherwise.
+func (r *Renderer) DrawRows(rs *vt.RenderState, pix []uint32, stride, w, h int, rows []bool) {
+	if w <= 0 || h <= 0 {
+		return
+	}
+	if stride < w || len(pix) < stride*(h-1)+w {
+		panic("render: the pixel buffer is smaller than stride and size say")
+	}
 	t := &target{pix, stride, w, h}
 	defBg, defFg := rgb(rs.Colors.Background), rgb(rs.Colors.Foreground)
-	t.fill(0, 0, w, h, defBg)
+	if rows == nil {
+		t.fill(0, 0, w, h, defBg)
+	}
 
 	for y := range rs.RowData {
 		row := &rs.RowData[y]
 		py := y * r.cellH
 		if py >= h {
 			break
+		}
+		if rows != nil {
+			if y >= len(rows) || !rows[y] {
+				continue
+			}
+			t.fill(0, py, w, py+r.cellH, defBg)
 		}
 		for x := range row.Cells {
 			cell := &row.Cells[x]
@@ -183,11 +242,18 @@ func (r *Renderer) Draw(rs *vt.RenderState, pix []uint32, stride, w, h int) {
 			if c := style.Bg(&cell.Raw, &rs.Colors.Palette); c.Valid {
 				bg = rgb(c.Value)
 			}
-			if style.Flags.Inverse {
+			// Selected text is shown inverted; text that is already inverse
+			// stays inverse when selected, so that the selection is never
+			// invisible, and gets the selection tint below.
+			selected := false
+			if sel := row.Selection; sel.Valid && x >= int(sel.Value[0]) && x <= int(sel.Value[1]) {
+				selected = true
+			}
+			if style.Flags.Inverse || selected {
 				fg, bg = bg, fg
 			}
-			if sel := row.Selection; sel.Valid && x >= int(sel.Value[0]) && x <= int(sel.Value[1]) {
-				fg, bg = bg, fg
+			if style.Flags.Inverse && selected {
+				bg = blend(bg, 0x3070C0, 96)
 			}
 			if style.Flags.Faint {
 				fg = blend(bg, fg, 128)
@@ -218,6 +284,8 @@ func (r *Renderer) Draw(rs *vt.RenderState, pix []uint32, stride, w, h int) {
 				}
 			}
 			thick := max(r.cellH/14, 1)
+			// Curly, dotted and dashed underlines are drawn as a single
+			// line for now.
 			if style.Flags.Underline != sgr.AttributeUnderlineNone {
 				uc := fg
 				if c := style.UnderlineColor(&rs.Colors.Palette); c.Valid {
@@ -237,8 +305,10 @@ func (r *Renderer) Draw(rs *vt.RenderState, pix []uint32, stride, w, h int) {
 				t.fill(px, py, px+cells*r.cellW, py+thick, fg)
 			}
 		}
+		if c := &rs.Cursor; c.Visible && c.Viewport.Valid && int(c.Viewport.Value.Y) == y {
+			r.cursor(rs, t, defBg, defFg)
+		}
 	}
-	r.cursor(rs, t, defBg, defFg)
 }
 
 // cursor draws the cursor when it is visible and inside the viewport.

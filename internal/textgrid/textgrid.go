@@ -158,8 +158,9 @@ func row(sb *strings.Builder, rs *vt.RenderState, y int) {
 }
 
 // escape writes one character of text: markup characters as entities, a
-// space as a no-break space, and control characters (which a cell should not
-// hold) as the replacement character.
+// space as a no-break space, and control characters as the replacement
+// character (a cell can hold one: the terminal, as upstream, prints the bytes
+// 0x10 to 0x1F in ground state).
 func escape(sb *strings.Builder, r rune) {
 	switch {
 	case r == ' ':

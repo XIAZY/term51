@@ -155,7 +155,6 @@ const (
 	MinFontPt          = 3
 	MaxFontPt          = 40
 	MaxScrollbackBytes = 256 << 20 // the phone has about 2 GB for everything
-	maxTextLen         = 256       // names, versions, the answerback
 )
 
 // parseColor reads "#rrggbb".
@@ -183,17 +182,6 @@ func parseColor(s string) (session.RGB, error) {
 	return session.RGB{R: v[0], G: v[1], B: v[2]}, nil
 }
 
-// printable reports whether s can be sent to a program as an answer: no
-// control characters, which could be read as commands.
-func printable(s string) bool {
-	for _, c := range s {
-		if c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0) {
-			return false
-		}
-	}
-	return true
-}
-
 // Validate reports the first setting whose value makes no sense.
 func (s Settings) Validate() error {
 	bad := func(name, format string, args ...any) error {
@@ -205,16 +193,8 @@ func (s Settings) Validate() error {
 	if s.Shell == "" {
 		return bad("shell", "empty")
 	}
-	if strings.ContainsRune(s.Shell, 0) {
-		return bad("shell", "contains a NUL character")
-	}
-	for i, a := range s.Args {
-		if strings.ContainsRune(a, 0) {
-			return bad(fmt.Sprintf("args[%d]", i), "contains a NUL character")
-		}
-	}
-	if s.Term == "" || !printable(s.Term) || strings.ContainsAny(s.Term, " =") {
-		return bad("term", "%q is not a terminal name", s.Term)
+	if s.Term == "" {
+		return bad("term", "empty")
 	}
 	if s.ScrollbackBytes > MaxScrollbackBytes {
 		return bad("scrollbackBytes", "%d is more than %d", s.ScrollbackBytes, MaxScrollbackBytes)
@@ -244,18 +224,8 @@ func (s Settings) Validate() error {
 	if _, ok := terminals[id.Terminal]; !ok {
 		return bad("identity.terminal", "%q is not one of vt220, vt100, xterm", id.Terminal)
 	}
-	for _, f := range []struct{ name, value string }{
-		{"identity.name", id.Name}, {"identity.version", id.Version}, {"identity.answerback", id.Answerback},
-	} {
-		if len(f.value) > maxTextLen {
-			return bad(f.name, "longer than %d bytes", maxTextLen)
-		}
-		if !printable(f.value) {
-			return bad(f.name, "contains a control character")
-		}
-	}
-	if id.VersionNumber < 0 || id.VersionNumber > 99999 {
-		return bad("identity.versionNumber", "%d is not between 0 and 99999", id.VersionNumber)
+	if id.VersionNumber < 0 {
+		return bad("identity.versionNumber", "%d is negative", id.VersionNumber)
 	}
 	return nil
 }
@@ -466,13 +436,19 @@ func (s Settings) Format() []byte {
 	return b.Bytes()
 }
 
-// Load reads the settings file. A file that does not exist is the defaults,
-// with no error. For any other failure it returns the defaults and the
-// error, so the app can start and say what is wrong.
+// Load reads the settings file. The first time, when there is no file, it
+// writes one holding the defaults, every setting with a comment saying what
+// it is, so that the user has something to edit. For a file it cannot read
+// or that has a mistake in it, it returns the defaults and the error, so the
+// app can start and say what is wrong.
 func Load(path string) (Settings, []string, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return Default(), nil, nil
+		s := Default()
+		if err := Save(path, s); err != nil {
+			return s, nil, fmt.Errorf("settings: %w", err)
+		}
+		return s, nil, nil
 	}
 	if err != nil {
 		return Default(), nil, fmt.Errorf("settings: %w", err)

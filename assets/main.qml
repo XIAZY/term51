@@ -92,8 +92,7 @@ Page {
             var ls = page.labels // read once: each access converts the list
             for (var i = 0; i < e.rows.length; i++) {
                 var row = e.rows[i]
-                if (row.y < ls.length)
-                    ls[row.y].text = "<html>" + row.html + "</html>"
+                ls[row.y].text = "<html>" + row.html + "</html>"
             }
         })
     }

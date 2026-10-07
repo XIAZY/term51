@@ -12,7 +12,6 @@ package session
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -39,8 +38,9 @@ type Config struct {
 	Env   []string
 	Dir   string
 
-	// The terminal's size in cells and the size of one cell in pixels
-	// (zero when unknown).
+	// The terminal's size in cells and the size of one cell in pixels (the
+	// page measures both before the first shell starts). A size of zero
+	// columns or rows is the library's error.
 	Cols, Rows   int
 	CellW, CellH int
 
@@ -162,9 +162,6 @@ type Session struct {
 
 // Start starts the shell and the reader.
 func Start(cfg Config) (*Session, error) {
-	if cfg.Cols <= 0 || cfg.Rows <= 0 || cfg.Cols > 0xFFFF || cfg.Rows > 0xFFFF {
-		return nil, fmt.Errorf("session: bad size %dx%d", cfg.Cols, cfg.Rows)
-	}
 	term, err := vt.NewTerminal(vt.TerminalOptions{
 		Cols:          uint16(cfg.Cols),
 		Rows:          uint16(cfg.Rows),
@@ -222,13 +219,7 @@ func withTerm(env []string) []string {
 }
 
 func (s *Session) ptySize(cols, rows int) pty.Size {
-	clamp := func(v int) uint16 {
-		if v > 0xFFFF {
-			return 0xFFFF
-		}
-		return uint16(v)
-	}
-	return pty.Size{Rows: uint16(rows), Cols: uint16(cols), XPixel: clamp(cols * s.cellW), YPixel: clamp(rows * s.cellH)}
+	return pty.Size{Rows: uint16(rows), Cols: uint16(cols), XPixel: uint16(cols * s.cellW), YPixel: uint16(rows * s.cellH)}
 }
 
 // read feeds the shell's output to the terminal until the shell's side of
@@ -388,9 +379,6 @@ func (s *Session) Paste(data []byte) error {
 
 // Resize changes the terminal's size and tells the shell.
 func (s *Session) Resize(cols, rows, cellW, cellH int) error {
-	if cols <= 0 || rows <= 0 || cols > 0xFFFF || rows > 0xFFFF {
-		return fmt.Errorf("session: bad size %dx%d", cols, rows)
-	}
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()

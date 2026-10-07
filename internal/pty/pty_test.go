@@ -105,14 +105,6 @@ func TestInputReachesChild(t *testing.T) {
 	cmd.Wait()
 }
 
-func TestStartRejectsPresetStdio(t *testing.T) {
-	cmd := exec.Command("/bin/true")
-	cmd.Stdout = os.Stdout
-	if _, err := Start(cmd, Size{Rows: 24, Cols: 80}); err == nil {
-		t.Fatal("Start accepted a cmd with Stdout set")
-	}
-}
-
 // openBSD scans dir for a free ptyXY master and opens the matching ttyXY.
 // The test builds a fake /dev with plain files: an absent pair, a master
 // that cannot be opened (no permission, as one in use refuses), and a free

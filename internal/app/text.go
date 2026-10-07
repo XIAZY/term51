@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
@@ -127,10 +126,7 @@ func (a *App) Run() error {
 		if len(changed) == 0 {
 			return
 		}
-		b, err := json.Marshal(map[string]any{"rows": changed, "count": len(rs.RowData)})
-		if err == nil {
-			a.pub.Event(string(b))
-		}
+		a.event(map[string]any{"rows": changed, "count": len(rs.RowData)})
 	}
 	// show makes tab i the one on screen: every row is sent again.
 	show := func(i int) {
@@ -207,7 +203,7 @@ func (a *App) Run() error {
 		case c := <-a.cmds:
 			if c.Name == "grid" {
 				nc, nr := num(c.Args["cols"]), num(c.Args["rows"])
-				if nc <= 0 || nr <= 0 || (nc == cols && nr == rows && len(tabs) > 0) {
+				if nc == cols && nr == rows && len(tabs) > 0 {
 					break
 				}
 				cols, rows, cw, ch = nc, nr, num(c.Args["cw"]), num(c.Args["ch"])
@@ -295,9 +291,7 @@ func (a *App) Run() error {
 					msg["clipboard"] = text[cut:]
 					a.notice("The selection is very long: its last 512 KB were copied")
 				}
-				if b, err := json.Marshal(msg); err == nil {
-					a.pub.Event(string(b))
-				}
+				a.event(msg)
 				sess.ClearSelection()
 			case "scroll":
 				sess.ScrollViewport(num(c.Args["rows"]))
@@ -345,9 +339,7 @@ func (a *App) Run() error {
 					// is not shown instead of beeping for it.
 					for i, t := range tabs {
 						if t == n.t {
-							if b, err := json.Marshal(map[string]any{"bell": true, "tab": i, "shown": i == cur}); err == nil {
-								a.pub.Event(string(b))
-							}
+							a.event(map[string]any{"bell": true, "tab": i, "shown": i == cur})
 						}
 					}
 				}

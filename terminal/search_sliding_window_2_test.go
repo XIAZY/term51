@@ -157,10 +157,10 @@ func sw2Put(node *PageListNode, y uint, x uint, text string) {
 	row := node.data.GetRow(y)
 	cells := node.data.GetCells(row)
 	for i := 0; i < len(text); i++ {
-		cells[x+uint(i)] = PageCell{
+		cells[x+uint(i)] = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: uint32(text[i])},
-		}
+			content:     pageCellContentFields{codepoint: uint32(text[i])}.pack(),
+		}.pack()
 	}
 }
 

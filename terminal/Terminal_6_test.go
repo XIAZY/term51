@@ -197,26 +197,26 @@ func tm6TGridRow(t *testing.T, tm *Terminal, y uint) string {
 	buf := make([]uint8, tm.Cols)
 	for x := uint(0); x < uint(tm.Cols); x++ {
 		c := tm6TCellAt(t, tm, x, y)
-		switch c.wide {
+		switch c.Wide() {
 		case PageCellWideSpacerTail:
 			buf[x] = '_'
 		case PageCellWideSpacerHead:
 			buf[x] = '>'
 		case PageCellWideWide:
-			if c.content.codepoint == 0 {
+			if c.content().codepoint() == 0 {
 				buf[x] = 'w'
 			} else {
 				buf[x] = 'W'
 			}
 		case PageCellWideNarrow:
-			switch c.content_tag {
+			switch c.ContentTag() {
 			case PageCellContentTagBgColorPalette, PageCellContentTagBgColorRgb:
 				buf[x] = '#'
 			case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
-				if c.content.codepoint == 0 {
+				if c.content().codepoint() == 0 {
 					buf[x] = '.'
-				} else if c.content.codepoint < 128 {
-					buf[x] = uint8(c.content.codepoint)
+				} else if c.content().codepoint() < 128 {
+					buf[x] = uint8(c.content().codepoint())
 				} else {
 					buf[x] = '?'
 				}
@@ -376,7 +376,7 @@ func tm6URowAt(t *testing.T, tm *Terminal, y uint) *PageRow {
 // head, '>' spacer tail, '<' spacer head, 'p' palette background cell, 'r'
 // RGB background cell.
 func tm6UCellChar(cell PageCell) uint8 {
-	switch cell.wide {
+	switch cell.Wide() {
 	case PageCellWideWide:
 		return '#'
 	case PageCellWideSpacerTail:
@@ -385,12 +385,12 @@ func tm6UCellChar(cell PageCell) uint8 {
 		return '<'
 	}
 	// narrow
-	switch cell.content_tag {
+	switch cell.ContentTag() {
 	case PageCellContentTagCodepoint:
-		if cell.content.codepoint == 0 {
+		if cell.content().codepoint() == 0 {
 			return '.'
-		} else if cell.content.codepoint < 128 {
-			return uint8(cell.content.codepoint)
+		} else if cell.content().codepoint() < 128 {
+			return uint8(cell.content().codepoint())
 		}
 		return '?'
 	case PageCellContentTagCodepointGrapheme:
@@ -706,8 +706,8 @@ func TestTm6_term51_scrollUp_background_colour_fills_the_new_rows(t *testing.T) 
 	tm6ScrollUp(t, tm, 2)
 	tm6TExpectGrid(t, tm, "KLMNO", "PQRST", "UVWXY", "#####", "#####")
 	cell := tm6TCellAt(t, tm, 2, 4)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content().colorRGB())
 }
 
 // Zig: test "term51: scrollUp: alternate screen has no scrollback"
@@ -805,8 +805,8 @@ func TestTm6_term51_scrollDown_background_colour_fills_the_new_rows(t *testing.T
 	tm.ScrollDown(2)
 	tm6TExpectGrid(t, tm, "#####", "#####", "ABCDE", "FGHIJ", "KLMNO")
 	cell := tm6TCellAt(t, tm, 0, 0)
-	expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-	expectEqual(t, uint8(0), cell.content.color_palette)
+	expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+	expectEqual(t, uint8(0), cell.content().colorPalette())
 }
 
 // Zig: test "term51: scrollDown: alternate screen"
@@ -1186,8 +1186,8 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		expectEqualStrings(t, "a..bcdefgh", tm6TGridRow(t, tm, 0))
 		cell := tm6TCellAt(t, tm, 1, 0)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
-		expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
-		expectEqual(t, uint32(0), cell.content.codepoint)
+		expectEqual(t, PageCellContentTagCodepoint, cell.ContentTag())
+		expectEqual(t, uint32(0), cell.content().codepoint())
 		expectEqual(t, uint(0), lc.Node.data.GraphemeCount())
 		expect(t, !tm6TRowAt(t, tm, 0).grapheme, "!term51TRowAt(&t, 0).grapheme")
 	}()
@@ -1204,7 +1204,7 @@ func TestTm6_term51_rowWillBeShifted_cleared_wide_cells_lose_their_grapheme(t *t
 		expectEqualStrings(t, "abcdefg..h", tm6TGridRow(t, tm, 0))
 		cell := tm6TCellAt(t, tm, 7, 0)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
-		expectEqual(t, uint32(0), cell.content.codepoint)
+		expectEqual(t, uint32(0), cell.content().codepoint())
 		expectEqual(t, uint(0), lc.Node.data.GraphemeCount())
 		expect(t, !tm6TRowAt(t, tm, 0).grapheme, "!term51TRowAt(&t, 0).grapheme")
 	}()
@@ -1279,14 +1279,14 @@ func TestTm6_term51_rowWillBeShifted_the_cleared_wide_cell_keeps_its_style(t *te
 	tm6SetAttribute(t, tm, tm6AttrBold)
 	tm6TPutRow(t, tm, 0, "a中bcdefgh")
 	before := tm6TCellAt(t, tm, 1, 0)
-	expect(t, before.style_id != StyleDefaultID, "before.style_id != style.default_id")
+	expect(t, before.StyleID() != StyleDefaultID, "before.style_id != style.default_id")
 
 	tm6TShiftRow(t, tm, 0, 2, 6)
 	after := tm6TCellAt(t, tm, 1, 0)
-	expectEqual(t, before.style_id, after.style_id)
-	expectEqual(t, uint32(0), after.content.codepoint)
-	expectEqual(t, PageCellWideNarrow, after.wide)
-	expectEqual(t, PageCellWideNarrow, tm6TCellAt(t, tm, 2, 0).wide)
+	expectEqual(t, before.StyleID(), after.StyleID())
+	expectEqual(t, uint32(0), after.content().codepoint())
+	expectEqual(t, PageCellWideNarrow, after.Wide())
+	expectEqual(t, PageCellWideNarrow, tm6TCellAt(t, tm, 2, 0).Wide())
 }
 
 // Zig: test "term51: rowWillBeShifted: only the split cells and the given row change"
@@ -1937,16 +1937,16 @@ func TestTm6_term51_insertLines_protected_cells_move_with_their_text_and_blanks_
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm6Print(t, tm, 'X')
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, tm6UCellAt(t, tm, 2, 1).protected, "term51UCellAt(&t, 2, 1).protected")
+	expect(t, tm6UCellAt(t, tm, 2, 1).Protected(), "term51UCellAt(&t, 2, 1).protected")
 
 	tm.SetCursorPos(2, 1)
 	tm.InsertLines(1)
 
 	// Neither mode nor the protected flag prevents insert lines.
 	tm6UExpectGrid(t, tm, "abcdef", "......", "ghXjkl", "mnopqr", "stuvwx", "yzABCD")
-	expect(t, !tm6UCellAt(t, tm, 2, 1).protected, "!term51UCellAt(&t, 2, 1).protected")
-	expect(t, tm6UCellAt(t, tm, 2, 2).protected, "term51UCellAt(&t, 2, 2).protected")
-	expect(t, !tm6UCellAt(t, tm, 2, 3).protected, "!term51UCellAt(&t, 2, 3).protected")
+	expect(t, !tm6UCellAt(t, tm, 2, 1).Protected(), "!term51UCellAt(&t, 2, 1).protected")
+	expect(t, tm6UCellAt(t, tm, 2, 2).Protected(), "term51UCellAt(&t, 2, 2).protected")
+	expect(t, !tm6UCellAt(t, tm, 2, 3).Protected(), "!term51UCellAt(&t, 2, 3).protected")
 }
 
 // Zig: test "term51: insertLines: protected ISO mode does not stop clearing"
@@ -1963,7 +1963,7 @@ func TestTm6_term51_insertLines_protected_ISO_mode_does_not_stop_clearing(t *tes
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mnopqr", "stuvwx", "yzABCD", "......")
-	expect(t, !tm6UCellAt(t, tm, 0, 5).protected, "!term51UCellAt(&t, 0, 5).protected")
+	expect(t, !tm6UCellAt(t, tm, 0, 5).Protected(), "!term51UCellAt(&t, 0, 5).protected")
 }
 
 // Zig: test "term51: insertLines: cleared rows take the background of the cursor style"
@@ -1979,9 +1979,9 @@ func TestTm6_term51_insertLines_cleared_rows_take_the_background_of_the_cursor_s
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "pppppp", "pppppp", "mnopqr", "stuvwx")
 	for x := uint(0); x < 6; x++ {
 		cell := *tm6UCellAt(t, tm, x, 2)
-		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-		expectEqual(t, uint8(7), cell.content.color_palette)
-		expectEqual(t, StyleDefaultID, cell.style_id)
+		expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+		expectEqual(t, uint8(7), cell.content().colorPalette())
+		expectEqual(t, StyleDefaultID, cell.StyleID())
 	}
 }
 
@@ -1999,8 +1999,8 @@ func TestTm6_term51_insertLines_left_and_right_margins_color_only_the_margin_col
 
 	tm6UExpectGrid(t, tm, "abcdef", "grrrkl", "mhijqr", "snopwx", "ytuvCD", "EzABIJ")
 	cell := *tm6UCellAt(t, tm, 2, 1)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content().colorRGB())
 }
 
 // Zig: test "term51: insertLines: a cursor style without a background leaves blanks empty"
@@ -2015,7 +2015,7 @@ func TestTm6_term51_insertLines_a_cursor_style_without_a_background_leaves_blank
 
 	tm6UExpectGrid(t, tm, "abcdef", "......", "ghijkl", "mnopqr", "stuvwx", "yzABCD")
 	// The blank cells carry no style; only the cursor holds the bold style.
-	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 0, 1).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 0, 1).StyleID())
 	expectEqual(t, uint(1), tm6UPage(tm).styles.Count())
 	expectEqual(t, uint(1), tm6StyleRefCount(tm6UPage(tm), tm.Screens.Active.Cursor.StyleID))
 }
@@ -2036,7 +2036,7 @@ func TestTm6_term51_insertLines_spacer_head_is_turned_narrow_on_a_full_width_reg
 	tm.InsertLines(1)
 
 	tm6UExpectGrid(t, tm, "........", "abcdefg.", "#>......", "........")
-	expectEqual(t, PageCellWideNarrow, tm6UCellAt(t, tm, 7, 1).wide)
+	expectEqual(t, PageCellWideNarrow, tm6UCellAt(t, tm, 7, 1).Wide())
 	tm6UExpectWrap(t, tm, "....")
 }
 
@@ -2074,7 +2074,7 @@ func TestTm6_term51_insertLines_spacer_head_outside_the_margins_is_turned_narrow
 	// The wide character in column 0/1 straddles the left margin, so it is
 	// cleared too.
 	tm6UExpectGrid(t, tm, "a.....g.", ".bcdef..", "........", "........")
-	expectEqual(t, PageCellWideNarrow, tm6UCellAt(t, tm, 7, 0).wide)
+	expectEqual(t, PageCellWideNarrow, tm6UCellAt(t, tm, 7, 0).Wide())
 }
 
 // Zig: test "term51: insertLines: left margin zero turns the spacer head narrow and moves a contained wide character"
@@ -2233,8 +2233,8 @@ func TestTm6_term51_insertLines_style_reference_counts_follow_the_shifted_and_di
 	tm6UPutStr(t, tm, 0, 2, "YYYYYY")
 	tm6SetAttribute(t, tm, tm6AttrUnset)
 	page := tm6UPage(tm)
-	bold := tm6UCellAt(t, tm, 0, 1).style_id
-	italic := tm6UCellAt(t, tm, 0, 2).style_id
+	bold := tm6UCellAt(t, tm, 0, 1).StyleID()
+	italic := tm6UCellAt(t, tm, 0, 2).StyleID()
 	expectEqual(t, uint(2), page.styles.Count())
 	expectEqual(t, uint(6), tm6StyleRefCount(page, bold))
 	expectEqual(t, uint(6), tm6StyleRefCount(page, italic))
@@ -2249,8 +2249,8 @@ func TestTm6_term51_insertLines_style_reference_counts_follow_the_shifted_and_di
 	expect(t, !tm6URowAt(t, tm, 1).styled, "!term51URowAt(&t, 1).styled")
 	expect(t, tm6URowAt(t, tm, 2).styled, "term51URowAt(&t, 2).styled")
 	expect(t, tm6URowAt(t, tm, 3).styled, "term51URowAt(&t, 3).styled")
-	expectEqual(t, bold, tm6UCellAt(t, tm, 3, 2).style_id)
-	expectEqual(t, italic, tm6UCellAt(t, tm, 3, 3).style_id)
+	expectEqual(t, bold, tm6UCellAt(t, tm, 3, 2).StyleID())
+	expectEqual(t, italic, tm6UCellAt(t, tm, 3, 3).StyleID())
 
 	// The italic row falls off the bottom and its references are released.
 	tm.InsertLines(1)
@@ -2281,8 +2281,8 @@ func TestTm6_term51_insertLines_style_reference_counts_with_left_and_right_margi
 	tm6UPutStr(t, tm, 0, 2, "YYYYYY")
 	tm6SetAttribute(t, tm, tm6AttrUnset)
 	page := tm6UPage(tm)
-	bold := tm6UCellAt(t, tm, 0, 1).style_id
-	italic := tm6UCellAt(t, tm, 0, 2).style_id
+	bold := tm6UCellAt(t, tm, 0, 1).StyleID()
+	italic := tm6UCellAt(t, tm, 0, 2).StyleID()
 
 	tm.ScrollingRegion.Left = 1
 	tm.ScrollingRegion.Right = 3
@@ -2297,11 +2297,11 @@ func TestTm6_term51_insertLines_style_reference_counts_with_left_and_right_margi
 	expect(t, tm6URowAt(t, tm, 1).styled, "term51URowAt(&t, 1).styled")
 	expect(t, tm6URowAt(t, tm, 2).styled, "term51URowAt(&t, 2).styled")
 	expect(t, tm6URowAt(t, tm, 3).styled, "term51URowAt(&t, 3).styled")
-	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 1, 1).style_id)
-	expectEqual(t, bold, tm6UCellAt(t, tm, 0, 1).style_id)
-	expectEqual(t, bold, tm6UCellAt(t, tm, 2, 2).style_id)
-	expectEqual(t, italic, tm6UCellAt(t, tm, 0, 2).style_id)
-	expectEqual(t, italic, tm6UCellAt(t, tm, 2, 3).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 1, 1).StyleID())
+	expectEqual(t, bold, tm6UCellAt(t, tm, 0, 1).StyleID())
+	expectEqual(t, bold, tm6UCellAt(t, tm, 2, 2).StyleID())
+	expectEqual(t, italic, tm6UCellAt(t, tm, 0, 2).StyleID())
+	expectEqual(t, italic, tm6UCellAt(t, tm, 2, 3).StyleID())
 
 	// Clearing the region releases the margin cells but not those outside.
 	tm.InsertLines(^uint(0))
@@ -2315,7 +2315,7 @@ func TestTm6_term51_insertLines_style_reference_counts_with_left_and_right_margi
 	// blanks the cells, so a partial-width clear leaves the flag set even
 	// though no styled cell remains in the row.
 	expect(t, tm6URowAt(t, tm, 3).styled, "term51URowAt(&t, 3).styled")
-	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 2, 3).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 2, 3).StyleID())
 }
 
 // Zig: test "term51: insertLines: the cursor style reference is untouched"
@@ -2368,9 +2368,9 @@ func TestTm6_term51_insertLines_hyperlinks_move_with_their_rows_and_are_released
 	expect(t, tm6URowAt(t, tm, 2).hyperlink, "term51URowAt(&t, 2).hyperlink")
 	expect(t, tm6URowAt(t, tm, 3).hyperlink, "term51URowAt(&t, 3).hyperlink")
 	for x := uint(0); x < 6; x++ {
-		expect(t, !tm6UCellAt(t, tm, x, 1).hyperlink, "!term51UCellAt(&t, x, 1).hyperlink")
-		expect(t, tm6UCellAt(t, tm, x, 2).hyperlink, "term51UCellAt(&t, x, 2).hyperlink")
-		expect(t, tm6UCellAt(t, tm, x, 3).hyperlink, "term51UCellAt(&t, x, 3).hyperlink")
+		expect(t, !tm6UCellAt(t, tm, x, 1).Hyperlink(), "!term51UCellAt(&t, x, 1).hyperlink")
+		expect(t, tm6UCellAt(t, tm, x, 2).Hyperlink(), "term51UCellAt(&t, x, 2).hyperlink")
+		expect(t, tm6UCellAt(t, tm, x, 3).Hyperlink(), "term51UCellAt(&t, x, 3).hyperlink")
 	}
 	id_a := zigUnwrap(t, page.LookupHyperlink(tm6UCellAt(t, tm, 0, 2)))
 	id_b := zigUnwrap(t, page.LookupHyperlink(tm6UCellAt(t, tm, 5, 3)))
@@ -2415,10 +2415,10 @@ func TestTm6_term51_insertLines_hyperlinks_with_left_and_right_margins(t *testin
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
 	expect(t, tm6URowAt(t, tm, 1).hyperlink, "term51URowAt(&t, 1).hyperlink")
 	expect(t, tm6URowAt(t, tm, 2).hyperlink, "term51URowAt(&t, 2).hyperlink")
-	expect(t, tm6UCellAt(t, tm, 0, 1).hyperlink, "term51UCellAt(&t, 0, 1).hyperlink")
-	expect(t, !tm6UCellAt(t, tm, 1, 1).hyperlink, "!term51UCellAt(&t, 1, 1).hyperlink")
-	expect(t, !tm6UCellAt(t, tm, 0, 2).hyperlink, "!term51UCellAt(&t, 0, 2).hyperlink")
-	expect(t, tm6UCellAt(t, tm, 1, 2).hyperlink, "term51UCellAt(&t, 1, 2).hyperlink")
+	expect(t, tm6UCellAt(t, tm, 0, 1).Hyperlink(), "term51UCellAt(&t, 0, 1).hyperlink")
+	expect(t, !tm6UCellAt(t, tm, 1, 1).Hyperlink(), "!term51UCellAt(&t, 1, 1).hyperlink")
+	expect(t, !tm6UCellAt(t, tm, 0, 2).Hyperlink(), "!term51UCellAt(&t, 0, 2).hyperlink")
+	expect(t, tm6UCellAt(t, tm, 1, 2).Hyperlink(), "term51UCellAt(&t, 1, 2).hyperlink")
 
 	tm.InsertLines(^uint(0))
 	tm6UExpectGrid(t, tm, "......", "X...XX", "......", "......")
@@ -2561,7 +2561,7 @@ func TestTm6_term51_insertLines_rows_crossing_a_page_boundary_keep_styles_hyperl
 	id := zigUnwrap(t, page.LookupHyperlink(tm6UCellAt(t, tm, 5, 3)))
 	expectEqualStrings(t, "http://x.test", string(page.hyperlink_set.Get(id).uri))
 	expectEqualSlices(t, []uint32{0x0301}, zigUnwrap(t, page.LookupGrapheme(tm6UCellAt(t, tm, 0, 3))))
-	expectEqual(t, uint(10), tm6StyleRefCount(page, tm6UCellAt(t, tm, 0, 3).style_id))
+	expectEqual(t, uint(10), tm6StyleRefCount(page, tm6UCellAt(t, tm, 0, 3).StyleID()))
 }
 
 // Zig: test "term51: insertLines: left and right margins across a page boundary copy only the margin columns"
@@ -2594,17 +2594,17 @@ func TestTm6_term51_insertLines_left_and_right_margins_across_a_page_boundary_co
 	expectEqual(t, uint(1), first.data.GraphemeCount())
 	expectEqual(t, uint(2), first.data.HyperlinkCount())
 	expectEqual(t, uint(1), first.data.styles.Count())
-	expectEqual(t, uint(2), tm6StyleRefCount(&first.data, tm6UCellAt(t, tm, 0, 2).style_id))
+	expectEqual(t, uint(2), tm6StyleRefCount(&first.data, tm6UCellAt(t, tm, 0, 2).StyleID()))
 	// The margin columns were copied into the second page.
 	expectEqual(t, uint(0), second.data.GraphemeCount())
 	expectEqual(t, uint(8), second.data.HyperlinkCount())
 	expectEqual(t, uint(1), second.data.styles.Count())
-	expectEqual(t, uint(8), tm6StyleRefCount(&second.data, tm6UCellAt(t, tm, 1, 3).style_id))
+	expectEqual(t, uint(8), tm6StyleRefCount(&second.data, tm6UCellAt(t, tm, 1, 3).StyleID()))
 	expect(t, tm6URowAt(t, tm, 3).hyperlink, "term51URowAt(&t, 3).hyperlink")
 	expect(t, tm6URowAt(t, tm, 3).styled, "term51URowAt(&t, 3).styled")
 	expect(t, !tm6URowAt(t, tm, 3).grapheme, "!term51URowAt(&t, 3).grapheme")
-	expect(t, !tm6UCellAt(t, tm, 0, 3).hyperlink, "!term51UCellAt(&t, 0, 3).hyperlink")
-	expect(t, tm6UCellAt(t, tm, 1, 3).hyperlink, "term51UCellAt(&t, 1, 3).hyperlink")
+	expect(t, !tm6UCellAt(t, tm, 0, 3).Hyperlink(), "!term51UCellAt(&t, 0, 3).hyperlink")
+	expect(t, tm6UCellAt(t, tm, 1, 3).Hyperlink(), "term51UCellAt(&t, 1, 3).hyperlink")
 }
 
 // ---------------------------------------------------------------------------
@@ -3136,21 +3136,21 @@ func TestTm6_term51_deleteLines_protected_cells_move_with_their_text_and_blanks_
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm6Print(t, tm, 'X')
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, tm6UCellAt(t, tm, 2, 2).protected, "term51UCellAt(&t, 2, 2).protected")
+	expect(t, tm6UCellAt(t, tm, 2, 2).Protected(), "term51UCellAt(&t, 2, 2).protected")
 
 	tm.SetCursorPos(2, 1)
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "mnXpqr", "stuvwx", "yzABCD", "EFGHIJ", "......")
-	expect(t, tm6UCellAt(t, tm, 2, 1).protected, "term51UCellAt(&t, 2, 1).protected")
-	expect(t, !tm6UCellAt(t, tm, 2, 2).protected, "!term51UCellAt(&t, 2, 2).protected")
-	expect(t, !tm6UCellAt(t, tm, 2, 5).protected, "!term51UCellAt(&t, 2, 5).protected")
+	expect(t, tm6UCellAt(t, tm, 2, 1).Protected(), "term51UCellAt(&t, 2, 1).protected")
+	expect(t, !tm6UCellAt(t, tm, 2, 2).Protected(), "!term51UCellAt(&t, 2, 2).protected")
+	expect(t, !tm6UCellAt(t, tm, 2, 5).Protected(), "!term51UCellAt(&t, 2, 5).protected")
 
 	// A protected cell on the deleted row is deleted as well.
 	tm.SetCursorPos(2, 1)
 	tm.DeleteLines(1)
 	tm6UExpectGrid(t, tm, "abcdef", "stuvwx", "yzABCD", "EFGHIJ", "......", "......")
-	expect(t, !tm6UCellAt(t, tm, 2, 1).protected, "!term51UCellAt(&t, 2, 1).protected")
+	expect(t, !tm6UCellAt(t, tm, 2, 1).Protected(), "!term51UCellAt(&t, 2, 1).protected")
 }
 
 // Zig: test "term51: deleteLines: protected ISO mode does not stop clearing"
@@ -3167,7 +3167,7 @@ func TestTm6_term51_deleteLines_protected_ISO_mode_does_not_stop_clearing(t *tes
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "mnopqr", "stuvwx", "yzABCD", "......")
-	expect(t, !tm6UCellAt(t, tm, 0, 5).protected, "!term51UCellAt(&t, 0, 5).protected")
+	expect(t, !tm6UCellAt(t, tm, 0, 5).Protected(), "!term51UCellAt(&t, 0, 5).protected")
 }
 
 // Zig: test "term51: deleteLines: cleared rows take the background of the cursor style"
@@ -3183,9 +3183,9 @@ func TestTm6_term51_deleteLines_cleared_rows_take_the_background_of_the_cursor_s
 	tm6UExpectGrid(t, tm, "abcdef", "ghijkl", "yzABCD", "EFGHIJ", "pppppp", "pppppp")
 	for x := uint(0); x < 6; x++ {
 		cell := *tm6UCellAt(t, tm, x, 4)
-		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-		expectEqual(t, uint8(7), cell.content.color_palette)
-		expectEqual(t, StyleDefaultID, cell.style_id)
+		expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+		expectEqual(t, uint8(7), cell.content().colorPalette())
+		expectEqual(t, StyleDefaultID, cell.StyleID())
 	}
 }
 
@@ -3203,8 +3203,8 @@ func TestTm6_term51_deleteLines_left_and_right_margins_color_only_the_margin_col
 
 	tm6UExpectGrid(t, tm, "abcdef", "gnopkl", "mtuvqr", "szABwx", "yFGHCD", "ErrrIJ")
 	cell := *tm6UCellAt(t, tm, 2, 5)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content().colorRGB())
 }
 
 // Zig: test "term51: deleteLines: a cursor style without a background leaves blanks empty"
@@ -3218,7 +3218,7 @@ func TestTm6_term51_deleteLines_a_cursor_style_without_a_background_leaves_blank
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdef", "mnopqr", "stuvwx", "yzABCD", "EFGHIJ", "......")
-	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 0, 5).style_id)
+	expectEqual(t, StyleDefaultID, tm6UCellAt(t, tm, 0, 5).StyleID())
 	expectEqual(t, uint(1), tm6UPage(tm).styles.Count())
 }
 
@@ -3238,7 +3238,7 @@ func TestTm6_term51_deleteLines_spacer_head_is_turned_narrow_on_a_full_width_reg
 	tm.DeleteLines(1)
 
 	tm6UExpectGrid(t, tm, "abcdefg.", "#>......", "........", "........")
-	expectEqual(t, PageCellWideNarrow, tm6UCellAt(t, tm, 7, 0).wide)
+	expectEqual(t, PageCellWideNarrow, tm6UCellAt(t, tm, 7, 0).Wide())
 	tm6UExpectWrap(t, tm, "....")
 }
 
@@ -3302,7 +3302,7 @@ func TestTm6_panic_rowWillBeShifted_spacer_tail_at_left_margin_zero(t *testing.T
 	defer tm.Deinit()
 
 	tm6TPutRow(t, tm, 0, "abcdefghij")
-	tm6UCellAt(t, tm, 0, 0).wide = PageCellWideSpacerTail
+	tm6UCellAt(t, tm, 0, 0).setWide(PageCellWideSpacerTail)
 	tm6TRegion(tm, 0, 1, 0, 9)
 	lc := zigUnwrap(t, tm.Screens.Active.Pages.GetCell(tm6Active(0, 0)))
 	tm6ExpectPanic(t, func() {

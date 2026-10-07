@@ -365,13 +365,13 @@ func TestRender_grapheme(t *testing.T) {
 	{
 		cell := cells[1]
 		expectEqual(t, uint32(0x1F468), cell.Raw.Codepoint())
-		expectEqual(t, PageCellWideWide, cell.Raw.wide)
+		expectEqual(t, PageCellWideWide, cell.Raw.Wide())
 		expectEqualSlices(t, []uint32{0x200D}, cell.Grapheme)
 	}
 	{
 		cell := cells[2]
 		expectEqual(t, uint32(0), cell.Raw.Codepoint())
-		expectEqual(t, PageCellWideSpacerTail, cell.Raw.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Raw.Wide())
 	}
 }
 
@@ -1343,14 +1343,14 @@ func TestRender_term51_RenderState_update_cursor_on_the_tail_of_a_wide_character
 	zigTry(t, state.Update(term))
 	expectEqual(t, SizeCellCountInt(1), zigUnwrap(t, state.Cursor.Viewport).X)
 	expect(t, !zigUnwrap(t, state.Cursor.Viewport).WideTail, "!state.cursor.viewport.?.wide_tail")
-	expectEqual(t, PageCellWideWide, state.Cursor.Cell.wide)
+	expectEqual(t, PageCellWideWide, state.Cursor.Cell.Wide())
 
 	// On the tail: the cell to the left is wide.
 	rnWrite(t, term, "\x1b[3G")
 	zigTry(t, state.Update(term))
 	expectEqual(t, SizeCellCountInt(2), zigUnwrap(t, state.Cursor.Viewport).X)
 	expect(t, zigUnwrap(t, state.Cursor.Viewport).WideTail, "state.cursor.viewport.?.wide_tail")
-	expectEqual(t, PageCellWideSpacerTail, state.Cursor.Cell.wide)
+	expectEqual(t, PageCellWideSpacerTail, state.Cursor.Cell.Wide())
 
 	// After the tail: the cell to the left is the tail itself.
 	rnWrite(t, term, "\x1b[4G")
@@ -1455,13 +1455,13 @@ func TestRender_term51_RenderState_update_copies_cells_styles_graphemes_and_raw_
 		expectEqual(t, uint32('b'), b.Raw.Codepoint())
 		expect(t, !b.Raw.HasStyling(), "!b.raw.hasStyling()")
 		g := rnCell(&state, 2, 0)
-		expectEqual(t, PageCellContentTagCodepointGrapheme, g.Raw.content_tag)
+		expectEqual(t, PageCellContentTagCodepointGrapheme, g.Raw.ContentTag())
 		expectEqualSlices(t, []uint32{0x301}, g.Grapheme)
 		w := rnCell(&state, 3, 0)
 		expectEqual(t, uint32(0x4e2d), w.Raw.Codepoint())
-		expectEqual(t, PageCellWideWide, w.Raw.wide)
+		expectEqual(t, PageCellWideWide, w.Raw.Wide())
 		tail := rnCell(&state, 4, 0)
-		expectEqual(t, PageCellWideSpacerTail, tail.Raw.wide)
+		expectEqual(t, PageCellWideSpacerTail, tail.Raw.Wide())
 		expectEqual(t, uint32(0), tail.Raw.Codepoint())
 		expectEqual(t, uint32(0), rnCell(&state, 5, 0).Raw.Codepoint())
 	}
@@ -1473,8 +1473,8 @@ func TestRender_term51_RenderState_update_copies_cells_styles_graphemes_and_raw_
 		expect(t, s.Style.Flags.Italic, "s.style.flags.italic")
 		for x := uint(1); x < 6; x++ {
 			c := rnCell(&state, x, 1)
-			expectEqual(t, PageCellContentTagBgColorPalette, c.Raw.content_tag)
-			expectEqual(t, uint8(1), c.Raw.content.color_palette)
+			expectEqual(t, PageCellContentTagBgColorPalette, c.Raw.ContentTag())
+			expectEqual(t, uint8(1), c.Raw.content().colorPalette())
 			expect(t, c.Style.Eql(Style{BgColor: StyleColor{Tag: StyleColorPalette, Palette: 1}}), "c.style.eql(.{ .bg_color = .{ .palette = 1 } })")
 		}
 	}
@@ -1486,10 +1486,10 @@ func TestRender_term51_RenderState_update_copies_cells_styles_graphemes_and_raw_
 		expect(t, !row.ManagedMemory(), "!row.managedMemory()")
 		for x := uint(0); x < 6; x++ {
 			c := rnCell(&state, x, 2)
-			expectEqual(t, PageCellContentTagBgColorRgb, c.Raw.content_tag)
-			expectEqual(t, uint8(1), c.Raw.content.color_rgb.R)
-			expectEqual(t, uint8(2), c.Raw.content.color_rgb.G)
-			expectEqual(t, uint8(3), c.Raw.content.color_rgb.B)
+			expectEqual(t, PageCellContentTagBgColorRgb, c.Raw.ContentTag())
+			expectEqual(t, uint8(1), c.Raw.content().colorRGB().R)
+			expectEqual(t, uint8(2), c.Raw.content().colorRGB().G)
+			expectEqual(t, uint8(3), c.Raw.content().colorRGB().B)
 		}
 	}
 
@@ -1552,7 +1552,7 @@ func TestRender_term51_RenderState_update_dirty_rows_are_rebuilt_and_clean_rows_
 	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{true, false, false})
 	expectEqual(t, uint32('x'), rnCell(&state, 0, 0).Raw.Codepoint())
-	expectEqual(t, PageCellContentTagCodepoint, rnCell(&state, 0, 0).Raw.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, rnCell(&state, 0, 0).Raw.ContentTag())
 	expectEqual(t, uint32('y'), rnCell(&state, 1, 0).Raw.Codepoint())
 	expect(t, !rnCell(&state, 1, 0).Raw.HasStyling(), "!term51ZRsCell(&state, 1, 0).raw.hasStyling()")
 	// Row 1 keeps the sentinel and not 'k'.
@@ -2138,7 +2138,7 @@ func TestRender_term51_RenderState_string_background_cells_empty_state_and_write
 	state := RenderStateEmpty
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
-	expectEqual(t, PageCellContentTagBgColorPalette, rnCell(&state, 1, 0).Raw.content_tag)
+	expectEqual(t, PageCellContentTagBgColorPalette, rnCell(&state, 1, 0).Raw.ContentTag())
 
 	// Background cells have no codepoint: NUL like empty cells.
 	{
@@ -2166,7 +2166,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 	p := &rnPtrNode(t, term.Screens.Active.Pages.pages.first, "t.screens.active.pages.pages.first.?").data
 
 	// A surrogate half passes the length check and is written as U+FFFD.
-	p.GetRowAndCell(1, 0).cell.content = PageCellContent{codepoint: 0xd800}
+	p.GetRowAndCell(1, 0).cell.setContent(pageCellContentFields{codepoint: 0xd800}.pack())
 	{
 		state := RenderStateEmpty
 		defer state.Deinit()
@@ -2181,7 +2181,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 	}
 
 	// A value above U+10FFFF cannot be sized: WriteFailed.
-	p.GetRowAndCell(1, 0).cell.content = PageCellContent{codepoint: 0x110000}
+	p.GetRowAndCell(1, 0).cell.setContent(pageCellContentFields{codepoint: 0x110000}.pack())
 	{
 		state := RenderStateEmpty
 		defer state.Deinit()
@@ -2194,7 +2194,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 	}
 
 	// Restore, then put a bad codepoint in a grapheme.
-	p.GetRowAndCell(1, 0).cell.content = PageCellContent{codepoint: 'b'}
+	p.GetRowAndCell(1, 0).cell.setContent(pageCellContentFields{codepoint: 'b'}.pack())
 	{
 		rac := p.GetRowAndCell(2, 0)
 		zigTry(t, p.AppendGrapheme(rac.row, rac.cell, 0x110000))

@@ -2139,10 +2139,10 @@ func (self *pageListReflowCursor) writeCell(
 		// errdefer comptime unreachable;
 
 		// Copy cell contents.
-		switch cell.content_tag {
+		switch cell.ContentTag() {
 		case PageCellContentTagCodepoint,
 			PageCellContentTagCodepointGrapheme:
-			switch cell.wide {
+			switch cell.Wide() {
 			case PageCellWideNarrow:
 				*self.page_cell = *cell
 
@@ -2152,11 +2152,11 @@ func (self *pageListReflowCursor) writeCell(
 						// If there's a wide character in the last column of
 						// the reflowed page then we need to insert a spacer
 						// head and wrap before handling it.
-						*self.page_cell = PageCell{
+						*self.page_cell = pageCellFields{
 							content_tag: PageCellContentTagCodepoint,
-							content:     PageCellContent{codepoint: 0},
+							content:     pageCellContentFields{codepoint: 0}.pack(),
 							wide:        PageCellWideSpacerHead,
-						}
+						}.pack()
 
 						// Move to the next row (this sets pending wrap
 						// which will cause us to wrap on the next
@@ -2174,8 +2174,8 @@ func (self *pageListReflowCursor) writeCell(
 					// Edge case, when resizing to 1 column, wide
 					// characters are just destroyed and replaced
 					// with empty narrow cells.
-					self.page_cell.content.codepoint = 0
-					self.page_cell.wide = PageCellWideNarrow
+					self.page_cell.setContentCodepoint(0)
+					self.page_cell.setWide(PageCellWideNarrow)
 					self.cursorForward()
 
 					// Skip spacer tail so it doesn't cause a wrap.
@@ -2218,9 +2218,9 @@ func (self *pageListReflowCursor) writeCell(
 		// These will create issues by trying to clone managed memory that
 		// isn't set if the current dst row needs to be moved to a new page.
 		// They'll be fixed once we do properly copy the relevant memory.
-		self.page_cell.content_tag = PageCellContentTagCodepoint
-		self.page_cell.hyperlink = false
-		self.page_cell.style_id = StyleDefaultID
+		self.page_cell.setContentTag(PageCellContentTagCodepoint)
+		self.page_cell.setHyperlink(false)
+		self.page_cell.setStyleID(StyleDefaultID)
 
 		// Zig: the `if (comptime build_options.kitty_graphics)` block that
 		// copies the Kitty virtual placeholder status is compiled out (see
@@ -2244,7 +2244,7 @@ func (self *pageListReflowCursor) writeCell(
 	// into some functional but not strictly correct cell.
 
 	// Copy grapheme data.
-	if cell.content_tag == PageCellContentTagCodepointGrapheme {
+	if cell.ContentTag() == PageCellContentTagCodepointGrapheme {
 		// Copy the graphemes
 		cps_ := src_page.LookupGrapheme(cell)
 		assert(cps_.Valid) // .?
@@ -2305,7 +2305,7 @@ func (self *pageListReflowCursor) writeCell(
 	//
 	// Zig: the block is labeled `hyperlink:`; every `break :hyperlink`
 	// follows a safe-build `unreachable`, so none is reached.
-	if cell.hyperlink {
+	if cell.Hyperlink() {
 		src_id_ := src_page.LookupHyperlink(cell)
 		assert(src_id_.Valid) // .?
 		src_id := src_id_.Value
@@ -2466,12 +2466,12 @@ func (self *pageListReflowCursor) writeCell(
 	// safe-build `unreachable` and is not reached.
 	if cell.HasStyling() {
 		style := *src_page.styles.Get(
-			cell.style_id,
+			cell.StyleID(),
 		)
 
 		id_, err := self.page.styles.AddWithId(
 			style,
-			cell.style_id,
+			cell.StyleID(),
 		)
 		if err != nil {
 			// Zig: `catch |err| id: { ... }`.
@@ -2496,7 +2496,7 @@ func (self *pageListReflowCursor) writeCell(
 			// We assume this one will succeed.
 			id2, err2 := self.page.styles.AddWithId(
 				style,
-				cell.style_id,
+				cell.StyleID(),
 			)
 			if err2 != nil {
 				// Should not fail since we just modified capacity
@@ -2515,13 +2515,13 @@ func (self *pageListReflowCursor) writeCell(
 			id_ = id2
 		}
 		// Zig: `orelse cell.style_id`.
-		id := cell.style_id
+		id := cell.StyleID()
 		if id_.Valid {
 			id = id_.Value
 		}
 
 		self.page_row.styled = true
-		self.page_cell.style_id = id
+		self.page_cell.setStyleID(id)
 	}
 
 	self.cursorForward()
@@ -3050,7 +3050,7 @@ func (self *PageList) resizeWithoutReflowGrowCols(
 		for i := range rows {
 			row := &rows[i]
 			cells := page.GetCells(row)
-			if cells[old_cols-1].wide == PageCellWideSpacerHead {
+			if cells[old_cols-1].Wide() == PageCellWideSpacerHead {
 				fast = false // break :fast
 				break
 			}
@@ -5541,7 +5541,7 @@ func (self *PageList) HighlightSemanticContent(
 	prompt:
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
 			p := p_.Value
-			switch p.RowAndCell().cell.semantic_content {
+			switch p.RowAndCell().cell.SemanticContent() {
 			case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
 				result.End = p
 			case PageCellSemanticContentOutput:
@@ -5563,7 +5563,7 @@ func (self *PageList) HighlightSemanticContent(
 	input_start:
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
 			p := p_.Value
-			switch p.RowAndCell().cell.semantic_content {
+			switch p.RowAndCell().cell.SemanticContent() {
 			case PageCellSemanticContentPrompt:
 			case PageCellSemanticContentInput:
 				result.Start = p
@@ -5583,7 +5583,7 @@ func (self *PageList) HighlightSemanticContent(
 	input_end:
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
 			p := p_.Value
-			switch p.RowAndCell().cell.semantic_content {
+			switch p.RowAndCell().cell.SemanticContent() {
 			// Prompts can be nested in our input for continuation
 			case PageCellSemanticContentPrompt:
 
@@ -5609,7 +5609,7 @@ func (self *PageList) HighlightSemanticContent(
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
 			p := p_.Value
 			cell := p.RowAndCell().cell
-			switch cell.semantic_content {
+			switch cell.SemanticContent() {
 			case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
 			case PageCellSemanticContentOutput:
 				// Skip empty cells - they default to .output but aren't real output
@@ -5632,7 +5632,7 @@ func (self *PageList) HighlightSemanticContent(
 		for p_ := it.Next(); p_.Valid; p_ = it.Next() {
 			p := p_.Value
 			cell := p.RowAndCell().cell
-			switch cell.semantic_content {
+			switch cell.SemanticContent() {
 			case PageCellSemanticContentPrompt, PageCellSemanticContentInput:
 				break output_end
 			case PageCellSemanticContentOutput:
@@ -6726,11 +6726,11 @@ func (self PageListPin) Grapheme(cell *PageCell) Optional[[]uint32] {
 //
 // Zig: cell is *const pagepkg.Cell.
 func (self PageListPin) Style(cell *PageCell) Style {
-	if cell.style_id == StyleDefaultID {
+	if cell.StyleID() == StyleDefaultID {
 		return Style{}
 	}
 	return *self.Node.data.styles.Get(
-		cell.style_id,
+		cell.StyleID(),
 	)
 }
 
@@ -7298,11 +7298,11 @@ func (self PageListCell) IsDirty() bool {
 //
 // Not meant for non-test usage since this is inefficient.
 func (self PageListCell) Style() Style {
-	if self.Cell.style_id == StyleDefaultID {
+	if self.Cell.StyleID() == StyleDefaultID {
 		return Style{}
 	}
 	return *self.Node.data.styles.Get(
-		self.Cell.style_id,
+		self.Cell.StyleID(),
 	)
 }
 

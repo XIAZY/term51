@@ -125,10 +125,10 @@ func pl3Clone(t *testing.T, s *PageList, opts PageListClone) *PageList {
 // pl3Codepoint is the Zig literal `.{ .content_tag = .codepoint, .content =
 // .{ .codepoint = cp } }`.
 func pl3Codepoint(cp uint32) PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // pl3Bold is the style `.{ .flags = .{ .bold = true } }`.
@@ -146,7 +146,7 @@ func pl3SetCell(p PageListPin, cp uint32) {
 // pl3Cp is term51JCp: reads the codepoint at the point (0 for an empty cell).
 func pl3Cp(t *testing.T, s *PageList, pt Point) uint32 {
 	t.Helper()
-	return zigUnwrap(t, s.GetCell(pt)).Cell.content.codepoint
+	return zigUnwrap(t, s.GetCell(pt)).Cell.content().codepoint()
 }
 
 // pl3MarkRows is term51JMarkRows: marks every screen row of the list with a
@@ -385,11 +385,11 @@ func TestPl3_term51_reset_page_contents_and_dirty_state_are_cleared(t *testing.T
 		rac := p.RowAndCell()
 		rac.row.wrap = true
 		rac.row.styled = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'Z'},
+			content:     pageCellContentFields{codepoint: 'Z'}.pack(),
 			style_id:    style_id,
-		}
+		}.pack()
 		page.styles.Use(style_id)
 	}
 	page.styles.Release(style_id)
@@ -404,8 +404,8 @@ func TestPl3_term51_reset_page_contents_and_dirty_state_are_cleared(t *testing.T
 	expect(t, !new_page.dirty, "!new_page.dirty")
 	for y := 0; y < 24; y++ {
 		rac := new_page.GetRowAndCell(0, uint(y))
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
-		expectEqual(t, uint16(0), rac.cell.style_id)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
+		expectEqual(t, uint16(0), rac.cell.StyleID())
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expect(t, !rac.row.styled, "!rac.row.styled")
 		expect(t, !rac.row.dirty, "!rac.row.dirty")
@@ -927,11 +927,11 @@ func TestPl3_term51_clone_padded_rows_are_blank(t *testing.T) {
 		rac := page.GetRowAndCell(5, uint(y))
 		rac.row.styled = true
 		rac.row.wrap = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'W'},
+			content:     pageCellContentFields{codepoint: 'W'}.pack(),
 			style_id:    style_id,
-		}
+		}.pack()
 		page.styles.Use(style_id)
 	}
 	page.styles.Release(style_id)
@@ -944,8 +944,8 @@ func TestPl3_term51_clone_padded_rows_are_blank(t *testing.T) {
 	expectEqual(t, uint(24), c.total_rows)
 	for y := 3; y < 24; y++ {
 		rac := c.pages.first.data.GetRowAndCell(5, uint(y))
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
-		expectEqual(t, uint16(0), rac.cell.style_id)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
+		expectEqual(t, uint16(0), rac.cell.StyleID())
 		expect(t, !rac.row.styled, "!rac.row.styled")
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 	}
@@ -1510,30 +1510,30 @@ func pl3KLoad(t *testing.T, s *PageList, text string) {
 			ch := body[x]
 			switch ch {
 			case '.':
-				cells[x] = PageCell{}
+				cells[x] = PageCell(0)
 			case 'W':
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: 0x1F600},
+					content:     pageCellContentFields{codepoint: 0x1F600}.pack(),
 					wide:        PageCellWideWide,
-				}
+				}.pack()
 			case '_':
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: 0},
+					content:     pageCellContentFields{codepoint: 0}.pack(),
 					wide:        PageCellWideSpacerTail,
-				}
+				}.pack()
 			case '^':
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: 0},
+					content:     pageCellContentFields{codepoint: 0}.pack(),
 					wide:        PageCellWideSpacerHead,
-				}
+				}.pack()
 			default:
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: uint32(ch)},
-				}
+					content:     pageCellContentFields{codepoint: uint32(ch)}.pack(),
+				}.pack()
 			}
 		}
 	}
@@ -1541,12 +1541,12 @@ func pl3KLoad(t *testing.T, s *PageList, text string) {
 
 // pl3KCh is term51KCh.
 func pl3KCh(c PageCell) uint8 {
-	switch c.content_tag {
+	switch c.ContentTag() {
 	case PageCellContentTagBgColorPalette, PageCellContentTagBgColorRgb:
 		return '#'
 	case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
 	}
-	switch c.wide {
+	switch c.Wide() {
 	case PageCellWideWide:
 		return 'W'
 	case PageCellWideSpacerTail:
@@ -1554,10 +1554,10 @@ func pl3KCh(c PageCell) uint8 {
 	case PageCellWideSpacerHead:
 		return '^'
 	default:
-		if c.content.codepoint == 0 {
+		if c.content().codepoint() == 0 {
 			return '.'
-		} else if c.content.codepoint < 128 {
-			return uint8(c.content.codepoint)
+		} else if c.content().codepoint() < 128 {
+			return uint8(c.content().codepoint())
 		}
 		return '?'
 	}
@@ -1741,11 +1741,11 @@ func pl3KSetCell(rc *pageListReflowCursor, x int, cell PageCell) {
 
 // pl3KWide is term51KWide.
 func pl3KWide() PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 0x1F600},
+		content:     pageCellContentFields{codepoint: 0x1F600}.pack(),
 		wide:        PageCellWideWide,
-	}
+	}.pack()
 }
 
 // pl3KDstCell is term51KDstCell.
@@ -1756,26 +1756,26 @@ func pl3KDstCell(rc *pageListReflowCursor, x int) PageCell {
 // pl3KSpacerTail, pl3KSpacerHead are the Zig literals
 // `.{ .content_tag = .codepoint, .content = .{ .codepoint = 0 }, .wide = ... }`.
 func pl3KSpacerTail() PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 0},
+		content:     pageCellContentFields{codepoint: 0}.pack(),
 		wide:        PageCellWideSpacerTail,
-	}
+	}.pack()
 }
 
 func pl3KSpacerHead() PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 0},
+		content:     pageCellContentFields{codepoint: 0}.pack(),
 		wide:        PageCellWideSpacerHead,
-	}
+	}.pack()
 }
 
 // pl3KStyleCell is the Zig literal `.{ .content_tag = .codepoint, .content =
 // .{ .codepoint = cp }, .style_id = id }`.
 func pl3KStyleCell(cp uint32, id StyleID) PageCell {
 	c := pl3Codepoint(cp)
-	c.style_id = id
+	c.setStyleID(id)
 	return c
 }
 
@@ -1800,11 +1800,11 @@ func pl3KFillStyles(page *Page) uint {
 		}
 		rac := page.GetRowAndCell(uint(x), 0)
 		rac.row.styled = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'X'},
+			content:     pageCellContentFields{codepoint: 'X'}.pack(),
 			style_id:    id,
-		}
+		}.pack()
 		n += 1
 	}
 	return n
@@ -1919,7 +1919,7 @@ func TestPl3_term51_resize_layout_reflow_recomputes_min_max_size_from_the_new_di
 	expectEqual(t, uint(40), s.totalRows())
 	expectEqual(t, pageListMinMaxSize(3000, 40), s.min_max_size)
 	expect(t, s.min_max_size > old, "s.min_max_size > old")
-	expectEqual(t, uint32('a'), pl3KCell(t, s, 0, 0).content.codepoint)
+	expectEqual(t, uint32('a'), pl3KCell(t, s, 0, 0).content().codepoint())
 }
 
 // Zig: test "term51: resize: growing cols reflows before growing rows"
@@ -2241,9 +2241,9 @@ func TestPl3_term51_resizeCols_layout_capacity_falls_back_when_the_columns_do_no
 	// rows = min(rows of the old page, capacity rows).
 	expectEqual(t, SizeCellCountInt(1), page.capacity.rows)
 	expectEqual(t, uint(1), s.totalRows())
-	expectEqual(t, uint32('a'), pl3KCell(t, s, 0, 0).content.codepoint)
-	expectEqual(t, uint32('c'), pl3KCell(t, s, 2, 0).content.codepoint)
-	expectEqual(t, uint32(0), pl3KCell(t, s, 3, 0).content.codepoint)
+	expectEqual(t, uint32('a'), pl3KCell(t, s, 0, 0).content().codepoint())
+	expectEqual(t, uint32('c'), pl3KCell(t, s, 2, 0).content().codepoint())
+	expectEqual(t, uint32(0), pl3KCell(t, s, 3, 0).content().codepoint())
 	s.AssertIntegrity()
 }
 
@@ -2289,10 +2289,10 @@ func TestPl3_term51_resizeCols_layout_source_pages_are_consumed_and_replaced_acr
 
 	for y := 0; y < 63; y++ {
 		c := pl3KCell(t, s, 0, y*2)
-		expectEqual(t, 'a'+uint32(y%26), c.content.codepoint)
+		expectEqual(t, 'a'+uint32(y%26), c.content().codepoint())
 		expect(t, pl3KRow(t, s, y*2).wrap, "term51KRow(&s, y * 2).wrap")
 		expect(t, pl3KRow(t, s, y*2+1).wrap_continuation, "term51KRow(&s, y * 2 + 1).wrap_continuation")
-		expectEqual(t, uint32('Z'), pl3KCell(t, s, 499, y*2+1).content.codepoint)
+		expectEqual(t, uint32('Z'), pl3KCell(t, s, 499, y*2+1).content().codepoint())
 	}
 	s.AssertIntegrity()
 }
@@ -2327,7 +2327,7 @@ func TestPl3_term51_resizeCols_layout_pruning_while_padding_for_the_cursor_drops
 	expectEqualSlices(t, []uint{46, 1}, pl3KRowsPerPage(s))
 	expect(t, first_pin.Garbage, "first_pin.garbage")
 	pl3KExpectPin(t, s, *first_pin, 0, 0)
-	expectEqual(t, uint32('a'+(46%26)), pl3KCell(t, s, 0, 0).content.codepoint)
+	expectEqual(t, uint32('a'+(46%26)), pl3KCell(t, s, 0, 0).content().codepoint())
 	pl3KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 43)
 	s.AssertIntegrity()
 }
@@ -2365,8 +2365,8 @@ func TestPl3_term51_resizeCols_layout_cursor_in_the_second_page(t *testing.T) {
 	expectEqual(t, uint(63), s.totalRows())
 	expectEqual(t, uint(63), s.total_rows)
 	pl3KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 60)
-	expectEqual(t, uint32('a'+(59%26)), pl3KCell(t, s, 0, 59).content.codepoint)
-	expectEqual(t, uint32(0), pl3KCell(t, s, 0, 60).content.codepoint)
+	expectEqual(t, uint32('a'+(59%26)), pl3KCell(t, s, 0, 59).content().codepoint())
+	expectEqual(t, uint32(0), pl3KCell(t, s, 0, 60).content().codepoint())
 	s.AssertIntegrity()
 }
 
@@ -2686,7 +2686,7 @@ func TestPl3_term51_ReflowCursor_countTrailingEmptyCells_counts_the_empty_cells_
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
 
 	// Text in the middle: only the cells after it count.
-	pl3KSetCell(&rc, 3, PageCell{})
+	pl3KSetCell(&rc, 3, PageCell(0))
 	pl3KSetCell(&rc, 1, PageCellInit('x'))
 	expectEqual(t, uint(2), rc.countTrailingEmptyCells())
 
@@ -2744,14 +2744,14 @@ func TestPl3_term51_ReflowCursor_countTrailingEmptyCells_spacers_and_colors_are_
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
 	pl3KSetCell(&rc, 3, pl3KSpacerTail())
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
-	pl3KSetCell(&rc, 3, PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 3}})
+	pl3KSetCell(&rc, 3, pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 3}.pack()}.pack())
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
-	pl3KSetCell(&rc, 3, PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}})
+	pl3KSetCell(&rc, 3, pageCellFields{content_tag: PageCellContentTagBgColorRgb, content: pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack()}.pack())
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
 	// A blank cell that carries a style id but no text is empty.
-	pl3KSetCell(&rc, 3, PageCell{style_id: 5})
+	pl3KSetCell(&rc, 3, pageCellFields{style_id: 5}.pack())
 	expectEqual(t, uint(4), rc.countTrailingEmptyCells())
-	pl3KSetCell(&rc, 3, PageCell{})
+	pl3KSetCell(&rc, 3, PageCell(0))
 }
 
 // Zig: test "term51: ReflowCursor.copyRowMetadata: copies only the semantic prompt"
@@ -2810,7 +2810,7 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_moves_the_row_and_its_pins
 		*d.cell = PageCellInit('d')
 		id, err := page.styles.Add(pl3Bold())
 		zigTry(t, err)
-		d.cell.style_id = id
+		d.cell.setStyleID(id)
 		d.row.styled = true
 	}
 
@@ -2846,11 +2846,11 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_moves_the_row_and_its_pins
 	expectEqual(t, PageRowSemanticPromptPrompt, row.semantic_prompt)
 	{
 		c := new_page.GetRowAndCell(0, 0).cell
-		expectEqual(t, uint32('c'), c.content.codepoint)
+		expectEqual(t, uint32('c'), c.content().codepoint())
 		expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, new_page.LookupGrapheme(c)))
 		d := new_page.GetRowAndCell(1, 0).cell
-		expectEqual(t, uint32('d'), d.content.codepoint)
-		expect(t, new_page.styles.Get(d.style_id).Flags.Bold, "new_page.styles.get(new_page.memory, d.style_id).flags.bold")
+		expectEqual(t, uint32('d'), d.content().codepoint())
+		expect(t, new_page.styles.Get(d.StyleID()).Flags.Bold, "new_page.styles.get(new_page.memory, d.style_id).flags.bold")
 	}
 
 	// The old row is cleared, including its managed memory.
@@ -2867,7 +2867,7 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_moves_the_row_and_its_pins
 		expectEqual(t, uint(1), new_page.styles.living)
 	}
 	// The row above is untouched.
-	expectEqual(t, uint32('a'), page.GetRowAndCell(0, 0).cell.content.codepoint)
+	expectEqual(t, uint32('a'), page.GetRowAndCell(0, 0).cell.content().codepoint())
 
 	// The pin in the moved row follows, the other one stays.
 	expect(t, rc.node == pin_row1.Node, "rc.node == pin_row1.node")
@@ -2900,7 +2900,7 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_a_page_with_a_single_row_i
 	expectEqual(t, SizeCellCountInt(0), rc.y)
 	expectEqual(t, SizeCellCountInt(1), rc.x)
 	expect(t, rc.node == tpin.Node, "rc.node == tpin.node")
-	expectEqual(t, uint32('x'), rc.page.GetRowAndCell(1, 0).cell.content.codepoint)
+	expectEqual(t, uint32('x'), rc.page.GetRowAndCell(1, 0).cell.content().codepoint())
 	s.AssertIntegrity()
 }
 
@@ -2950,7 +2950,7 @@ func TestPl3_term51_ReflowCursor_increaseCapacity_replaces_the_node_keeping_posi
 	// The cursor is reinitialized: deferred rows and a pending wrap are lost.
 	expectEqual(t, uint(0), rc.new_rows)
 	expect(t, !rc.pending_wrap, "!rc.pending_wrap")
-	expectEqual(t, uint32('b'), rc.page_cell.content.codepoint)
+	expectEqual(t, uint32('b'), rc.page_cell.content().codepoint())
 	expect(t, rc.node == tpin.Node, "rc.node == tpin.node")
 	expectEqual(t, uint(2), s.TotalPages())
 	expect(t, rc.node == s.pages.last, "rc.node == s.pages.last.?")
@@ -2971,7 +2971,7 @@ func TestPl3_term51_ReflowCursor_increaseCapacity_replaces_the_node_keeping_posi
 	zigTry(t, rc.increaseCapacity(s, None[PageListIncreaseCapacity]()))
 	expect(t, rc.node != before, "rc.node != before")
 	expectEqual(t, cap, rc.page.capacity)
-	expectEqual(t, uint32('a'), rc.page.GetRowAndCell(0, 0).cell.content.codepoint)
+	expectEqual(t, uint32('a'), rc.page.GetRowAndCell(0, 0).cell.content().codepoint())
 	expectEqual(t, SizeCellCountInt(2), rc.x)
 	s.AssertIntegrity()
 }
@@ -3010,12 +3010,12 @@ func TestPl3_term51_ReflowCursor_writeCell_narrow_cells_are_copied_whole_and_the
 	rc := pageListReflowCursorInit(node)
 	src_page := &s.pages.first.data
 
-	cell := PageCell{
+	cell := pageCellFields{
 		content_tag:      PageCellContentTagCodepoint,
-		content:          PageCellContent{codepoint: 'x'},
+		content:          pageCellContentFields{codepoint: 'x'}.pack(),
 		protected:        true,
 		semantic_content: PageCellSemanticContentInput,
-	}
+	}.pack()
 	r, err := rc.writeCell(s, &cell, src_page)
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultSuccess, "r == .success")
@@ -3024,7 +3024,7 @@ func TestPl3_term51_ReflowCursor_writeCell_narrow_cells_are_copied_whole_and_the
 	expect(t, !rc.pending_wrap, "!rc.pending_wrap")
 
 	// An empty cell is copied as well.
-	r2, err := rc.writeCell(s, &PageCell{}, src_page)
+	r2, err := rc.writeCell(s, new(PageCell), src_page)
 	zigTry(t, err)
 	expect(t, r2 == pageListReflowCursorWriteCellResultSuccess, "r2 == .success")
 	expectEqual(t, uint64(0), pl3KDstCell(&rc, 1).bitCast())
@@ -3069,8 +3069,8 @@ func TestPl3_term51_ReflowCursor_writeCell_wide_cell_in_the_last_column_becomes_
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultRepeat, "r == .repeat")
 	head := pl3KDstCell(&rc, 2)
-	expectEqual(t, PageCellWideSpacerHead, head.wide)
-	expectEqual(t, uint32(0), head.content.codepoint)
+	expectEqual(t, PageCellWideSpacerHead, head.Wide())
+	expectEqual(t, uint32(0), head.content().codepoint())
 	expectEqual(t, SizeCellCountInt(2), rc.x)
 	expect(t, rc.pending_wrap, "rc.pending_wrap")
 }
@@ -3086,14 +3086,14 @@ func TestPl3_term51_ReflowCursor_writeCell_wide_cell_in_a_one_column_page_is_des
 
 	// Pre-existing garbage in the destination: only the codepoint and wide
 	// flags are reset.
-	*rc.page_cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'q'}, wide: PageCellWideWide}
+	*rc.page_cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'q'}.pack(), wide: PageCellWideWide}.pack()
 	wide := pl3KWide()
 	r, err := rc.writeCell(s, &wide, src_page)
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultSkipNext, "r == .skip_next")
 	dst := pl3KDstCell(&rc, 0)
-	expectEqual(t, uint32(0), dst.content.codepoint)
-	expectEqual(t, PageCellWideNarrow, dst.wide)
+	expectEqual(t, uint32(0), dst.content().codepoint())
+	expectEqual(t, PageCellWideNarrow, dst.Wide())
 	expect(t, rc.pending_wrap, "rc.pending_wrap")
 	expectEqual(t, SizeCellCountInt(0), rc.x)
 }
@@ -3146,22 +3146,22 @@ func TestPl3_term51_ReflowCursor_writeCell_background_color_cells_are_copied_wit
 	rc := pageListReflowCursorInit(node)
 	src_page := &s.pages.first.data
 
-	pal := PageCell{
+	pal := pageCellFields{
 		content_tag:      PageCellContentTagBgColorPalette,
-		content:          PageCellContent{color_palette: 9},
+		content:          pageCellContentFields{color_palette: 9}.pack(),
 		protected:        true,
 		semantic_content: PageCellSemanticContentPrompt,
-	}
+	}.pack()
 	r, err := rc.writeCell(s, &pal, src_page)
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultSuccess, "r == .success")
 	expectEqual(t, pal.bitCast(), pl3KDstCell(&rc, 0).bitCast())
 	expectEqual(t, SizeCellCountInt(1), rc.x)
 
-	rgb := PageCell{
+	rgb := pageCellFields{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
-	}
+		content:     pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack(),
+	}.pack()
 	r, err = rc.writeCell(s, &rgb, src_page)
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultSuccess, "r == .success")
@@ -3188,8 +3188,8 @@ func TestPl3_term51_ReflowCursor_writeCell_graphemes_are_copied(t *testing.T) {
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultSuccess, "r == .success")
 	dst := rc.page.GetRowAndCell(0, 0)
-	expectEqual(t, PageCellContentTagCodepointGrapheme, dst.cell.content_tag)
-	expectEqual(t, uint32('e'), dst.cell.content.codepoint)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, dst.cell.ContentTag())
+	expectEqual(t, uint32('e'), dst.cell.content().codepoint())
 	expect(t, dst.row.grapheme, "dst.row.grapheme")
 	expectEqualSlices(t, []uint32{0x301, 0x302}, zigUnwrap(t, rc.page.LookupGrapheme(dst.cell)))
 	expectEqual(t, uint(1), rc.page.GraphemeCount())
@@ -3322,7 +3322,7 @@ func TestPl3_term51_ReflowCursor_writeCell_hyperlinks_are_copied_with_their_stri
 	d1 := page.GetRowAndCell(0, 0).cell
 	d2 := page.GetRowAndCell(1, 0).cell
 	d3 := page.GetRowAndCell(2, 0).cell
-	expect(t, d1.hyperlink && d2.hyperlink && d3.hyperlink, "d1.hyperlink and d2.hyperlink and d3.hyperlink")
+	expect(t, d1.Hyperlink() && d2.Hyperlink() && d3.Hyperlink(), "d1.hyperlink and d2.hyperlink and d3.hyperlink")
 	l1 := zigUnwrap(t, page.LookupHyperlink(d1))
 	l2 := zigUnwrap(t, page.LookupHyperlink(d2))
 	l3 := zigUnwrap(t, page.LookupHyperlink(d3))
@@ -3378,7 +3378,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_full_hyperlink_map_increases_the_ca
 	expectEqual(t, uint(65), rc.page.HyperlinkCount())
 	expectEqual(t, SizeCellCountInt(3), rc.x)
 	dst := rc.page.GetRowAndCell(2, 1).cell
-	expect(t, dst.hyperlink, "dst.hyperlink")
+	expect(t, dst.Hyperlink(), "dst.hyperlink")
 	e := rc.page.hyperlink_set.Get(zigUnwrap(t, rc.page.LookupHyperlink(dst)))
 	expectEqualStrings(t, "https://src.example", string(e.uri))
 	s.AssertIntegrity()
@@ -3460,13 +3460,13 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_are_copied_and_shared(t *testi
 	d1 := pl3KDstCell(&rc, 1)
 	d2 := pl3KDstCell(&rc, 2)
 	// The wanted id was taken so the style got another id.
-	expect(t, d0.style_id != other, "d0.style_id != other")
-	expect(t, d0.style_id != 0, "d0.style_id != 0")
-	expect(t, page.styles.Get(d0.style_id).Flags.Bold, "page.styles.get(page.memory, d0.style_id).flags.bold")
-	expect(t, page.styles.Get(d1.style_id).Flags.Italic, "page.styles.get(page.memory, d1.style_id).flags.italic")
-	expectEqual(t, d0.style_id, d2.style_id)
-	expectEqual(t, uint16(2), page.styles.RefCount(d0.style_id))
-	expectEqual(t, uint16(1), page.styles.RefCount(d1.style_id))
+	expect(t, d0.StyleID() != other, "d0.style_id != other")
+	expect(t, d0.StyleID() != 0, "d0.style_id != 0")
+	expect(t, page.styles.Get(d0.StyleID()).Flags.Bold, "page.styles.get(page.memory, d0.style_id).flags.bold")
+	expect(t, page.styles.Get(d1.StyleID()).Flags.Italic, "page.styles.get(page.memory, d1.style_id).flags.italic")
+	expectEqual(t, d0.StyleID(), d2.StyleID())
+	expectEqual(t, uint16(2), page.styles.RefCount(d0.StyleID()))
+	expectEqual(t, uint16(1), page.styles.RefCount(d1.StyleID()))
 	page.AssertIntegrity()
 }
 
@@ -3491,7 +3491,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_get_fresh_ids_in_an_empty_dest
 	// The wanted id (2) is beyond the ids in use in the destination, so
 	// the first free one is used.
 	expectEqual(t, SizeStyleCountInt(2), ital)
-	expectEqual(t, SizeStyleCountInt(1), pl3KDstCell(&rc, 0).style_id)
+	expectEqual(t, SizeStyleCountInt(1), pl3KDstCell(&rc, 0).StyleID())
 	expect(t, rc.page_row.styled, "rc.page_row.styled")
 	expectEqual(t, uint16(1), rc.page.styles.RefCount(1))
 	rc.page.AssertIntegrity()
@@ -3531,13 +3531,13 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_reuse_their_id_when_its_slot_i
 	bcell := pl3KStyleCell('a', bold)
 	_, err = rc.writeCell(s, &bcell, src_page)
 	zigTry(t, err)
-	expectEqual(t, bold, pl3KDstCell(&rc, 0).style_id)
+	expectEqual(t, bold, pl3KDstCell(&rc, 0).StyleID())
 	expect(t, page.styles.Get(bold).Flags.Bold, "page.styles.get(page.memory, bold).flags.bold")
 	// ital (2) is alive with another style, so it gets the next id (3).
 	r, err := rc.writeCell(s, &cell, src_page)
 	zigTry(t, err)
 	expect(t, r == pageListReflowCursorWriteCellResultSuccess, "r == .success")
-	expectEqual(t, SizeStyleCountInt(3), pl3KDstCell(&rc, 1).style_id)
+	expectEqual(t, SizeStyleCountInt(3), pl3KDstCell(&rc, 1).StyleID())
 	page.AssertIntegrity()
 }
 
@@ -3575,7 +3575,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_full_style_set_increases_the_style_
 	expectEqual(t, SizeCellCountInt(4), rc.x)
 	dst := rc.page.GetRowAndCell(3, 1)
 	expect(t, dst.row.styled, "dst.row.styled")
-	expect(t, rc.page.styles.Get(dst.cell.style_id).Flags.Bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
+	expect(t, rc.page.styles.Get(dst.cell.StyleID()).Flags.Bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
 	expectEqual(t, n+1, rc.page.styles.living)
 	s.AssertIntegrity()
 }
@@ -3599,8 +3599,8 @@ func TestPl3_term51_ReflowCursor_writeCell_a_style_set_that_needs_a_rehash_is_re
 	// the middle of the set so they are not trimmed.
 	for x := 1; x < int(n)-1; x++ {
 		rac := page.GetRowAndCell(uint(x), 0)
-		page.styles.Release(rac.cell.style_id)
-		rac.cell.style_id = 0
+		page.styles.Release(rac.cell.StyleID())
+		rac.cell.setStyleID(0)
 	}
 	_, err = page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	pl3ExpectError(t, ErrNeedsRehash, err)
@@ -3615,7 +3615,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_style_set_that_needs_a_rehash_is_re
 	expectEqual(t, SizeStyleCountInt(128), rc.page.capacity.styles)
 	expectEqual(t, uint(3), rc.page.styles.living)
 	dst := rc.page.GetRowAndCell(3, 1)
-	expect(t, rc.page.styles.Get(dst.cell.style_id).Flags.Bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
+	expect(t, rc.page.styles.Get(dst.cell.StyleID()).Flags.Bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
 	s.AssertIntegrity()
 }
 
@@ -3728,11 +3728,11 @@ func TestPl3_term51_ReflowCursor_writeCell_out_of_space_is_reported_when_the_cap
 		}
 		rac := page.GetRowAndCell(uint(x), 0)
 		rac.row.styled = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'X'},
+			content:     pageCellContentFields{codepoint: 'X'}.pack(),
 			style_id:    id,
-		}
+		}.pack()
 		n += 1
 	}
 	expect(t, n < max, "n < max")
@@ -3744,8 +3744,8 @@ func TestPl3_term51_ReflowCursor_writeCell_out_of_space_is_reported_when_the_cap
 	// The cell is valid but has lost its style.
 	expect(t, node == rc.node, "node == rc.node")
 	dst := pl3KDstCell(&rc, 3)
-	expectEqual(t, uint32('s'), dst.content.codepoint)
-	expectEqual(t, SizeStyleCountInt(0), dst.style_id)
+	expectEqual(t, uint32('s'), dst.content().codepoint())
+	expectEqual(t, SizeStyleCountInt(0), dst.StyleID())
 	expectEqual(t, SizeCellCountInt(3), rc.x)
 	s.AssertIntegrity()
 }
@@ -4233,10 +4233,10 @@ func TestPl3_panic_ReflowCursor_writeCell_grapheme_cell_without_grapheme_data(t 
 	node := pl3KAddNode(t, s, pl3Cap(4, 2), 1)
 	rc := pageListReflowCursorInit(node)
 	src_page := &s.pages.first.data
-	cell := PageCell{
+	cell := pageCellFields{
 		content_tag: PageCellContentTagCodepointGrapheme,
-		content:     PageCellContent{codepoint: 'e'},
-	}
+		content:     pageCellContentFields{codepoint: 'e'}.pack(),
+	}.pack()
 	pl3ExpectPanic(t, func() {
 		_, _ = rc.writeCell(s, &cell, src_page)
 	})
@@ -4249,11 +4249,11 @@ func TestPl3_panic_ReflowCursor_writeCell_hyperlink_cell_without_hyperlink_data(
 	node := pl3KAddNode(t, s, pl3Cap(4, 2), 1)
 	rc := pageListReflowCursorInit(node)
 	src_page := &s.pages.first.data
-	cell := PageCell{
+	cell := pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 'x'},
+		content:     pageCellContentFields{codepoint: 'x'}.pack(),
 		hyperlink:   true,
-	}
+	}.pack()
 	pl3ExpectPanic(t, func() {
 		_, _ = rc.writeCell(s, &cell, src_page)
 	})

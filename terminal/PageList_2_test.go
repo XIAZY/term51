@@ -120,10 +120,10 @@ func pl2Grow(t *testing.T, s *PageList) *PageListNode {
 // pl2CpCell is the Zig literal `.{ .content_tag = .codepoint, .content =
 // .{ .codepoint = cp } }`.
 func pl2CpCell(cp uint32) PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // pl2RowIterAll walks `s.rowIterator(.right_down, .{ .screen = .{} }, null)`
@@ -150,7 +150,7 @@ func pl2JSetCell(p PageListPin, cp uint32) {
 // cell).
 func pl2JCp(t *testing.T, s *PageList, pt Point) uint32 {
 	t.Helper()
-	return zigUnwrap(t, s.GetCell(pt)).Cell.content.codepoint
+	return zigUnwrap(t, s.GetCell(pt)).Cell.content().codepoint()
 }
 
 // pl2JMarkRows is term51JMarkRows: marks every screen row of the list with
@@ -198,7 +198,7 @@ func pl2Implicit(n SizeOffsetInt) HyperlinkHyperlinkId {
 // .{ .codepoint = cp }, .wide = wide }`.
 func pl2WideCell(cp uint32, wide PageCellWide) PageCell {
 	c := pl2CpCell(cp)
-	c.wide = wide
+	c.setWide(wide)
 	return c
 }
 
@@ -337,7 +337,7 @@ func TestPl2_PageList_resize_no_reflow_more_cols_forces_smaller_cap(t *testing.T
 		rac := offset.RowAndCell()
 		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(cap2.cols), uint(len(cells)))
-		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
+		expectEqual[uint32](t, 'A', cells[0].content().codepoint())
 	})
 }
 
@@ -369,7 +369,7 @@ func TestPl2_PageList_resize_no_reflow_more_rows_adds_blank_rows_if_cursor_at_bo
 	original_cursor := zigUnwrap(t, s.PointFromPin(PointTagActive, *p)).Active
 	{
 		get := zigUnwrap(t, s.GetCell(pl2Active(original_cursor.X, original_cursor.Y)))
-		expectEqual[uint32](t, 3, get.Cell.content.codepoint)
+		expectEqual[uint32](t, 3, get.Cell.content().codepoint())
 	}
 
 	// Resize
@@ -398,7 +398,7 @@ func TestPl2_PageList_resize_no_reflow_more_rows_adds_blank_rows_if_cursor_at_bo
 	for y := uint(0); y < 3; y++ {
 		get := zigUnwrap(t, s.GetCell(pl2Active(0, uint32(y))))
 		expected := uint32(y + 2)
-		expectEqual(t, expected, get.Cell.content.codepoint)
+		expectEqual(t, expected, get.Cell.content().codepoint())
 	}
 }
 
@@ -426,7 +426,7 @@ func TestPl2_PageList_resize_reflow_more_cols_no_wrapped_rows(t *testing.T) {
 		rac := offset.RowAndCell()
 		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, 10, len(cells))
-		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
+		expectEqual[uint32](t, 'A', cells[0].content().codepoint())
 	})
 }
 
@@ -472,8 +472,8 @@ func TestPl2_PageList_resize_reflow_more_cols_wrapped_rows(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 4, len(cells))
-		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
-		expectEqual[uint32](t, 'A', cells[2].content.codepoint)
+		expectEqual[uint32](t, 'A', cells[0].content().codepoint())
+		expectEqual[uint32](t, 'A', cells[2].content().codepoint())
 	}
 }
 
@@ -705,10 +705,10 @@ func TestPl2_PageList_resize_reflow_more_cols_wrap_across_page_boundary(t *testi
 		expect(t, !row.wrap_continuation, "!row.wrap_continuation")
 
 		cells := p.Cells(PageListPinCellSubsetAll)
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
-		expectEqual[uint32](t, 1, cells[1].content.codepoint)
-		expectEqual[uint32](t, 0, cells[2].content.codepoint)
-		expectEqual[uint32](t, 1, cells[3].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
+		expectEqual[uint32](t, 1, cells[1].content().codepoint())
+		expectEqual[uint32](t, 0, cells[2].content().codepoint())
+		expectEqual[uint32](t, 1, cells[3].content().codepoint())
 	}
 }
 
@@ -782,10 +782,10 @@ func TestPl2_PageList_resize_reflow_more_cols_wrap_across_page_boundary_cursor_i
 		expect(t, !row.wrap, "!row.wrap")
 
 		cells := p2.Cells(PageListPinCellSubsetAll)
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
-		expectEqual[uint32](t, 1, cells[1].content.codepoint)
-		expectEqual[uint32](t, 0, cells[2].content.codepoint)
-		expectEqual[uint32](t, 1, cells[3].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
+		expectEqual[uint32](t, 1, cells[1].content().codepoint())
+		expectEqual[uint32](t, 0, cells[2].content().codepoint())
+		expectEqual[uint32](t, 1, cells[3].content().codepoint())
 	}
 }
 
@@ -915,10 +915,10 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_across_page_boundary_cursor_i
 		expect(t, !row.wrap_continuation, "!row.wrap_continuation")
 
 		cells := p2.Cells(PageListPinCellSubsetAll)
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
-		expectEqual[uint32](t, 1, cells[1].content.codepoint)
-		expectEqual[uint32](t, 2, cells[2].content.codepoint)
-		expectEqual[uint32](t, 3, cells[3].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
+		expectEqual[uint32](t, 1, cells[1].content().codepoint())
+		expectEqual[uint32](t, 2, cells[2].content().codepoint())
+		expectEqual[uint32](t, 3, cells[3].content().codepoint())
 	}
 	{
 		// PAGE 0 ROW 7897, ACTIVE 5
@@ -928,10 +928,10 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_across_page_boundary_cursor_i
 		expect(t, row.wrap_continuation, "row.wrap_continuation")
 
 		cells := p2.Cells(PageListPinCellSubsetAll)
-		expectEqual[uint32](t, 4, cells[0].content.codepoint)
-		expectEqual[uint32](t, 0, cells[1].content.codepoint)
-		expectEqual[uint32](t, 1, cells[2].content.codepoint)
-		expectEqual[uint32](t, 2, cells[3].content.codepoint)
+		expectEqual[uint32](t, 4, cells[0].content().codepoint())
+		expectEqual[uint32](t, 0, cells[1].content().codepoint())
+		expectEqual[uint32](t, 1, cells[2].content().codepoint())
+		expectEqual[uint32](t, 2, cells[3].content().codepoint())
 	}
 	{
 		// PAGE 0 ROW 7898, ACTIVE 6
@@ -941,8 +941,8 @@ func TestPl2_PageList_resize_reflow_less_cols_wrap_across_page_boundary_cursor_i
 		expect(t, row.wrap_continuation, "row.wrap_continuation")
 
 		cells := p2.Cells(PageListPinCellSubsetAll)
-		expectEqual[uint32](t, 3, cells[0].content.codepoint)
-		expectEqual[uint32](t, 4, cells[1].content.codepoint)
+		expectEqual[uint32](t, 3, cells[0].content().codepoint())
+		expectEqual[uint32](t, 4, cells[1].content().codepoint())
 	}
 	{
 		// PAGE 0 ROW 7899, ACTIVE 7
@@ -1323,11 +1323,11 @@ func TestPl2_PageList_resize_reflow_exceeds_style_memory_forcing_capacity_increa
 			rac := page.GetRowAndCell(x, uint(page.size.rows-1))
 			rac.row.wrap = true
 			rac.row.styled = true
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 'X'},
+				content:     pageCellContentFields{codepoint: 'X'}.pack(),
 				style_id:    id,
-			}
+			}.pack()
 		}
 	}
 
@@ -1350,11 +1350,11 @@ func TestPl2_PageList_resize_reflow_exceeds_style_memory_forcing_capacity_increa
 			rac := page.GetRowAndCell(x, 0)
 			rac.row.wrap_continuation = true
 			rac.row.styled = true
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 'X'},
+				content:     pageCellContentFields{codepoint: 'X'}.pack(),
 				style_id:    id,
-			}
+			}.pack()
 		}
 	}
 
@@ -1403,19 +1403,19 @@ func TestPl2_PageList_resize_reflow_more_cols_unwrap_wide_spacer_head(t *testing
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 			expect(t, !rac.row.wrap, "!rac.row.wrap")
 		}
 		{
 			rac := page.GetRowAndCell(1, 0)
-			expectEqual[uint32](t, '😀', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, '😀', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(2, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 	}
 }
@@ -1471,34 +1471,34 @@ func TestPl2_PageList_resize_reflow_more_cols_unwrap_wide_spacer_head_across_two
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 			expect(t, rac.row.wrap, "rac.row.wrap")
 		}
 		{
 			rac := page.GetRowAndCell(1, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(2, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(3, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerHead, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerHead, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(0, 1)
-			expectEqual[uint32](t, '😀', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, '😀', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(1, 1)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 	}
 }
@@ -1544,29 +1544,29 @@ func TestPl2_PageList_resize_reflow_more_cols_unwrap_still_requires_wide_spacer_
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 			expect(t, rac.row.wrap, "rac.row.wrap")
 		}
 		{
 			rac := page.GetRowAndCell(1, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(2, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerHead, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerHead, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(0, 1)
-			expectEqual[uint32](t, '😀', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, '😀', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(1, 1)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 	}
 }
@@ -1692,7 +1692,7 @@ func TestPl2_PageList_resize_reflow_less_cols_no_wrapped_rows(t *testing.T) {
 			rac := offset_copy.RowAndCell()
 			cells := offset.Node.data.GetCells(rac.row)
 			expectEqual(t, 5, len(cells))
-			expectEqual(t, uint32(x), cells[x].content.codepoint)
+			expectEqual(t, uint32(x), cells[x].content().codepoint())
 		}
 	})
 }
@@ -1731,7 +1731,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -1739,7 +1739,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 2, cells[0].content.codepoint)
+		expectEqual[uint32](t, 2, cells[0].content().codepoint())
 	}
 	{
 		// First row should be wrapped
@@ -1748,7 +1748,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -1756,7 +1756,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 2, cells[0].content.codepoint)
+		expectEqual[uint32](t, 2, cells[0].content().codepoint())
 	}
 }
 
@@ -1801,7 +1801,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -1810,7 +1810,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 2, cells[0].content.codepoint)
+		expectEqual[uint32](t, 2, cells[0].content().codepoint())
 
 		cps := zigUnwrap(t, page.LookupGrapheme(rac.cell))
 		expectEqual(t, 1, len(cps))
@@ -1823,7 +1823,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -1832,7 +1832,7 @@ func TestPl2_PageList_resize_reflow_less_cols_wrapped_rows_with_graphemes(t *tes
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 2, cells[0].content.codepoint)
+		expectEqual[uint32](t, 2, cells[0].content().codepoint())
 
 		cps := zigUnwrap(t, page.LookupGrapheme(rac.cell))
 		expectEqual(t, 1, len(cps))
@@ -1917,29 +1917,29 @@ func TestPl2_PageList_resize_reflow_less_cols_wraps_spacer_head(t *testing.T) {
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 			expect(t, rac.row.wrap, "rac.row.wrap")
 		}
 		{
 			rac := page.GetRowAndCell(1, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(2, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(0, 1)
-			expectEqual[uint32](t, '😀', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, '😀', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(1, 1)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 	}
 }
@@ -2112,7 +2112,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -2120,7 +2120,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines(t *testing.T) {
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 2, cells[0].content.codepoint)
+		expectEqual[uint32](t, 2, cells[0].content().codepoint())
 	}
 }
 
@@ -2162,7 +2162,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between(t *testing.T) 
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, rac.row.wrap, "rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -2170,7 +2170,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between(t *testing.T) 
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 2, cells[0].content.codepoint)
+		expectEqual[uint32](t, 2, cells[0].content().codepoint())
 	}
 }
 
@@ -2203,13 +2203,13 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between_no_scrollback(
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 'A', cells[0].content.codepoint)
+		expectEqual[uint32](t, 'A', cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
 		rac := offset.RowAndCell()
 		cells := offset.Node.data.GetCells(rac.row)
-		expectEqual[uint32](t, 0, cells[0].content.codepoint)
+		expectEqual[uint32](t, 0, cells[0].content().codepoint())
 	}
 	{
 		offset := zigUnwrap(t, it.Next())
@@ -2217,7 +2217,7 @@ func TestPl2_PageList_resize_reflow_less_cols_blank_lines_between_no_scrollback(
 		cells := offset.Node.data.GetCells(rac.row)
 		expect(t, !rac.row.wrap, "!rac.row.wrap")
 		expectEqual(t, 2, len(cells))
-		expectEqual[uint32](t, 'C', cells[0].content.codepoint)
+		expectEqual[uint32](t, 'C', cells[0].content().codepoint())
 	}
 }
 
@@ -2276,11 +2276,11 @@ func TestPl2_PageList_resize_reflow_less_cols_copy_style(t *testing.T) {
 
 		for x := uint(0); x < uint(s.cols-1); x++ {
 			rac := page.GetRowAndCell(x, 0)
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: uint32(x)},
+				content:     pageCellContentFields{codepoint: uint32(x)}.pack(),
 				style_id:    style_id,
-			}
+			}.pack()
 			page.styles.Use(style_id)
 		}
 
@@ -2298,7 +2298,7 @@ func TestPl2_PageList_resize_reflow_less_cols_copy_style(t *testing.T) {
 			offset_copy := offset
 			offset_copy.X = SizeCellCountInt(x)
 			rac := offset_copy.RowAndCell()
-			style_id := rac.cell.style_id
+			style_id := rac.cell.StyleID()
 			expect(t, style_id != 0, "style_id != 0")
 
 			style := offset.Node.data.styles.Get(style_id)
@@ -2341,8 +2341,8 @@ func TestPl2_PageList_resize_reflow_less_cols_to_eliminate_a_wide_char(t *testin
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 		}
 	}
 }
@@ -2382,24 +2382,24 @@ func TestPl2_PageList_resize_reflow_less_cols_to_wrap_a_wide_char(t *testing.T) 
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 'x', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideNarrow, rac.cell.wide)
+			expectEqual[uint32](t, 'x', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideNarrow, rac.cell.Wide())
 			expect(t, rac.row.wrap, "rac.row.wrap")
 		}
 		{
 			rac := page.GetRowAndCell(1, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerHead, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerHead, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(0, 1)
-			expectEqual[uint32](t, '😀', rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, '😀', rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(1, 1)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 	}
 }
@@ -2459,8 +2459,8 @@ func TestPl2_PageList_resize_reflow_less_cols_to_wrap_a_multi_codepoint_grapheme
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 0x1F468, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, 0x1F468, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 
 			cps := zigUnwrap(t, page.LookupGrapheme(rac.cell))
 			expectEqual(t, 6, len(cps))
@@ -2476,19 +2476,19 @@ func TestPl2_PageList_resize_reflow_less_cols_to_wrap_a_multi_codepoint_grapheme
 		}
 		{
 			rac := page.GetRowAndCell(1, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 		{
 			rac := page.GetRowAndCell(2, 0)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerHead, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerHead, rac.cell.Wide())
 		}
 
 		{
 			rac := page.GetRowAndCell(0, 0)
-			expectEqual[uint32](t, 0x1F468, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideWide, rac.cell.wide)
+			expectEqual[uint32](t, 0x1F468, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideWide, rac.cell.Wide())
 
 			cps := zigUnwrap(t, page.LookupGrapheme(rac.cell))
 			expectEqual(t, 6, len(cps))
@@ -2501,8 +2501,8 @@ func TestPl2_PageList_resize_reflow_less_cols_to_wrap_a_multi_codepoint_grapheme
 		}
 		{
 			rac := page.GetRowAndCell(1, 1)
-			expectEqual[uint32](t, 0, rac.cell.content.codepoint)
-			expectEqual(t, PageCellWideSpacerTail, rac.cell.wide)
+			expectEqual[uint32](t, 0, rac.cell.content().codepoint())
+			expectEqual(t, PageCellWideSpacerTail, rac.cell.Wide())
 		}
 	}
 }
@@ -2930,8 +2930,8 @@ func TestPl2_PageList_resize_no_reflow_more_cols_remaps_pins_in_backfill_path(t 
 
 	// Verify the pin still points to the cell with our marker content.
 	cell := tracked.RowAndCell().cell
-	expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
-	expectEqual(t, marker, cell.content.codepoint)
+	expectEqual(t, PageCellContentTagCodepoint, cell.ContentTag())
+	expectEqual(t, marker, cell.content().codepoint())
 }
 
 // Zig: test "PageList compact std_size page returns null"
@@ -3035,7 +3035,7 @@ func TestPl2_PageList_compact_oversized_page(t *testing.T) {
 			rac := page.GetRowAndCell(x, y)
 			expectEqual(t,
 				uint32(x+y*uint(s.cols)),
-				rac.cell.content.codepoint,
+				rac.cell.content().codepoint(),
 			)
 		}
 	}
@@ -3105,13 +3105,13 @@ func TestPl2_PageList_split_at_middle_row(t *testing.T) {
 	// Verify content in first page is preserved (rows 0-4 have codepoints 0-4)
 	for y := uint(0); y < 5; y++ {
 		rac := first_page.GetRowAndCell(0, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 
 	// Verify content in second page (original rows 5-9, now at y=0-4)
 	for y := uint(0); y < 5; y++ {
 		rac := second_page.GetRowAndCell(0, y)
-		expectEqual(t, uint32(y+5), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y+5), rac.cell.content().codepoint())
 	}
 }
 
@@ -3142,7 +3142,7 @@ func TestPl2_PageList_split_at_row_0_is_no_op(t *testing.T) {
 	expectEqual(t, 10, page.size.rows)
 	for y := uint(0); y < 10; y++ {
 		rac := page.GetRowAndCell(0, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 }
 
@@ -3179,7 +3179,7 @@ func TestPl2_PageList_split_at_last_row(t *testing.T) {
 
 	// Verify content in second page (original row 9, now at y=0)
 	rac := second_page.GetRowAndCell(0, 0)
-	expectEqual[uint32](t, 9, rac.cell.content.codepoint)
+	expectEqual[uint32](t, 9, rac.cell.content().codepoint())
 }
 
 // Zig: test "PageList split single row page returns OutOfSpace"
@@ -3524,11 +3524,11 @@ func TestPl2_PageList_split_preserves_styled_cells(t *testing.T) {
 
 	for y := uint(5); y < 8; y++ {
 		rac := page.GetRowAndCell(0, y)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'S'},
+			content:     pageCellContentFields{codepoint: 'S'}.pack(),
 			style_id:    style_id,
-		}
+		}.pack()
 		rac.row.styled = true
 		page.styles.Use(style_id)
 	}
@@ -3551,10 +3551,10 @@ func TestPl2_PageList_split_preserves_styled_cells(t *testing.T) {
 	// Verify styled cells are preserved in new page
 	for y := uint(0); y < 3; y++ {
 		rac := second_page.GetRowAndCell(0, y)
-		expectEqual[uint32](t, 'S', rac.cell.content.codepoint)
-		expect(t, rac.cell.style_id != 0, "rac.cell.style_id != 0")
+		expectEqual[uint32](t, 'S', rac.cell.content().codepoint())
+		expect(t, rac.cell.StyleID() != 0, "rac.cell.style_id != 0")
 
-		got_style := second_page.styles.Get(rac.cell.style_id)
+		got_style := second_page.styles.Get(rac.cell.StyleID())
 		expect(t, got_style.Flags.Bold, "got_style.flags.bold")
 		expect(t, rac.row.styled, "rac.row.styled")
 	}
@@ -3595,7 +3595,7 @@ func TestPl2_PageList_split_preserves_grapheme_clusters(t *testing.T) {
 	// Verify grapheme is preserved in new page (original row 6 is now row 1)
 	{
 		rac := second_page.GetRowAndCell(0, 1)
-		expectEqual[uint32](t, 0x1F468, rac.cell.content.codepoint)
+		expectEqual[uint32](t, 0x1F468, rac.cell.content().codepoint())
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 
 		cps := zigUnwrap(t, second_page.LookupGrapheme(rac.cell))
@@ -3642,8 +3642,8 @@ func TestPl2_PageList_split_preserves_hyperlinks(t *testing.T) {
 	// Verify hyperlink is preserved in new page (original row 7 is now row 2)
 	{
 		rac := second_page.GetRowAndCell(0, 2)
-		expectEqual[uint32](t, 'L', rac.cell.content.codepoint)
-		expect(t, rac.cell.hyperlink, "rac.cell.hyperlink")
+		expectEqual[uint32](t, 'L', rac.cell.content().codepoint())
+		expect(t, rac.cell.Hyperlink(), "rac.cell.hyperlink")
 
 		link_id := zigUnwrap(t, second_page.LookupHyperlink(rac.cell))
 		link := second_page.hyperlink_set.Get(link_id)
@@ -4121,7 +4121,7 @@ func TestPl2_term51_initPages_single_page(t *testing.T) {
 	expectEqual[SizeCellCountInt](t, 80, node.data.capacity.cols)
 	// Blank page memory.
 	rac := node.data.GetRowAndCell(0, 0)
-	expectEqual[uint32](t, 0, rac.cell.content.codepoint)
+	expectEqual[uint32](t, 0, rac.cell.content().codepoint())
 }
 
 // Zig: test "term51: initPages: serial continues from the given value"

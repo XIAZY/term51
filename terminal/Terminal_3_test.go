@@ -185,8 +185,8 @@ func tm3Dirty(tm *Terminal, y uint32) bool {
 // cell of the given color.
 func tm3ExpectBgRGB(t *testing.T, cell *PageCell, r uint8, g uint8, b uint8) {
 	t.Helper()
-	expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-	expectEqual(t, PageCellRGB{R: r, G: g, B: b}, cell.content.color_rgb)
+	expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+	expectEqual(t, PageCellRGB{R: r, G: g, B: b}, cell.content().colorRGB())
 }
 
 // tm3SAt is term51SAt: the page list cell at the given active-area position.
@@ -201,7 +201,7 @@ func tm3SExpectCell(t *testing.T, tm *Terminal, x uint, y uint, cp uint32, wide 
 	t.Helper()
 	lc := tm3SAt(t, tm, x, y)
 	expectEqual(t, cp, lc.Cell.Codepoint())
-	expectEqual(t, wide, lc.Cell.wide)
+	expectEqual(t, wide, lc.Cell.Wide())
 }
 
 // tm3SExpectGrapheme is term51SExpectGrapheme: expect the cell at (x, y) to
@@ -242,13 +242,13 @@ func TestTm3_Terminal_deleteChars_split_wide_character_from_end(t *testing.T) {
 
 	{
 		cell := tm3GetCell(t, &tm, tm3Screen(0, 0)).Cell
-		expectEqual(t, uint32(0x6A4B), cell.content.codepoint)
-		expectEqual(t, PageCellWideWide, cell.wide)
+		expectEqual(t, uint32(0x6A4B), cell.content().codepoint())
+		expectEqual(t, PageCellWideWide, cell.Wide())
 	}
 	{
 		cell := tm3GetCell(t, &tm, tm3Screen(1, 0)).Cell
-		expectEqual(t, uint32(0), cell.content.codepoint)
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, uint32(0), cell.content().codepoint())
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 }
 
@@ -263,7 +263,7 @@ func TestTm3_Terminal_deleteChars_with_a_spacer_head_at_the_end(t *testing.T) {
 		list_cell := tm3GetCell(t, &tm, tm3Screen(4, 0))
 		row := list_cell.Row
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerHead, cell.wide)
+		expectEqual(t, PageCellWideSpacerHead, cell.Wide())
 		expect(t, row.wrap, "row.wrap")
 	}
 
@@ -272,8 +272,8 @@ func TestTm3_Terminal_deleteChars_with_a_spacer_head_at_the_end(t *testing.T) {
 
 	{
 		cell := tm3GetCell(t, &tm, tm3Screen(3, 0)).Cell
-		expectEqual(t, uint32(0), cell.content.codepoint)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
+		expectEqual(t, uint32(0), cell.content().codepoint())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
 	}
 }
 
@@ -1642,7 +1642,7 @@ func TestTm3_Terminal_semantic_prompt(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellSemanticContentPrompt, cell.semantic_content)
+		expectEqual(t, PageCellSemanticContentPrompt, cell.SemanticContent())
 
 		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptPrompt, row.semantic_prompt)
@@ -1660,7 +1660,7 @@ func TestTm3_Terminal_semantic_prompt(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellSemanticContentOutput, cell.semantic_content)
+		expectEqual(t, PageCellSemanticContentOutput, cell.SemanticContent())
 
 		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptNone, row.semantic_prompt)
@@ -1681,7 +1681,7 @@ func TestTm3_Terminal_semantic_prompt_continuations(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellSemanticContentPrompt, cell.semantic_content)
+		expectEqual(t, PageCellSemanticContentPrompt, cell.SemanticContent())
 
 		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptPrompt, row.semantic_prompt)
@@ -1699,7 +1699,7 @@ func TestTm3_Terminal_semantic_prompt_continuations(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellSemanticContentPrompt, cell.semantic_content)
+		expectEqual(t, PageCellSemanticContentPrompt, cell.SemanticContent())
 
 		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptPromptContinuation, row.semantic_prompt)
@@ -2046,7 +2046,7 @@ func TestTm3_Terminal_fullReset_with_a_non_empty_pen(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expect(t, cell.style_id == 0, "cell.style_id == 0")
+		expect(t, cell.StyleID() == 0, "cell.style_id == 0")
 	}
 
 	expectEqual(t, StyleID(0), tm.Screens.Active.Cursor.StyleID)
@@ -2078,7 +2078,7 @@ func TestTm3_Terminal_fullReset_with_a_non_empty_saved_cursor(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expect(t, cell.style_id == 0, "cell.style_id == 0")
+		expect(t, cell.StyleID() == 0, "cell.style_id == 0")
 	}
 
 	expectEqual(t, StyleID(0), tm.Screens.Active.Cursor.StyleID)
@@ -2284,7 +2284,7 @@ func TestTm3_Terminal_resize_with_reflow_and_saved_cursor(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('B'), cell.content.codepoint)
+		expectEqual(t, uint32('B'), cell.content().codepoint())
 	}
 
 	{
@@ -2303,7 +2303,7 @@ func TestTm3_Terminal_resize_with_reflow_and_saved_cursor(t *testing.T) {
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('B'), cell.content.codepoint)
+		expectEqual(t, uint32('B'), cell.content().codepoint())
 	}
 }
 
@@ -2316,7 +2316,7 @@ func TestTm3_Terminal_resize_with_reflow_and_saved_cursor_pending_wrap(t *testin
 	{
 		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('B'), cell.content.codepoint)
+		expectEqual(t, uint32('B'), cell.content().codepoint())
 	}
 
 	{
@@ -2983,8 +2983,8 @@ func TestTm3_term51_vtStream_processes_VT_bytes_into_terminal_state(t *testing.T
 	{
 		lc := tm3SAt(t, &tm, 0, 1)
 		expectEqual(t, uint32('B'), lc.Cell.Codepoint())
-		expect(t, lc.Cell.style_id != StyleDefaultID, "lc.cell.style_id != style.default_id")
-		expect(t, lc.Node.data.styles.Get(lc.Cell.style_id).Flags.Bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
+		expect(t, lc.Cell.StyleID() != StyleDefaultID, "lc.cell.style_id != style.default_id")
+		expect(t, lc.Node.data.styles.Get(lc.Cell.StyleID()).Flags.Bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
 	}
 }
 

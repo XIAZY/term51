@@ -702,8 +702,8 @@ func TestSc2_Screen_selectionString_with_zero_width_joiner(t *testing.T) {
 	{
 		pin := sc2Pin(t, s, Point{Tag: PointTagScreen, Screen: PointCoordinate{Y: 0, X: 0}})
 		cell := pin.RowAndCell().cell
-		expectEqual(t, uint32(0x1F468), cell.content.codepoint)
-		expectEqual(t, PageCellWideWide, cell.wide)
+		expectEqual(t, uint32(0x1F468), cell.content().codepoint())
+		expectEqual(t, PageCellWideWide, cell.Wide())
 		cps := zigUnwrap(t, pin.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
@@ -1941,10 +1941,10 @@ func sc2ORow(t *testing.T, s *Screen, y int) *PageRow {
 // at active (x, y).
 func sc2OSetCp(t *testing.T, s *Screen, x int, y int, cp uint32) {
 	t.Helper()
-	*sc2OCell(t, s, x, y) = PageCell{
+	*sc2OCell(t, s, x, y) = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // sc2OCp is term51OCp: the codepoint of the cell at active (x, y).
@@ -2773,9 +2773,9 @@ func TestSc2_term51_clone_cells_keep_their_style_and_hyperlink_the_cursor_s_own_
 
 	cell := sc2OCell(t, s2, 0, 0)
 	expectEqual(t, uint32('a'), cell.Codepoint())
-	expect(t, cell.style_id != StyleDefaultID, "cell.style_id != style.default_id")
-	expect(t, page2.styles.Get(cell.style_id).Flags.Bold, "page2.styles.get(page2.memory, cell.style_id).flags.bold")
-	expectEqual(t, uint(2), sc2OStyleRefs(page2, cell.style_id))
+	expect(t, cell.StyleID() != StyleDefaultID, "cell.style_id != style.default_id")
+	expect(t, page2.styles.Get(cell.StyleID()).Flags.Bold, "page2.styles.get(page2.memory, cell.style_id).flags.bold")
+	expectEqual(t, uint(2), sc2OStyleRefs(page2, cell.StyleID()))
 	link_id := zigUnwrap(t, page2.LookupHyperlink(cell))
 	expectEqual(t, uint(2), sc2OLinkRefs(page2, link_id))
 	entry := page2.hyperlink_set.Get(link_id)
@@ -2786,8 +2786,8 @@ func TestSc2_term51_clone_cells_keep_their_style_and_hyperlink_the_cursor_s_own_
 	expectEqual(t, SizeCellCountInt(2), s2.Cursor.X)
 	sc2Write(t, s2, "Z")
 	expectEqual(t, uint32('Z'), sc2OCp(t, s2, 2, 0))
-	expectEqual(t, StyleDefaultID, sc2OCell(t, s2, 2, 0).style_id)
-	expect(t, !sc2OCell(t, s2, 2, 0).hyperlink, "!term51OCell(&s2, 2, 0).hyperlink")
+	expectEqual(t, StyleDefaultID, sc2OCell(t, s2, 2, 0).StyleID())
+	expect(t, !sc2OCell(t, s2, 2, 0).Hyperlink(), "!term51OCell(&s2, 2, 0).hyperlink")
 }
 
 // Zig: test "term51: clone: bounds, history and padding with the cursor inside"
@@ -3344,7 +3344,7 @@ func sc2OIncreaseCase(t *testing.T, adj Optional[PageListIncreaseCapacity]) {
 	expect(t, s.Cursor.StyleID != StyleDefaultID, "s.cursor.style_id != style.default_id")
 	expectEqual(t, uint(1), page.styles.Count())
 	expectEqual(t, uint(4), sc2OStyleRefs(page, s.Cursor.StyleID))
-	expectEqual(t, s.Cursor.StyleID, sc2OCell(t, s, 0, 0).style_id)
+	expectEqual(t, s.Cursor.StyleID, sc2OCell(t, s, 0, 0).StyleID())
 
 	// Hyperlink: re-added too, as a new heap allocation with equal content.
 	expect(t, s.Cursor.Hyperlink != nil, "s.cursor.hyperlink != null")
@@ -3361,7 +3361,7 @@ func sc2OIncreaseCase(t *testing.T, adj Optional[PageListIncreaseCapacity]) {
 	s.Cursor.PendingWrap = false
 	sc2Write(t, s, "Z")
 	expectEqual(t, uint32('Z'), sc2OCp(t, s, 5, 1))
-	expectEqual(t, s.Cursor.StyleID, sc2OCell(t, s, 5, 1).style_id)
+	expectEqual(t, s.Cursor.StyleID, sc2OCell(t, s, 5, 1).StyleID())
 	expectEqual(t, uint(5), sc2OStyleRefs(page, s.Cursor.StyleID))
 	expectEqual(t, uint(5), sc2OLinkRefs(page, s.Cursor.HyperlinkID))
 }
@@ -3851,7 +3851,7 @@ func TestSc2_term51_cursorDown_style_and_hyperlink_move_to_the_next_page(t *test
 	// Printing uses the migrated style and link.
 	sc2Write(t, s, "q")
 	cell := sc2OCell(t, s, 4, 2)
-	expectEqual(t, s.Cursor.StyleID, cell.style_id)
+	expectEqual(t, s.Cursor.StyleID, cell.StyleID())
 	expectEqual(t, s.Cursor.HyperlinkID, zigUnwrap(t, s.Cursor.PagePin.Node.data.LookupHyperlink(cell)))
 }
 
@@ -4338,10 +4338,10 @@ func sc2OExpectBgRow(t *testing.T, s *Screen, y int, rgb [3]uint8) {
 	t.Helper()
 	for x := 0; x < int(s.Pages.cols); x++ {
 		cell := sc2OCell(t, s, x, y)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, rgb[0], cell.content.color_rgb.R)
-		expectEqual(t, rgb[1], cell.content.color_rgb.G)
-		expectEqual(t, rgb[2], cell.content.color_rgb.B)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, rgb[0], cell.content().colorRGB().R)
+		expectEqual(t, rgb[1], cell.content().colorRGB().G)
+		expectEqual(t, rgb[2], cell.content().colorRGB().B)
 	}
 }
 
@@ -4589,8 +4589,8 @@ func TestSc2_term51_cursorDownScroll_with_scrollback_fills_the_new_row_only_for_
 		zigTry(t, s.CursorDownScroll())
 		for x := 0; x < 5; x++ {
 			cell := sc2OCell(t, s, x, 1)
-			expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-			expectEqual(t, uint8(7), cell.content.color_palette)
+			expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+			expectEqual(t, uint8(7), cell.content().colorPalette())
 		}
 	}
 

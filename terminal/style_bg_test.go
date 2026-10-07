@@ -52,10 +52,10 @@ func TestStyle_term51_Style_bg_cell_content_tag_decides_the_source(t *testing.T)
 
 	// Text cells use the style's bg color.
 	for _, tag := range []PageCellContentTag{PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme} {
-		cell := PageCell{
+		cell := pageCellFields{
 			content_tag: tag,
-			content:     PageCellContent{codepoint: 'a'},
-		}
+			content:     pageCellContentFields{codepoint: 'a'}.pack(),
+		}.pack()
 		expectEqual(t, None[ColorRGB](), style_none.Bg(&cell, &pal))
 		expectEqual(t, Some(pal[20]), style_pal.Bg(&cell, &pal))
 		expectEqual(t,
@@ -66,10 +66,10 @@ func TestStyle_term51_Style_bg_cell_content_tag_decides_the_source(t *testing.T)
 
 	// A palette bg-only cell ignores the style entirely.
 	{
-		cell := PageCell{
+		cell := pageCellFields{
 			content_tag: PageCellContentTagBgColorPalette,
-			content:     PageCellContent{color_palette: 33},
-		}
+			content:     pageCellContentFields{color_palette: 33}.pack(),
+		}.pack()
 		expectEqual(t, Some(pal[33]), style_none.Bg(&cell, &pal))
 		expectEqual(t, Some(pal[33]), style_pal.Bg(&cell, &pal))
 		expectEqual(t, Some(pal[33]), style_rgb.Bg(&cell, &pal))
@@ -77,10 +77,10 @@ func TestStyle_term51_Style_bg_cell_content_tag_decides_the_source(t *testing.T)
 
 	// An rgb bg-only cell ignores the style entirely.
 	{
-		cell := PageCell{
+		cell := pageCellFields{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{R: 11, G: 12, B: 13}},
-		}
+			content:     pageCellContentFields{color_rgb: PageCellRGB{R: 11, G: 12, B: 13}}.pack(),
+		}.pack()
 		want := Some(ColorRGB{R: 11, G: 12, B: 13})
 		expectEqual(t, want, style_none.Bg(&cell, &pal))
 		expectEqual(t, want, style_pal.Bg(&cell, &pal))
@@ -91,23 +91,23 @@ func TestStyle_term51_Style_bg_cell_content_tag_decides_the_source(t *testing.T)
 // Zig: test "term51: Style.bg: palette boundaries"
 func TestStyle_term51_Style_bg_palette_boundaries(t *testing.T) {
 	pal := sbgPalette()
-	cell := PageCell{}
+	cell := PageCell(0)
 
 	s0 := Style{BgColor: sbgPal(0)}
 	expectEqual(t, Some(pal[0]), s0.Bg(&cell, &pal))
 	s255 := Style{BgColor: sbgPal(255)}
 	expectEqual(t, Some(pal[255]), s255.Bg(&cell, &pal))
 
-	c0 := PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 0}}
+	c0 := pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 0}.pack()}.pack()
 	expectEqual(t, Some(pal[0]), (Style{}).Bg(&c0, &pal))
-	c255 := PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 255}}
+	c255 := pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 255}.pack()}.pack()
 	expectEqual(t, Some(pal[255]), (Style{}).Bg(&c255, &pal))
 }
 
 // Zig: test "term51: Style.bg: flags and other colors do not matter"
 func TestStyle_term51_Style_bg_flags_and_other_colors_do_not_matter(t *testing.T) {
 	pal := sbgPalette()
-	cell := PageCell{}
+	cell := PageCell(0)
 	s := Style{
 		FgColor:         sbgPal(1),
 		underline_color: sbgPal(2),
@@ -132,13 +132,13 @@ func TestStyle_term51_Style_bgCell_palette_bg(t *testing.T) {
 	for _, idx := range []uint8{0, 1, 128, 255} {
 		s := Style{BgColor: sbgPal(idx)}
 		cell := zigUnwrap(t, s.BgCell())
-		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-		expectEqual(t, idx, cell.content.color_palette)
-		expectEqual(t, StyleID(0), cell.style_id)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
-		expect(t, !cell.protected, "!cell.protected")
-		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		expectEqual(t, PageCellSemanticContentOutput, cell.semantic_content)
+		expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+		expectEqual(t, idx, cell.content().colorPalette())
+		expectEqual(t, StyleID(0), cell.StyleID())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
+		expect(t, !cell.Protected(), "!cell.protected")
+		expect(t, !cell.Hyperlink(), "!cell.hyperlink")
+		expectEqual(t, PageCellSemanticContentOutput, cell.SemanticContent())
 	}
 }
 
@@ -146,12 +146,12 @@ func TestStyle_term51_Style_bgCell_palette_bg(t *testing.T) {
 func TestStyle_term51_Style_bgCell_rgb_bg(t *testing.T) {
 	s := Style{BgColor: sbgRgb(10, 20, 30)}
 	cell := zigUnwrap(t, s.BgCell())
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, uint8(10), cell.content.color_rgb.R)
-	expectEqual(t, uint8(20), cell.content.color_rgb.G)
-	expectEqual(t, uint8(30), cell.content.color_rgb.B)
-	expectEqual(t, StyleID(0), cell.style_id)
-	expectEqual(t, PageCellWideNarrow, cell.wide)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, uint8(10), cell.content().colorRGB().R)
+	expectEqual(t, uint8(20), cell.content().colorRGB().G)
+	expectEqual(t, uint8(30), cell.content().colorRGB().B)
+	expectEqual(t, StyleID(0), cell.StyleID())
+	expectEqual(t, PageCellWideNarrow, cell.Wide())
 
 	// Round trip through Style.bg.
 	pal := sbgPalette()

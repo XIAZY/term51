@@ -227,10 +227,10 @@ func pl5LInitPages(t *testing.T, last_rows uint) *PageList {
 
 // pl5LText is term51LText: set a plain text cell at the given pin.
 func pl5LText(p PageListPin, cp uint32) {
-	*p.RowAndCell().cell = PageCell{
+	*p.RowAndCell().cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // pl5LMakeOversized is term51LMakeOversized: make the page of the given node
@@ -283,8 +283,8 @@ func pl5LCreatedBytes(page *Page) uint64 {
 // shared styles, a grapheme cluster, a hyperlink and row flags.
 func pl5LFillPage(t *testing.T, page *Page) {
 	t.Helper()
-	*page.GetRowAndCell(0, 0).cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'A'}}
-	*page.GetRowAndCell(19, 4).cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'Z'}}
+	*page.GetRowAndCell(0, 0).cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'A'}.pack()}.pack()
+	*page.GetRowAndCell(19, 4).cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'Z'}.pack()}.pack()
 
 	// Two cells share bold; one cell has italic.
 	bold, err := page.styles.Add(Style{Flags: StyleFlags{Bold: true}})
@@ -302,20 +302,20 @@ func pl5LFillPage(t *testing.T, page *Page) {
 		{0, 1, italic},
 	} {
 		rac := page.GetRowAndCell(e.x, e.y)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'S'},
+			content:     pageCellContentFields{codepoint: 'S'}.pack(),
 			style_id:    e.id,
-		}
+		}.pack()
 		rac.row.styled = true
 	}
 
 	{
 		rac := page.GetRowAndCell(3, 0)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 0x1F468},
-		}
+			content:     pageCellContentFields{codepoint: 0x1F468}.pack(),
+		}.pack()
 		zigTry(t, page.SetGraphemes(rac.row, rac.cell, []uint32{0x200D, 0x1F469}))
 	}
 
@@ -326,10 +326,10 @@ func pl5LFillPage(t *testing.T, page *Page) {
 	zigTry(t, err)
 	{
 		rac := page.GetRowAndCell(4, 2)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'L'},
-		}
+			content:     pageCellContentFields{codepoint: 'L'}.pack(),
+		}.pack()
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, link))
 	}
 
@@ -344,24 +344,24 @@ func pl5LFillPage(t *testing.T, page *Page) {
 // pl5LCheckPage is term51LCheckPage: verify what pl5LFillPage put in the page.
 func pl5LCheckPage(t *testing.T, page *Page) {
 	t.Helper()
-	expectEqual(t, uint32('A'), page.GetRowAndCell(0, 0).cell.content.codepoint)
-	expectEqual(t, uint32('Z'), page.GetRowAndCell(19, 4).cell.content.codepoint)
+	expectEqual(t, uint32('A'), page.GetRowAndCell(0, 0).cell.content().codepoint())
+	expectEqual(t, uint32('Z'), page.GetRowAndCell(19, 4).cell.content().codepoint())
 
 	expectEqual(t, uint(2), page.styles.Count())
 	{
 		a := page.GetRowAndCell(1, 0)
 		b := page.GetRowAndCell(2, 0)
 		expect(t, a.row.styled, "a.row.styled")
-		expectEqual(t, a.cell.style_id, b.cell.style_id)
-		expect(t, page.styles.Get(a.cell.style_id).Flags.Bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
+		expectEqual(t, a.cell.StyleID(), b.cell.StyleID())
+		expect(t, page.styles.Get(a.cell.StyleID()).Flags.Bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
 		c := page.GetRowAndCell(0, 1)
-		expect(t, page.styles.Get(c.cell.style_id).Flags.Italic, "page.styles.get(page.memory, c.cell.style_id).flags.italic")
+		expect(t, page.styles.Get(c.cell.StyleID()).Flags.Italic, "page.styles.get(page.memory, c.cell.style_id).flags.italic")
 	}
 
 	expectEqual(t, uint(1), page.GraphemeCount())
 	{
 		rac := page.GetRowAndCell(3, 0)
-		expectEqual(t, uint32(0x1F468), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0x1F468), rac.cell.content().codepoint())
 		cps := zigUnwrap(t, page.LookupGrapheme(rac.cell))
 		expectEqual(t, 2, len(cps))
 		expectEqual(t, uint32(0x200D), cps[0])
@@ -371,7 +371,7 @@ func pl5LCheckPage(t *testing.T, page *Page) {
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
 	{
 		rac := page.GetRowAndCell(4, 2)
-		expect(t, rac.cell.hyperlink, "rac.cell.hyperlink")
+		expect(t, rac.cell.Hyperlink(), "rac.cell.hyperlink")
 		id := zigUnwrap(t, page.LookupHyperlink(rac.cell))
 		entry := page.hyperlink_set.Get(id)
 		expectEqualStrings(t, "https://example.com", string(entry.uri))
@@ -788,7 +788,7 @@ func TestPl5_term51_grow_prunes_and_reuses_the_first_page_one_byte_over_the_max_
 	// Memory was cleared, the other page is intact.
 	expect(t, pl5LRawCell(&new.data, 2, 5).IsEmpty(), "term51LRawCell(&new.data, 2, 5).isEmpty()")
 	expect(t, new.data.GetRowAndCell(2, 0).cell.IsEmpty(), "new.data.getRowAndCell(2, 0).cell.isEmpty()")
-	expectEqual(t, uint32('S'), second.data.GetRowAndCell(2, 5).cell.content.codepoint)
+	expectEqual(t, uint32('S'), second.data.GetRowAndCell(2, 5).cell.content().codepoint())
 }
 
 // Zig: test "term51: grow: pruning needs the remaining rows to cover the active area"
@@ -1837,10 +1837,10 @@ func pl5Mbuild(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, sizes
 			row := node.data.GetRow(y)
 			cells := node.data.GetCells(row)
 			for i := range cells {
-				cells[i] = PageCell{
+				cells[i] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: label},
-				}
+					content:     pageCellContentFields{codepoint: label}.pack(),
+				}.pack()
 			}
 			label++
 		}
@@ -2261,7 +2261,7 @@ func TestPl5_term51_eraseRow_row_metadata_moves_with_the_row_and_managed_memory_
 		id, err := p0.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 		zigTry(t, err)
 		rac.row.styled = true
-		rac.cell.style_id = id
+		rac.cell.setStyleID(id)
 		rac2 := p0.GetRowAndCell(1, 0)
 		zigTry(t, p0.AppendGrapheme(rac2.row, rac2.cell, 0x301))
 	}
@@ -2315,7 +2315,7 @@ func pl5MfillStyles(t *testing.T, p0 *Page) uint {
 		}
 		rac := p0.GetRowAndCell(n, 0)
 		rac.row.styled = true
-		rac.cell.style_id = id
+		rac.cell.setStyleID(id)
 	}
 	return n
 }
@@ -2340,7 +2340,7 @@ func TestPl5_term51_eraseRow_clone_failure_across_a_page_boundary_returns_the_pa
 		zigTry(t, err)
 		rac := p1.GetRowAndCell(0, 0)
 		rac.row.styled = true
-		rac.cell.style_id = id
+		rac.cell.setStyleID(id)
 	}
 
 	// Erasing the last row of page 0 must pull page 1's first row into it,
@@ -2702,7 +2702,7 @@ func TestPl5_term51_eraseRowBounded_managed_memory_of_the_vacated_row_is_release
 	id, err := p0.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 	zigTry(t, err)
 	rac.row.styled = true
-	rac.cell.style_id = id
+	rac.cell.setStyleID(id)
 	rac2 := p0.GetRowAndCell(1, 0)
 	zigTry(t, p0.AppendGrapheme(rac2.row, rac2.cell, 0x301))
 
@@ -2728,7 +2728,7 @@ func TestPl5_term51_eraseRowBounded_clone_failure_across_a_page_boundary_returns
 		zigTry(t, err)
 		rac := p1.GetRowAndCell(0, 0)
 		rac.row.styled = true
-		rac.cell.style_id = id
+		rac.cell.setStyleID(id)
 	}
 
 	// limit 2 from the last row of page 0 reaches into page 1.
@@ -3333,7 +3333,7 @@ func TestPl5_term51_eraseRows_styles_and_graphemes_of_erased_rows_are_released(t
 	zigTry(t, err)
 	rac := p0.GetRowAndCell(0, 1)
 	rac.row.styled = true
-	rac.cell.style_id = id
+	rac.cell.setStyleID(id)
 	rac2 := p0.GetRowAndCell(1, 2)
 	zigTry(t, p0.AppendGrapheme(rac2.row, rac2.cell, 0x301))
 	expectEqual(t, uint(1), p0.styles.Count())
@@ -4079,7 +4079,7 @@ func TestPl5_term51_getCell_returned_pointers_address_the_live_cell_and_row(t *t
 	defer s.Deinit()
 
 	c := zigUnwrap(t, s.GetCell(pl5Screen(2, 5)))
-	*c.Cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'Z'}}
+	*c.Cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'Z'}.pack()}.pack()
 	c.Row.wrap = true
 	page := &pl5MnodeAt(s, 1).data
 	expectEqual(t, uint32('Z'), page.GetRowAndCell(2, 1).cell.Codepoint())
@@ -4147,7 +4147,7 @@ func TestPl5_term51_Pin_rowAndCell_returns_the_row_and_cell_at_the_pin_position(
 	// Writes through the pointers are visible in the page.
 	*rac.cell = PageCellInit('Z')
 	rac.row.wrap = true
-	expectEqual(t, uint32('Z'), page.GetRowAndCell(3, 2).cell.content.codepoint)
+	expectEqual(t, uint32('Z'), page.GetRowAndCell(3, 2).cell.content().codepoint())
 	expect(t, page.GetRowAndCell(0, 2).row.wrap, "page.getRowAndCell(0, 2).row.wrap")
 	expect(t, !page.GetRowAndCell(0, 1).row.wrap, "!page.getRowAndCell(0, 1).row.wrap")
 	expect(t, !page.GetRowAndCell(0, 3).row.wrap, "!page.getRowAndCell(0, 3).row.wrap")
@@ -4174,8 +4174,8 @@ func TestPl5_term51_Pin_rowAndCell_uses_the_page_of_the_pin_node(t *testing.T) {
 
 	pf := PageListPin{Node: first, X: 1}
 	pl := PageListPin{Node: last, X: 1}
-	expectEqual(t, uint32('A'), pf.RowAndCell().cell.content.codepoint)
-	expectEqual(t, uint32('B'), pl.RowAndCell().cell.content.codepoint)
+	expectEqual(t, uint32('A'), pf.RowAndCell().cell.content().codepoint())
+	expectEqual(t, uint32('B'), pl.RowAndCell().cell.content().codepoint())
 	expect(t, pf.RowAndCell().cell == first.data.GetRowAndCell(1, 0).cell, "pf.rowAndCell().cell == first.data.getRowAndCell(1, 0).cell")
 	expect(t, pl.RowAndCell().cell == last.data.GetRowAndCell(1, 0).cell, "pl.rowAndCell().cell == last.data.getRowAndCell(1, 0).cell")
 
@@ -4205,21 +4205,21 @@ func TestPl5_term51_Pin_cells_all_left_and_right_subsets(t *testing.T) {
 	all := p.Cells(PageListPinCellSubsetAll)
 	expectEqual(t, 6, len(all))
 	expect(t, &all[0] == base, "all.ptr == @as([*]pagepkg.Cell, @ptrCast(base))")
-	expectEqual(t, uint32('a'), all[0].content.codepoint)
-	expectEqual(t, uint32('f'), all[5].content.codepoint)
+	expectEqual(t, uint32('a'), all[0].content().codepoint())
+	expectEqual(t, uint32('f'), all[5].content().codepoint())
 
 	// Left is inclusive of x: 0..=x
 	l := p.Cells(PageListPinCellSubsetLeft)
 	expectEqual(t, 3, len(l))
 	expect(t, &l[0] == &all[0], "l.ptr == all.ptr")
-	expectEqual(t, uint32('c'), l[2].content.codepoint)
+	expectEqual(t, uint32('c'), l[2].content().codepoint())
 
 	// Right is inclusive of x: x..cols
 	r := p.Cells(PageListPinCellSubsetRight)
 	expectEqual(t, 4, len(r))
 	expect(t, &r[0] == &all[2], "r.ptr == all.ptr + 2")
-	expectEqual(t, uint32('c'), r[0].content.codepoint)
-	expectEqual(t, uint32('f'), r[3].content.codepoint)
+	expectEqual(t, uint32('c'), r[0].content().codepoint())
+	expectEqual(t, uint32('f'), r[3].content().codepoint())
 }
 
 // Zig: test "term51: Pin.cells: first and last column boundaries"
@@ -4307,7 +4307,7 @@ func TestPl5_term51_Pin_style_default_style_id_gives_the_default_style(t *testin
 	node := s.pages.first
 	p := PageListPin{Node: node}
 	cell := node.data.GetRowAndCell(0, 0).cell
-	expectEqual(t, StyleDefaultID, cell.style_id)
+	expectEqual(t, StyleDefaultID, cell.StyleID())
 	st := p.Style(cell)
 	expect(t, st.Default(), "st.default()")
 	expect(t, st.Eql(Style{}), "st.eql(.{})")
@@ -4332,17 +4332,17 @@ func TestPl5_term51_Pin_style_non_default_style_id_returns_the_page_style(t *tes
 
 	a := page.GetRowAndCell(1, 1)
 	a.row.styled = true
-	*a.cell = PageCell{
+	*a.cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 'A'},
+		content:     pageCellContentFields{codepoint: 'A'}.pack(),
 		style_id:    bold_id,
-	}
+	}.pack()
 	b := page.GetRowAndCell(2, 1)
-	*b.cell = PageCell{
+	*b.cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 'B'},
+		content:     pageCellContentFields{codepoint: 'B'}.pack(),
 		style_id:    red_id,
-	}
+	}.pack()
 
 	p := PageListPin{Node: node, Y: 1, X: 1}
 	sa := p.Style(a.cell)
@@ -4628,7 +4628,7 @@ func TestPl5_panic_Pin_style_unused_style_id(t *testing.T) {
 	s := pl5Init(t, 5, 3, None[uint64]())
 	node := s.pages.first
 	cell := node.data.GetRowAndCell(0, 0).cell
-	cell.style_id = 1
+	cell.setStyleID(1)
 	p := PageListPin{Node: node}
 	pl5ExpectPanic(t, func() { p.Style(cell) })
 }
@@ -4639,7 +4639,7 @@ func TestPl5_panic_Pin_style_style_id_beyond_the_set(t *testing.T) {
 	s := pl5Init(t, 5, 3, None[uint64]())
 	node := s.pages.first
 	cell := node.data.GetRowAndCell(0, 0).cell
-	cell.style_id = math.MaxUint16
+	cell.setStyleID(math.MaxUint16)
 	p := PageListPin{Node: node}
 	pl5ExpectPanic(t, func() { p.Style(cell) })
 }

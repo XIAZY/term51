@@ -1515,7 +1515,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 	if self.opts.Unwrap && !self.rectangle {
 		final_row := self.page.GetRow(uint(end_y))
 		cells := self.page.GetCells(final_row)
-		switch cells[end_x].wide {
+		switch cells[end_x].Wide() {
 		case PageCellWideSpacerHead:
 			// Move to next row if available
 			//
@@ -1676,7 +1676,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 		if start_x > 0 &&
 			(self.rectangle || y == start_y) {
 			// start_x:
-			switch cells[start_x].wide {
+			switch cells[start_x].Wide() {
 			// Include the prior cell to get the full wide char
 			case PageCellWideSpacerTail:
 				row_start_x = start_x - 1
@@ -1806,7 +1806,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 
 			// Skip spacers. These happen naturally when wide characters
 			// are printed again on the screen (for well-behaved terminals!)
-			switch cell.wide {
+			switch cell.Wide() {
 			case PageCellWideNarrow, PageCellWideWide:
 			case PageCellWideSpacerHead, PageCellWideSpacerTail:
 				continue
@@ -1974,7 +1974,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 				// Get the hyperlink ID. This ID is our internal ID,
 				// not necessarily the OSC8 ID.
 				var link_id_ Optional[HyperlinkID]
-				if cell.hyperlink {
+				if cell.Hyperlink() {
 					link_id_ = self.page.LookupHyperlink(cell)
 				} else {
 					link_id_ = None[HyperlinkID]()
@@ -2035,11 +2035,11 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 			}
 		hyperlink:
 
-			switch cell.content_tag {
+			switch cell.ContentTag() {
 			// We combine codepoint and graphemes because both have
 			// shared style handling. We use comptime to dup it.
 			case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
-				tag := cell.content_tag
+				tag := cell.ContentTag()
 				if err := self.writeCell(tag, writer, cell); err != nil {
 					return FormatterPageFormatterTrailingState{}, err
 				}
@@ -2130,7 +2130,7 @@ func (self FormatterPageFormatter) writeCell(tag PageCellContentTag, writer *osc
 		return writer.writeByte(' ')
 	}
 
-	if err := self.writeCodepointWithReplacement(writer, cell.content.codepoint); err != nil {
+	if err := self.writeCodepointWithReplacement(writer, cell.content().codepoint()); err != nil {
 		return err
 	}
 	if tag == PageCellContentTagCodepointGrapheme {
@@ -2256,20 +2256,20 @@ func (self FormatterPageFormatter) writeCodepoint(writer *oscWriter, codepoint u
 //
 // Zig: fn cellStyle(self: *const PageFormatter, cell: *const Cell) Style.
 func (self *FormatterPageFormatter) cellStyle(cell *PageCell) Style {
-	switch cell.content_tag {
+	switch cell.ContentTag() {
 	case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
 		if !cell.HasStyling() {
 			return Style{}
 		}
 		return *self.page.styles.Get(
-			cell.style_id,
+			cell.StyleID(),
 		)
 
 	case PageCellContentTagBgColorPalette:
 		return Style{
 			BgColor: StyleColor{
 				Tag:     StyleColorPalette,
-				Palette: cell.content.color_palette,
+				Palette: cell.content().colorPalette(),
 			},
 		}
 
@@ -2278,9 +2278,9 @@ func (self *FormatterPageFormatter) cellStyle(cell *PageCell) Style {
 			BgColor: StyleColor{
 				Tag: StyleColorRgb,
 				Rgb: ColorRGB{
-					R: cell.content.color_rgb.R,
-					G: cell.content.color_rgb.G,
-					B: cell.content.color_rgb.B,
+					R: cell.content().colorRGB().R,
+					G: cell.content().colorRGB().G,
+					B: cell.content().colorRGB().B,
 				},
 			},
 		}

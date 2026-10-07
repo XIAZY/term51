@@ -147,7 +147,7 @@ func pg3HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleID 
 	for _, c := range cells {
 		rac := page.GetRowAndCell(c[0], c[1])
 		rac.row.styled = true
-		rac.cell.style_id = id
+		rac.cell.setStyleID(id)
 		page.styles.Use(id)
 	}
 	page.styles.Release(id)
@@ -240,34 +240,34 @@ func pg3ITagged(tag PageCellContentTag, content uint32) PageCell {
 // pg3IBlank is term51IBlank: a default cell built at runtime the way
 // Screen.blankCell returns it (`return .{}`).
 func pg3IBlank() PageCell {
-	return PageCell{}
+	return PageCell(0)
 }
 
 // pg3ISpelled is term51ISpelled: a cell with every default spelled out.
 func pg3ISpelled() PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag:      PageCellContentTagCodepoint,
-		content:          PageCellContent{codepoint: 0},
+		content:          pageCellContentFields{codepoint: 0}.pack(),
 		style_id:         0,
 		wide:             PageCellWideNarrow,
 		protected:        false,
 		hyperlink:        false,
 		semantic_content: PageCellSemanticContentOutput,
-	}
+	}.pack()
 }
 
 // pg3IBgPalette is term51IBgPalette: a background-only cell built by struct
 // literal.
 func pg3IBgPalette(index uint8) PageCell {
-	return PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: index}}
+	return pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: index}.pack()}.pack()
 }
 
 // pg3IBgRgb is term51IBgRgb.
 func pg3IBgRgb(r uint8, g uint8, b uint8) PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{R: r, G: g, B: b}},
-	}
+		content:     pageCellContentFields{color_rgb: PageCellRGB{R: r, G: g, B: b}}.pack(),
+	}.pack()
 }
 
 // pg3IRC is term51IRC.
@@ -359,12 +359,12 @@ func TestPg3_Page_clearCells_plain_full_row_is_zeroed(t *testing.T) {
 	cells := page.GetCells(page.GetRow(0))
 	for i := range cells {
 		c := &cells[i]
-		c.protected = true
-		c.semantic_content = PageCellSemanticContentInput
-		c.wide = PageCellWideNarrow
+		c.setProtected(true)
+		c.setSemanticContent(PageCellSemanticContentInput)
+		c.setWide(PageCellWideNarrow)
 	}
-	*page.GetRowAndCell(1, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 9, G: 9, B: 9}}}
-	*page.GetRowAndCell(2, 0).cell = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 3}}
+	*page.GetRowAndCell(1, 0).cell = pageCellFields{content_tag: PageCellContentTagBgColorRgb, content: pageCellContentFields{color_rgb: PageCellRGB{R: 9, G: 9, B: 9}}.pack()}.pack()
+	*page.GetRowAndCell(2, 0).cell = pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 3}.pack()}.pack()
 
 	page.ClearCells(page.GetRow(0), 0, 6)
 
@@ -482,8 +482,8 @@ func TestPg3_Page_clearCells_styles_are_released_and_the_styled_flag_follows_the
 	page.ClearCells(row, 0, 3)
 	expectEqual(t, uint16(1), page.styles.RefCount(a))
 	expect(t, row.styled, "row.styled")
-	expectEqual(t, StyleID(0), page.GetRowAndCell(1, 0).cell.style_id)
-	expectEqual(t, a, page.GetRowAndCell(7, 0).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(1, 0).cell.StyleID())
+	expectEqual(t, a, page.GetRowAndCell(7, 0).cell.StyleID())
 
 	page.ClearCells(row, 3, 10)
 	expectEqual(t, uint16(0), page.styles.RefCount(a))
@@ -492,7 +492,7 @@ func TestPg3_Page_clearCells_styles_are_released_and_the_styled_flag_follows_the
 	// are zeroed, and releasing a style does not reset the cell's style_id,
 	// so the flag stays set although no styled cell remains.
 	expect(t, row.styled, "row.styled")
-	expectEqual(t, StyleID(0), page.GetRowAndCell(7, 0).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(7, 0).cell.StyleID())
 	// A second pass over the (now zeroed) cells does clear it.
 	page.ClearCells(row, 0, 2)
 	expect(t, !row.styled, "!row.styled")
@@ -561,8 +561,8 @@ func TestPg3_Page_clearCells_wide_characters_can_be_cleared_as_a_pair(t *testing
 	page := pg3HNew(t, 6, 1)
 	defer page.Deinit()
 	*page.GetRowAndCell(1, 0).cell = PageCellInit('w')
-	page.GetRowAndCell(1, 0).cell.wide = PageCellWideWide
-	page.GetRowAndCell(2, 0).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(1, 0).cell.setWide(PageCellWideWide)
+	page.GetRowAndCell(2, 0).cell.setWide(PageCellWideSpacerTail)
 	page.ClearCells(page.GetRow(0), 1, 3)
 	for _, c := range page.GetCells(page.GetRow(0)) {
 		expect(t, c.IsZero(), "c.isZero()")
@@ -659,48 +659,48 @@ func TestPg3_Cell_init_layout_of_Cell_bit_fields(t *testing.T) {
 	expectEqual(t, uint8(2), uint8(PageCellSemanticContentPrompt))
 
 	// Reading fields out of raw bits.
-	expectEqual(t, PageCellContentTagCodepointGrapheme, pg3IRaw(1).content_tag)
-	expectEqual(t, PageCellContentTagBgColorPalette, pg3IRaw(2).content_tag)
-	expectEqual(t, PageCellContentTagBgColorRgb, pg3IRaw(3).content_tag)
-	expectEqual(t, uint32(0x1FFFFF), pg3IRaw(uint64(0x1FFFFF)<<2).content.codepoint)
-	expectEqual(t, uint8(0xAB), pg3IRaw(uint64(0xAB)<<2).content.color_palette)
-	rgb := pg3IRaw(uint64(0x030201) << 2).content.color_rgb
+	expectEqual(t, PageCellContentTagCodepointGrapheme, pg3IRaw(1).ContentTag())
+	expectEqual(t, PageCellContentTagBgColorPalette, pg3IRaw(2).ContentTag())
+	expectEqual(t, PageCellContentTagBgColorRgb, pg3IRaw(3).ContentTag())
+	expectEqual(t, uint32(0x1FFFFF), pg3IRaw(uint64(0x1FFFFF)<<2).content().codepoint())
+	expectEqual(t, uint8(0xAB), pg3IRaw(uint64(0xAB)<<2).content().colorPalette())
+	rgb := pg3IRaw(uint64(0x030201) << 2).content().colorRGB()
 	expectEqual(t, uint8(1), rgb.R)
 	expectEqual(t, uint8(2), rgb.G)
 	expectEqual(t, uint8(3), rgb.B)
-	expectEqual(t, StyleID(0xABCD), pg3IRaw(uint64(0xABCD)<<26).style_id)
-	expectEqual(t, PageCellWideWide, pg3IRaw(uint64(1)<<42).wide)
-	expectEqual(t, PageCellWideSpacerTail, pg3IRaw(uint64(2)<<42).wide)
-	expectEqual(t, PageCellWideSpacerHead, pg3IRaw(uint64(3)<<42).wide)
-	expect(t, pg3IRaw(uint64(1)<<44).protected, "term51IRaw(@as(u64, 1) << 44).protected")
-	expect(t, !pg3IRaw(uint64(1)<<44).hyperlink, "!term51IRaw(@as(u64, 1) << 44).hyperlink")
-	expect(t, pg3IRaw(uint64(1)<<45).hyperlink, "term51IRaw(@as(u64, 1) << 45).hyperlink")
-	expect(t, !pg3IRaw(uint64(1)<<45).protected, "!term51IRaw(@as(u64, 1) << 45).protected")
-	expectEqual(t, PageCellSemanticContentInput, pg3IRaw(uint64(1)<<46).semantic_content)
-	expectEqual(t, PageCellSemanticContentPrompt, pg3IRaw(uint64(2)<<46).semantic_content)
-	expectEqual(t, uint16(0xFFFF), pg3IRaw(uint64(0xFFFF)<<48)._padding)
+	expectEqual(t, StyleID(0xABCD), pg3IRaw(uint64(0xABCD)<<26).StyleID())
+	expectEqual(t, PageCellWideWide, pg3IRaw(uint64(1)<<42).Wide())
+	expectEqual(t, PageCellWideSpacerTail, pg3IRaw(uint64(2)<<42).Wide())
+	expectEqual(t, PageCellWideSpacerHead, pg3IRaw(uint64(3)<<42).Wide())
+	expect(t, pg3IRaw(uint64(1)<<44).Protected(), "term51IRaw(@as(u64, 1) << 44).protected")
+	expect(t, !pg3IRaw(uint64(1)<<44).Hyperlink(), "!term51IRaw(@as(u64, 1) << 44).hyperlink")
+	expect(t, pg3IRaw(uint64(1)<<45).Hyperlink(), "term51IRaw(@as(u64, 1) << 45).hyperlink")
+	expect(t, !pg3IRaw(uint64(1)<<45).Protected(), "!term51IRaw(@as(u64, 1) << 45).protected")
+	expectEqual(t, PageCellSemanticContentInput, pg3IRaw(uint64(1)<<46).SemanticContent())
+	expectEqual(t, PageCellSemanticContentPrompt, pg3IRaw(uint64(2)<<46).SemanticContent())
+	expectEqual(t, uint16(0xFFFF), pg3IRaw(uint64(0xFFFF)<<48).padding())
 
 	// Writing whole fields sets exactly their bits.
 	c := pg3IRaw(0)
-	c.content_tag = PageCellContentTagBgColorRgb
+	c.setContentTag(PageCellContentTagBgColorRgb)
 	expectEqual(t, uint64(3), pg3IBits(c))
 	c = pg3IRaw(0)
-	c.style_id = 0xFFFF
+	c.setStyleID(0xFFFF)
 	expectEqual(t, uint64(0xFFFF)<<26, pg3IBits(c))
 	c = pg3IRaw(0)
-	c.wide = PageCellWideSpacerHead
+	c.setWide(PageCellWideSpacerHead)
 	expectEqual(t, uint64(3)<<42, pg3IBits(c))
 	c = pg3IRaw(0)
-	c.protected = true
+	c.setProtected(true)
 	expectEqual(t, uint64(1)<<44, pg3IBits(c))
 	c = pg3IRaw(0)
-	c.hyperlink = true
+	c.setHyperlink(true)
 	expectEqual(t, uint64(1)<<45, pg3IBits(c))
 	c = pg3IRaw(0)
-	c.semantic_content = PageCellSemanticContentPrompt
+	c.setSemanticContent(PageCellSemanticContentPrompt)
 	expectEqual(t, uint64(2)<<46, pg3IBits(c))
 	c = pg3IRaw(0)
-	c._padding = 0xFFFF
+	c.setPadding(0xFFFF)
 	expectEqual(t, uint64(0xFFFF)<<48, pg3IBits(c))
 }
 
@@ -709,14 +709,14 @@ func TestPg3_Cell_init_sets_the_codepoint_and_nothing_else(t *testing.T) {
 	// Zero codepoint: the all-zero cell.
 	zero := PageCellInit(0)
 	expectEqual(t, uint64(0), pg3IBits(zero))
-	expectEqual(t, PageCellContentTagCodepoint, zero.content_tag)
-	expectEqual(t, uint32(0), zero.content.codepoint)
-	expectEqual(t, StyleID(0), zero.style_id)
-	expectEqual(t, PageCellWideNarrow, zero.wide)
-	expect(t, !zero.protected, "!zero.protected")
-	expect(t, !zero.hyperlink, "!zero.hyperlink")
-	expectEqual(t, PageCellSemanticContentOutput, zero.semantic_content)
-	expectEqual(t, uint16(0), zero._padding)
+	expectEqual(t, PageCellContentTagCodepoint, zero.ContentTag())
+	expectEqual(t, uint32(0), zero.content().codepoint())
+	expectEqual(t, StyleID(0), zero.StyleID())
+	expectEqual(t, PageCellWideNarrow, zero.Wide())
+	expect(t, !zero.Protected(), "!zero.protected")
+	expect(t, !zero.Hyperlink(), "!zero.hyperlink")
+	expectEqual(t, PageCellSemanticContentOutput, zero.SemanticContent())
+	expectEqual(t, uint16(0), zero.padding())
 
 	// Smallest, a few boundaries of the UTF-8 / UTF-16 ranges, the largest
 	// Unicode scalar and the largest u21: the codepoint is stored in bits
@@ -726,15 +726,15 @@ func TestPg3_Cell_init_sets_the_codepoint_and_nothing_else(t *testing.T) {
 	for _, cp := range cps {
 		c := PageCellInit(cp)
 		expectEqual(t, uint64(cp)<<2, pg3IBits(c))
-		expectEqual(t, PageCellContentTagCodepoint, c.content_tag)
-		expectEqual(t, cp, c.content.codepoint)
+		expectEqual(t, PageCellContentTagCodepoint, c.ContentTag())
+		expectEqual(t, cp, c.content().codepoint())
 		expectEqual(t, cp, c.Codepoint())
-		expectEqual(t, StyleID(0), c.style_id)
-		expectEqual(t, PageCellWideNarrow, c.wide)
-		expect(t, !c.protected, "!c.protected")
-		expect(t, !c.hyperlink, "!c.hyperlink")
-		expectEqual(t, PageCellSemanticContentOutput, c.semantic_content)
-		expectEqual(t, uint16(0), c._padding)
+		expectEqual(t, StyleID(0), c.StyleID())
+		expectEqual(t, PageCellWideNarrow, c.Wide())
+		expect(t, !c.Protected(), "!c.protected")
+		expect(t, !c.Hyperlink(), "!c.hyperlink")
+		expectEqual(t, PageCellSemanticContentOutput, c.SemanticContent())
+		expectEqual(t, uint16(0), c.padding())
 	}
 
 	// The default cell, built at runtime, equals init(0).
@@ -753,9 +753,9 @@ func TestPg3_Cell_isZero_default_cells_are_zero(t *testing.T) {
 	cell := PageCellInit(0)
 	expect(t, cell.IsZero(), "cell.isZero()")
 	// A zero cell that had a field set and reset is zero again.
-	cell.wide = PageCellWideWide
+	cell.setWide(PageCellWideWide)
 	expect(t, !cell.IsZero(), "!cell.isZero()")
-	cell.wide = PageCellWideNarrow
+	cell.setWide(PageCellWideNarrow)
 	expect(t, cell.IsZero(), "cell.isZero()")
 }
 
@@ -775,33 +775,33 @@ func TestPg3_Cell_isZero_any_single_non_default_field_is_non_zero(t *testing.T) 
 
 	// Style id.
 	c := pg3IRaw(0)
-	c.style_id = 1
+	c.setStyleID(1)
 	expect(t, !c.IsZero(), "!c.isZero()")
-	c.style_id = 0xFFFF
+	c.setStyleID(0xFFFF)
 	expect(t, !c.IsZero(), "!c.isZero()")
 
 	// Wide.
 	for _, w := range []PageCellWide{PageCellWideWide, PageCellWideSpacerTail, PageCellWideSpacerHead} {
 		c = pg3IRaw(0)
-		c.wide = w
+		c.setWide(w)
 		expect(t, !c.IsZero(), "!c.isZero()")
 	}
 
 	// Flags.
 	c = pg3IRaw(0)
-	c.protected = true
+	c.setProtected(true)
 	expect(t, !c.IsZero(), "!c.isZero()")
 	c = pg3IRaw(0)
-	c.hyperlink = true
+	c.setHyperlink(true)
 	expect(t, !c.IsZero(), "!c.isZero()")
 
 	// Semantic content.
 	c = pg3IRaw(0)
-	c.semantic_content = PageCellSemanticContentInput
+	c.setSemanticContent(PageCellSemanticContentInput)
 	expect(t, !c.IsZero(), "!c.isZero()")
-	c.semantic_content = PageCellSemanticContentPrompt
+	c.setSemanticContent(PageCellSemanticContentPrompt)
 	expect(t, !c.IsZero(), "!c.isZero()")
-	c.semantic_content = PageCellSemanticContentOutput
+	c.setSemanticContent(PageCellSemanticContentOutput)
 	expect(t, c.IsZero(), "c.isZero()")
 }
 
@@ -831,7 +831,7 @@ func TestPg3_Cell_isZero_leftover_bits_are_not_ignored(t *testing.T) {
 	// isZero is a raw comparison, not a semantic one.
 	for _, bits := range []uint64{1 << 23, 1 << 24, 1 << 25, 7 << 23} {
 		c := pg3IRaw(bits)
-		expectEqual(t, PageCellContentTagCodepoint, c.content_tag)
+		expectEqual(t, PageCellContentTagCodepoint, c.ContentTag())
 		expectEqual(t, uint32(0), c.Codepoint())
 		expect(t, !c.HasText(), "!c.hasText()")
 		expect(t, c.IsEmpty(), "c.isEmpty()")
@@ -844,7 +844,7 @@ func TestPg3_Cell_isZero_leftover_bits_are_not_ignored(t *testing.T) {
 		expectEqual(t, uint32(0), c.Codepoint())
 		expect(t, !c.HasText(), "!c.hasText()")
 		expect(t, c.IsEmpty(), "c.isEmpty()")
-		expectEqual(t, PageCellWideNarrow, c.wide)
+		expectEqual(t, PageCellWideNarrow, c.Wide())
 		expect(t, !c.IsZero(), "!c.isZero()")
 	}
 
@@ -862,16 +862,16 @@ func TestPg3_Cell_isZero_background_only_cells_are_never_zero(t *testing.T) {
 	for palette := uint16(0); palette <= 255; palette++ {
 		expect(t, !pg3ITagged(PageCellContentTagBgColorPalette, uint32(palette)).IsZero(), "!term51ITagged(.bg_color_palette, @intCast(palette)).isZero()")
 		lit := pg3IBgPalette(uint8(palette))
-		expectEqual(t, PageCellContentTagBgColorPalette, lit.content_tag)
-		expectEqual(t, uint8(palette), lit.content.color_palette)
+		expectEqual(t, PageCellContentTagBgColorPalette, lit.ContentTag())
+		expectEqual(t, uint8(palette), lit.content().colorPalette())
 		expect(t, !lit.IsZero(), "!lit.isZero()")
 	}
 	colors := []uint32{0x000000, 0x000001, 0x010000, 0x0000FF, 0xFFFFFF, 0x800000}
 	for _, rgb := range colors {
 		expect(t, !pg3ITagged(PageCellContentTagBgColorRgb, rgb).IsZero(), "!term51ITagged(.bg_color_rgb, rgb).isZero()")
 		lit := pg3IBgRgb(uint8(rgb), uint8(rgb>>8), uint8(rgb>>16))
-		expectEqual(t, PageCellContentTagBgColorRgb, lit.content_tag)
-		expectEqual(t, uint8(rgb), lit.content.color_rgb.R)
+		expectEqual(t, PageCellContentTagBgColorRgb, lit.ContentTag())
+		expectEqual(t, uint8(rgb), lit.content().colorRGB().R)
 		expect(t, !lit.IsZero(), "!lit.isZero()")
 	}
 }
@@ -889,20 +889,20 @@ func TestPg3_Cell_hasText_codepoint_tag(t *testing.T) {
 
 	// Only the codepoint matters: wide, spacer, style, flags do not.
 	c := PageCellInit(0)
-	c.wide = PageCellWideWide
+	c.setWide(PageCellWideWide)
 	expect(t, !c.HasText(), "!c.hasText()")
-	c.wide = PageCellWideSpacerTail
+	c.setWide(PageCellWideSpacerTail)
 	expect(t, !c.HasText(), "!c.hasText()")
-	c.wide = PageCellWideSpacerHead
+	c.setWide(PageCellWideSpacerHead)
 	expect(t, !c.HasText(), "!c.hasText()")
 	c = PageCellInit(0)
-	c.style_id = 5
-	c.protected = true
-	c.hyperlink = true
-	c.semantic_content = PageCellSemanticContentPrompt
+	c.setStyleID(5)
+	c.setProtected(true)
+	c.setHyperlink(true)
+	c.setSemanticContent(PageCellSemanticContentPrompt)
 	expect(t, !c.HasText(), "!c.hasText()")
 	c = PageCellInit('x')
-	c.wide = PageCellWideSpacerTail
+	c.setWide(PageCellWideSpacerTail)
 	expect(t, c.HasText(), "c.hasText()")
 
 	// Bits 23..25 of the content union are not part of the codepoint.
@@ -949,11 +949,11 @@ func TestPg3_Cell_codepoint_codepoint_and_grapheme_tags_return_the_codepoint(t *
 
 	// Other fields do not matter.
 	c := PageCellInit(0x42)
-	c.wide = PageCellWideWide
-	c.style_id = 9
-	c.protected = true
-	c.hyperlink = true
-	c.semantic_content = PageCellSemanticContentInput
+	c.setWide(PageCellWideWide)
+	c.setStyleID(9)
+	c.setProtected(true)
+	c.setHyperlink(true)
+	c.setSemanticContent(PageCellSemanticContentInput)
 	expectEqual(t, uint32(0x42), c.Codepoint())
 }
 
@@ -970,26 +970,26 @@ func TestPg3_Cell_codepoint_background_cells_return_0(t *testing.T) {
 func TestPg3_Cell_gridWidth_width_per_wide_value(t *testing.T) {
 	var c PageCell
 	expectEqual(t, uint8(1), c.GridWidth())
-	c.wide = PageCellWideNarrow
+	c.setWide(PageCellWideNarrow)
 	expectEqual(t, uint8(1), c.GridWidth())
-	c.wide = PageCellWideWide
+	c.setWide(PageCellWideWide)
 	expectEqual(t, uint8(2), c.GridWidth())
-	c.wide = PageCellWideSpacerTail
+	c.setWide(PageCellWideSpacerTail)
 	expectEqual(t, uint8(1), c.GridWidth())
-	c.wide = PageCellWideSpacerHead
+	c.setWide(PageCellWideSpacerHead)
 	expectEqual(t, uint8(1), c.GridWidth())
 
 	// Independent of the content.
 	tags := []PageCellContentTag{PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme, PageCellContentTagBgColorPalette, PageCellContentTagBgColorRgb}
 	for _, tag := range tags {
 		d := pg3ITagged(tag, 0x41)
-		d.wide = PageCellWideWide
+		d.setWide(PageCellWideWide)
 		expectEqual(t, uint8(2), d.GridWidth())
-		d.wide = PageCellWideNarrow
+		d.setWide(PageCellWideNarrow)
 		expectEqual(t, uint8(1), d.GridWidth())
 	}
 	w := PageCellInit(0x4E2D)
-	w.wide = PageCellWideWide
+	w.setWide(PageCellWideWide)
 	expectEqual(t, uint8(2), w.GridWidth())
 }
 
@@ -997,27 +997,27 @@ func TestPg3_Cell_gridWidth_width_per_wide_value(t *testing.T) {
 func TestPg3_Cell_hasStyling_style_id_other_than_the_default(t *testing.T) {
 	var c PageCell
 	expect(t, !c.HasStyling(), "!c.hasStyling()")
-	c.style_id = 0
+	c.setStyleID(0)
 	expect(t, !c.HasStyling(), "!c.hasStyling()")
-	c.style_id = 1
+	c.setStyleID(1)
 	expect(t, c.HasStyling(), "c.hasStyling()")
-	c.style_id = 2
+	c.setStyleID(2)
 	expect(t, c.HasStyling(), "c.hasStyling()")
-	c.style_id = 0x8000
+	c.setStyleID(0x8000)
 	expect(t, c.HasStyling(), "c.hasStyling()")
-	c.style_id = 0xFFFF
+	c.setStyleID(0xFFFF)
 	expect(t, c.HasStyling(), "c.hasStyling()")
 
 	// Only the style id matters, not the content tag or other fields.
 	tags := []PageCellContentTag{PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme, PageCellContentTagBgColorPalette, PageCellContentTagBgColorRgb}
 	for _, tag := range tags {
 		d := pg3ITagged(tag, 0xFF)
-		d.wide = PageCellWideWide
-		d.protected = true
-		d.hyperlink = true
-		d.semantic_content = PageCellSemanticContentPrompt
+		d.setWide(PageCellWideWide)
+		d.setProtected(true)
+		d.setHyperlink(true)
+		d.setSemanticContent(PageCellSemanticContentPrompt)
 		expect(t, !d.HasStyling(), "!d.hasStyling()")
-		d.style_id = 1
+		d.setStyleID(1)
 		expect(t, d.HasStyling(), "d.hasStyling()")
 	}
 }
@@ -1032,27 +1032,27 @@ func TestPg3_Cell_isEmpty_textual_cells(t *testing.T) {
 	// Zero codepoint but a wide-ness other than narrow is meaningful
 	// (wide spacers), so not empty.
 	c := PageCellInit(0)
-	c.wide = PageCellWideWide
+	c.setWide(PageCellWideWide)
 	expect(t, !c.IsEmpty(), "!c.isEmpty()")
-	c.wide = PageCellWideSpacerTail
+	c.setWide(PageCellWideSpacerTail)
 	expect(t, !c.IsEmpty(), "!c.isEmpty()")
-	c.wide = PageCellWideSpacerHead
+	c.setWide(PageCellWideSpacerHead)
 	expect(t, !c.IsEmpty(), "!c.isEmpty()")
-	c.wide = PageCellWideNarrow
+	c.setWide(PageCellWideNarrow)
 	expect(t, c.IsEmpty(), "c.isEmpty()")
 
 	// A cell with text is not empty whatever its width.
 	c = PageCellInit('a')
-	c.wide = PageCellWideWide
+	c.setWide(PageCellWideWide)
 	expect(t, !c.IsEmpty(), "!c.isEmpty()")
-	c.wide = PageCellWideSpacerTail
+	c.setWide(PageCellWideSpacerTail)
 	expect(t, !c.IsEmpty(), "!c.isEmpty()")
 
 	// Grapheme tag follows the same rule.
 	expect(t, pg3ITagged(PageCellContentTagCodepointGrapheme, 0).IsEmpty(), "term51ITagged(.codepoint_grapheme, 0).isEmpty()")
 	expect(t, !pg3ITagged(PageCellContentTagCodepointGrapheme, 1).IsEmpty(), "!term51ITagged(.codepoint_grapheme, 1).isEmpty()")
 	c = pg3ITagged(PageCellContentTagCodepointGrapheme, 0)
-	c.wide = PageCellWideSpacerHead
+	c.setWide(PageCellWideSpacerHead)
 	expect(t, !c.IsEmpty(), "!c.isEmpty()")
 
 	// The unused content bits are not text.
@@ -1064,19 +1064,19 @@ func TestPg3_Cell_isEmpty_ignores_style_flags_and_semantic_content(t *testing.T)
 	// The doc comment says "no text or styling" but styling is not
 	// checked: a styled blank narrow cell is empty.
 	c := PageCellInit(0)
-	c.style_id = 7
+	c.setStyleID(7)
 	expect(t, c.HasStyling(), "c.hasStyling()")
 	expect(t, c.IsEmpty(), "c.isEmpty()")
 	c = PageCellInit(0)
-	c.protected = true
+	c.setProtected(true)
 	expect(t, c.IsEmpty(), "c.isEmpty()")
 	c = PageCellInit(0)
-	c.hyperlink = true
+	c.setHyperlink(true)
 	expect(t, c.IsEmpty(), "c.isEmpty()")
 	c = PageCellInit(0)
-	c.semantic_content = PageCellSemanticContentPrompt
+	c.setSemanticContent(PageCellSemanticContentPrompt)
 	expect(t, c.IsEmpty(), "c.isEmpty()")
-	c.semantic_content = PageCellSemanticContentInput
+	c.setSemanticContent(PageCellSemanticContentInput)
 	expect(t, c.IsEmpty(), "c.isEmpty()")
 }
 
@@ -1102,14 +1102,14 @@ func TestPg3_Cell_hasGrapheme_only_the_grapheme_tag(t *testing.T) {
 
 	// Other fields do not matter.
 	c := pg3ITagged(PageCellContentTagCodepointGrapheme, 0)
-	c.wide = PageCellWideWide
-	c.style_id = 3
-	c.hyperlink = true
+	c.setWide(PageCellWideWide)
+	c.setStyleID(3)
+	c.setHyperlink(true)
 	expect(t, c.HasGrapheme(), "c.hasGrapheme()")
 	c = PageCellInit('a')
-	c.wide = PageCellWideWide
-	c.style_id = 3
-	c.hyperlink = true
+	c.setWide(PageCellWideWide)
+	c.setStyleID(3)
+	c.setHyperlink(true)
 	expect(t, !c.HasGrapheme(), "!c.hasGrapheme()")
 }
 
@@ -1149,8 +1149,8 @@ func TestPg3_Cell_hasTextAny_slices_of_cells(t *testing.T) {
 		PageCellInit(0),
 		PageCellInit(0),
 	}
-	other[3].wide = PageCellWideSpacerTail
-	other[4].style_id = 2
+	other[3].setWide(PageCellWideSpacerTail)
+	other[4].setStyleID(2)
 	expect(t, !PageCellHasTextAny(other[:]), "!Cell.hasTextAny(&other)")
 
 	// A grapheme cell with text counts.
@@ -1359,18 +1359,18 @@ func TestPg3_Page_lookupHyperlink_consults_the_map_not_the_cell_flag(t *testing.
 	id := pg3ILink(t, page, 1)
 	a := pg3IPut(page, 0, 0, 'a')
 	zigTry(t, page.SetHyperlink(a.row, a.cell, id))
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
+	expect(t, a.cell.Hyperlink(), "a.cell.hyperlink")
 
 	// Clearing the flag by hand: the map entry is still found.
-	a.cell.hyperlink = false
+	a.cell.setHyperlink(false)
 	expectEqual(t, Some(id), page.LookupHyperlink(a.cell))
-	a.cell.hyperlink = true
+	a.cell.setHyperlink(true)
 
 	// Setting the flag on another cell by hand: no map entry, no id.
 	b := pg3IPut(page, 1, 0, 'b')
-	b.cell.hyperlink = true
+	b.cell.setHyperlink(true)
 	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(b.cell))
-	b.cell.hyperlink = false
+	b.cell.setHyperlink(false)
 
 	// Rewriting the cell content does not drop the map entry either.
 	*a.cell = PageCellInit('z')
@@ -1393,13 +1393,13 @@ func TestPg3_Page_clearHyperlink_releases_the_link_clears_the_cell_flag(t *testi
 
 	// Clear one of two.
 	page.ClearHyperlink(a.cell)
-	expect(t, !a.cell.hyperlink, "!a.cell.hyperlink")
+	expect(t, !a.cell.Hyperlink(), "!a.cell.hyperlink")
 	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(a.cell))
 	expectEqual(t, uint(1), page.HyperlinkCount())
 	expectEqual(t, uint(1), pg3IRefs(page, id))
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
 	// The other cell is untouched.
-	expect(t, b.cell.hyperlink, "b.cell.hyperlink")
+	expect(t, b.cell.Hyperlink(), "b.cell.hyperlink")
 	expectEqual(t, Some(id), page.LookupHyperlink(b.cell))
 	// The cell text is untouched.
 	expectEqual(t, uint32('a'), a.cell.Codepoint())
@@ -1414,7 +1414,7 @@ func TestPg3_Page_clearHyperlink_releases_the_link_clears_the_cell_flag(t *testi
 	// Clear the last user: the ref count reaches zero and the set has no
 	// living item. The row flag still stays until updated.
 	page.ClearHyperlink(b.cell)
-	expect(t, !b.cell.hyperlink, "!b.cell.hyperlink")
+	expect(t, !b.cell.Hyperlink(), "!b.cell.hyperlink")
 	expectEqual(t, uint(0), page.HyperlinkCount())
 	expectEqual(t, uint(0), pg3IRefs(page, id))
 	expectEqual(t, uint(0), page.hyperlink_set.Count())
@@ -1440,7 +1440,7 @@ func TestPg3_Page_clearHyperlink_cell_without_a_link_is_untouched(t *testing.T) 
 	expectEqual(t, before, pg3IBits(*plain.cell))
 	expectEqual(t, uint(1), page.HyperlinkCount())
 	expectEqual(t, uint(1), pg3IRefs(page, id))
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
+	expect(t, a.cell.Hyperlink(), "a.cell.hyperlink")
 	expect(t, a.row.hyperlink, "a.row.hyperlink")
 	expect(t, !other_row.row.hyperlink, "!other_row.row.hyperlink")
 
@@ -1517,12 +1517,12 @@ func TestPg3_Page_updateRowHyperlinkFlag_never_sets_the_flag_other_rows_untouche
 
 	// The function looks at the cell flags, not at the map: with the cell
 	// flag cleared by hand the row flag goes.
-	a.cell.hyperlink = false
+	a.cell.setHyperlink(false)
 	page.UpdateRowHyperlinkFlag(a.row)
 	expect(t, !a.row.hyperlink, "!a.row.hyperlink")
 	// The flag is never set by update: a cell with the flag on a row
 	// without the flag keeps the row flag false.
-	a.cell.hyperlink = true
+	a.cell.setHyperlink(true)
 	page.UpdateRowHyperlinkFlag(a.row)
 	expect(t, !a.row.hyperlink, "!a.row.hyperlink")
 }
@@ -1878,7 +1878,7 @@ func TestPg3_Page_setHyperlink_first_link_on_a_cell(t *testing.T) {
 	expect(t, !a.row.hyperlink, "!a.row.hyperlink")
 	zigTry(t, page.SetHyperlink(a.row, a.cell, id))
 
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
+	expect(t, a.cell.Hyperlink(), "a.cell.hyperlink")
 	expect(t, a.row.hyperlink, "a.row.hyperlink")
 	expectEqual(t, Some(id), page.LookupHyperlink(a.cell))
 	expectEqual(t, uint(1), page.HyperlinkCount())
@@ -1891,7 +1891,7 @@ func TestPg3_Page_setHyperlink_first_link_on_a_cell(t *testing.T) {
 	page.hyperlink_set.Use(id)
 	b := pg3IPut(page, 5, 3, 'b')
 	zigTry(t, page.SetHyperlink(b.row, b.cell, id))
-	expect(t, b.cell.hyperlink, "b.cell.hyperlink")
+	expect(t, b.cell.Hyperlink(), "b.cell.hyperlink")
 	expect(t, b.row.hyperlink, "b.row.hyperlink")
 	expectEqual(t, uint(2), page.HyperlinkCount())
 	page.hyperlink_set.Use(id)
@@ -1919,7 +1919,7 @@ func TestPg3_Page_setHyperlink_replacing_a_link_releases_the_old_one(t *testing.
 	// id2 already has the reference from its insert; that moves to the cell.
 	zigTry(t, page.SetHyperlink(a.row, a.cell, id2))
 	expectEqual(t, Some(id2), page.LookupHyperlink(a.cell))
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
+	expect(t, a.cell.Hyperlink(), "a.cell.hyperlink")
 	expect(t, a.row.hyperlink, "a.row.hyperlink")
 	expectEqual(t, uint(1), page.HyperlinkCount())
 	expectEqual(t, uint(0), pg3IRefs(page, id1))
@@ -1945,15 +1945,15 @@ func TestPg3_Page_setHyperlink_same_id_again_keeps_one_reference_per_use(t *test
 	expectEqual(t, uint(1), pg3IRefs(page, id))
 	expectEqual(t, uint(1), page.HyperlinkCount())
 	expectEqual(t, Some(id), page.LookupHyperlink(a.cell))
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
+	expect(t, a.cell.Hyperlink(), "a.cell.hyperlink")
 	expect(t, a.row.hyperlink, "a.row.hyperlink")
 
 	// The cell flag may be false while the map entry exists (printing over
 	// a cell): setting the same id again sets the flag back.
-	a.cell.hyperlink = false
+	a.cell.setHyperlink(false)
 	page.hyperlink_set.Use(id)
 	zigTry(t, page.SetHyperlink(a.row, a.cell, id))
-	expect(t, a.cell.hyperlink, "a.cell.hyperlink")
+	expect(t, a.cell.Hyperlink(), "a.cell.hyperlink")
 	expect(t, a.row.hyperlink, "a.row.hyperlink")
 	expectEqual(t, uint(1), pg3IRefs(page, id))
 	expectEqual(t, uint(1), page.HyperlinkCount())
@@ -1985,7 +1985,7 @@ func TestPg3_Page_setHyperlink_HyperlinkMapOutOfMemory_at_the_map_capacity(t *te
 	// One more cell, in a row that has no link yet: error, nothing changed.
 	extra := pg3IPut(page, 0, 7, 'z')
 	pg3ExpectError(t, ErrHyperlinkMapOutOfMemory, page.SetHyperlink(extra.row, extra.cell, id))
-	expect(t, !extra.cell.hyperlink, "!extra.cell.hyperlink")
+	expect(t, !extra.cell.Hyperlink(), "!extra.cell.hyperlink")
 	expect(t, !extra.row.hyperlink, "!extra.row.hyperlink")
 	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(extra.cell))
 	expectEqual(t, cap, page.HyperlinkCount())
@@ -2020,7 +2020,7 @@ func TestPg3_Page_setHyperlink_no_map_memory(t *testing.T) {
 	a := pg3IPut(page, 0, 0, 'a')
 	// Any id will do: the map is full before the id is looked at.
 	pg3ExpectError(t, ErrHyperlinkMapOutOfMemory, page.SetHyperlink(a.row, a.cell, 1))
-	expect(t, !a.cell.hyperlink, "!a.cell.hyperlink")
+	expect(t, !a.cell.Hyperlink(), "!a.cell.hyperlink")
 	expect(t, !a.row.hyperlink, "!a.row.hyperlink")
 	expectEqual(t, uint(0), page.HyperlinkCount())
 }
@@ -2048,12 +2048,12 @@ func TestPg3_Page_moveHyperlink_moves_the_map_entry_only(t *testing.T) {
 	expectEqual(t, uint(2), pg3IRefs(page, id))
 
 	// The cell flags are NOT changed: the caller is responsible.
-	expect(t, src.cell.hyperlink, "src.cell.hyperlink")
-	expect(t, !dst.cell.hyperlink, "!dst.cell.hyperlink")
+	expect(t, src.cell.Hyperlink(), "src.cell.hyperlink")
+	expect(t, !dst.cell.Hyperlink(), "!dst.cell.hyperlink")
 
 	// Once the caller fixes the flags the page is consistent again.
-	src.cell.hyperlink = false
-	dst.cell.hyperlink = true
+	src.cell.setHyperlink(false)
+	dst.cell.setHyperlink(true)
 	page.AssertIntegrity()
 }
 
@@ -2080,7 +2080,7 @@ func TestPg3_Page_moveHyperlink_across_rows_chained_at_capacity(t *testing.T) {
 	// Cell index 0 is (0,0); move it to (3,8): different row.
 	src := page.GetRowAndCell(0, 0)
 	dst := page.GetRowAndCell(3, 8)
-	src.cell.hyperlink = true
+	src.cell.setHyperlink(true)
 	page.moveHyperlink(src.cell, dst.cell)
 	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(src.cell))
 	expectEqual(t, Some(HyperlinkID(100)), page.LookupHyperlink(dst.cell))
@@ -2088,7 +2088,7 @@ func TestPg3_Page_moveHyperlink_across_rows_chained_at_capacity(t *testing.T) {
 
 	// Chain it on to a third cell (the flag has to be moved by hand for the
 	// assert in moveHyperlink).
-	dst.cell.hyperlink = true
+	dst.cell.setHyperlink(true)
 	third := page.GetRowAndCell(9, 9)
 	page.moveHyperlink(dst.cell, third.cell)
 	expectEqual(t, None[HyperlinkID](), page.LookupHyperlink(dst.cell))
@@ -2192,7 +2192,7 @@ func TestPg3_Page_setGraphemes_stores_the_codepoints_on_a_text_cell(t *testing.T
 	expect(t, !a.row.grapheme, "!a.row.grapheme")
 	zigTry(t, page.SetGraphemes(a.row, a.cell, []uint32{0x301, 0x302, 0x303}))
 
-	expectEqual(t, PageCellContentTagCodepointGrapheme, a.cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, a.cell.ContentTag())
 	expect(t, a.cell.HasGrapheme(), "a.cell.hasGrapheme()")
 	expect(t, a.row.grapheme, "a.row.grapheme")
 	// The first codepoint stays on the cell and is not part of the list.
@@ -2274,16 +2274,16 @@ func TestPg3_Page_setGraphemes_only_the_content_tag_of_the_cell_changes(t *testi
 	defer page.Deinit()
 
 	a := pg3IPut(page, 0, 0, 0x4E2D)
-	a.cell.wide = PageCellWideWide
-	a.cell.protected = true
-	a.cell.semantic_content = PageCellSemanticContentInput
+	a.cell.setWide(PageCellWideWide)
+	a.cell.setProtected(true)
+	a.cell.setSemanticContent(PageCellSemanticContentInput)
 	before := pg3IBits(*a.cell)
 	zigTry(t, page.SetGraphemes(a.row, a.cell, []uint32{0xFE0F}))
 	// Only the 2 tag bits differ: 0 -> 1.
 	expectEqual(t, before|1, pg3IBits(*a.cell))
-	expectEqual(t, PageCellWideWide, a.cell.wide)
-	expect(t, a.cell.protected, "a.cell.protected")
-	expectEqual(t, PageCellSemanticContentInput, a.cell.semantic_content)
+	expectEqual(t, PageCellWideWide, a.cell.Wide())
+	expect(t, a.cell.Protected(), "a.cell.protected")
+	expectEqual(t, PageCellSemanticContentInput, a.cell.SemanticContent())
 	expectEqual(t, uint32(0x4E2D), a.cell.Codepoint())
 }
 
@@ -2297,7 +2297,7 @@ func TestPg3_Page_setGraphemes_GraphemeAllocOutOfMemory(t *testing.T) {
 	defer page.Deinit()
 	a := pg3IPut(page, 0, 0, 'a')
 	pg3ExpectError(t, ErrGraphemeAllocOutOfMemory, page.SetGraphemes(a.row, a.cell, []uint32{0x301}))
-	expectEqual(t, PageCellContentTagCodepoint, a.cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, a.cell.ContentTag())
 	expect(t, !a.row.grapheme, "!a.row.grapheme")
 	expectEqual(t, uint(0), page.GraphemeCount())
 	expectEqual(t, uint(0), page.GraphemeCapacity())
@@ -2315,7 +2315,7 @@ func TestPg3_Page_setGraphemes_GraphemeAllocOutOfMemory(t *testing.T) {
 	expectEqual(t, uint64(1024), pg3IGrUsed(page2))
 	extra := pg3IPut(page2, 4, 6, 'x')
 	pg3ExpectError(t, ErrGraphemeAllocOutOfMemory, page2.SetGraphemes(extra.row, extra.cell, []uint32{0x301}))
-	expectEqual(t, PageCellContentTagCodepoint, extra.cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, extra.cell.ContentTag())
 	expectEqual(t, uint(64), page2.GraphemeCount())
 
 	// Freeing one chunk makes room for a one-chunk grapheme, but not for a
@@ -2348,7 +2348,7 @@ func TestPg3_Page_setGraphemes_GraphemeMapOutOfMemory_frees_the_codepoints(t *te
 	pg3ExpectError(t, ErrGraphemeMapOutOfMemory, page.SetGraphemes(b.row, b.cell, []uint32{0x301, 0x302, 0x303, 0x304, 0x305}))
 	// The allocation was given back, nothing on the cell or row changed.
 	expectEqual(t, uint64(pg3IChunk), pg3IGrUsed(page))
-	expectEqual(t, PageCellContentTagCodepoint, b.cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, b.cell.ContentTag())
 	expect(t, !b.row.grapheme, "!b.row.grapheme")
 	expect(t, !page.LookupGrapheme(b.cell).Valid, "page.lookupGrapheme(b.cell) == null")
 	expectEqual(t, uint(1), page.GraphemeCount())
@@ -2383,8 +2383,8 @@ func TestPg3_Page_appendGrapheme_first_codepoint_on_a_plain_cell(t *testing.T) {
 
 	// Only the content tag of the cell changes.
 	c := pg3IPut(page, 3, 2, 'c')
-	c.cell.wide = PageCellWideWide
-	c.cell.protected = true
+	c.cell.setWide(PageCellWideWide)
+	c.cell.setProtected(true)
 	before := pg3IBits(*c.cell)
 	zigTry(t, page.AppendGrapheme(c.row, c.cell, 0x301))
 	expectEqual(t, before|1, pg3IBits(*c.cell))
@@ -2557,11 +2557,11 @@ func TestPg3_Page_lookupGrapheme_consults_the_map_returns_page_memory(t *testing
 
 	// The tag is not consulted: with the tag reset by hand the entry is
 	// still found, and a tag set by hand does not make up an entry.
-	a.cell.content_tag = PageCellContentTagCodepoint
+	a.cell.setContentTag(PageCellContentTagCodepoint)
 	expectEqualSlices(t, []uint32{0x301, 0x302}, zigUnwrap(t, page.LookupGrapheme(a.cell)))
-	a.cell.content_tag = PageCellContentTagCodepointGrapheme
+	a.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	b := pg3IPut(page, 2, 1, 'b')
-	b.cell.content_tag = PageCellContentTagCodepointGrapheme
+	b.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	expect(t, !page.LookupGrapheme(b.cell).Valid, "page.lookupGrapheme(b.cell) == null")
 
 	// The slice is a view of page memory: writing through it is visible to
@@ -2603,8 +2603,8 @@ func TestPg3_Page_moveGrapheme_moves_the_map_entry_and_nothing_else(t *testing.T
 	expectEqual(t, uint32('b'), dst.cell.Codepoint())
 
 	// Once the caller fixes the tags the page is consistent.
-	src.cell.content_tag = PageCellContentTagCodepoint
-	dst.cell.content_tag = PageCellContentTagCodepointGrapheme
+	src.cell.setContentTag(PageCellContentTagCodepoint)
+	dst.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	page.AssertIntegrity()
 }
 
@@ -2630,16 +2630,16 @@ func TestPg3_Page_moveGrapheme_across_rows_chained_map_at_capacity(t *testing.T)
 	expectEqual(t, uint64(2*pg3IChunk), pg3IGrUsed(page))
 
 	// Chain on, with the tags fixed up by hand.
-	a.cell.content_tag = PageCellContentTagCodepoint
-	b.cell.content_tag = PageCellContentTagCodepointGrapheme
+	a.cell.setContentTag(PageCellContentTagCodepoint)
+	b.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	c := pg3IPut(page, 9, 9, 'c')
 	page.MoveGrapheme(b.cell, c.cell)
 	expect(t, !page.LookupGrapheme(b.cell).Valid, "page.lookupGrapheme(b.cell) == null")
 	expectEqualSlices(t, []uint32{0x301, 0x302, 0x303, 0x304, 0x305}, zigUnwrap(t, page.LookupGrapheme(c.cell)))
 
 	// Move back to the very first cell.
-	b.cell.content_tag = PageCellContentTagCodepoint
-	c.cell.content_tag = PageCellContentTagCodepointGrapheme
+	b.cell.setContentTag(PageCellContentTagCodepoint)
+	c.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	page.MoveGrapheme(c.cell, a.cell)
 	expectEqualSlices(t, []uint32{0x301, 0x302, 0x303, 0x304, 0x305}, zigUnwrap(t, page.LookupGrapheme(a.cell)))
 	expectEqual(t, uint(1), page.GraphemeCount())
@@ -2660,16 +2660,16 @@ func TestPg3_Page_clearGrapheme_frees_the_codepoints_and_resets_the_tag(t *testi
 	expectEqual(t, uint64(4*pg3IChunk), pg3IGrUsed(page))
 	expectEqual(t, uint(2), page.GraphemeCount())
 
-	a.cell.wide = PageCellWideWide
+	a.cell.setWide(PageCellWideWide)
 	page.ClearGrapheme(a.cell)
-	expectEqual(t, PageCellContentTagCodepoint, a.cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, a.cell.ContentTag())
 	expect(t, !a.cell.HasGrapheme(), "!a.cell.hasGrapheme()")
 	expect(t, !page.LookupGrapheme(a.cell).Valid, "page.lookupGrapheme(a.cell) == null")
 	expectEqual(t, uint(1), page.GraphemeCount())
 	expectEqual(t, uint64(pg3IChunk), pg3IGrUsed(page))
 	// The first codepoint and other fields stay.
 	expectEqual(t, uint32('a'), a.cell.Codepoint())
-	expectEqual(t, PageCellWideWide, a.cell.wide)
+	expectEqual(t, PageCellWideWide, a.cell.Wide())
 	// The row flag is not updated by clearGrapheme.
 	expect(t, a.row.grapheme, "a.row.grapheme")
 	// The other cell is untouched.
@@ -2736,12 +2736,12 @@ func TestPg3_Page_updateRowGraphemeFlag_looks_at_the_cell_tags_of_this_row_only(
 	// The scan is by cell tag, not by map entry: a tag set by hand keeps the
 	// flag, a missing tag with a map entry does not.
 	b := pg3IPut(page, 3, 2, 'b')
-	b.cell.content_tag = PageCellContentTagCodepointGrapheme
+	b.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	r2.grapheme = true
 	page.UpdateRowGraphemeFlag(r2)
 	expect(t, r2.grapheme, "r2.grapheme")
-	b.cell.content_tag = PageCellContentTagCodepoint
-	a.cell.content_tag = PageCellContentTagCodepoint
+	b.cell.setContentTag(PageCellContentTagCodepoint)
+	a.cell.setContentTag(PageCellContentTagCodepoint)
 	page.UpdateRowGraphemeFlag(a.row)
 	expect(t, !a.row.grapheme, "!a.row.grapheme")
 }
@@ -2863,20 +2863,20 @@ func TestPg3_Page_updateRowStyledFlag_clears_the_flag_when_no_cell_is_styled(t *
 	cells := page.GetCells(row)
 	for _, x := range []int{0, 9, 4} {
 		row.styled = true
-		cells[x].style_id = 1
+		cells[x].setStyleID(1)
 		page.UpdateRowStyledFlag(row)
 		expect(t, row.styled, "row.styled")
-		cells[x].style_id = 0
+		cells[x].setStyleID(0)
 		page.UpdateRowStyledFlag(row)
 		expect(t, !row.styled, "!row.styled")
 	}
 
 	// Any non-default style id counts, including the largest.
 	row.styled = true
-	cells[3].style_id = 0xFFFF
+	cells[3].setStyleID(0xFFFF)
 	page.UpdateRowStyledFlag(row)
 	expect(t, row.styled, "row.styled")
-	cells[3].style_id = 0
+	cells[3].setStyleID(0)
 
 	// A cell with only a background colour has no style id.
 	row.styled = true
@@ -2891,14 +2891,14 @@ func TestPg3_Page_updateRowStyledFlag_this_row_only_size_cols_only(t *testing.T)
 	defer page.Deinit()
 
 	// A styled cell in another row does not matter.
-	page.GetCells(page.GetRow(1))[0].style_id = 1
+	page.GetCells(page.GetRow(1))[0].setStyleID(1)
 	r2 := page.GetRow(2)
 	r2.styled = true
 	page.UpdateRowStyledFlag(r2)
 	expect(t, !r2.styled, "!r2.styled")
 
 	// Cells beyond size.cols are not scanned.
-	page.GetCells(r2)[7].style_id = 1
+	page.GetCells(r2)[7].setStyleID(1)
 	r2.styled = true
 	page.size.cols = 7
 	page.UpdateRowStyledFlag(r2)
@@ -3974,7 +3974,7 @@ func TestPg3_panic_Page_appendGrapheme_row_grapheme_flag_is_false(t *testing.T) 
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	a := pg3IPut(page, 0, 0, 'a')
-	a.cell.content_tag = PageCellContentTagCodepointGrapheme
+	a.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg3ExpectPanic(t, func() {
 		_ = page.AppendGrapheme(a.row, a.cell, 0x301)
 	})
@@ -3985,7 +3985,7 @@ func TestPg3_panic_Page_appendGrapheme_no_map_entry(t *testing.T) {
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	a := pg3IPut(page, 0, 0, 'a')
-	a.cell.content_tag = PageCellContentTagCodepointGrapheme
+	a.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	a.row.grapheme = true
 	pg3ExpectPanic(t, func() {
 		_ = page.AppendGrapheme(a.row, a.cell, 0x301)
@@ -4022,7 +4022,7 @@ func TestPg3_panic_Page_moveGrapheme_no_map_entry(t *testing.T) {
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	src := pg3IPut(page, 0, 0, 'a')
-	src.cell.content_tag = PageCellContentTagCodepointGrapheme
+	src.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	dst := pg3IPut(page, 1, 0, 'b')
 	pg3ExpectPanic(t, func() {
 		page.MoveGrapheme(src.cell, dst.cell)
@@ -4044,7 +4044,7 @@ func TestPg3_panic_Page_clearGrapheme_no_map_entry(t *testing.T) {
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	a := pg3IPut(page, 0, 0, 'a')
-	a.cell.content_tag = PageCellContentTagCodepointGrapheme
+	a.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg3ExpectPanic(t, func() {
 		page.ClearGrapheme(a.cell)
 	})
@@ -4078,7 +4078,7 @@ func TestPg3_panic_Page_moveHyperlink_no_map_entry(t *testing.T) {
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	src := pg3IPut(page, 0, 0, 'a')
-	src.cell.hyperlink = true
+	src.cell.setHyperlink(true)
 	dst := pg3IPut(page, 1, 0, 'b')
 	pg3ExpectPanic(t, func() {
 		page.moveHyperlink(src.cell, dst.cell)
@@ -4104,9 +4104,9 @@ func TestPg3_panic_Page_swapCells_both_graphemes_no_map_entry(t *testing.T) {
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	a := pg3IPut(page, 0, 0, 'a')
-	a.cell.content_tag = PageCellContentTagCodepointGrapheme
+	a.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	b := pg3IPut(page, 1, 0, 'b')
-	b.cell.content_tag = PageCellContentTagCodepointGrapheme
+	b.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg3ExpectPanic(t, func() {
 		page.SwapCells(a.cell, b.cell)
 	})
@@ -4117,9 +4117,9 @@ func TestPg3_panic_Page_swapCells_both_hyperlinks_no_map_entry(t *testing.T) {
 	page := pg3HNew(t, 4, 1)
 	defer page.Deinit()
 	a := pg3IPut(page, 0, 0, 'a')
-	a.cell.hyperlink = true
+	a.cell.setHyperlink(true)
 	b := pg3IPut(page, 1, 0, 'b')
-	b.cell.hyperlink = true
+	b.cell.setHyperlink(true)
 	pg3ExpectPanic(t, func() {
 		page.SwapCells(a.cell, b.cell)
 	})

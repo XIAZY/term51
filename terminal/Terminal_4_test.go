@@ -102,7 +102,7 @@ func tm4SExpectCell(t *testing.T, term *Terminal, x uint, y uint, cp uint32, wid
 	t.Helper()
 	lc := tm4SAt(t, term, x, y)
 	expectEqual(t, cp, lc.Cell.Codepoint())
-	expectEqual(t, wide, lc.Cell.wide)
+	expectEqual(t, wide, lc.Cell.Wide())
 }
 
 // tm4SExpectGrapheme is term51SExpectGrapheme: expect the cell at (x, y) to
@@ -218,9 +218,9 @@ func TestTm4_print_ascii_fast_path_writes_narrow_cells_and_advances(t *testing.T
 
 	// Cells carry the default style and no extras.
 	lc := tm4SAt(t, term, 3, 0)
-	expectEqual(t, StyleDefaultID, lc.Cell.style_id)
-	expect(t, !lc.Cell.protected, "!lc.cell.protected")
-	expect(t, !lc.Cell.hyperlink, "!lc.cell.hyperlink")
+	expectEqual(t, StyleDefaultID, lc.Cell.StyleID())
+	expect(t, !lc.Cell.Protected(), "!lc.cell.protected")
+	expect(t, !lc.Cell.Hyperlink(), "!lc.cell.hyperlink")
 	expect(t, !lc.Row.wrap, "!lc.row.wrap")
 	expect(t, !lc.Row.styled, "!lc.row.styled")
 }
@@ -738,17 +738,17 @@ func TestTm4_print_protected_mode_marks_printed_cells(t *testing.T) {
 	zigTry(t, term.Print(0x4E2D))
 	term.SetProtectedMode(ANSIProtectedModeOff)
 	zigTry(t, term.Print('c'))
-	expect(t, !tm4SAt(t, term, 0, 0).Cell.protected, "!term51SAt(&t, 0, 0).cell.protected")
-	expect(t, tm4SAt(t, term, 1, 0).Cell.protected, "term51SAt(&t, 1, 0).cell.protected")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.Protected(), "!term51SAt(&t, 0, 0).cell.protected")
+	expect(t, tm4SAt(t, term, 1, 0).Cell.Protected(), "term51SAt(&t, 1, 0).cell.protected")
 	// Both halves of a wide character are protected.
-	expect(t, tm4SAt(t, term, 2, 0).Cell.protected, "term51SAt(&t, 2, 0).cell.protected")
-	expect(t, tm4SAt(t, term, 3, 0).Cell.protected, "term51SAt(&t, 3, 0).cell.protected")
-	expect(t, !tm4SAt(t, term, 4, 0).Cell.protected, "!term51SAt(&t, 4, 0).cell.protected")
+	expect(t, tm4SAt(t, term, 2, 0).Cell.Protected(), "term51SAt(&t, 2, 0).cell.protected")
+	expect(t, tm4SAt(t, term, 3, 0).Cell.Protected(), "term51SAt(&t, 3, 0).cell.protected")
+	expect(t, !tm4SAt(t, term, 4, 0).Cell.Protected(), "!term51SAt(&t, 4, 0).cell.protected")
 
 	// Printing again unprotected over protected cells clears the flag.
 	term.SetCursorPos(1, 2)
 	zigTry(t, term.Print('z'))
-	expect(t, !tm4SAt(t, term, 1, 0).Cell.protected, "!term51SAt(&t, 1, 0).cell.protected")
+	expect(t, !tm4SAt(t, term, 1, 0).Cell.Protected(), "!term51SAt(&t, 1, 0).cell.protected")
 }
 
 // Zig: test "term51: print: cells take the cursor style and track style reference counts"
@@ -763,12 +763,12 @@ func TestTm4_print_cells_take_the_cursor_style_and_track_style_reference_counts(
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
 		page := &lc.Node.data
-		expect(t, lc.Cell.style_id != StyleDefaultID, "lc.cell.style_id != style.default_id")
+		expect(t, lc.Cell.StyleID() != StyleDefaultID, "lc.cell.style_id != style.default_id")
 		expect(t, lc.Row.styled, "lc.row.styled")
-		expect(t, page.styles.Get(lc.Cell.style_id).Flags.Bold, "page.styles.get(page.memory, lc.cell.style_id).flags.bold")
-		expectEqual(t, lc.Cell.style_id, tm4SAt(t, term, 1, 0).Cell.style_id)
+		expect(t, page.styles.Get(lc.Cell.StyleID()).Flags.Bold, "page.styles.get(page.memory, lc.cell.style_id).flags.bold")
+		expectEqual(t, lc.Cell.StyleID(), tm4SAt(t, term, 1, 0).Cell.StyleID())
 		// One ref for the cursor plus the two cells.
-		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.Cell.style_id))
+		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.Cell.StyleID()))
 	}()
 
 	// Overwriting with the same style does not change the reference count.
@@ -777,18 +777,18 @@ func TestTm4_print_cells_take_the_cursor_style_and_track_style_reference_counts(
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
 		page := &lc.Node.data
-		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.Cell.style_id))
+		expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(lc.Cell.StyleID()))
 	}()
 
 	// Overwriting with the default style releases a reference.
-	bold_id := tm4SAt(t, term, 0, 0).Cell.style_id
+	bold_id := tm4SAt(t, term, 0, 0).Cell.StyleID()
 	zigTry(t, term.Screens.Active.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('d'))
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
 		page := &lc.Node.data
-		expectEqual(t, StyleDefaultID, lc.Cell.style_id)
+		expectEqual(t, StyleDefaultID, lc.Cell.StyleID())
 		expectEqual(t, SizeCellCountInt(1), page.styles.RefCount(bold_id))
 	}()
 
@@ -798,9 +798,9 @@ func TestTm4_print_cells_take_the_cursor_style_and_track_style_reference_counts(
 	func() {
 		lc := tm4SAt(t, term, 1, 0)
 		page := &lc.Node.data
-		expect(t, page.styles.Get(lc.Cell.style_id).Flags.Italic, "page.styles.get(page.memory, lc.cell.style_id).flags.italic")
+		expect(t, page.styles.Get(lc.Cell.StyleID()).Flags.Italic, "page.styles.get(page.memory, lc.cell.style_id).flags.italic")
 		// cursor + this cell
-		expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(lc.Cell.style_id))
+		expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(lc.Cell.StyleID()))
 	}()
 }
 
@@ -814,12 +814,12 @@ func TestTm4_print_wide_character_with_a_style_styles_both_cells(t *testing.T) {
 	zigTry(t, term.Print(0x4E2D))
 	head := tm4SAt(t, term, 0, 0)
 	tail := tm4SAt(t, term, 1, 0)
-	expect(t, head.Cell.style_id != StyleDefaultID, "head.cell.style_id != style.default_id")
-	expectEqual(t, head.Cell.style_id, tail.Cell.style_id)
+	expect(t, head.Cell.StyleID() != StyleDefaultID, "head.cell.style_id != style.default_id")
+	expectEqual(t, head.Cell.StyleID(), tail.Cell.StyleID())
 	expect(t, head.Row.styled, "head.row.styled")
 	page := &head.Node.data
 	// cursor + head + tail
-	expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(head.Cell.style_id))
+	expectEqual(t, SizeCellCountInt(3), page.styles.RefCount(head.Cell.StyleID()))
 }
 
 // Zig: test "term51: print: hyperlink applies to both halves of a wide character"
@@ -833,7 +833,7 @@ func TestTm4_print_hyperlink_applies_to_both_halves_of_a_wide_character(t *testi
 	zigTry(t, term.Print('a'))
 	for x := uint(0); x < 3; x++ {
 		lc := tm4SAt(t, term, x, 0)
-		expect(t, lc.Cell.hyperlink, "lc.cell.hyperlink")
+		expect(t, lc.Cell.Hyperlink(), "lc.cell.hyperlink")
 		expectEqual(t, HyperlinkID(1), zigUnwrap(t, lc.Node.data.LookupHyperlink(lc.Cell)))
 	}
 	expect(t, tm4SAt(t, term, 0, 0).Row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
@@ -853,13 +853,13 @@ func TestTm4_print_overwriting_hyperlink_cells_keeps_the_row_flag_while_any_link
 	// Overwrite the first cell with a plain char: the second still has a link.
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('x'))
-	expect(t, !tm4SAt(t, term, 0, 0).Cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
-	expect(t, tm4SAt(t, term, 1, 0).Cell.hyperlink, "term51SAt(&t, 1, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.Hyperlink(), "!term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, tm4SAt(t, term, 1, 0).Cell.Hyperlink(), "term51SAt(&t, 1, 0).cell.hyperlink")
 	expect(t, tm4SAt(t, term, 0, 0).Row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
 
 	// Overwrite the second too: the row flag clears and the page set empties.
 	zigTry(t, term.Print('y'))
-	expect(t, !tm4SAt(t, term, 1, 0).Cell.hyperlink, "!term51SAt(&t, 1, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 1, 0).Cell.Hyperlink(), "!term51SAt(&t, 1, 0).cell.hyperlink")
 	expect(t, !tm4SAt(t, term, 0, 0).Row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
 	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).Node.data.hyperlink_set.Count())
 }
@@ -876,7 +876,7 @@ func TestTm4_print_overwriting_a_hyperlink_with_a_different_one_swaps_ids(t *tes
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('b'))
 	lc := tm4SAt(t, term, 0, 0)
-	expect(t, lc.Cell.hyperlink, "lc.cell.hyperlink")
+	expect(t, lc.Cell.Hyperlink(), "lc.cell.hyperlink")
 	id := zigUnwrap(t, lc.Node.data.LookupHyperlink(lc.Cell))
 	entry := lc.Node.data.hyperlink_set.Get(id)
 	expectEqualStrings(t, "http://two.example.com", string(entry.uri))
@@ -897,11 +897,11 @@ func TestTm4_print_cells_take_the_cursor_semantic_content(t *testing.T) {
 	zigTry(t, term.Print(0x4E2D))
 	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentOutput
 	zigTry(t, term.Print('c'))
-	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 0, 0).Cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentPrompt, tm4SAt(t, term, 1, 0).Cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 2, 0).Cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 3, 0).Cell.semantic_content)
-	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 4, 0).Cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 0, 0).Cell.SemanticContent())
+	expectEqual(t, PageCellSemanticContentPrompt, tm4SAt(t, term, 1, 0).Cell.SemanticContent())
+	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 2, 0).Cell.SemanticContent())
+	expectEqual(t, PageCellSemanticContentInput, tm4SAt(t, term, 3, 0).Cell.SemanticContent())
+	expectEqual(t, PageCellSemanticContentOutput, tm4SAt(t, term, 4, 0).Cell.SemanticContent())
 }
 
 // Zig: test "term51: print: charset maps ascii through the active GL table"
@@ -1800,12 +1800,12 @@ func TestTm4_print_clustering_VS16_widening_keeps_style_and_hyperlink_on_the_spa
 	zigTry(t, term.Print(0xFE0F))
 	head := tm4SAt(t, term, 0, 0)
 	tail := tm4SAt(t, term, 1, 0)
-	expectEqual(t, PageCellWideWide, head.Cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, tail.Cell.wide)
-	expect(t, head.Cell.hyperlink, "head.cell.hyperlink")
-	expect(t, tail.Cell.hyperlink, "tail.cell.hyperlink")
-	expectEqual(t, head.Cell.style_id, tail.Cell.style_id)
-	expect(t, head.Cell.style_id != StyleDefaultID, "head.cell.style_id != style.default_id")
+	expectEqual(t, PageCellWideWide, head.Cell.Wide())
+	expectEqual(t, PageCellWideSpacerTail, tail.Cell.Wide())
+	expect(t, head.Cell.Hyperlink(), "head.cell.hyperlink")
+	expect(t, tail.Cell.Hyperlink(), "tail.cell.hyperlink")
+	expectEqual(t, head.Cell.StyleID(), tail.Cell.StyleID())
+	expect(t, head.Cell.StyleID() != StyleDefaultID, "head.cell.style_id != style.default_id")
 }
 
 // Zig: test "term51: print: many cells with grapheme data grow the page capacity"
@@ -1861,7 +1861,7 @@ func TestTm4_printCell_writes_at_the_cursor_without_moving_it_or_marking_dirty(t
 	tm4SExpectCursor(t, term, 2, 1, false)
 	tm4SExpectRowDirty(t, term, 1, false)
 	tm4ExpectOptional(t, None[uint32](), term.PreviousChar)
-	expectEqual(t, PageCellContentTagCodepoint, tm4SAt(t, term, 2, 1).Cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, tm4SAt(t, term, 2, 1).Cell.ContentTag())
 
 	// A zero codepoint with narrow writes an empty-looking cell.
 	term.printCell(0, PageCellWideNarrow)
@@ -1897,20 +1897,20 @@ func TestTm4_printCell_replaces_non_text_cell_content_and_takes_pen_attributes(t
 
 	func() {
 		lc := tm4SAt(t, term, 0, 0)
-		*lc.Cell = PageCell{
+		*lc.Cell = pageCellFields{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
-		}
+			content:     pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack(),
+		}.pack()
 	}()
 	term.Screens.Active.Cursor.Protected = true
 	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
 	term.printCell('Z', PageCellWideNarrow)
 	cell := tm4SAt(t, term, 0, 0).Cell
-	expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
-	expectEqual(t, uint32('Z'), cell.content.codepoint)
-	expect(t, cell.protected, "cell.protected")
-	expectEqual(t, PageCellSemanticContentInput, cell.semantic_content)
-	expect(t, !cell.hyperlink, "!cell.hyperlink")
+	expectEqual(t, PageCellContentTagCodepoint, cell.ContentTag())
+	expectEqual(t, uint32('Z'), cell.content().codepoint())
+	expect(t, cell.Protected(), "cell.protected")
+	expectEqual(t, PageCellSemanticContentInput, cell.SemanticContent())
+	expect(t, !cell.Hyperlink(), "!cell.hyperlink")
 }
 
 // Zig: test "term51: printCell: charset utf8 and ascii are identity, others map"
@@ -2096,11 +2096,11 @@ func TestTm4_printCell_style_reference_counting_only_changes_when_the_style_id_d
 	expectEqual(t, SizeCellCountInt(1), page.styles.RefCount(id))
 	term.printCell('c', PageCellWideNarrow)
 	expectEqual(t, SizeCellCountInt(0), page.styles.RefCount(id))
-	expectEqual(t, StyleDefaultID, tm4SAt(t, term, 0, 0).Cell.style_id)
+	expectEqual(t, StyleDefaultID, tm4SAt(t, term, 0, 0).Cell.StyleID())
 
 	// Default over default: nothing to do.
 	term.printCell('d', PageCellWideNarrow)
-	expectEqual(t, StyleDefaultID, tm4SAt(t, term, 0, 0).Cell.style_id)
+	expectEqual(t, StyleDefaultID, tm4SAt(t, term, 0, 0).Cell.StyleID())
 }
 
 // Zig: test "term51: printCell: hyperlink set, replaced and cleared"
@@ -2111,19 +2111,19 @@ func TestTm4_printCell_hyperlink_set_replaced_and_cleared(t *testing.T) {
 
 	// No link on a cell without a link: nothing happens.
 	term.printCell('a', PageCellWideNarrow)
-	expect(t, !tm4SAt(t, term, 0, 0).Cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.Hyperlink(), "!term51SAt(&t, 0, 0).cell.hyperlink")
 	expect(t, !tm4SAt(t, term, 0, 0).Row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
 
 	// Active link is attached.
 	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	term.printCell('b', PageCellWideNarrow)
-	expect(t, tm4SAt(t, term, 0, 0).Cell.hyperlink, "term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, tm4SAt(t, term, 0, 0).Cell.Hyperlink(), "term51SAt(&t, 0, 0).cell.hyperlink")
 	expect(t, tm4SAt(t, term, 0, 0).Row.hyperlink, "term51SAt(&t, 0, 0).row.hyperlink")
 
 	// Writing with no active link clears the old one and the row flag.
 	term.Screens.Active.EndHyperlink()
 	term.printCell('c', PageCellWideNarrow)
-	expect(t, !tm4SAt(t, term, 0, 0).Cell.hyperlink, "!term51SAt(&t, 0, 0).cell.hyperlink")
+	expect(t, !tm4SAt(t, term, 0, 0).Cell.Hyperlink(), "!term51SAt(&t, 0, 0).cell.hyperlink")
 	expect(t, !tm4SAt(t, term, 0, 0).Row.hyperlink, "!term51SAt(&t, 0, 0).row.hyperlink")
 	expectEqual(t, uint(0), tm4SAt(t, term, 0, 0).Node.data.hyperlink_set.Count())
 }
@@ -2923,7 +2923,7 @@ func TestTm4_panic_printCell_spacer_tail_at_column_zero(t *testing.T) {
 	// Zig: in the `.spacer_tail` branch, `assert(self.screens.active.cursor.x > 0)`.
 	// A spacer tail in column zero is an invalid state that a test makes by
 	// hand.
-	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.setWide(PageCellWideSpacerTail)
 	tm4ExpectPanic(t, func() {
 		term.printCell('a', PageCellWideNarrow)
 	})
@@ -2939,7 +2939,7 @@ func TestTm4_panic_printCell_styled_cell_in_unstyled_row(t *testing.T) {
 	// self.screens.active.cursor.page_row.styled); ... }` when the style of
 	// the cell differs from the cursor's. The cell is given a style id by
 	// hand while the row has no styled flag.
-	term.Screens.Active.Cursor.PageCell.style_id = 1
+	term.Screens.Active.Cursor.PageCell.setStyleID(1)
 	expect(t, !term.Screens.Active.Cursor.PageRow.styled, "!t.screens.active.cursor.page_row.styled")
 	tm4ExpectPanic(t, func() {
 		term.printCell('a', PageCellWideNarrow)

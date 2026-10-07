@@ -752,7 +752,7 @@ func (self *Terminal) printBody(c uint32) error {
 			// want to use the cell before that because that has the actual
 			// content.
 			immediate := self.Screens.Active.CursorCellLeft(left)
-			switch immediate.wide {
+			switch immediate.Wide() {
 			default:
 				prev = Prev{cell: immediate, left: left}
 			case PageCellWideSpacerTail:
@@ -774,7 +774,7 @@ func (self *Terminal) printBody(c uint32) error {
 			{
 				// Zig: the labeled block `brk:`.
 				state := UucodeGraphemeBreakStateDefault
-				cp1 := prev.cell.content.codepoint
+				cp1 := prev.cell.content().codepoint()
 				if prev.cell.HasGrapheme() {
 					cps := self.Screens.Active.Cursor.PagePin.Node.data.LookupGrapheme(prev.cell)
 					assert(cps.Valid) // .?
@@ -804,7 +804,7 @@ func (self *Terminal) printBody(c uint32) error {
 				// the cell width accordingly. VS16 makes the character wide and
 				// VS15 makes it narrow.
 				if c == 0xFE0F || c == 0xFE0E {
-					prev_props := UnicodeTable.Get(prev.cell.content.codepoint)
+					prev_props := UnicodeTable.Get(prev.cell.content().codepoint())
 					// Check if it is a valid variation sequence in
 					// emoji-variation-sequences.txt, and if not, ignore the char.
 					if !prev_props.emoji_vs_base {
@@ -833,7 +833,7 @@ func (self *Terminal) printBody(c uint32) error {
 				case desired_wide_wide:
 					// Zig: the labeled block `wide:`; `break :wide` is
 					// Go's break out of the switch.
-					if prev.cell.wide == PageCellWideWide {
+					if prev.cell.Wide() == PageCellWideWide {
 						break
 					}
 
@@ -858,17 +858,17 @@ func (self *Terminal) printBody(c uint32) error {
 							self.Screens.Active.Cursor.PageRow.wrap = true
 						}
 
-						prev_cp := prev.cell.content.codepoint
+						prev_cp := prev.cell.content().codepoint()
 						if prev.cell.HasGrapheme() {
 							// This is like printCell but without clearing the
 							// grapheme data from the cell, so we can move it
 							// later.
 							if row_wrap {
-								prev.cell.wide = PageCellWideSpacerHead
+								prev.cell.setWide(PageCellWideSpacerHead)
 							} else {
-								prev.cell.wide = PageCellWideNarrow
+								prev.cell.setWide(PageCellWideNarrow)
 							}
-							prev.cell.content.codepoint = 0
+							prev.cell.setContentCodepoint(0)
 
 							if err := self.printWrap(); err != nil {
 								return err
@@ -892,8 +892,8 @@ func (self *Terminal) printBody(c uint32) error {
 
 								if new_pin.Node == old_pin.Node {
 									new_pin.Node.data.MoveGrapheme(prev.cell, new_rac.cell)
-									prev.cell.content_tag = PageCellContentTagCodepoint
-									new_rac.cell.content_tag = PageCellContentTagCodepointGrapheme
+									prev.cell.setContentTag(PageCellContentTagCodepoint)
+									new_rac.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 									new_rac.row.grapheme = true
 								} else {
 									cps := old_pin.Node.data.LookupGrapheme(old_rac.cell)
@@ -931,7 +931,7 @@ func (self *Terminal) printBody(c uint32) error {
 							prev.cell = self.Screens.Active.Cursor.PageCell
 						}
 					} else {
-						prev.cell.wide = PageCellWideWide
+						prev.cell.setWide(PageCellWideWide)
 					}
 
 					// Write our spacer, since prev.cell is now wide
@@ -950,15 +950,15 @@ func (self *Terminal) printBody(c uint32) error {
 					// Go's break out of the switch.
 
 					// Prev cell is no longer wide
-					if prev.cell.wide != PageCellWideWide {
+					if prev.cell.Wide() != PageCellWideWide {
 						break
 					}
-					prev.cell.wide = PageCellWideNarrow
+					prev.cell.setWide(PageCellWideNarrow)
 
 					// Remove the wide spacer tail
 					assert(prev.left >= 1) // Zig: prev.left - 1 (u16) traps
 					cell := self.Screens.Active.CursorCellLeft(prev.left - 1)
-					cell.wide = PageCellWideNarrow
+					cell.setWide(PageCellWideNarrow)
 
 					// Back track the cursor so that we don't end up with
 					// an extra space after the character. Since xterm is
@@ -1030,7 +1030,7 @@ grapheme:
 		{
 			// Zig: the labeled block `prev:`.
 			immediate := self.Screens.Active.CursorCellLeft(1)
-			if immediate.wide != PageCellWideSpacerTail {
+			if immediate.Wide() != PageCellWideSpacerTail {
 				prev = immediate
 			} else {
 				prev = self.Screens.Active.CursorCellLeft(2)
@@ -1045,7 +1045,7 @@ grapheme:
 
 		// If this is a emoji variation selector, prev must be an emoji
 		if c == 0xFE0F || c == 0xFE0E {
-			prev_props := UnicodeTable.Get(prev.content.codepoint)
+			prev_props := UnicodeTable.Get(prev.content().codepoint())
 			emoji := prev_props.grapheme_break == UucodeXTypesGraphemeBreakNoControlExtendedPictographic
 			if !emoji {
 				return nil
@@ -1189,8 +1189,8 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 	// need to do the special handling here because the structure will
 	// be the same. If it is NOT the same, then we may need to clear some
 	// cells.
-	if cell.wide != wide {
-		switch cell.wide {
+	if cell.Wide() != wide {
+		switch cell.Wide() {
 		// Previous cell was narrow. Do nothing.
 		case PageCellWideNarrow:
 
@@ -1217,8 +1217,8 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 			// doesn't keep a stale spacer_head.
 			if self.Screens.Active.Cursor.Y > 0 && self.Screens.Active.Cursor.X <= 1 {
 				head_cell := self.Screens.Active.CursorCellEndOfPrev()
-				if head_cell.wide == PageCellWideSpacerHead {
-					head_cell.wide = PageCellWideNarrow
+				if head_cell.Wide() == PageCellWideSpacerHead {
+					head_cell.setWide(PageCellWideNarrow)
 				}
 			}
 
@@ -1230,7 +1230,7 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 			//
 			// Zig: `if (comptime std.debug.runtime_safety)`, true in the
 			// safe build the port follows.
-			cell.wide = PageCellWideNarrow
+			cell.setWide(PageCellWideNarrow)
 
 			wide_cell := self.Screens.Active.CursorCellLeft(1)
 			page := &self.Screens.Active.Cursor.PagePin.Node.data
@@ -1246,8 +1246,8 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 			// doesn't keep a stale spacer_head.
 			if self.Screens.Active.Cursor.Y > 0 && self.Screens.Active.Cursor.X <= 1 {
 				head_cell := self.Screens.Active.CursorCellEndOfPrev()
-				if head_cell.wide == PageCellWideSpacerHead {
-					head_cell.wide = PageCellWideNarrow
+				if head_cell.Wide() == PageCellWideSpacerHead {
+					head_cell.setWide(PageCellWideNarrow)
 				}
 			}
 
@@ -1270,36 +1270,36 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 
 	// We don't need to update the style refs unless the
 	// cell's new style will be different after writing.
-	style_changed := cell.style_id != self.Screens.Active.Cursor.StyleID
+	style_changed := cell.StyleID() != self.Screens.Active.Cursor.StyleID
 	if style_changed {
 		page := &self.Screens.Active.Cursor.PagePin.Node.data
 
 		// Release the old style.
-		if cell.style_id != StyleDefaultID {
+		if cell.StyleID() != StyleDefaultID {
 			assert(self.Screens.Active.Cursor.PageRow.styled)
-			page.styles.Release(cell.style_id)
+			page.styles.Release(cell.StyleID())
 		}
 	}
 
 	// Keep track if we had a hyperlink so we can unset it.
-	had_hyperlink := cell.hyperlink
+	had_hyperlink := cell.Hyperlink()
 
 	// Write
-	*cell = PageCell{
+	*cell = pageCellFields{
 		content_tag:      PageCellContentTagCodepoint,
-		content:          PageCellContent{codepoint: c},
+		content:          pageCellContentFields{codepoint: c}.pack(),
 		style_id:         self.Screens.Active.Cursor.StyleID,
 		wide:             wide,
 		protected:        self.Screens.Active.Cursor.Protected,
 		semantic_content: self.Screens.Active.Cursor.SemanticContent,
-	}
+	}.pack()
 
 	if style_changed {
 		page := &self.Screens.Active.Cursor.PagePin.Node.data
 
 		// Use the new style.
-		if cell.style_id != StyleDefaultID {
-			page.styles.Use(cell.style_id)
+		if cell.StyleID() != StyleDefaultID {
+			page.styles.Use(cell.StyleID())
 			self.Screens.Active.Cursor.PageRow.styled = true
 		}
 	}
@@ -1313,7 +1313,7 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 	if self.Screens.Active.Cursor.HyperlinkID > 0 {
 		if err := self.Screens.Active.CursorSetHyperlink(); err != nil {
 			warn("terminal", "error reallocating for more hyperlink space, ignoring hyperlink err=error.%v", err)
-			assert(!cell.hyperlink)
+			assert(!cell.Hyperlink())
 		}
 	} else if had_hyperlink {
 		// If the previous cell had a hyperlink then we need to clear it.
@@ -2514,8 +2514,8 @@ func (self *Terminal) rowWillBeShifted(page *Page, row *PageRow) {
 	if self.ScrollingRegion.Right == self.Cols-1 ||
 		self.ScrollingRegion.Left < 2 {
 		end_cell := &cells[page.size.cols-1]
-		if end_cell.wide == PageCellWideSpacerHead {
-			end_cell.wide = PageCellWideNarrow
+		if end_cell.Wide() == PageCellWideSpacerHead {
+			end_cell.setWide(PageCellWideNarrow)
 		}
 	}
 
@@ -2525,27 +2525,27 @@ func (self *Terminal) rowWillBeShifted(page *Page, row *PageRow) {
 	left_cell := &cells[self.ScrollingRegion.Left]
 	right_cell := &cells[self.ScrollingRegion.Right]
 
-	if left_cell.wide == PageCellWideSpacerTail {
+	if left_cell.Wide() == PageCellWideSpacerTail {
 		assert(self.ScrollingRegion.Left >= 1) // Zig: left - 1 (u16) traps
 		wide_cell := &cells[self.ScrollingRegion.Left-1]
 		if wide_cell.HasGrapheme() {
 			page.ClearGrapheme(wide_cell)
 			page.UpdateRowGraphemeFlag(row)
 		}
-		wide_cell.content.codepoint = 0
-		wide_cell.wide = PageCellWideNarrow
-		left_cell.wide = PageCellWideNarrow
+		wide_cell.setContentCodepoint(0)
+		wide_cell.setWide(PageCellWideNarrow)
+		left_cell.setWide(PageCellWideNarrow)
 	}
 
-	if right_cell.wide == PageCellWideWide {
+	if right_cell.Wide() == PageCellWideWide {
 		tail_cell := &cells[self.ScrollingRegion.Right+1]
 		if right_cell.HasGrapheme() {
 			page.ClearGrapheme(right_cell)
 			page.UpdateRowGraphemeFlag(row)
 		}
-		right_cell.content.codepoint = 0
-		right_cell.wide = PageCellWideNarrow
-		tail_cell.wide = PageCellWideNarrow
+		right_cell.setContentCodepoint(0)
+		right_cell.setWide(PageCellWideNarrow)
+		tail_cell.setWide(PageCellWideNarrow)
 	}
 }
 
@@ -3015,7 +3015,7 @@ func (self *Terminal) InsertBlanks(count uint) {
 
 	// If our X is a wide spacer tail then we need to erase the
 	// previous cell too so we don't split a multi-cell character.
-	if self.Screens.Active.Cursor.PageCell.wide == PageCellWideSpacerTail {
+	if self.Screens.Active.Cursor.PageCell.Wide() == PageCellWideSpacerTail {
 		assert(self.Screens.Active.Cursor.X > 0)
 		self.Screens.Active.ClearCells(page, self.Screens.Active.Cursor.PageRow, page.cells[left-1:left+1])
 	}
@@ -3028,7 +3028,7 @@ func (self *Terminal) InsertBlanks(count uint) {
 	// shift or the clear. Clean up both halves up front.
 	{
 		right_cell := left + uint(rem-1)
-		if page.cells[right_cell].wide == PageCellWideWide {
+		if page.cells[right_cell].Wide() == PageCellWideWide {
 			self.Screens.Active.ClearCells(
 				page,
 				self.Screens.Active.Cursor.PageRow,
@@ -3060,9 +3060,9 @@ func (self *Terminal) InsertBlanks(count uint) {
 			// If our last cell we're shifting is wide, then we need to clear
 			// it to be empty so we don't split the multi-cell char.
 			end := x
-			if page.cells[end].wide == PageCellWideWide {
+			if page.cells[end].Wide() == PageCellWideWide {
 				end_multi := end
-				assert(page.cells[end_multi+1].wide == PageCellWideSpacerTail)
+				assert(page.cells[end_multi+1].Wide() == PageCellWideSpacerTail)
 				self.Screens.Active.ClearCells(
 					page,
 					self.Screens.Active.Cursor.PageRow,
@@ -3175,7 +3175,7 @@ func (self *Terminal) EraseChars(count_req uint) {
 		// cell beyond it since we can't just split a wide char.
 		if end != remaining {
 			last := self.Screens.Active.CursorCellRight(end - 1)
-			if last.wide == PageCellWideWide {
+			if last.Wide() == PageCellWideWide {
 				end += 1
 			}
 		}
@@ -3238,7 +3238,7 @@ func (self *Terminal) EraseLine(mode CSIEraseLine, protected_req bool) {
 
 		// If our X is a wide spacer tail then we need to erase the
 		// previous cell too so we don't split a multi-cell character.
-		if x > 0 && self.Screens.Active.Cursor.PageCell.wide == PageCellWideSpacerTail {
+		if x > 0 && self.Screens.Active.Cursor.PageCell.Wide() == PageCellWideSpacerTail {
 			x -= 1
 		}
 
@@ -3252,7 +3252,7 @@ func (self *Terminal) EraseLine(mode CSIEraseLine, protected_req bool) {
 		x := self.Screens.Active.Cursor.X
 
 		// If our x is a wide char we need to delete the tail too.
-		if self.Screens.Active.Cursor.PageCell.wide == PageCellWideWide {
+		if self.Screens.Active.Cursor.PageCell.Wide() == PageCellWideWide {
 			x += 1
 		}
 
@@ -3503,14 +3503,14 @@ func (self *Terminal) Decaln() (err error) {
 		cells_multi := page.rowCells(row)
 		cells := cells_multi[0:page.size.cols]
 		for i := range cells { // Zig: @memset
-			cells[i] = PageCell{
+			cells[i] = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 'E'},
+				content:     pageCellContentFields{codepoint: 'E'}.pack(),
 				style_id:    self.Screens.Active.Cursor.StyleID,
 
 				// DECALN does not respect protected state. Verified with xterm.
 				protected: false,
-			}
+			}.pack()
 		}
 
 		// If we have a ref-counted style, increase

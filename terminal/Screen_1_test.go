@@ -1003,8 +1003,8 @@ func TestSc1_Screen_scrolling(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 2)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Everything is dirty because we have no scrollback
@@ -1512,8 +1512,8 @@ func TestSc1_Screen_scroll_above_same_page(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Page 0 row 1 (active row 0) is dirty because the cursor moved off of it.
@@ -1589,8 +1589,8 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page(t *testin
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Page 0's penultimate row is dirty because the cursor moved off of it.
@@ -1667,8 +1667,8 @@ func TestSc1_Screen_scroll_above_same_page_but_cursor_on_previous_page_last_row(
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Page 0's final row is dirty because the cursor moved off of it.
@@ -1746,8 +1746,8 @@ func TestSc1_Screen_scroll_above_creates_new_page(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Page 0's penultimate row is dirty because the cursor moved off of it.
@@ -1820,8 +1820,8 @@ func TestSc1_Screen_scroll_above_with_cursor_on_non_final_row(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Page 0's penultimate row is dirty because the cursor moved off of it.
@@ -1882,8 +1882,8 @@ func TestSc1_Screen_scroll_above_no_scrollback_bottom_of_page(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, 1)))
 		cell := list_cell.Cell
-		expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content.color_rgb)
+		expect(t, cell.ContentTag() == PageCellContentTagBgColorRgb, "cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 155, G: 0, B: 0}, cell.content().colorRGB())
 	}
 
 	// Page 0 row 1 (active row 0) is dirty because the cursor moved off of it.
@@ -2425,10 +2425,10 @@ func TestSc1_Screen_resize_no_reflow_less_rows_trims_blank_lines(t *testing.T) {
 	// Write only a background color into the remaining rows
 	for y := 1; y < int(s.Pages.rows); y++ {
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, uint32(y))))
-		*list_cell.Cell = PageCell{
+		*list_cell.Cell = pageCellFields{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
-		}
+			content:     pageCellContentFields{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}}.pack(),
+		}.pack()
 	}
 
 	cursor := s.Cursor
@@ -2456,10 +2456,10 @@ func TestSc1_Screen_resize_no_reflow_more_rows_trims_blank_lines(t *testing.T) {
 	// Write only a background color into the remaining rows
 	for y := 1; y < int(s.Pages.rows); y++ {
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Active(0, uint32(y))))
-		*list_cell.Cell = PageCell{
+		*list_cell.Cell = pageCellFields{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
-		}
+			content:     pageCellContentFields{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}}.pack(),
+		}.pack()
 	}
 
 	cursor := s.Cursor
@@ -2668,7 +2668,7 @@ func TestSc1_Screen_resize_more_rows_with_populated_scrollback(t *testing.T) {
 	s.CursorAbsolute(0, 1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '4', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '4', list_cell.Cell.content().codepoint())
 	}
 
 	// Resize
@@ -2677,7 +2677,7 @@ func TestSc1_Screen_resize_more_rows_with_populated_scrollback(t *testing.T) {
 	// Cursor should still be on the "4"
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '4', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '4', list_cell.Cell.content().codepoint())
 	}
 
 	{
@@ -2868,7 +2868,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_fits_full_width(t *testing
 	s.CursorAbsolute(0, 1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '2', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '2', list_cell.Cell.content().codepoint())
 	}
 
 	// Resize and verify we undid the soft wrap because we have space now
@@ -2903,7 +2903,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_ends_in_newline(t *testing
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '3', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '3', list_cell.Cell.content().codepoint())
 	}
 
 	// Resize and verify we undid the soft wrap because we have space now
@@ -2916,7 +2916,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_ends_in_newline(t *testing
 	// Our cursor should still be on the 3
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '3', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '3', list_cell.Cell.content().codepoint())
 	}
 }
 
@@ -2933,7 +2933,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_forces_more_wrapping(t *te
 	s.CursorAbsolute(0, 1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '2', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '2', list_cell.Cell.content().codepoint())
 	}
 
 	// Verify we soft wrapped
@@ -2969,7 +2969,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow_that_unwraps_multiple_times(t *
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '3', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '3', list_cell.Cell.content().codepoint())
 	}
 
 	// Verify we soft wrapped
@@ -3010,7 +3010,7 @@ func TestSc1_Screen_resize_more_cols_with_populated_scrollback(t *testing.T) {
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '5', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '5', list_cell.Cell.content().codepoint())
 	}
 
 	// Resize
@@ -3024,7 +3024,7 @@ func TestSc1_Screen_resize_more_cols_with_populated_scrollback(t *testing.T) {
 	// Cursor should still be on the "5"
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, '5', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, '5', list_cell.Cell.content().codepoint())
 	}
 }
 
@@ -3041,7 +3041,7 @@ func TestSc1_Screen_resize_more_cols_with_reflow(t *testing.T) {
 	s.CursorAbsolute(0, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'E', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, 'E', list_cell.Cell.content().codepoint())
 	}
 
 	// Verify we soft wrapped
@@ -3136,7 +3136,7 @@ func TestSc1_Screen_resize_less_rows_moving_cursor(t *testing.T) {
 	s.CursorAbsolute(1, 2)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'I', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, 'I', list_cell.Cell.content().codepoint())
 	}
 
 	// Resize
@@ -3284,7 +3284,7 @@ func TestSc1_Screen_resize_less_cols_with_reflow_but_row_space(t *testing.T) {
 	s.CursorAbsolute(4, 0)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'D', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, 'D', list_cell.Cell.content().codepoint())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
@@ -3392,7 +3392,7 @@ func TestSc1_Screen_resize_less_cols_with_reflow_and_scrollback(t *testing.T) {
 	s.CursorAbsolute(1, s.Pages.rows-1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'E', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, 'E', list_cell.Cell.content().codepoint())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
@@ -3428,7 +3428,7 @@ func TestSc1_Screen_resize_less_cols_with_reflow_previously_wrapped_and_scrollba
 	s.CursorAbsolute(s.Pages.cols-1, s.Pages.rows-1)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'H', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, 'H', list_cell.Cell.content().codepoint())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(3, 3)))
@@ -3449,7 +3449,7 @@ func TestSc1_Screen_resize_less_cols_with_reflow_previously_wrapped_and_scrollba
 	expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
 	{
 		list_cell := sc1CursorCell(t, s)
-		expectEqual[uint32](t, 'H', list_cell.Cell.content.codepoint)
+		expectEqual[uint32](t, 'H', list_cell.Cell.content().codepoint())
 	}
 }
 
@@ -3577,8 +3577,8 @@ func TestSc1_Screen_resize_less_cols_to_eliminate_wide_char(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
-		expectEqual[uint32](t, '😀', cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, cell.Wide())
+		expectEqual[uint32](t, '😀', cell.content().codepoint())
 	}
 
 	// Resize to 1 column can't fit a wide char. So it should be deleted.
@@ -3590,8 +3590,8 @@ func TestSc1_Screen_resize_less_cols_to_eliminate_wide_char(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual[uint32](t, 0, cell.content.codepoint)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
+		expectEqual[uint32](t, 0, cell.content().codepoint())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
 	}
 }
 
@@ -3610,13 +3610,13 @@ func TestSc1_Screen_resize_less_cols_to_wrap_wide_char(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
-		expectEqual[uint32](t, '😀', cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, cell.Wide())
+		expectEqual[uint32](t, '😀', cell.content().codepoint())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(2, 3)))
@@ -3627,7 +3627,7 @@ func TestSc1_Screen_resize_less_cols_to_wrap_wide_char(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerHead, cell.wide)
+		expectEqual(t, PageCellWideSpacerHead, cell.Wide())
 		expect(t, list_cell.Row.wrap, "list_cell.row.wrap")
 	}
 }
@@ -3647,13 +3647,13 @@ func TestSc1_Screen_resize_less_cols_to_eliminate_wide_char_with_row_space(t *te
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
-		expectEqual[uint32](t, '😀', cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, cell.Wide())
+		expectEqual[uint32](t, '😀', cell.content().codepoint())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(1, 2)))
@@ -3683,17 +3683,17 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerHead, cell.wide)
+		expectEqual(t, PageCellWideSpacerHead, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
+		expectEqual(t, PageCellWideWide, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(4, 2)))
@@ -3704,13 +3704,13 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
-		expectEqual[uint32](t, '😀', cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, cell.Wide())
+		expectEqual[uint32](t, '😀', cell.content().codepoint())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(3, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 }
 
@@ -3732,17 +3732,17 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head_multiple_lines(t *tes
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerHead, cell.wide)
+		expectEqual(t, PageCellWideSpacerHead, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 2)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
+		expectEqual(t, PageCellWideWide, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 2)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 
 	zigTry(t, s.Resize(screenResizeDefault(8, 2)))
@@ -3753,13 +3753,13 @@ func TestSc1_Screen_resize_more_cols_with_wide_spacer_head_multiple_lines(t *tes
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(5, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
-		expectEqual[uint32](t, '😀', cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, cell.Wide())
+		expectEqual[uint32](t, '😀', cell.content().codepoint())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(6, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 }
 
@@ -3778,12 +3778,12 @@ func TestSc1_Screen_resize_more_cols_requiring_a_wide_spacer_head(t *testing.T) 
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
+		expectEqual(t, PageCellWideWide, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 
 	// This resizes to 3 columns, which isn't enough space for our wide
@@ -3797,18 +3797,18 @@ func TestSc1_Screen_resize_more_cols_requiring_a_wide_spacer_head(t *testing.T) 
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(2, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerHead, cell.wide)
+		expectEqual(t, PageCellWideSpacerHead, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(0, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideWide, cell.wide)
-		expectEqual[uint32](t, '😀', cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, cell.Wide())
+		expectEqual[uint32](t, '😀', cell.content().codepoint())
 	}
 	{
 		list_cell := zigUnwrap(t, s.Pages.GetCell(sc1Screen(1, 1)))
 		cell := list_cell.Cell
-		expectEqual(t, PageCellWideSpacerTail, cell.wide)
+		expectEqual(t, PageCellWideSpacerTail, cell.Wide())
 	}
 }
 

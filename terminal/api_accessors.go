@@ -9,35 +9,13 @@
 
 package terminal
 
-// ContentTag is cell.content_tag: which kind of content the cell holds.
-func (self PageCell) ContentTag() PageCellContentTag { return self.content_tag }
-
-// StyleID is cell.style_id: the ID of the cell's style in its page's style
-// set (the default style when the cell has no styling).
-func (self PageCell) StyleID() StyleID { return self.style_id }
-
-// Wide is cell.wide: narrow, wide, or one of the spacer cells of a wide
-// character.
-func (self PageCell) Wide() PageCellWide { return self.wide }
-
-// Protected is cell.protected: whether the cell is protected from erasing
-// (DECSCA).
-func (self PageCell) Protected() bool { return self.protected }
-
-// Hyperlink is cell.hyperlink: whether the cell is part of a hyperlink.
-func (self PageCell) Hyperlink() bool { return self.hyperlink }
-
-// SemanticContent is cell.semantic_content: output, input or prompt (OSC
-// 133).
-func (self PageCell) SemanticContent() PageCellSemanticContent { return self.semantic_content }
-
 // ColorPalette is cell.content.color_palette: the palette index of a cell
 // that is only a background colour. Meaningful when ContentTag says so.
-func (self PageCell) ColorPalette() uint8 { return self.content.color_palette }
+func (self PageCell) ColorPalette() uint8 { return self.content().colorPalette() }
 
 // ColorRGB is cell.content.color_rgb: the colour of a cell that is only a
 // background colour. Meaningful when ContentTag says so.
-func (self PageCell) ColorRGB() PageCellRGB { return self.content.color_rgb }
+func (self PageCell) ColorRGB() PageCellRGB { return self.content().colorRGB() }
 
 // Wrap is row.wrap: whether the row is soft-wrapped onto the next one.
 func (self PageRow) Wrap() bool { return self.wrap }

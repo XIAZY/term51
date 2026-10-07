@@ -761,10 +761,10 @@ func ssYSetText(t *testing.T, s *Screen, x SizeCellCountInt, y uint32, text stri
 	p := ssYPin(t, s, x, y)
 	for i := 0; i < len(text); i++ {
 		c := text[i]
-		*p.RowAndCell().cell = PageCell{
+		*p.RowAndCell().cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: uint32(c)},
-		}
+			content:     pageCellContentFields{codepoint: uint32(c)}.pack(),
+		}.pack()
 		p.X += 1
 	}
 }
@@ -774,27 +774,27 @@ func ssYSetText(t *testing.T, s *Screen, x SizeCellCountInt, y uint32, text stri
 func ssYSetWide(t *testing.T, s *Screen, x SizeCellCountInt, y uint32, cp uint32) {
 	t.Helper()
 	p := ssYPin(t, s, x, y)
-	*p.RowAndCell().cell = PageCell{
+	*p.RowAndCell().cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
+		content:     pageCellContentFields{codepoint: cp}.pack(),
 		wide:        PageCellWideWide,
-	}
+	}.pack()
 	p.X += 1
-	*p.RowAndCell().cell = PageCell{
+	*p.RowAndCell().cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 0},
+		content:     pageCellContentFields{codepoint: 0}.pack(),
 		wide:        PageCellWideSpacerTail,
-	}
+	}.pack()
 }
 
 // ssYSetBg is term51YSetBg: a cell that is only a background color: it has
 // no text.
 func ssYSetBg(t *testing.T, s *Screen, x SizeCellCountInt, y uint32) {
 	t.Helper()
-	*ssYPin(t, s, x, y).RowAndCell().cell = PageCell{
+	*ssYPin(t, s, x, y).RowAndCell().cell = pageCellFields{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
-	}
+		content:     pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack(),
+	}.pack()
 }
 
 // ssYHistory is term51YHistory: a screen whose history holds `lines` lines
@@ -2180,8 +2180,8 @@ func TestSelection_term51_adjust_left_and_right_with_wide_characters(t *testing.
 	defer s.Deinit()
 	// Row 0: a, wide(1,2), b.
 	zigTry(t, s.TestWriteString([]uint8("aあb")))
-	expectEqual(t, PageCellWideWide, ssYPin(t, s, 1, 0).RowAndCell().cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, ssYPin(t, s, 2, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideWide, ssYPin(t, s, 1, 0).RowAndCell().cell.Wide())
+	expectEqual(t, PageCellWideSpacerTail, ssYPin(t, s, 2, 0).RowAndCell().cell.Wide())
 
 	// The spacer tail has no text, so it is skipped in both directions.
 	ssYCheckAdjust(t, s, SelectionAdjustmentRight, []ssYEndCase{
@@ -2206,10 +2206,10 @@ func TestSelection_term51_adjust_left_and_right_across_a_wide_character_wrap(t *
 	// Nine narrow characters then a wide one that does not fit: a spacer head
 	// at (9,0), the wide pair at (0,1)-(1,1), then another wide pair.
 	zigTry(t, s.TestWriteString([]uint8("abcdefghiあい")))
-	expectEqual(t, PageCellWideSpacerHead, ssYPin(t, s, 9, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideSpacerHead, ssYPin(t, s, 9, 0).RowAndCell().cell.Wide())
 	expect(t, ssYPin(t, s, 0, 0).RowAndCell().row.wrap, "term51YPin(&s, 0, 0).rowAndCell().row.wrap")
-	expectEqual(t, PageCellWideWide, ssYPin(t, s, 0, 1).RowAndCell().cell.wide)
-	expectEqual(t, PageCellWideWide, ssYPin(t, s, 2, 1).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideWide, ssYPin(t, s, 0, 1).RowAndCell().cell.Wide())
+	expectEqual(t, PageCellWideWide, ssYPin(t, s, 2, 1).RowAndCell().cell.Wide())
 
 	ssYCheckAdjust(t, s, SelectionAdjustmentRight, []ssYEndCase{
 		{ex: 8, ey: 0, nx: 0, ny: 1},

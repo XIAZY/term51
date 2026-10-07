@@ -230,30 +230,30 @@ func pl4KLoad(t *testing.T, s *PageList, text string) {
 			ch := body[x]
 			switch ch {
 			case '.':
-				cells[x] = PageCell{}
+				cells[x] = PageCell(0)
 			case 'W':
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: 0x1F600},
+					content:     pageCellContentFields{codepoint: 0x1F600}.pack(),
 					wide:        PageCellWideWide,
-				}
+				}.pack()
 			case '_':
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: 0},
+					content:     pageCellContentFields{codepoint: 0}.pack(),
 					wide:        PageCellWideSpacerTail,
-				}
+				}.pack()
 			case '^':
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: 0},
+					content:     pageCellContentFields{codepoint: 0}.pack(),
 					wide:        PageCellWideSpacerHead,
-				}
+				}.pack()
 			default:
-				cells[x] = PageCell{
+				cells[x] = pageCellFields{
 					content_tag: PageCellContentTagCodepoint,
-					content:     PageCellContent{codepoint: uint32(ch)},
-				}
+					content:     pageCellContentFields{codepoint: uint32(ch)}.pack(),
+				}.pack()
 			}
 		}
 		y++
@@ -262,11 +262,11 @@ func pl4KLoad(t *testing.T, s *PageList, text string) {
 
 // pl4KCh is term51KCh.
 func pl4KCh(c PageCell) byte {
-	switch c.content_tag {
+	switch c.ContentTag() {
 	case PageCellContentTagBgColorPalette, PageCellContentTagBgColorRgb:
 		return '#'
 	}
-	switch c.wide {
+	switch c.Wide() {
 	case PageCellWideWide:
 		return 'W'
 	case PageCellWideSpacerTail:
@@ -274,10 +274,10 @@ func pl4KCh(c PageCell) byte {
 	case PageCellWideSpacerHead:
 		return '^'
 	default:
-		if c.content.codepoint == 0 {
+		if c.content().codepoint() == 0 {
 			return '.'
-		} else if c.content.codepoint < 128 {
-			return byte(c.content.codepoint)
+		} else if c.content().codepoint() < 128 {
+			return byte(c.content().codepoint())
 		}
 		return '?'
 	}
@@ -482,11 +482,11 @@ func pl4KFillStyles(page *Page) uint {
 		}
 		rac := page.GetRowAndCell(x, 0)
 		rac.row.styled = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'X'},
+			content:     pageCellContentFields{codepoint: 'X'}.pack(),
 			style_id:    id,
-		}
+		}.pack()
 		n++
 	}
 	return n
@@ -543,7 +543,7 @@ func pl4KGrowColsFixture(t *testing.T, s *PageList, styled [3]bool) {
 		rac := page.GetRowAndCell(0, uint(y))
 		*rac.cell = PageCellInit(uint32('a' + y))
 		if v {
-			rac.cell.style_id = id
+			rac.cell.setStyleID(id)
 			rac.row.styled = true
 			if y > 0 {
 				page.styles.Use(id)
@@ -664,10 +664,10 @@ func pl4LMark(t *testing.T, s *PageList, y uint, v PageRowSemanticPrompt) {
 
 // pl4LText is term51LText: set a plain text cell at the given pin.
 func pl4LText(p PageListPin, cp uint32) {
-	*p.RowAndCell().cell = PageCell{
+	*p.RowAndCell().cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // pl4LMakeOversized is term51LMakeOversized: make the page of the given node
@@ -690,19 +690,19 @@ func TestPl4_term51_ReflowCursor_reflowRow_background_color_cells_are_not_trimme
 	pl4KLoad(t, s, "|a...|\n|....|")
 	// Row 0: a, blank, bg palette, bg rgb. Row 1: only a bg cell.
 	cells0 := pl4KPin(t, s, 0, 0).Cells(PageListPinCellSubsetAll)
-	cells0[2] = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 4}}
-	cells0[3] = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}}
+	cells0[2] = pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 4}.pack()}.pack()
+	cells0[3] = pageCellFields{content_tag: PageCellContentTagBgColorRgb, content: pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack()}.pack()
 	cells1 := pl4KPin(t, s, 0, 1).Cells(PageListPinCellSubsetAll)
-	cells1[1] = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 7}}
+	cells1[1] = pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 7}.pack()}.pack()
 
 	r := pl4KReflowInit(t, s, 3, None[PageCapacity]())
 	r.run()
 	r.finish()
 	pl4KExpect(t, s, "|a.#>\n<#..|\n|.#.|")
-	expectEqual(t, uint8(4), pl4KCell(t, s, 2, 0).content.color_palette)
-	expectEqual(t, PageCellContentTagBgColorRgb, pl4KCell(t, s, 0, 1).content_tag)
-	expectEqual(t, uint8(3), pl4KCell(t, s, 0, 1).content.color_rgb.B)
-	expectEqual(t, uint8(7), pl4KCell(t, s, 1, 2).content.color_palette)
+	expectEqual(t, uint8(4), pl4KCell(t, s, 2, 0).content().colorPalette())
+	expectEqual(t, PageCellContentTagBgColorRgb, pl4KCell(t, s, 0, 1).ContentTag())
+	expectEqual(t, uint8(3), pl4KCell(t, s, 0, 1).content().colorRGB().B)
+	expectEqual(t, uint8(7), pl4KCell(t, s, 1, 2).content().colorPalette())
 }
 
 // Zig: test "term51: ReflowCursor.reflowRow: cell flags survive the reflow"
@@ -712,18 +712,18 @@ func TestPl4_term51_ReflowCursor_reflowRow_cell_flags_survive_the_reflow(t *test
 	defer s.Deinit()
 	pl4KLoad(t, s, "|abcd|")
 	cells := pl4KPin(t, s, 0, 0).Cells(PageListPinCellSubsetAll)
-	cells[1].protected = true
-	cells[2].semantic_content = PageCellSemanticContentInput
-	cells[3].semantic_content = PageCellSemanticContentPrompt
+	cells[1].setProtected(true)
+	cells[2].setSemanticContent(PageCellSemanticContentInput)
+	cells[3].setSemanticContent(PageCellSemanticContentPrompt)
 
 	r := pl4KReflowInit(t, s, 2, None[PageCapacity]())
 	r.run()
 	r.finish()
 	pl4KExpect(t, s, "|ab>\n<cd|")
-	expect(t, pl4KCell(t, s, 1, 0).protected, "term51KCell(&s, 1, 0).protected")
-	expect(t, !pl4KCell(t, s, 0, 0).protected, "!term51KCell(&s, 0, 0).protected")
-	expectEqual(t, PageCellSemanticContentInput, pl4KCell(t, s, 0, 1).semantic_content)
-	expectEqual(t, PageCellSemanticContentPrompt, pl4KCell(t, s, 1, 1).semantic_content)
+	expect(t, pl4KCell(t, s, 1, 0).Protected(), "term51KCell(&s, 1, 0).protected")
+	expect(t, !pl4KCell(t, s, 0, 0).Protected(), "!term51KCell(&s, 0, 0).protected")
+	expectEqual(t, PageCellSemanticContentInput, pl4KCell(t, s, 0, 1).SemanticContent())
+	expectEqual(t, PageCellSemanticContentPrompt, pl4KCell(t, s, 1, 1).SemanticContent())
 }
 
 // Zig: test "term51: ReflowCursor.reflowRow: graphemes follow their cell across the wrap"
@@ -770,10 +770,10 @@ func TestPl4_term51_ReflowCursor_reflowRow_styles_follow_their_cells_and_are_sha
 		page := &s.pages.first.data
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		rac0 := page.GetRowAndCell(0, 0)
-		rac0.cell.style_id = bold
+		rac0.cell.setStyleID(bold)
 		rac0.row.styled = true
 		page.styles.Use(bold)
-		page.GetRowAndCell(3, 0).cell.style_id = bold
+		page.GetRowAndCell(3, 0).cell.setStyleID(bold)
 	}
 
 	r := pl4KReflowInit(t, s, 2, None[PageCapacity]())
@@ -785,10 +785,10 @@ func TestPl4_term51_ReflowCursor_reflowRow_styles_follow_their_cells_and_are_sha
 	d := page.GetRowAndCell(1, 1)
 	expect(t, a.row.styled, "a.row.styled")
 	expect(t, d.row.styled, "d.row.styled")
-	expect(t, a.cell.style_id != 0, "a.cell.style_id != 0")
-	expectEqual(t, a.cell.style_id, d.cell.style_id)
-	expect(t, page.styles.Get(a.cell.style_id).Flags.Bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
-	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(a.cell.style_id))
+	expect(t, a.cell.StyleID() != 0, "a.cell.style_id != 0")
+	expectEqual(t, a.cell.StyleID(), d.cell.StyleID())
+	expect(t, page.styles.Get(a.cell.StyleID()).Flags.Bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
+	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(a.cell.StyleID()))
 	expectEqual(t, uint(1), page.styles.living)
 	page.AssertIntegrity()
 }
@@ -822,8 +822,8 @@ func TestPl4_term51_ReflowCursor_reflowRow_hyperlinks_follow_their_cells_and_are
 	expectEqual(t, uint(2), page.HyperlinkCount())
 	a := page.GetRowAndCell(0, 0).cell
 	d := page.GetRowAndCell(1, 1).cell
-	expect(t, a.hyperlink && d.hyperlink, "a.hyperlink and d.hyperlink")
-	expect(t, !page.GetRowAndCell(1, 0).cell.hyperlink, "!page.getRowAndCell(1, 0).cell.hyperlink")
+	expect(t, a.Hyperlink() && d.Hyperlink(), "a.hyperlink and d.hyperlink")
+	expect(t, !page.GetRowAndCell(1, 0).cell.Hyperlink(), "!page.getRowAndCell(1, 0).cell.hyperlink")
 	id := zigUnwrap(t, page.LookupHyperlink(a))
 	expectEqual(t, id, zigUnwrap(t, page.LookupHyperlink(d)))
 	expectEqual(t, SizeCellCountInt(2), page.hyperlink_set.RefCount(id))
@@ -918,7 +918,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_layout_capacity_of_new_pages_falls_ba
 			expectEqual(t, SizeCellCountInt(3), node.data.capacity.rows)
 		}
 	}
-	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 2).content.codepoint)
+	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 2).content().codepoint())
 }
 
 // Zig: test "term51: ReflowCursor.reflowRow: layout capacity of new pages is capped to the standard row count"
@@ -951,7 +951,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_out_of_space_on_the_first_row_drops_t
 		page := &s.pages.first.data
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		c := page.GetRowAndCell(1, 0)
-		c.cell.style_id = bold
+		c.cell.setStyleID(bold)
 		c.row.styled = true
 	}
 
@@ -966,7 +966,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_out_of_space_on_the_first_row_drops_t
 
 	// The text is kept, the style is lost and the row is not flagged.
 	pl4KExpect(t, s, "|abc.|")
-	expectEqual(t, SizeStyleCountInt(0), pl4KCell(t, s, 1, 0).style_id)
+	expectEqual(t, SizeStyleCountInt(0), pl4KCell(t, s, 1, 0).StyleID())
 	expect(t, !pl4KRow(t, s, 0).styled, "!term51KRow(&s, 0).styled")
 	expectEqual(t, uint(1), s.TotalPages())
 	s.AssertIntegrity()
@@ -982,7 +982,7 @@ func TestPl4_term51_ReflowCursor_reflowRow_out_of_space_after_the_first_row_move
 		page := &s.pages.first.data
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		c := page.GetRowAndCell(1, 1)
-		c.cell.style_id = bold
+		c.cell.setStyleID(bold)
 		c.row.styled = true
 	}
 	p := pl4TrackPin(t, s, pl4KPin(t, s, 1, 1))
@@ -1002,8 +1002,8 @@ func TestPl4_term51_ReflowCursor_reflowRow_out_of_space_after_the_first_row_move
 	expectEqualSlices(t, []uint{1, 1}, pl4KRowsPerPage(s))
 	expectEqual(t, SizeStyleCountInt(128), s.pages.last.data.capacity.styles)
 	c := pl4KCell(t, s, 1, 1)
-	expect(t, c.style_id != 0, "c.style_id != 0")
-	expect(t, s.pages.last.data.styles.Get(c.style_id).Flags.Bold, "s.pages.last.?.data.styles.get(s.pages.last.?.data.memory, c.style_id).flags.bold")
+	expect(t, c.StyleID() != 0, "c.style_id != 0")
+	expect(t, s.pages.last.data.styles.Get(c.StyleID()).Flags.Bold, "s.pages.last.?.data.styles.get(s.pages.last.?.data.memory, c.style_id).flags.bold")
 	expect(t, pl4KRow(t, s, 1).styled, "term51KRow(&s, 1).styled")
 	// The pin followed the row.
 	expectEqual(t, s.pages.last, p.Node)
@@ -1091,7 +1091,7 @@ func TestPl4_term51_resizeWithoutReflow_fewer_cols_releases_managed_memory_beyon
 		zigTry(t, page.AppendGrapheme(g3.row, g3.cell, 0x302))
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		st := page.GetRowAndCell(4, 0)
-		st.cell.style_id = bold
+		st.cell.setStyleID(bold)
 		st.row.styled = true
 		link := pl4InsertHyperlink(t, page, Hyperlink{
 			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
@@ -1102,7 +1102,7 @@ func TestPl4_term51_resizeWithoutReflow_fewer_cols_releases_managed_memory_beyon
 		// Row 1: a style that is kept.
 		keep := pl4StylesAdd(t, page, pl4Italic())
 		k := page.GetRowAndCell(0, 1)
-		k.cell.style_id = keep
+		k.cell.setStyleID(keep)
 		k.row.styled = true
 	}
 
@@ -1358,7 +1358,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_page_without_capacity_is_clone
 		zigTry(t, page.AppendGrapheme(g.row, g.cell, 0x301))
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		b := page.GetRowAndCell(1, 2)
-		*b.cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'h'}, style_id: bold}
+		*b.cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'h'}.pack(), style_id: bold}.pack()
 		b.row.styled = true
 		link := pl4InsertHyperlink(t, page, Hyperlink{
 			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 3},
@@ -1390,7 +1390,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_page_without_capacity_is_clone
 	expectEqual(t, uint(1), page.GraphemeCount())
 	expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, page.LookupGrapheme(page.GetRowAndCell(0, 2).cell)))
 	h := page.GetRowAndCell(1, 2).cell
-	expect(t, page.styles.Get(h.style_id).Flags.Bold, "page.styles.get(page.memory, h.style_id).flags.bold")
+	expect(t, page.styles.Get(h.StyleID()).Flags.Bold, "page.styles.get(page.memory, h.style_id).flags.bold")
 	expect(t, page.GetRowAndCell(1, 2).row.styled, "page.getRowAndCell(1, 2).row.styled")
 	l := page.GetRowAndCell(2, 2).cell
 	e := page.hyperlink_set.Get(zigUnwrap(t, page.LookupHyperlink(l)))
@@ -1417,9 +1417,9 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_columns_beyond_a_standard
 	// rows = min(rows of the page, capacity rows).
 	expectEqual(t, SizeCellCountInt(3), page.capacity.rows)
 	expectEqual(t, SizeCellCountInt(3), page.size.rows)
-	expectEqual(t, uint32('d'), pl4KCell(t, s, 3, 0).content.codepoint)
-	expectEqual(t, uint32('e'), pl4KCell(t, s, 0, 1).content.codepoint)
-	expectEqual(t, uint32(0), pl4KCell(t, s, 4, 0).content.codepoint)
+	expectEqual(t, uint32('d'), pl4KCell(t, s, 3, 0).content().codepoint())
+	expectEqual(t, uint32('e'), pl4KCell(t, s, 0, 1).content().codepoint())
+	expectEqual(t, uint32(0), pl4KCell(t, s, 4, 0).content().codepoint())
 	expectEqual(t, uint(3), s.totalRows())
 	expect(t, pageListMemoryLen(page) > pageListStdSize(), "page.memory.len > std_size")
 }
@@ -1454,7 +1454,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_a_page_with_too_many_rows
 	expectEqual(t, uint(43), s.totalRows())
 	for i, y := range ys {
 		pl4KExpectPin(t, s, *pins[i], 0, y)
-		expectEqual(t, 'a'+uint32(y%26), pins[i].RowAndCell().cell.content.codepoint)
+		expectEqual(t, 'a'+uint32(y%26), pins[i].RowAndCell().cell.content().codepoint())
 	}
 	expectEqual(t, s.pages.first, pins[0].Node)
 	expectEqual(t, s.pages.first, pins[1].Node)
@@ -1462,7 +1462,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_a_page_with_too_many_rows
 	expectEqual(t, SizeCellCountInt(0), pins[2].Y)
 	expectEqual(t, SizeCellCountInt(19), pins[3].Y)
 	for y := uint(0); y < 43; y++ {
-		expectEqual(t, 'a'+uint32(y%26), pl4KCell(t, s, 0, y).content.codepoint)
+		expectEqual(t, 'a'+uint32(y%26), pl4KCell(t, s, 0, y).content().codepoint())
 	}
 	s.AssertIntegrity()
 }
@@ -1503,7 +1503,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_rows_are_backfilled_into_
 	expectEqual(t, uint(53), s.total_rows)
 	for i, y := range ys {
 		pl4KExpectPin(t, s, *pins[i], 0, y)
-		expectEqual(t, 'a'+uint32((y+10)%26), pins[i].RowAndCell().cell.content.codepoint)
+		expectEqual(t, 'a'+uint32((y+10)%26), pins[i].RowAndCell().cell.content().codepoint())
 	}
 	expectEqual(t, s.pages.first.next, pins[0].Node)
 	expectEqual(t, SizeCellCountInt(13), pins[0].Y)
@@ -1512,7 +1512,7 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_layout_rows_are_backfilled_into_
 	expectEqual(t, SizeCellCountInt(0), pins[2].Y)
 	expectEqual(t, SizeCellCountInt(6), pins[3].Y)
 	for y := uint(0); y < 53; y++ {
-		expectEqual(t, 'a'+uint32((y+10)%26), pl4KCell(t, s, 0, y).content.codepoint)
+		expectEqual(t, 'a'+uint32((y+10)%26), pl4KCell(t, s, 0, y).content().codepoint())
 	}
 	s.AssertIntegrity()
 }
@@ -1546,9 +1546,9 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_failed_backfill_falls_back_to_
 	// is full) so nothing is copied there.
 	expectEqualSlices(t, []uint{1, 3}, pl4KRowsPerPage(s))
 	expectEqual(t, uint(4), s.totalRows())
-	expectEqual(t, uint32('a'), pl4KCell(t, s, 0, 1).content.codepoint)
-	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 3).content.codepoint)
-	expect(t, pl4KCell(t, s, 0, 1).style_id != 0, "term51KCell(&s, 0, 1).style_id != 0")
+	expectEqual(t, uint32('a'), pl4KCell(t, s, 0, 1).content().codepoint())
+	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 3).content().codepoint())
+	expect(t, pl4KCell(t, s, 0, 1).StyleID() != 0, "term51KCell(&s, 0, 1).style_id != 0")
 	expectEqual(t, s.pages.last, tpin.Node)
 	expectEqual(t, SizeCellCountInt(2), tpin.Y)
 	s.AssertIntegrity()
@@ -1572,9 +1572,9 @@ func TestPl4_term51_resizeWithoutReflowGrowCols_a_backfill_that_fails_midway_lea
 	// Row 0 went to the previous page, rows 1 and 2 to a new one.
 	expectEqualSlices(t, []uint{2, 2}, pl4KRowsPerPage(s))
 	expectEqual(t, uint(4), s.totalRows())
-	expectEqual(t, uint32('a'), pl4KCell(t, s, 0, 1).content.codepoint)
-	expectEqual(t, uint32('b'), pl4KCell(t, s, 0, 2).content.codepoint)
-	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 3).content.codepoint)
+	expectEqual(t, uint32('a'), pl4KCell(t, s, 0, 1).content().codepoint())
+	expectEqual(t, uint32('b'), pl4KCell(t, s, 0, 2).content().codepoint())
+	expectEqual(t, uint32('c'), pl4KCell(t, s, 0, 3).content().codepoint())
 	expectEqual(t, s.pages.last, other_pin.Node)
 	expectEqual(t, SizeCellCountInt(1), other_pin.Y)
 
@@ -1640,13 +1640,13 @@ func TestPl4_term51_trailingBlankLines_rows_with_only_colors_styles_or_spacers_a
 	pl4KLoad(t, s, "|a..|\n|...|\n|...|\n|...|\n|...|")
 	{
 		page := &s.pages.first.data
-		*page.GetRowAndCell(0, 1).cell = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 1}}
-		*page.GetRowAndCell(1, 2).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}}
+		*page.GetRowAndCell(0, 1).cell = pageCellFields{content_tag: PageCellContentTagBgColorPalette, content: pageCellContentFields{color_palette: 1}.pack()}.pack()
+		*page.GetRowAndCell(1, 2).cell = pageCellFields{content_tag: PageCellContentTagBgColorRgb, content: pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack()}.pack()
 		bold := pl4StylesAdd(t, page, pl4Bold())
 		st := page.GetRowAndCell(2, 3)
-		st.cell.style_id = bold
+		st.cell.setStyleID(bold)
 		st.row.styled = true
-		*page.GetRowAndCell(2, 4).cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 0}, wide: PageCellWideSpacerTail}
+		*page.GetRowAndCell(2, 4).cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 0}.pack(), wide: PageCellWideSpacerTail}.pack()
 	}
 	expectEqual(t, SizeCellCountInt(4), s.trailingBlankLines(10))
 }
@@ -1825,10 +1825,10 @@ func TestPl4_term51_trimTrailingBlankRows_rows_with_colors_have_no_text_and_are_
 	s := pl4Init(t, 2, 3, pl4Max(0))
 	defer s.Deinit()
 	pl4KLoad(t, s, "|a.|\n|..|\n|..|")
-	*pl4KPin(t, s, 1, 2).RowAndCell().cell = PageCell{
+	*pl4KPin(t, s, 1, 2).RowAndCell().cell = pageCellFields{
 		content_tag: PageCellContentTagBgColorPalette,
-		content:     PageCellContent{color_palette: 5},
-	}
+		content:     pageCellContentFields{color_palette: 5}.pack(),
+	}.pack()
 
 	expectEqual(t, SizeCellCountInt(2), s.trimTrailingBlankRows(10))
 	s.total_rows -= 2
@@ -1878,8 +1878,8 @@ func TestPl4_term51_resizeCols_layout_hyperlinks_that_need_more_string_bytes_are
 	expectEqual(t, total-1, s.totalRows())
 	expectEqual(t, uint(2), s.TotalPages())
 	last_row := s.totalRows() - 1
-	expectEqual(t, uint32('X'), pl4KCell(t, s, 1, last_row).content.codepoint)
-	expectEqual(t, uint32('Y'), pl4KCell(t, s, 2, last_row).content.codepoint)
+	expectEqual(t, uint32('X'), pl4KCell(t, s, 1, last_row).content().codepoint())
+	expectEqual(t, uint32('Y'), pl4KCell(t, s, 2, last_row).content().codepoint())
 	expect(t, !pl4KRow(t, s, last_row).wrap, "!term51KRow(&s, last_row).wrap")
 	expect(t, !pl4KRow(t, s, last_row).wrap_continuation, "!term51KRow(&s, last_row).wrap_continuation")
 
@@ -1938,10 +1938,10 @@ func TestPl4_term51_resizeCols_layout_graphemes_that_need_more_bytes_are_kept_wh
 	expectEqual(t, uint(2), page.GraphemeCount())
 	expect(t, pl4KRow(t, s, last_row).grapheme, "term51KRow(&s, last_row).grapheme")
 	x := pl4KPin(t, s, 1, last_row).RowAndCell().cell
-	expectEqual(t, uint32('X'), x.content.codepoint)
+	expectEqual(t, uint32('X'), x.content().codepoint())
 	expectEqualSlices(t, cps_a, zigUnwrap(t, page.LookupGrapheme(x)))
 	y := pl4KPin(t, s, 2, last_row).RowAndCell().cell
-	expectEqual(t, uint32('Y'), y.content.codepoint)
+	expectEqual(t, uint32('Y'), y.content().codepoint())
 	expectEqualSlices(t, cps_b, zigUnwrap(t, page.LookupGrapheme(y)))
 	expectEqual(t, uint(0), s.pages.first.data.GraphemeCount())
 }
@@ -1967,7 +1967,7 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 			rac := page.GetRowAndCell(x, uint(page.size.rows)-1)
 			rac.row.wrap = true
 			rac.row.styled = true
-			*rac.cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'X'}, style_id: id}
+			*rac.cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'X'}.pack(), style_id: id}.pack()
 			n1 += 1
 		}
 	}
@@ -1986,7 +1986,7 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 			rac := page.GetRowAndCell(x, 0)
 			rac.row.wrap_continuation = true
 			rac.row.styled = true
-			*rac.cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'X'}, style_id: id}
+			*rac.cell = pageCellFields{content_tag: PageCellContentTagCodepoint, content: pageCellContentFields{codepoint: 'X'}.pack(), style_id: id}.pack()
 			n2 += 1
 		}
 	}
@@ -2004,11 +2004,11 @@ func TestPl4_term51_resizeCols_layout_styles_that_need_a_larger_set_are_kept_whe
 	expect(t, pl4KRow(t, s, last_row).styled, "term51KRow(&s, last_row).styled")
 	// First part has the bg styles, the second the fg ones.
 	a := *pl4KPin(t, s, 0, last_row).RowAndCell().cell
-	expect(t, page.styles.Get(a.style_id).BgColor.Tag == StyleColorRgb, "page.styles.get(page.memory, a.style_id).bg_color == .rgb")
+	expect(t, page.styles.Get(a.StyleID()).BgColor.Tag == StyleColorRgb, "page.styles.get(page.memory, a.style_id).bg_color == .rgb")
 	b := *pl4KPin(t, s, cols, last_row).RowAndCell().cell
-	expect(t, page.styles.Get(b.style_id).FgColor.Tag == StyleColorRgb, "page.styles.get(page.memory, b.style_id).fg_color == .rgb")
+	expect(t, page.styles.Get(b.StyleID()).FgColor.Tag == StyleColorRgb, "page.styles.get(page.memory, b.style_id).fg_color == .rgb")
 	gap := *pl4KPin(t, s, n1, last_row).RowAndCell().cell
-	expectEqual(t, SizeStyleCountInt(0), gap.style_id)
+	expectEqual(t, SizeStyleCountInt(0), gap.StyleID())
 }
 
 // Zig: test "term51: resizeCols: layout a line wrapped across two pages is joined and pins in both halves follow"
@@ -2043,9 +2043,9 @@ func TestPl4_term51_resizeCols_layout_a_line_wrapped_across_two_pages_is_joined_
 	s.AssertIntegrity()
 	// Rows 0-44 and the joined row; the blank rows after it were never written.
 	expectEqual(t, uint(46), s.totalRows())
-	expectEqual(t, uint32('p'), pl4KCell(t, s, 0, 45).content.codepoint)
-	expectEqual(t, uint32('q'), pl4KCell(t, s, 999, 45).content.codepoint)
-	expectEqual(t, uint32('r'), pl4KCell(t, s, 1000, 45).content.codepoint)
+	expectEqual(t, uint32('p'), pl4KCell(t, s, 0, 45).content().codepoint())
+	expectEqual(t, uint32('q'), pl4KCell(t, s, 999, 45).content().codepoint())
+	expectEqual(t, uint32('r'), pl4KCell(t, s, 1000, 45).content().codepoint())
 	expect(t, !pl4KRow(t, s, 45).wrap, "!term51KRow(&s, 45).wrap")
 	pl4KExpectPin(t, s, *pin_a, 999, 45)
 	pl4KExpectPin(t, s, *pin_b, 1000, 45)
@@ -3252,7 +3252,7 @@ func TestPl4_term51_scrollClear_scrolls_up_to_the_last_non_empty_row(t *testing.
 
 			// The content is now in history and the active area is blank.
 			moved := pl4Pin(t, s, pl4ScreenPt(0, i))
-			expectEqual(t, uint32('A'), moved.RowAndCell().cell.content.codepoint)
+			expectEqual(t, uint32('A'), moved.RowAndCell().cell.content().codepoint())
 			expect(t, !s.PointFromPin(PointTagActive, moved).Valid, "s.pointFromPin(.active, moved) == null")
 			for y := uint(0); y < 5; y++ {
 				p := pl4Pin(t, s, pl4ActivePt(0, y))
@@ -3319,20 +3319,20 @@ func TestPl4_term51_scrollClear_which_cells_count_as_non_empty(t *testing.T) {
 	{
 		s := pl4Init(t, 80, 5, pl4NoMax())
 		defer s.Deinit()
-		*pl4Pin(t, s, pl4ActivePt(10, 3)).RowAndCell().cell = PageCell{
+		*pl4Pin(t, s, pl4ActivePt(10, 3)).RowAndCell().cell = pageCellFields{
 			content_tag: PageCellContentTagBgColorPalette,
-			content:     PageCellContent{color_palette: 1},
-		}
+			content:     pageCellContentFields{color_palette: 1}.pack(),
+		}.pack()
 		zigTry(t, s.ScrollClear())
 		expectEqual(t, uint(5+4), s.total_rows)
 	}
 	{
 		s := pl4Init(t, 80, 5, pl4NoMax())
 		defer s.Deinit()
-		*pl4Pin(t, s, pl4ActivePt(10, 1)).RowAndCell().cell = PageCell{
+		*pl4Pin(t, s, pl4ActivePt(10, 1)).RowAndCell().cell = pageCellFields{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
-		}
+			content:     pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack(),
+		}.pack()
 		zigTry(t, s.ScrollClear())
 		expectEqual(t, uint(5+2), s.total_rows)
 	}
@@ -3341,10 +3341,10 @@ func TestPl4_term51_scrollClear_which_cells_count_as_non_empty(t *testing.T) {
 	{
 		s := pl4Init(t, 80, 5, pl4NoMax())
 		defer s.Deinit()
-		*pl4Pin(t, s, pl4ActivePt(10, 4)).RowAndCell().cell = PageCell{
+		*pl4Pin(t, s, pl4ActivePt(10, 4)).RowAndCell().cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 0},
-		}
+			content:     pageCellContentFields{codepoint: 0}.pack(),
+		}.pack()
 		zigTry(t, s.ScrollClear())
 		expectEqual(t, uint(5), s.total_rows)
 	}
@@ -3356,11 +3356,11 @@ func TestPl4_term51_scrollClear_which_cells_count_as_non_empty(t *testing.T) {
 		node := s.pages.first
 		node.data.PauseIntegrityChecks(true)
 		defer node.data.PauseIntegrityChecks(false)
-		*pl4Pin(t, s, pl4ActivePt(79, 2)).RowAndCell().cell = PageCell{
+		*pl4Pin(t, s, pl4ActivePt(79, 2)).RowAndCell().cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 0},
+			content:     pageCellContentFields{codepoint: 0}.pack(),
 			wide:        PageCellWideSpacerHead,
-		}
+		}.pack()
 		zigTry(t, s.ScrollClear())
 		expectEqual(t, uint(5+3), s.total_rows)
 	}
@@ -3497,7 +3497,7 @@ func TestPl4_term51_scrollClear_grows_through_the_pruning_path_at_the_max_size(t
 	expectEqual(
 		t,
 		uint32('A'),
-		pl4Pin(t, s, pl4ScreenPt(0, c-1)).RowAndCell().cell.content.codepoint,
+		pl4Pin(t, s, pl4ScreenPt(0, c-1)).RowAndCell().cell.content().codepoint(),
 	)
 }
 
@@ -3618,8 +3618,8 @@ func TestPl4_term51_compact_oversized_page_in_the_middle_is_replaced(t *testing.
 	expectEqual(t, c+20, s.Scrollbar().Offset)
 
 	// Contents.
-	expectEqual(t, uint32('X'), new.data.GetRowAndCell(3, 7).cell.content.codepoint)
-	expectEqual(t, uint32('Y'), new.data.GetRowAndCell(79, c-1).cell.content.codepoint)
+	expectEqual(t, uint32('X'), new.data.GetRowAndCell(3, 7).cell.content().codepoint())
+	expectEqual(t, uint32('Y'), new.data.GetRowAndCell(79, c-1).cell.content().codepoint())
 	expect(t, new.data.GetRowAndCell(4, 7).cell.IsEmpty(), "new.data.getRowAndCell(4, 7).cell.isEmpty()")
 
 	// Accounting: the new (pooled) page adds a standard page, the old
@@ -3704,21 +3704,21 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 			{x: 0, y: 1, id: italic},
 		} {
 			rac := page.GetRowAndCell(e.x, e.y)
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 'S'},
+				content:     pageCellContentFields{codepoint: 'S'}.pack(),
 				style_id:    e.id,
-			}
+			}.pack()
 			rac.row.styled = true
 		}
 
 		// A grapheme cluster.
 		{
 			rac := page.GetRowAndCell(2, 0)
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 0x1F468},
-			}
+				content:     pageCellContentFields{codepoint: 0x1F468}.pack(),
+			}.pack()
 			zigTry(t, page.SetGraphemes(rac.row, rac.cell, []uint32{0x200D, 0x1F469}))
 		}
 
@@ -3729,10 +3729,10 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 		})
 		{
 			rac := page.GetRowAndCell(3, 2)
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 'L'},
-			}
+				content:     pageCellContentFields{codepoint: 'L'}.pack(),
+			}.pack()
 			zigTry(t, page.SetHyperlink(rac.row, rac.cell, link))
 		}
 	}
@@ -3749,16 +3749,16 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 
 	{
 		rac := page.GetRowAndCell(0, 0)
-		expect(t, page.styles.Get(rac.cell.style_id).Flags.Bold, "page.styles.get(page.memory, rac.cell.style_id).flags.bold")
+		expect(t, page.styles.Get(rac.cell.StyleID()).Flags.Bold, "page.styles.get(page.memory, rac.cell.style_id).flags.bold")
 		expect(t, rac.row.styled, "rac.row.styled")
 		rac2 := page.GetRowAndCell(1, 0)
-		expectEqual(t, rac.cell.style_id, rac2.cell.style_id)
+		expectEqual(t, rac.cell.StyleID(), rac2.cell.StyleID())
 		rac3 := page.GetRowAndCell(0, 1)
-		expect(t, page.styles.Get(rac3.cell.style_id).Flags.Italic, "page.styles.get(page.memory, rac3.cell.style_id).flags.italic")
+		expect(t, page.styles.Get(rac3.cell.StyleID()).Flags.Italic, "page.styles.get(page.memory, rac3.cell.style_id).flags.italic")
 	}
 	{
 		rac := page.GetRowAndCell(2, 0)
-		expectEqual(t, uint32(0x1F468), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0x1F468), rac.cell.content().codepoint())
 		cps := zigUnwrap(t, page.LookupGrapheme(rac.cell))
 		expectEqual(t, 2, len(cps))
 		expectEqual(t, uint32(0x200D), cps[0])
@@ -3766,7 +3766,7 @@ func TestPl4_term51_compact_preserves_styles_graphemes_and_hyperlinks_at_exact_c
 	}
 	{
 		rac := page.GetRowAndCell(3, 2)
-		expect(t, rac.cell.hyperlink, "rac.cell.hyperlink")
+		expect(t, rac.cell.Hyperlink(), "rac.cell.hyperlink")
 		id := zigUnwrap(t, page.LookupHyperlink(rac.cell))
 		entry := page.hyperlink_set.Get(id)
 		expectEqualStrings(t, "https://example.com", string(entry.uri))
@@ -3798,11 +3798,11 @@ func TestPl4_term51_compact_returns_null_when_compacting_would_not_save_memory(t
 				}},
 			})
 			rac := page.GetRowAndCell(i%80, i/80)
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: 'S'},
+				content:     pageCellContentFields{codepoint: 'S'}.pack(),
 				style_id:    id,
-			}
+			}.pack()
 			rac.row.styled = true
 		}
 		expectEqual(t, uint(3000), page.styles.Count())
@@ -3855,7 +3855,7 @@ func TestPl4_term51_split_row_0_is_a_no_op(t *testing.T) {
 	expectEqual(t, SizeCellCountInt(10), s.pages.first.data.size.rows)
 	expectEqual(t, serial, s.page_serial)
 	expectEqual(t, page_size, s.page_size)
-	expectEqual(t, uint32('A'), s.pages.first.data.GetRowAndCell(0, 0).cell.content.codepoint)
+	expectEqual(t, uint32('A'), s.pages.first.data.GetRowAndCell(0, 0).cell.content().codepoint())
 }
 
 // Zig: test "term51: split: rows from the pin down move to a new page"
@@ -3885,10 +3885,10 @@ func TestPl4_term51_split_rows_from_the_pin_down_move_to_a_new_page(t *testing.T
 
 	// Moved rows are copied in order; the old copies are cleared.
 	for y := uint(0); y < 4; y++ {
-		expectEqual(t, uint32('a'+y), first.data.GetRowAndCell(1, y).cell.content.codepoint)
+		expectEqual(t, uint32('a'+y), first.data.GetRowAndCell(1, y).cell.content().codepoint())
 	}
 	for y := uint(0); y < 6; y++ {
-		expectEqual(t, uint32('a'+4+y), second.data.GetRowAndCell(1, y).cell.content.codepoint)
+		expectEqual(t, uint32('a'+4+y), second.data.GetRowAndCell(1, y).cell.content().codepoint())
 	}
 	for y := 4; y < 10; y++ {
 		row := &first.data.rows[y]
@@ -4056,21 +4056,21 @@ func TestPl4_term51_split_styles_graphemes_and_hyperlinks_move_with_their_rows(t
 	page.styles.Use(bold)
 	for _, y := range []uint{2, 7} {
 		rac := page.GetRowAndCell(0, y)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'S'},
+			content:     pageCellContentFields{codepoint: 'S'}.pack(),
 			style_id:    bold,
-		}
+		}.pack()
 		rac.row.styled = true
 	}
 
 	// Grapheme and hyperlink below only.
 	{
 		rac := page.GetRowAndCell(1, 8)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 0x1F468},
-		}
+			content:     pageCellContentFields{codepoint: 0x1F468}.pack(),
+		}.pack()
 		zigTry(t, page.SetGraphemes(rac.row, rac.cell, []uint32{0x200D}))
 	}
 	link := pl4InsertHyperlink(t, page, Hyperlink{
@@ -4079,10 +4079,10 @@ func TestPl4_term51_split_styles_graphemes_and_hyperlinks_move_with_their_rows(t
 	})
 	{
 		rac := page.GetRowAndCell(2, 9)
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'L'},
-		}
+			content:     pageCellContentFields{codepoint: 'L'}.pack(),
+		}.pack()
 		zigTry(t, page.SetHyperlink(rac.row, rac.cell, link))
 	}
 
@@ -4091,15 +4091,15 @@ func TestPl4_term51_split_styles_graphemes_and_hyperlinks_move_with_their_rows(t
 
 	expectEqual(t, uint(1), first.data.styles.Count())
 	expectEqual(t, uint(1), second.data.styles.Count())
-	expect(t, first.data.styles.Get(first.data.GetRowAndCell(0, 2).cell.style_id).Flags.Bold, "first.data.styles.get(first.data.memory, first.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
-	expect(t, second.data.styles.Get(second.data.GetRowAndCell(0, 2).cell.style_id).Flags.Bold, "second.data.styles.get(second.data.memory, second.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
+	expect(t, first.data.styles.Get(first.data.GetRowAndCell(0, 2).cell.StyleID()).Flags.Bold, "first.data.styles.get(first.data.memory, first.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
+	expect(t, second.data.styles.Get(second.data.GetRowAndCell(0, 2).cell.StyleID()).Flags.Bold, "second.data.styles.get(second.data.memory, second.data.getRowAndCell(0, 2).cell.style_id).flags.bold")
 
 	expectEqual(t, uint(0), first.data.GraphemeCount())
 	expectEqual(t, uint(1), second.data.GraphemeCount())
 	expect(t, second.data.GetRowAndCell(1, 3).row.grapheme, "second.data.getRowAndCell(1, 3).row.grapheme")
 	expectEqual(t, uint(0), first.data.hyperlink_set.Count())
 	expectEqual(t, uint(1), second.data.hyperlink_set.Count())
-	expect(t, second.data.GetRowAndCell(2, 4).cell.hyperlink, "second.data.getRowAndCell(2, 4).cell.hyperlink")
+	expect(t, second.data.GetRowAndCell(2, 4).cell.Hyperlink(), "second.data.getRowAndCell(2, 4).cell.hyperlink")
 }
 
 // Zig: test "term51: split: non-standard page keeps its capacity"

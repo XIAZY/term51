@@ -77,7 +77,7 @@ func tm8RowAt(t *testing.T, term *Terminal, y uint) *PageRow {
 // head, '>' spacer tail, '<' spacer head, 'p' palette background cell, 'r'
 // RGB background cell.
 func tm8CellChar(cell PageCell) uint8 {
-	switch cell.wide {
+	switch cell.Wide() {
 	case PageCellWideWide:
 		return '#'
 	case PageCellWideSpacerTail:
@@ -85,12 +85,12 @@ func tm8CellChar(cell PageCell) uint8 {
 	case PageCellWideSpacerHead:
 		return '<'
 	case PageCellWideNarrow:
-		switch cell.content_tag {
+		switch cell.ContentTag() {
 		case PageCellContentTagCodepoint:
-			if cell.content.codepoint == 0 {
+			if cell.content().codepoint() == 0 {
 				return '.'
-			} else if cell.content.codepoint < 128 {
-				return uint8(cell.content.codepoint)
+			} else if cell.content().codepoint() < 128 {
+				return uint8(cell.content().codepoint())
 			} else {
 				return '?'
 			}
@@ -454,7 +454,7 @@ func TestTm8_eraseChars_hyperlinks_are_released(t *testing.T) {
 	tm8ExpectGrid(t, term, []string{"abc..fgh", "ijklmnop"})
 	expectEqual(t, uint(2), page.HyperlinkCount())
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, x == 2 || x == 5, tm8CellAt(t, term, x, 0).hyperlink)
+		expectEqual(t, x == 2 || x == 5, tm8CellAt(t, term, x, 0).Hyperlink())
 	}
 	expect(t, tm8RowAt(t, term, 0).hyperlink, "term51URowAt(&t, 0).hyperlink")
 
@@ -649,8 +649,8 @@ func TestTm8_eraseChars_ISO_protection_keeps_protected_cells(t *testing.T) {
 	term.EraseChars(5)
 
 	tm8ExpectGrid(t, term, []string{"a..de.gh", "ijklmnop"})
-	expect(t, tm8CellAt(t, term, 3, 0).protected, "term51UCellAt(&t, 3, 0).protected")
-	expect(t, !tm8CellAt(t, term, 1, 0).protected, "!term51UCellAt(&t, 1, 0).protected")
+	expect(t, tm8CellAt(t, term, 3, 0).Protected(), "term51UCellAt(&t, 3, 0).protected")
+	expect(t, !tm8CellAt(t, term, 1, 0).Protected(), "!term51UCellAt(&t, 1, 0).protected")
 }
 
 // Zig: test "term51: eraseChars: protection ends are handled at both ends of the range"
@@ -664,9 +664,9 @@ func TestTm8_eraseChars_protection_ends_are_handled_at_both_ends_of_the_range(t 
 	term.SetCursorPos(1, 2)
 	term.EraseChars(4)
 	tm8ExpectGrid(t, term, []string{"ab..efgh", "ijklmnop"})
-	expect(t, tm8CellAt(t, term, 1, 0).protected, "term51UCellAt(&t, 1, 0).protected")
-	expect(t, tm8CellAt(t, term, 4, 0).protected, "term51UCellAt(&t, 4, 0).protected")
-	expect(t, !tm8CellAt(t, term, 2, 0).protected, "!term51UCellAt(&t, 2, 0).protected")
+	expect(t, tm8CellAt(t, term, 1, 0).Protected(), "term51UCellAt(&t, 1, 0).protected")
+	expect(t, tm8CellAt(t, term, 4, 0).Protected(), "term51UCellAt(&t, 4, 0).protected")
+	expect(t, !tm8CellAt(t, term, 2, 0).Protected(), "!term51UCellAt(&t, 2, 0).protected")
 }
 
 // Zig: test "term51: eraseChars: a fully protected range under ISO protection is untouched"
@@ -711,7 +711,7 @@ func TestTm8_eraseChars_DEC_protection_is_ignored(t *testing.T) {
 
 	tm8ExpectGrid(t, term, []string{"........", "ijklmnop"})
 	for x := uint(0); x < 8; x++ {
-		expect(t, !tm8CellAt(t, term, x, 0).protected, "!term51UCellAt(&t, x, 0).protected")
+		expect(t, !tm8CellAt(t, term, x, 0).Protected(), "!term51UCellAt(&t, x, 0).protected")
 	}
 }
 
@@ -764,15 +764,15 @@ func TestTm8_eraseChars_a_protected_wide_character_is_split_by_the_boundary_hand
 	tm8PutWide(t, term, 2, 0)
 	term.SetProtectedMode(ANSIProtectedModeOff)
 	tm8PutStr(t, term, 4, 0, "cdef")
-	expect(t, tm8CellAt(t, term, 2, 0).protected, "term51UCellAt(&t, 2, 0).protected")
-	expect(t, tm8CellAt(t, term, 3, 0).protected, "term51UCellAt(&t, 3, 0).protected")
+	expect(t, tm8CellAt(t, term, 2, 0).Protected(), "term51UCellAt(&t, 2, 0).protected")
+	expect(t, tm8CellAt(t, term, 3, 0).Protected(), "term51UCellAt(&t, 3, 0).protected")
 
 	term.SetCursorPos(1, 4)
 	term.EraseChars(1)
 
 	// The protected character is cleared although ISO protection is on.
 	tm8ExpectGrid(t, term, []string{"ab..cdef", "........"})
-	expect(t, !tm8CellAt(t, term, 2, 0).protected, "!term51UCellAt(&t, 2, 0).protected")
+	expect(t, !tm8CellAt(t, term, 2, 0).Protected(), "!term51UCellAt(&t, 2, 0).protected")
 }
 
 // ---- eraseLine ----
@@ -891,8 +891,8 @@ func TestTm8_eraseLine_right_takes_the_background_color_of_the_cursor_style(t *t
 	tm8ExpectGrid(t, term, []string{"abcderrr", "ijklmnop"})
 	for x := uint(5); x < 8; x++ {
 		cell := *tm8CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
 	}
 }
 
@@ -906,7 +906,7 @@ func TestTm8_eraseLine_right_takes_a_palette_background_color(t *testing.T) {
 	term.EraseLine(CSIEraseLineRight, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdefpp", "ijklmnop"})
-	expectEqual(t, uint8(9), tm8CellAt(t, term, 6, 0).content.color_palette)
+	expectEqual(t, uint8(9), tm8CellAt(t, term, 6, 0).content().colorPalette())
 }
 
 // Zig: test "term51: eraseLine: right with a cursor style without a background leaves blanks empty"
@@ -919,7 +919,7 @@ func TestTm8_eraseLine_right_with_a_cursor_style_without_a_background_leaves_bla
 	term.EraseLine(CSIEraseLineRight, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdef..", "ijklmnop"})
-	expectEqual(t, StyleDefaultID, tm8CellAt(t, term, 6, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm8CellAt(t, term, 6, 0).StyleID())
 }
 
 // Zig: test "term51: eraseLine: right releases styles, graphemes and hyperlinks"
@@ -936,7 +936,7 @@ func TestTm8_eraseLine_right_releases_styles_graphemes_and_hyperlinks(t *testing
 	tm8PutGrapheme(t, term, 5, 0)
 	page := tm8Page(term)
 	// Printing the grapheme over column 5 replaced its styled, linked cell.
-	bold := tm8CellAt(t, term, 4, 0).style_id
+	bold := tm8CellAt(t, term, 4, 0).StyleID()
 	expectEqual(t, uint(3), uint(page.styles.RefCount(bold)))
 	expectEqual(t, uint(3), page.HyperlinkCount())
 	expectEqual(t, uint(1), page.GraphemeCount())
@@ -1071,8 +1071,8 @@ func TestTm8_eraseLine_left_takes_the_background_color_of_the_cursor_style(t *te
 
 	tm8ExpectGrid(t, term, []string{"rrrdefgh", "ijklmnop"})
 	cell := *tm8CellAt(t, term, 0, 0)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
 }
 
 // Zig: test "term51: eraseLine: left takes a palette background color"
@@ -1085,7 +1085,7 @@ func TestTm8_eraseLine_left_takes_a_palette_background_color(t *testing.T) {
 	term.EraseLine(CSIEraseLineLeft, false)
 
 	tm8ExpectGrid(t, term, []string{"ppcdefgh", "ijklmnop"})
-	expectEqual(t, uint8(9), tm8CellAt(t, term, 1, 0).content.color_palette)
+	expectEqual(t, uint8(9), tm8CellAt(t, term, 1, 0).content().colorPalette())
 }
 
 // Zig: test "term51: eraseLine: left releases styles, graphemes and hyperlinks"
@@ -1101,7 +1101,7 @@ func TestTm8_eraseLine_left_releases_styles_graphemes_and_hyperlinks(t *testing.
 	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 1, 0)
 	page := tm8Page(term)
-	bold := tm8CellAt(t, term, 0, 0).style_id
+	bold := tm8CellAt(t, term, 0, 0).StyleID()
 	expectEqual(t, uint(3), uint(page.styles.RefCount(bold)))
 	expectEqual(t, uint(3), page.HyperlinkCount())
 
@@ -1177,8 +1177,8 @@ func TestTm8_eraseLine_complete_takes_the_background_color_of_the_cursor_style(t
 	tm8ExpectGrid(t, term, []string{"rrrrrrrr", "ijklmnop"})
 	for x := uint(0); x < 8; x++ {
 		cell := *tm8CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
 	}
 }
 
@@ -1453,8 +1453,8 @@ func TestTm8_eraseDisplay_below_takes_the_background_color_of_the_cursor_style(t
 
 	tm8ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop", "qrstuvrr", "rrrrrrrr"})
 	cell := *tm8CellAt(t, term, 3, 3)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
 }
 
 // Zig: test "term51: eraseDisplay: below takes a palette background color"
@@ -1608,7 +1608,7 @@ func TestTm8_eraseDisplay_above_takes_the_background_color_of_the_cursor_style(t
 	term.EraseDisplay(CSIEraseDisplayAbove, false)
 
 	tm8ExpectGrid(t, term, []string{"rrrrrrrr", "rrrrrrrr", "rrstuvwx", "yzABCDEF"})
-	expectEqual(t, PageCellContentTagBgColorRgb, tm8CellAt(t, term, 0, 0).content_tag)
+	expectEqual(t, PageCellContentTagBgColorRgb, tm8CellAt(t, term, 0, 0).ContentTag())
 }
 
 // Zig: test "term51: eraseDisplay: above takes a palette background color"
@@ -1717,9 +1717,9 @@ func TestTm8_eraseDisplay_complete_takes_the_background_color_of_the_cursor_styl
 
 	tm8ExpectGrid(t, term, []string{"rrrrrrrr", "rrrrrrrr", "rrrrrrrr", "rrrrrrrr"})
 	cell := *tm8CellAt(t, term, 7, 3)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
-	expectEqual(t, StyleDefaultID, cell.style_id)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
+	expectEqual(t, StyleDefaultID, cell.StyleID())
 }
 
 // Zig: test "term51: eraseDisplay: complete takes a palette background color"

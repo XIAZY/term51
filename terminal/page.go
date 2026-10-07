@@ -695,11 +695,11 @@ func (self *Page) VerifyIntegrity() error {
 				}
 			}
 
-			if cell.style_id != StyleDefaultID {
+			if cell.StyleID() != StyleDefaultID {
 				// If a cell has a style, it must be present in the styles
 				// set. Accessing it with `get` asserts that.
 				_ = self.styles.Get(
-					cell.style_id,
+					cell.StyleID(),
 				)
 
 				if !row.styled {
@@ -713,10 +713,10 @@ func (self *Page) VerifyIntegrity() error {
 
 				// Zig: getOrPut (try: an allocation failure; none in Go),
 				// 0 when not found, then += 1.
-				styles_seen[cell.style_id] += 1
+				styles_seen[cell.StyleID()] += 1
 			}
 
-			if cell.hyperlink {
+			if cell.Hyperlink() {
 				id_opt := self.LookupHyperlink(cell)
 				if !id_opt.Valid {
 					warn(
@@ -755,7 +755,7 @@ func (self *Page) VerifyIntegrity() error {
 				}
 			}
 
-			switch cell.wide {
+			switch cell.Wide() {
 			case PageCellWideNarrow:
 			case PageCellWideWide:
 
@@ -773,7 +773,7 @@ func (self *Page) VerifyIntegrity() error {
 
 				// Spacer tails must follow a wide char
 				prev := cells[x-1]
-				if prev.wide != PageCellWideWide {
+				if prev.Wide() != PageCellWideWide {
 					warn(
 						"page",
 						"page integrity violation y=%d x=%d spacer tail not following wide",
@@ -1126,8 +1126,8 @@ func (self *Page) exactRowCapacityOrError(y_start uint, y_end uint) (PageCapacit
 		cells := self.rowCells(row)[0:self.size.cols]
 		for j := range cells {
 			cell := &cells[j]
-			if cell.style_id != StyleDefaultID {
-				id_set.set(cell.style_id)
+			if cell.StyleID() != StyleDefaultID {
+				id_set.set(cell.StyleID())
 			}
 
 			if cell.HasGrapheme() {
@@ -1149,7 +1149,7 @@ func (self *Page) exactRowCapacityOrError(y_start uint, y_end uint) (PageCapacit
 		cells := self.rowCells(row)[0:self.size.cols]
 		for j := range cells {
 			cell := &cells[j]
-			if cell.hyperlink {
+			if cell.Hyperlink() {
 				hyperlink_cells += 1
 				if id := self.LookupHyperlink(cell); id.Valid {
 					// Only count each unique hyperlink once for set sizing
@@ -1323,8 +1323,8 @@ func (self *Page) ClonePartialRowFrom(
 		if pageSlowRuntimeSafety {
 			for _, cell := range other_cells {
 				assert(!cell.HasGrapheme())
-				assert(!cell.hyperlink)
-				assert(cell.style_id == StyleDefaultID)
+				assert(!cell.Hyperlink())
+				assert(cell.StyleID() == StyleDefaultID)
 			}
 		}
 
@@ -1340,10 +1340,10 @@ func (self *Page) ClonePartialRowFrom(
 			// Reset any managed memory markers on the cell so that we don't
 			// hit an integrity check if we have to return an error because
 			// the page can't fit the new memory.
-			dst_cell.hyperlink = false
-			dst_cell.style_id = StyleDefaultID
-			if dst_cell.content_tag == PageCellContentTagCodepointGrapheme {
-				dst_cell.content_tag = PageCellContentTagCodepoint
+			dst_cell.setHyperlink(false)
+			dst_cell.setStyleID(StyleDefaultID)
+			if dst_cell.ContentTag() == PageCellContentTagCodepointGrapheme {
+				dst_cell.setContentTag(PageCellContentTagCodepoint)
 			}
 
 			if src_cell.HasGrapheme() {
@@ -1358,7 +1358,7 @@ func (self *Page) ClonePartialRowFrom(
 					return err
 				}
 			}
-			if src_cell.hyperlink {
+			if src_cell.Hyperlink() {
 				// hyperlink:
 				id_opt := other.LookupHyperlink(src_cell)
 				assert(id_opt.Valid) // .?
@@ -1450,24 +1450,24 @@ func (self *Page) ClonePartialRowFrom(
 				}
 			}
 		hyperlink:
-			if src_cell.style_id != StyleDefaultID {
+			if src_cell.StyleID() != StyleDefaultID {
 				// style:
 				dst_row.styled = true
 
 				if other == self {
 					// If it's the same page we don't have to worry about
 					// copying the style, we can use the style ID directly.
-					dst_cell.style_id = src_cell.style_id
-					self.styles.Use(dst_cell.style_id)
+					dst_cell.setStyleID(src_cell.StyleID())
+					self.styles.Use(dst_cell.StyleID())
 					continue // break :style (nothing follows in the loop body)
 				}
 
 				// Slow path: Get the style from the other
 				// page and add it to this page's style set.
-				other_style := other.styles.Get(src_cell.style_id)
+				other_style := other.styles.Get(src_cell.StyleID())
 				added, err := self.styles.AddWithId(
 					*other_style,
-					src_cell.style_id,
+					src_cell.StyleID(),
 				)
 				if err != nil {
 					switch err {
@@ -1485,9 +1485,9 @@ func (self *Page) ClonePartialRowFrom(
 				}
 				// orelse src_cell.style_id
 				if added.Valid {
-					dst_cell.style_id = added.Value
+					dst_cell.setStyleID(added.Value)
 				} else {
-					dst_cell.style_id = src_cell.style_id
+					dst_cell.setStyleID(src_cell.StyleID())
 				}
 			}
 			// Zig: the `if (comptime build_options.kitty_graphics)` block
@@ -1499,8 +1499,8 @@ func (self *Page) ClonePartialRowFrom(
 	// are cleared.
 	if self.size.cols > other.size.cols {
 		last := &cells[other.size.cols-1]
-		if last.wide == PageCellWideSpacerHead {
-			last.wide = PageCellWideNarrow
+		if last.Wide() == PageCellWideSpacerHead {
+			last.setWide(PageCellWideNarrow)
 		}
 	}
 	return nil
@@ -1581,16 +1581,16 @@ func (self *Page) MoveCells(
 			*dst = *src
 			if src.HasGrapheme() {
 				// Required for moveGrapheme assertions
-				dst.content_tag = PageCellContentTagCodepoint
+				dst.setContentTag(PageCellContentTagCodepoint)
 				self.MoveGrapheme(src, dst)
-				src.content_tag = PageCellContentTagCodepoint
-				dst.content_tag = PageCellContentTagCodepointGrapheme
+				src.setContentTag(PageCellContentTagCodepoint)
+				dst.setContentTag(PageCellContentTagCodepointGrapheme)
 				dst_row.grapheme = true
 			}
-			if src.hyperlink {
-				dst.hyperlink = false
+			if src.Hyperlink() {
+				dst.setHyperlink(false)
 				self.moveHyperlink(src, dst)
-				dst.hyperlink = true
+				dst.setHyperlink(true)
 				dst_row.hyperlink = true
 			}
 			// Zig: the `if (comptime build_options.kitty_graphics)` block
@@ -1602,7 +1602,7 @@ func (self *Page) MoveCells(
 	if !dst_row.styled {
 		styled := false // styled: for (dst_cells) |c| { ... } else false
 		for _, c := range dst_cells {
-			if c.style_id != StyleDefaultID {
+			if c.StyleID() != StyleDefaultID {
 				styled = true // break :styled true
 				break
 			}
@@ -1657,10 +1657,10 @@ func (self *Page) SwapCells(src *PageCell, dst *PageCell) {
 	}
 
 	// Hyperlinks are keyed by cell offset.
-	if src.hyperlink || dst.hyperlink {
-		if src.hyperlink && !dst.hyperlink {
+	if src.Hyperlink() || dst.Hyperlink() {
+		if src.Hyperlink() && !dst.Hyperlink() {
 			self.moveHyperlink(src, dst)
-		} else if !src.hyperlink && dst.hyperlink {
+		} else if !src.Hyperlink() && dst.Hyperlink() {
 			self.moveHyperlink(dst, src)
 		} else {
 			// Both had hyperlinks, so we have to manually swap
@@ -1721,7 +1721,7 @@ func (self *Page) ClearCells(row *PageRow, left uint, end uint) {
 	if row.hyperlink {
 		for i := range cells {
 			cell := &cells[i]
-			if cell.hyperlink {
+			if cell.Hyperlink() {
 				self.ClearHyperlink(cell) // @call(.always_inline, clearHyperlink, ...)
 			}
 		}
@@ -1740,7 +1740,7 @@ func (self *Page) ClearCells(row *PageRow, left uint, end uint) {
 		for i := range cells {
 			cell := &cells[i]
 			if cell.HasStyling() {
-				self.styles.Release(cell.style_id)
+				self.styles.Release(cell.StyleID())
 			}
 		}
 
@@ -1793,7 +1793,7 @@ func (self *Page) ClearHyperlink(cell *PageCell) {
 	// Release our usage of this, free memory, unset flag
 	self.hyperlink_set.Release(*entry.Value.value_ptr)
 	m.RemoveByPtr(entry.Value.key_ptr)
-	cell.hyperlink = false
+	cell.setHyperlink(false)
 }
 
 // UpdateRowHyperlinkFlag is page.Page.updateRowHyperlinkFlag.
@@ -1805,7 +1805,7 @@ func (self *Page) ClearHyperlink(cell *PageCell) {
 func (self *Page) UpdateRowHyperlinkFlag(row *PageRow) {
 	cells := self.rowCells(row)[0:self.size.cols]
 	for _, c := range cells {
-		if c.hyperlink {
+		if c.Hyperlink() {
 			return
 		}
 	}
@@ -1980,14 +1980,14 @@ func (self *Page) SetHyperlink(row *PageRow, cell *PageCell, id HyperlinkID) err
 			// a cell with a matching hyperlink this state can happen.
 			// This is tested in Terminal.zig.
 			assert(row.hyperlink)
-			cell.hyperlink = true
+			cell.setHyperlink(true)
 			return nil
 		}
 	}
 
 	// Set the hyperlink on the cell and in the map.
 	*gop.value_ptr = id
-	cell.hyperlink = true
+	cell.setHyperlink(true)
 	row.hyperlink = true
 	return nil
 }
@@ -1998,8 +1998,8 @@ func (self *Page) SetHyperlink(row *PageRow, cell *PageCell, id HyperlinkID) err
 // because we avoid any allocations since we're just moving data.
 // Destination must NOT have a hyperlink.
 func (self *Page) moveHyperlink(src *PageCell, dst *PageCell) {
-	assert(src.hyperlink)
-	assert(!dst.hyperlink)
+	assert(src.Hyperlink())
+	assert(!dst.Hyperlink())
 
 	src_offset := self.cellOffset(src)
 	dst_offset := self.cellOffset(dst)
@@ -2046,7 +2046,7 @@ func (self *Page) SetGraphemes(row *PageRow, cell *PageCell, cps []uint32) error
 	defer self.AssertIntegrity()
 
 	assert(cell.Codepoint() > 0)
-	assert(cell.content_tag == PageCellContentTagCodepoint)
+	assert(cell.ContentTag() == PageCellContentTagCodepoint)
 
 	cell_offset := self.cellOffset(cell)
 	m := self.grapheme_map.Map()
@@ -2072,7 +2072,7 @@ func (self *Page) SetGraphemes(row *PageRow, cell *PageCell, cps []uint32) error
 	}
 	// Zig: errdefer map.remove(cell_offset): nothing fails after it.
 
-	cell.content_tag = PageCellContentTagCodepointGrapheme
+	cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	row.grapheme = true
 
 	return nil
@@ -2095,7 +2095,7 @@ func (self *Page) AppendGrapheme(row *PageRow, cell *PageCell, cp uint32) error 
 
 	// If this cell has no graphemes, we can go faster by knowing we
 	// need to allocate a new grapheme slice and update the map.
-	if cell.content_tag != PageCellContentTagCodepointGrapheme {
+	if cell.ContentTag() != PageCellContentTagCodepointGrapheme {
 		cps, err := self.grapheme_alloc.Alloc(1)
 		if err != nil {
 			return err
@@ -2112,7 +2112,7 @@ func (self *Page) AppendGrapheme(row *PageRow, cell *PageCell, cp uint32) error 
 		}
 		// Zig: errdefer map.remove(cell_offset): nothing fails after it.
 
-		cell.content_tag = PageCellContentTagCodepointGrapheme
+		cell.setContentTag(PageCellContentTagCodepointGrapheme)
 		row.grapheme = true
 
 		return nil
@@ -2227,7 +2227,7 @@ func (self *Page) ClearGrapheme(cell *PageCell) {
 	m.RemoveByPtr(entry.Value.key_ptr)
 
 	// Mark that we no longer have graphemes by changing the content tag.
-	cell.content_tag = PageCellContentTagCodepoint
+	cell.setContentTag(PageCellContentTagCodepoint)
 }
 
 // UpdateRowGraphemeFlag is page.Page.updateRowGraphemeFlag.
@@ -2309,7 +2309,7 @@ func (self *Page) cellIndex(cell *PageCell) uint {
 	}
 	base := uintptr(unsafe.Pointer(unsafe.SliceData(self.cells)))
 	p := uintptr(unsafe.Pointer(cell))
-	size := unsafe.Sizeof(PageCell{})
+	size := unsafe.Sizeof(PageCell(0))
 	if p < base || p >= base+uintptr(len(self.cells))*size || (p-base)%size != 0 {
 		panic("cell is not in the page")
 	}
@@ -2848,7 +2848,155 @@ func pageRowFromBits(bits uint64) PageRow {
 // significant in the order listed: content_tag is bits 0..1, content 2..25,
 // style_id 26..41, wide 42..43, protected 44, hyperlink 45, semantic_content
 // 46..47, _padding 48..63. The Go zero value is Zig's default `.{}`.
-type PageCell struct {
+//
+// Go: the same 64-bit value with the same bit positions, so the value is
+// Zig's `@bitCast(cell)`. A field read `cell.f` is a getter (ContentTag,
+// content, StyleID, Wide, Protected, Hyperlink, SemanticContent, padding)
+// and an assignment `cell.f = v` a setter (setContentTag, ...); a struct
+// literal `Cell{ .f = v }` is `pageCellFields{f: v}.pack()`. The rewrite
+// from the first port's struct of fields was made by scripts/packcell
+// (docs/post-port-optimizations.md item 38).
+type PageCell uint64
+
+// The bit positions of the fields of Cell in its u64.
+const (
+	pageCellContentTagShift      = 0
+	pageCellContentShift         = 2
+	pageCellStyleIDShift         = 26
+	pageCellWideShift            = 42
+	pageCellProtectedShift       = 44
+	pageCellHyperlinkShift       = 45
+	pageCellSemanticContentShift = 46
+	pageCellPaddingShift         = 48
+
+	pageCellContentTagMask      PageCell = 0x3 << pageCellContentTagShift
+	pageCellContentMask         PageCell = 0xFFFFFF << pageCellContentShift
+	pageCellStyleIDMask         PageCell = 0xFFFF << pageCellStyleIDShift
+	pageCellWideMask            PageCell = 0x3 << pageCellWideShift
+	pageCellProtectedMask       PageCell = 1 << pageCellProtectedShift
+	pageCellHyperlinkMask       PageCell = 1 << pageCellHyperlinkShift
+	pageCellSemanticContentMask PageCell = 0x3 << pageCellSemanticContentShift
+	pageCellPaddingMask         PageCell = 0xFFFF << pageCellPaddingShift
+)
+
+// ContentTag is cell.content_tag: which kind of content the cell holds.
+func (self PageCell) ContentTag() PageCellContentTag {
+	return PageCellContentTag(self >> pageCellContentTagShift & 0x3)
+}
+
+// content is cell.content: the 24 content bits (see PageCellContent).
+func (self PageCell) content() PageCellContent {
+	return PageCellContent(self >> pageCellContentShift & 0xFFFFFF)
+}
+
+// StyleID is cell.style_id: the ID of the cell's style in its page's style
+// set (the default style when the cell has no styling).
+func (self PageCell) StyleID() StyleID {
+	return StyleID(self >> pageCellStyleIDShift)
+}
+
+// Wide is cell.wide: narrow, wide, or one of the spacer cells of a wide
+// character.
+func (self PageCell) Wide() PageCellWide {
+	return PageCellWide(self >> pageCellWideShift & 0x3)
+}
+
+// Protected is cell.protected: whether the cell is protected from erasing
+// (DECSCA).
+func (self PageCell) Protected() bool {
+	return self&pageCellProtectedMask != 0
+}
+
+// Hyperlink is cell.hyperlink: whether the cell is part of a hyperlink.
+func (self PageCell) Hyperlink() bool {
+	return self&pageCellHyperlinkMask != 0
+}
+
+// SemanticContent is cell.semantic_content: output, input or prompt (OSC
+// 133).
+func (self PageCell) SemanticContent() PageCellSemanticContent {
+	return PageCellSemanticContent(self >> pageCellSemanticContentShift & 0x3)
+}
+
+// padding is cell._padding.
+func (self PageCell) padding() uint16 {
+	return uint16(self >> pageCellPaddingShift)
+}
+
+// setContentTag is `cell.content_tag = v`. A value wider than the Zig field
+// (u2) keeps only its low bits, as bitCast always has.
+func (self *PageCell) setContentTag(v PageCellContentTag) {
+	*self = *self&^pageCellContentTagMask | PageCell(v)&0x3<<pageCellContentTagShift
+}
+
+// setContent is `cell.content = v`.
+func (self *PageCell) setContent(v PageCellContent) {
+	*self = *self&^pageCellContentMask | PageCell(v)&0xFFFFFF<<pageCellContentShift
+}
+
+// setContentCodepoint is `cell.content.codepoint = v`: the low 21 of the 24
+// content bits, as an assignment to that field of the packed union.
+func (self *PageCell) setContentCodepoint(v uint32) {
+	const mask PageCell = 0x1FFFFF << pageCellContentShift
+	*self = *self&^mask | PageCell(v)&0x1FFFFF<<pageCellContentShift
+}
+
+// setContentColorPalette is `cell.content.color_palette = v`: the low 8 of
+// the 24 content bits.
+func (self *PageCell) setContentColorPalette(v uint8) {
+	const mask PageCell = 0xFF << pageCellContentShift
+	*self = *self&^mask | PageCell(v)<<pageCellContentShift
+}
+
+// setContentColorRGB is `cell.content.color_rgb = v`: all 24 content bits.
+func (self *PageCell) setContentColorRGB(v PageCellRGB) {
+	self.setContent(pageCellContentFields{color_rgb: v}.pack())
+}
+
+// setStyleID is `cell.style_id = v`.
+func (self *PageCell) setStyleID(v StyleID) {
+	*self = *self&^pageCellStyleIDMask | PageCell(v)<<pageCellStyleIDShift
+}
+
+// setWide is `cell.wide = v` (u2: low bits only, as setContentTag).
+func (self *PageCell) setWide(v PageCellWide) {
+	*self = *self&^pageCellWideMask | PageCell(v)&0x3<<pageCellWideShift
+}
+
+// setProtected is `cell.protected = v`.
+func (self *PageCell) setProtected(v bool) {
+	if v {
+		*self |= pageCellProtectedMask
+	} else {
+		*self &^= pageCellProtectedMask
+	}
+}
+
+// setHyperlink is `cell.hyperlink = v`.
+func (self *PageCell) setHyperlink(v bool) {
+	if v {
+		*self |= pageCellHyperlinkMask
+	} else {
+		*self &^= pageCellHyperlinkMask
+	}
+}
+
+// setSemanticContent is `cell.semantic_content = v` (u2: low bits only).
+func (self *PageCell) setSemanticContent(v PageCellSemanticContent) {
+	*self = *self&^pageCellSemanticContentMask | PageCell(v)&0x3<<pageCellSemanticContentShift
+}
+
+// setPadding is `cell._padding = v`.
+func (self *PageCell) setPadding(v uint16) {
+	*self = *self&^pageCellPaddingMask | PageCell(v)<<pageCellPaddingShift
+}
+
+// pageCellFields is the fields of Cell as a plain struct, for building a
+// cell the way a Zig struct literal does: `Cell{ .content_tag = t, .content
+// = c }` is `pageCellFields{content_tag: t, content: c}.pack()`. A field
+// left out takes its Zig default, which is zero for every field. Not a Zig
+// declaration.
+type pageCellFields struct {
 	// The content tag dictates the active tag in content and possibly
 	// some other behaviors.
 	//
@@ -2891,17 +3039,59 @@ type PageCell struct {
 	_padding uint16
 }
 
+// pack is the cell with these field values.
+func (f pageCellFields) pack() PageCell {
+	c := PageCell(f.content_tag)&0x3<<pageCellContentTagShift |
+		PageCell(f.content)&0xFFFFFF<<pageCellContentShift |
+		PageCell(f.style_id)<<pageCellStyleIDShift |
+		PageCell(f.wide)&0x3<<pageCellWideShift |
+		PageCell(f.semantic_content)&0x3<<pageCellSemanticContentShift |
+		PageCell(f._padding)<<pageCellPaddingShift
+	if f.protected {
+		c |= pageCellProtectedMask
+	}
+	if f.hyperlink {
+		c |= pageCellHyperlinkMask
+	}
+	return c
+}
+
 // PageCellContent is the anonymous type of page.Cell.content.
 //
 // Zig: a packed union of three views of the same 24 bits, with no tag of
-// its own: `codepoint: u21`, `color_palette: u8`, `color_rgb: RGB`. Go has
-// no untagged union; this is a struct with one field per view, and
+// its own: `codepoint: u21`, `color_palette: u8`, `color_rgb: RGB`.
 // `Cell.content_tag` decides which one is meaningful: `codepoint` for
 // .codepoint and .codepoint_grapheme, `color_palette` for
 // .bg_color_palette, `color_rgb` for .bg_color_rgb. In the 24 bits,
 // codepoint is bits 0..20, color_palette is bits 0..7, and color_rgb has r
 // in bits 0..7, g in 8..15, b in 16..23.
-type PageCellContent struct {
+//
+// Go: those 24 bits, in a uint32; each view is a method that reads its bits,
+// as the packed union does. `Content{ .codepoint = cp }` is
+// `pageCellContentFields{codepoint: cp}.pack()`.
+type PageCellContent uint32
+
+// codepoint is content.codepoint: bits 0..20.
+func (self PageCellContent) codepoint() uint32 {
+	return uint32(self) & 0x1FFFFF
+}
+
+// colorPalette is content.color_palette: bits 0..7.
+func (self PageCellContent) colorPalette() uint8 {
+	return uint8(self)
+}
+
+// colorRGB is content.color_rgb: r in bits 0..7, g in 8..15, b in 16..23.
+func (self PageCellContent) colorRGB() PageCellRGB {
+	return PageCellRGB{R: uint8(self), G: uint8(self >> 8), B: uint8(self >> 16)}
+}
+
+// pageCellContentFields is the views of Cell.content as a plain struct, for
+// building a content the way a Zig union literal does. A Zig literal names
+// one view; pack combines whatever is set, each view in its own bits (the
+// views overlap, so naming more than one is meaningless, as in Zig). Not a
+// Zig declaration.
+type pageCellContentFields struct {
 	// The codepoint that this cell contains. If `grapheme` is false,
 	// then this is the only codepoint in the cell. If `grapheme` is
 	// true, then this is the first codepoint in the grapheme cluster.
@@ -2912,6 +3102,15 @@ type PageCellContent struct {
 	// The content is an empty cell with a background color.
 	color_palette uint8
 	color_rgb     PageCellRGB
+}
+
+// pack is the 24 content bits of these views.
+func (f pageCellContentFields) pack() PageCellContent {
+	return PageCellContent(f.codepoint&0x1FFFFF) |
+		PageCellContent(f.color_palette) |
+		PageCellContent(f.color_rgb.R) |
+		PageCellContent(f.color_rgb.G)<<8 |
+		PageCellContent(f.color_rgb.B)<<16
 }
 
 // PageCellContentTag is page.Cell.ContentTag.
@@ -3022,8 +3221,8 @@ func PageCellInit(cp uint32) PageCell {
 	var cell PageCell
 	// Zig: cp is a u21.
 	assert(cp <= 0x1FFFFF)
-	cell.content_tag = PageCellContentTagCodepoint
-	cell.content = PageCellContent{codepoint: cp}
+	cell.setContentTag(PageCellContentTagCodepoint)
+	cell.setContent(pageCellContentFields{codepoint: cp}.pack())
 	return cell
 }
 
@@ -3031,61 +3230,16 @@ func PageCellInit(cp uint32) PageCell {
 // in Cell.isZero (page.zig line 2066): the 64 bits of the packed struct,
 // laid out as described on PageCell.
 func (self PageCell) bitCast() uint64 {
-	// The 24 content bits: the view content_tag selects gives its own
-	// bits; the bits above that view come from color_rgb, the one view
-	// that covers all 24 (see PageCellContent).
-	var content uint64
-	rgb := uint64(self.content.color_rgb.R) |
-		uint64(self.content.color_rgb.G)<<8 |
-		uint64(self.content.color_rgb.B)<<16
-	switch self.content_tag & 0x3 {
-	case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
-		content = uint64(self.content.codepoint)&0x1FFFFF | rgb&^0x1FFFFF
-	case PageCellContentTagBgColorPalette:
-		content = uint64(self.content.color_palette) | rgb&^0xFF
-	case PageCellContentTagBgColorRgb:
-		content = rgb
-	}
-
-	// Fields narrower than their Go type keep only the bits of their Zig
-	// width, as the packed layout would (wider values cannot exist in
-	// Zig).
-	var v uint64
-	v |= uint64(self.content_tag) & 0x3
-	v |= content << 2
-	v |= uint64(self.style_id) << 26
-	v |= (uint64(self.wide) & 0x3) << 42
-	v |= pageBoolBit(self.protected) << 44
-	v |= pageBoolBit(self.hyperlink) << 45
-	v |= (uint64(self.semantic_content) & 0x3) << 46
-	v |= uint64(self._padding) << 48
-	return v
+	// Go: the cell is that u64 (see PageCell).
+	return uint64(self)
 }
 
 // pageCellFromBits is not a Zig declaration. It stands for
 // `@as(Cell, @bitCast(bits))`: the inverse of PageCell.bitCast. Bits that
 // carry no meaning in the packed struct are dropped.
 func pageCellFromBits(bits uint64) PageCell {
-	content := uint32(bits >> 2 & 0xFFFFFF)
-	return PageCell{
-		content_tag: PageCellContentTag(bits & 0x3),
-		// Every view reads the same 24 bits, as in the packed union.
-		content: PageCellContent{
-			codepoint:     content & 0x1FFFFF,
-			color_palette: uint8(content),
-			color_rgb: PageCellRGB{
-				R: uint8(content),
-				G: uint8(content >> 8),
-				B: uint8(content >> 16),
-			},
-		},
-		style_id:         StyleID(bits >> 26 & 0xFFFF),
-		wide:             PageCellWide(bits >> 42 & 0x3),
-		protected:        bits>>44&1 != 0,
-		hyperlink:        bits>>45&1 != 0,
-		semantic_content: PageCellSemanticContent(bits >> 46 & 0x3),
-		_padding:         uint16(bits >> 48),
-	}
+	// Go: the cell is that u64 (see PageCell).
+	return PageCell(bits)
 }
 
 // IsZero is page.Cell.isZero.
@@ -3102,10 +3256,10 @@ func (self PageCell) IsZero() bool {
 //   - Cell is styled but only with a background color and no text
 //   - Cell has a unicode placeholder for Kitty graphics protocol
 func (self PageCell) HasText() bool {
-	switch self.content_tag {
+	switch self.ContentTag() {
 	case PageCellContentTagCodepoint,
 		PageCellContentTagCodepointGrapheme:
-		return self.content.codepoint != 0
+		return self.content().codepoint() != 0
 
 	case PageCellContentTagBgColorPalette,
 		PageCellContentTagBgColorRgb:
@@ -3120,10 +3274,10 @@ func (self PageCell) HasText() bool {
 //
 // Zig: returns u21.
 func (self PageCell) Codepoint() uint32 {
-	switch self.content_tag {
+	switch self.ContentTag() {
 	case PageCellContentTagCodepoint,
 		PageCellContentTagCodepointGrapheme:
-		return self.content.codepoint
+		return self.content().codepoint()
 
 	case PageCellContentTagBgColorPalette,
 		PageCellContentTagBgColorRgb:
@@ -3139,7 +3293,7 @@ func (self PageCell) Codepoint() uint32 {
 //
 // Zig: returns u2.
 func (self PageCell) GridWidth() uint8 {
-	switch self.wide {
+	switch self.Wide() {
 	case PageCellWideNarrow, PageCellWideSpacerHead, PageCellWideSpacerTail:
 		return 1
 	case PageCellWideWide:
@@ -3151,18 +3305,18 @@ func (self PageCell) GridWidth() uint8 {
 
 // HasStyling is page.Cell.hasStyling.
 func (self PageCell) HasStyling() bool {
-	return self.style_id != StyleDefaultID
+	return self.StyleID() != StyleDefaultID
 }
 
 // IsEmpty is page.Cell.isEmpty: returns true if the cell has no text or
 // styling.
 func (self PageCell) IsEmpty() bool {
-	switch self.content_tag {
+	switch self.ContentTag() {
 	// Textual cells are empty if they have no text and are narrow.
 	// The "narrow" requirement is because wide spacers are meaningful.
 	case PageCellContentTagCodepoint,
 		PageCellContentTagCodepointGrapheme:
-		return !self.HasText() && self.wide == PageCellWideNarrow
+		return !self.HasText() && self.Wide() == PageCellWideNarrow
 
 	case PageCellContentTagBgColorPalette,
 		PageCellContentTagBgColorRgb:
@@ -3175,7 +3329,7 @@ func (self PageCell) IsEmpty() bool {
 
 // HasGrapheme is page.Cell.hasGrapheme.
 func (self PageCell) HasGrapheme() bool {
-	return self.content_tag == PageCellContentTagCodepointGrapheme
+	return self.ContentTag() == PageCellContentTagCodepointGrapheme
 }
 
 // PageCellHasTextAny is page.Cell.hasTextAny: returns true if the set of

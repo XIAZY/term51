@@ -130,8 +130,8 @@ func TestScreenSplitRuling_full_style_set_in_the_rows_above_fails_the_style_chan
 	for i, want := range "AB" {
 		x := ssrStyles - ssrCols + i
 		cell := node.data.GetRowAndCell(uint(x), 1).cell
-		expect(t, cell.content.codepoint == uint32(want), fmt.Sprintf("cell %d holds %c", x, want))
-		expect(t, cell.style_id == old_id, fmt.Sprintf("cell %d has the previous style", x))
+		expect(t, cell.content().codepoint() == uint32(want), fmt.Sprintf("cell %d holds %c", x, want))
+		expect(t, cell.StyleID() == old_id, fmt.Sprintf("cell %d has the previous style", x))
 	}
 	ssrCheckIntegrity(t, &term)
 }
@@ -220,8 +220,8 @@ func TestScreenSplitRuling_split_that_moves_the_cursor_row_prints_into_the_visib
 		cp uint32
 	}{{0, 'C'}, {1, 'B'}, {4, 'D'}} {
 		cell := second.data.GetRowAndCell(c.x, 0).cell
-		expect(t, cell.content.codepoint == c.cp, fmt.Sprintf("cell %d holds %c", c.x, rune(c.cp)))
-		expect(t, cell.style_id == style_id, fmt.Sprintf("cell %d has the new style", c.x))
+		expect(t, cell.content().codepoint() == c.cp, fmt.Sprintf("cell %d holds %c", c.x, rune(c.cp)))
+		expect(t, cell.StyleID() == style_id, fmt.Sprintf("cell %d has the new style", c.x))
 	}
 	expect(t, s.Cursor.X == 5 && s.Cursor.Y == 1, "cursor after D")
 	ssrCheckIntegrity(t, &term)

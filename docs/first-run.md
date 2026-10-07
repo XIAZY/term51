@@ -11,6 +11,38 @@ Build with `GOQNX=<go-qnx> tools/build.sh`; install with
 replace an open app). The settings are `data/settings.conf` in the app's
 sandbox (`internal/settings`); the log is `data/term51.log`.
 
+## Checking a page change before it is installed
+
+The page (`assets/*.qml`) is compiled by the phone, when the app starts: a
+mistake in it stops the app at once, and nothing on the development machine
+can find it. So every page change is loaded on the phone by hand first. It
+needs no install and does not disturb an installed copy that is running:
+
+1. Copy `build/term51` to `/dev/shmem/<name>` (the one place a program may
+   be started from; it has no directories), and the page files to a folder
+   on the SD card laid out like the app: `<folder>/app/native/assets/` with
+   `images/` in it, and an empty `<folder>/data/`. Copy the files level by
+   level; `scp -r` fails on the phone.
+2. Start it as `devuser` from that folder:
+
+       on -d -u devuser sh -c 'cd <folder> && LD_LIBRARY_PATH=/usr/lib/qt4/lib \
+         QML_IMPORT_PATH=/usr/lib/qt4/imports QT_PLUGIN_PATH=/usr/lib/qt4/plugins \
+         CASCADES_THEME=dark GRAPHICS_ROOT=/base/usr/lib/graphics/qc \
+         /dev/shmem/<name> > <folder>/out.txt 2>&1'
+
+   Without `QML_IMPORT_PATH` it stops at the first `import`.
+3. A page with a mistake prints `ui: the page does not load:` with the file,
+   line and reason, and the process ends. A page that loads prints nothing
+   and the process stays (so run the ssh command with a time limit). It
+   gets no window this way: this shows that the page compiles, not how it
+   looks.
+4. Stop it by its process number (`pidin`, `kill`), and remove the folder
+   and the program.
+
+The same error text is in the system log of an installed copy that fails
+(`slog2info`, the lines with `QmlDocument`), and since 13a910f in the app's
+`logs/log`.
+
 ## Seen to work (2026-10-07, first run)
 
 - The app starts and its log has no errors.
@@ -60,6 +92,13 @@ sandbox (`internal/settings`); the log is `data/term51.log`.
   the page has settled (948 high, then 804, then 828), and Cascades slides
   the window to a new size over several frames, so the window's own size
   lags what the page has said.
+
+- **The first native page did not start** (2026-10-07). The app menu's
+  "Close tab" was a `DeleteActionItem`, which an app menu does not accept
+  (`Cannot assign object to list`), and one such mistake stops the whole
+  page from loading. Changed: a plain action with an icon of ours; the
+  bridge prints why a page does not load; and pages are checked on the phone
+  before they are installed (above).
 
 ## Still to look at
 

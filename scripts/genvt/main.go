@@ -95,6 +95,17 @@ var exclude = map[string][]string{
 	"vt":   {"PageStdCapacity"},
 }
 
+// rename gives a declaration a name the prefix rule would not: package ->
+// terminal name -> new name.
+//
+// Upstream's Stream.init builds a stream whose OSC parser cannot grow its
+// buffer (it silently refuses the colour and clipboard commands) and
+// initAlloc one that can. A Go user reaches for NewStream and has no reason
+// to want the first, so NewStream is the growing one.
+var rename = map[string]map[string]string{
+	"vt": {"StreamInitAlloc": "NewStream", "StreamInit": "NewStreamFixed"},
+}
+
 // hand lists names written by hand in the package (the generator skips
 // them).
 var hand = map[string]map[string]bool{}
@@ -263,6 +274,9 @@ func (g *gen) emit(dir, name string, entries []entry, doc string) {
 			} else if rest == "Init" {
 				nn = "New"
 			}
+		}
+		if r, ok := rename[name][on]; ok {
+			nn = r
 		}
 		if hand[name][nn] {
 			continue

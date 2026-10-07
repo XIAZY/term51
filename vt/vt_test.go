@@ -62,7 +62,7 @@ func TestColourRequestsFromOutside(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := &queryHandler{ro: vt.NewReadonlyHandler(&term)}
-	stream := vt.StreamInitAlloc(h)
+	stream := vt.NewStream(h)
 	if err := stream.NextSlice([]byte("\x1b]11;?\x07\x1b]4;1;?;2;rgb:ff/00/00\x1b\\")); err != nil {
 		t.Fatal(err)
 	}

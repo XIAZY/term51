@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -157,4 +158,58 @@ func TestOpenBSDRealDevices(t *testing.T) {
 		t.Fatal(err)
 	}
 	readUntil(t, m, "ping", 10*time.Second)
+}
+
+// The program is a session leader whose controlling terminal is the pty,
+// runs in the directory asked for, and gets its own arguments.
+func TestStartSessionDirectoryAndArguments(t *testing.T) {
+	dir := t.TempDir()
+	cmd := exec.Command(shell(t), "-c", `echo "pwd=$(pwd)"; echo "arg=$1"; (: </dev/tty) && echo CTTY; echo DONE`, "sh", "two words")
+	cmd.Dir = dir
+	m, err := Start(cmd, Size{Rows: 24, Cols: 80})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	out := readUntil(t, m, "DONE", 10*time.Second)
+	for _, w := range []string{"pwd=" + dir, "arg=two words", "CTTY"} {
+		if !strings.Contains(out, w) {
+			t.Errorf("output %q lacks %q", out, w)
+		}
+	}
+	if err := cmd.Wait(); err != nil {
+		t.Errorf("wait: %v", err)
+	}
+}
+
+// A program that is not there is an error from Start.
+func TestStartOfAMissingProgramIsAnError(t *testing.T) {
+	if m, err := Start(exec.Command("/no/such/shell"), Size{Rows: 24, Cols: 80}); err == nil {
+		m.Close()
+		t.Fatal("no error")
+	} else if !strings.Contains(err.Error(), "/no/such/shell") {
+		t.Errorf("the error does not name the program: %v", err)
+	}
+}
+
+// A program that is there but cannot be run says so in the terminal, and
+// the process ends with a failure.
+func TestAProgramThatCannotBeRunIsReportedInTheTerminal(t *testing.T) {
+	notExecutable := filepath.Join(t.TempDir(), "shell")
+	if err := os.WriteFile(notExecutable, []byte("not a program\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(notExecutable)
+	m, err := Start(cmd, Size{Rows: 24, Cols: 80})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	out := readUntil(t, m, "permission denied", 10*time.Second)
+	if !strings.Contains(out, "term51: starting "+notExecutable) {
+		t.Errorf("the terminal shows %q", out)
+	}
+	if err := cmd.Wait(); err == nil {
+		t.Error("the process ended without a failure")
+	}
 }

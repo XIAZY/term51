@@ -2,7 +2,8 @@
 //
 // The master side stays in this process; the program gets the slave side as
 // its standard input, output and error and as its controlling terminal, in a
-// new session. How the pty is opened depends on the system, one way each: on
+// new session, and no other descriptor of this process (see Start). How the
+// pty is opened depends on the system, one way each: on
 // BlackBerry 10, whose C library has no posix_openpt, the BSD devices
 // /dev/pty[p-s]? (pty_qnx.go); elsewhere, where the tests run, the POSIX
 // calls (pty_posix.go). creack/pty has no QNX support, which is why this
@@ -23,6 +24,12 @@ static int set_size(int fd, unsigned short rows, unsigned short cols,
 	ws.ws_xpixel = xpixel;
 	ws.ws_ypixel = ypixel;
 	return ioctl(fd, TIOCSWINSZ, &ws);
+}
+
+// set_ctty makes the terminal on fd the controlling terminal of the calling
+// process, which must be a session leader without one.
+static int set_ctty(int fd) {
+	return ioctl(fd, TIOCSCTTY, 0);
 }
 */
 import "C"
@@ -105,12 +112,73 @@ func SetSize(f *os.File, s Size) error {
 	return nil
 }
 
-// Start starts cmd on a new pseudo-terminal of the given size and returns
-// the master side. The program runs in a new session with the pty as its
-// controlling terminal; Start sets cmd's Stdin, Stdout, Stderr and
-// SysProcAttr. The caller reads and writes the master, and closes it after cmd has
-// been waited for.
+// childArg is the first argument of this program when it is started as the
+// step between Start and the program to run (see child). It is not something
+// a user would type.
+const childArg = "--term51-pty-child--"
+
+// init runs the child step when this program was started for it. It is in
+// init, not in main, so that it comes before anything else the program
+// does, and so that every program that imports this package, the tests
+// included, starts shells the same way.
+func init() {
+	if len(os.Args) >= 4 && os.Args[1] == childArg {
+		child(os.Args[2], os.Args[3], os.Args[4:])
+	}
+}
+
+// child is the step between Start and the program: it runs in the new
+// process, which Start made a session leader with the terminal as its
+// descriptors 0, 1 and 2 and nothing else open. It makes the terminal the
+// controlling terminal, changes to dir if one is given, and becomes the
+// program. It does not return.
+func child(dir, path string, argv []string) {
+	fail := func(what string, err error) {
+		// The terminal is the only place to say it.
+		fmt.Fprintf(os.Stderr, "term51: %s: %v\r\n", what, err)
+		os.Exit(127)
+	}
+	if r, err := C.set_ctty(0); r != 0 {
+		fail("making the terminal the controlling terminal", err)
+	}
+	if dir != "" {
+		if err := os.Chdir(dir); err != nil {
+			fail("changing to "+dir, err)
+		}
+	}
+	fail("starting "+path, syscall.Exec(path, argv, os.Environ()))
+}
+
+// Start starts cmd on a new pseudo-terminal of the given size, in a new
+// session with the terminal as its controlling terminal and as its standard
+// input, output and error. It returns the master side; the caller reads and
+// writes it, and closes it after cmd has been waited for. Start rewrites
+// cmd's Path, Args, Dir, Stdin, Stdout, Stderr and SysProcAttr.
+//
+// The program is not started directly. Start starts this same executable
+// with childArg, as a session leader holding only the terminal, and that
+// process then becomes the program (child). The reason is which descriptors
+// the program gets. Go can start a process two ways on BlackBerry 10: with
+// spawn, which hands over exactly the descriptors listed, or with vfork,
+// which copies every descriptor this process has open. Asking Go to set the
+// controlling terminal forces vfork, and then the shell holds copies of the
+// connections Cascades opened in the app, to the phone's input service
+// among others. Setting the controlling terminal in the child step instead
+// leaves Go free to use spawn. (Elsewhere, where the tests run, Go has no
+// spawn and the program gets what any child gets; the tests check the
+// session, the terminal, the directory and the arguments, and the
+// descriptors are checked on the phone.)
 func Start(cmd *exec.Cmd, size Size) (*os.File, error) {
+	self, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("pty: %w", err)
+	}
+	// A program that is not there (a mistyped shell in the settings) is
+	// the caller's to report. Once the child step has started, the
+	// terminal is the only place left for an error.
+	if _, err := os.Stat(cmd.Path); err != nil {
+		return nil, fmt.Errorf("pty: starting %s: %w", cmd.Path, err)
+	}
 	master, slave, err := Open()
 	if err != nil {
 		return nil, err
@@ -121,12 +189,14 @@ func Start(cmd *exec.Cmd, size Size) (*os.File, error) {
 		master.Close()
 		return nil, err
 	}
+	program := cmd.Path
+	cmd.Args = append([]string{self, childArg, cmd.Dir, program}, cmd.Args...)
+	cmd.Path, cmd.Dir = self, ""
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = slave, slave, slave
-	// Ctty is a descriptor number in the child: 0 is the slave as stdin.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true, Ctty: 0}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
 		master.Close()
-		return nil, fmt.Errorf("pty: starting %s: %w", cmd.Path, err)
+		return nil, fmt.Errorf("pty: starting %s: %w", program, err)
 	}
 	return master, nil
 }

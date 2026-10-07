@@ -13,11 +13,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/XIAZY/libghostty-vt-go/vt"
 	"github.com/XIAZY/libghostty-vt-go/vt/input"
@@ -29,7 +30,9 @@ import (
 // Config describes the session to start.
 type Config struct {
 	// Shell is the program to run, with its arguments and environment (nil
-	// Env: the process's own). Dir is its working directory.
+	// Env: the process's own). Dir is its working directory. TERM is set
+	// to DefaultTerm unless Env names one: the app's own TERM, if it has
+	// one, says nothing about this terminal.
 	Shell string
 	Args  []string
 	Env   []string
@@ -48,6 +51,21 @@ type Config struct {
 	Replies replies.Config
 }
 
+// DefaultTerm is the TERM the shell gets when Config.Env does not set one.
+const DefaultTerm = "xterm-256color"
+
+// feedChunk is how much output is fed to the terminal per hold of the lock,
+// so that drawing (Snapshot) is never locked out for long: at the phone's
+// 2 to 4 MB/s, 4 KB is 1 to 2 ms.
+const feedChunk = 4 << 10
+
+// How long Close waits for the shell after the hang-up signal before it
+// kills the shell's process group, and how long it waits after that.
+const (
+	closeGrace = 500 * time.Millisecond
+	closeLimit = 2 * time.Second
+)
+
 // EventKind is the kind of an Event.
 type EventKind int
 
@@ -56,7 +74,7 @@ const (
 	EventBell                       // the bell rang
 	EventPwd                        // the shell reported its directory; Text is the URL
 	EventClipboard                  // a program set the clipboard; Text is the data as sent
-	EventExit                       // the shell exited; Err is its exit error, if any
+	EventExit                       // the shell exited; Err is its exit error, if any (see Done)
 )
 
 // Event is something the UI may want to show or act on.
@@ -72,8 +90,9 @@ type Session struct {
 	cmd    *exec.Cmd
 	master *os.File
 
-	// mu guards the terminal, the stream and the sizes.
+	// mu guards the terminal, the stream, the sizes and closed.
 	mu     sync.Mutex
+	closed bool
 	term   vt.Terminal
 	stream vt.Stream[*handler]
 	h      handler
@@ -84,9 +103,12 @@ type Session struct {
 	// the reader).
 	wmu sync.Mutex
 
-	changed chan struct{}
-	events  chan Event
-	done    chan struct{}
+	changed    chan struct{}
+	events     chan Event
+	readerDone chan struct{} // the reader saw the end of the shell's output
+	done       chan struct{} // the shell has exited and been waited for
+	exitErr    error         // set before done is closed
+	closeOnce  sync.Once
 }
 
 // Start starts the shell and the reader.
@@ -105,19 +127,20 @@ func Start(cfg Config) (*Session, error) {
 		return nil, err
 	}
 	s := &Session{
-		cfg:     cfg.Replies,
-		term:    term,
-		cellW:   cfg.CellW,
-		cellH:   cfg.CellH,
-		changed: make(chan struct{}, 1),
-		events:  make(chan Event, 64),
-		done:    make(chan struct{}),
+		cfg:        cfg.Replies,
+		term:       term,
+		cellW:      cfg.CellW,
+		cellH:      cfg.CellH,
+		changed:    make(chan struct{}, 1),
+		events:     make(chan Event, 64),
+		readerDone: make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 	s.h = handler{s: s, ro: vt.NewReadonlyHandler(&s.term)}
-	s.stream = vt.StreamInitAlloc(&s.h)
+	s.stream = vt.NewStream(&s.h)
 
 	cmd := exec.Command(cfg.Shell, cfg.Args...)
-	cmd.Env = cfg.Env
+	cmd.Env = withTerm(cfg.Env)
 	cmd.Dir = cfg.Dir
 	master, err := pty.Start(cmd, s.ptySize(cfg.Cols, cfg.Rows))
 	if err != nil {
@@ -126,7 +149,27 @@ func Start(cfg Config) (*Session, error) {
 	}
 	s.cmd, s.master = cmd, master
 	go s.read()
+	go s.wait()
 	return s, nil
+}
+
+// withTerm returns env (nil: the process's own environment) with TERM set to
+// DefaultTerm unless env itself names one.
+func withTerm(env []string) []string {
+	if env == nil {
+		for _, kv := range os.Environ() {
+			if !strings.HasPrefix(kv, "TERM=") {
+				env = append(env, kv)
+			}
+		}
+		return append(env, "TERM="+DefaultTerm)
+	}
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "TERM=") {
+			return env
+		}
+	}
+	return append(append([]string(nil), env...), "TERM="+DefaultTerm)
 }
 
 func (s *Session) ptySize(cols, rows int) pty.Size {
@@ -140,46 +183,78 @@ func (s *Session) ptySize(cols, rows int) pty.Size {
 }
 
 // read feeds the shell's output to the terminal until the shell's side of
-// the pseudo-terminal closes, then waits for the shell.
+// the pseudo-terminal closes.
 func (s *Session) read() {
+	defer close(s.readerDone)
 	buf := make([]byte, 64<<10)
 	for {
 		n, err := s.master.Read(buf)
+		for off := 0; off < n; off += feedChunk {
+			end := min(off+feedChunk, n)
+			if !s.feed(buf[off:end]) {
+				return
+			}
+		}
 		if n > 0 {
-			s.mu.Lock()
-			s.h.out.Reset()
-			ferr := s.stream.NextSlice(buf[:n])
-			answers := append([]byte(nil), s.h.out.Bytes()...)
-			evs := s.h.events
-			s.h.events = nil
-			s.mu.Unlock()
-			if ferr != nil {
-				// The library reports a sequence it could not apply; the
-				// terminal stays usable, so keep reading.
-				_ = ferr
-			}
-			if len(answers) > 0 {
-				s.write(answers)
-			}
-			for _, ev := range evs {
-				s.emit(ev)
-			}
-			select {
-			case s.changed <- struct{}{}:
-			default:
-			}
+			s.signal()
 		}
 		if err != nil {
-			break
+			return
 		}
 	}
-	werr := s.cmd.Wait()
-	s.emit(Event{Kind: EventExit, Err: werr})
-	close(s.done)
 }
 
-// emit queues an event; when the UI is not reading, the oldest kind of loss
-// is acceptable, so a full queue drops the event.
+// feed gives one piece of output to the terminal, then sends the answers to
+// the queries in it and its events. It reports false after Close.
+func (s *Session) feed(b []byte) bool {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return false
+	}
+	s.h.out.Reset()
+	// An error is a sequence the library could not apply; the terminal
+	// stays usable, so reading goes on.
+	_ = s.stream.NextSlice(b)
+	answers := append([]byte(nil), s.h.out.Bytes()...)
+	evs := s.h.events
+	s.h.events = nil
+	s.mu.Unlock()
+
+	if len(answers) > 0 {
+		s.write(answers)
+	}
+	for _, ev := range evs {
+		s.emit(ev)
+	}
+	return true
+}
+
+// wait waits for the shell itself. The end of its output is not a reliable
+// sign of its exit: a background job can keep the pseudo-terminal open
+// after the shell has gone. The reader gets a moment to take in the last
+// output first.
+func (s *Session) wait() {
+	err := s.cmd.Wait()
+	select {
+	case <-s.readerDone:
+	case <-time.After(300 * time.Millisecond):
+	}
+	s.exitErr = err
+	close(s.done)
+	s.emit(Event{Kind: EventExit, Err: err})
+}
+
+func (s *Session) signal() {
+	select {
+	case s.changed <- struct{}{}:
+	default:
+	}
+}
+
+// emit queues an event. When the UI is not reading and the queue is full the
+// event is dropped, the exit event included: Done is the reliable sign of
+// the shell's exit.
 func (s *Session) emit(ev Event) {
 	select {
 	case s.events <- ev:
@@ -203,11 +278,23 @@ func (s *Session) write(b []byte) {
 // at most one is pending.
 func (s *Session) Changed() <-chan struct{} { return s.changed }
 
-// Events delivers titles, bells and the shell's exit.
+// Events delivers titles, bells and the shell's exit. An event is dropped
+// when 64 are waiting unread.
 func (s *Session) Events() <-chan Event { return s.events }
 
 // Done is closed after the shell has exited and been waited for.
 func (s *Session) Done() <-chan struct{} { return s.done }
+
+// ExitErr is the shell's exit error (nil for a clean exit). It is valid
+// after Done is closed.
+func (s *Session) ExitErr() error {
+	select {
+	case <-s.done:
+		return s.exitErr
+	default:
+		return nil
+	}
+}
 
 // Send writes bytes to the shell as they are.
 func (s *Session) Send(b []byte) { s.write(b) }
@@ -215,6 +302,10 @@ func (s *Session) Send(b []byte) { s.write(b) }
 // Key encodes a key event with the terminal's current modes and sends it.
 func (s *Session) Key(ev input.KeyEvent) error {
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return ErrClosed
+	}
 	opts := input.KeyEncodeOptionsFromTerminal(&s.term)
 	s.mu.Unlock()
 	var b bytes.Buffer
@@ -231,6 +322,10 @@ func (s *Session) Key(ev input.KeyEvent) error {
 // data is copied before it is changed.
 func (s *Session) Paste(data []byte) error {
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return ErrClosed
+	}
 	bracketed := s.term.Modes.Get(vt.ModeBracketedPaste)
 	s.mu.Unlock()
 	parts := input.EncodePasteMutable(append([]byte(nil), data...), input.PasteOptions{Bracketed: bracketed})
@@ -248,6 +343,10 @@ func (s *Session) Resize(cols, rows, cellW, cellH int) error {
 		return fmt.Errorf("session: bad size %dx%d", cols, rows)
 	}
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return ErrClosed
+	}
 	s.cellW, s.cellH = cellW, cellH
 	err := s.term.Resize(uint16(cols), uint16(rows))
 	size := s.ptySize(cols, rows)
@@ -262,23 +361,21 @@ func (s *Session) Resize(cols, rows, cellW, cellH int) error {
 // towards older output).
 func (s *Session) ScrollViewport(delta int) {
 	s.mu.Lock()
-	s.term.ScrollViewport(vt.TerminalScrollViewport{Tag: vt.TerminalScrollViewportDelta, Delta: int64(delta)})
-	s.mu.Unlock()
-	select {
-	case s.changed <- struct{}{}:
-	default:
+	if !s.closed {
+		s.term.ScrollViewport(vt.TerminalScrollViewport{Tag: vt.TerminalScrollViewportDelta, Delta: int64(delta)})
 	}
+	s.mu.Unlock()
+	s.signal()
 }
 
 // ScrollToBottom returns the view to the live screen.
 func (s *Session) ScrollToBottom() {
 	s.mu.Lock()
-	s.term.ScrollViewport(vt.TerminalScrollViewport{Tag: vt.TerminalScrollViewportBottom})
-	s.mu.Unlock()
-	select {
-	case s.changed <- struct{}{}:
-	default:
+	if !s.closed {
+		s.term.ScrollViewport(vt.TerminalScrollViewport{Tag: vt.TerminalScrollViewportBottom})
 	}
+	s.mu.Unlock()
+	s.signal()
 }
 
 // Snapshot updates rs to the terminal's current state, for drawing. The
@@ -286,6 +383,9 @@ func (s *Session) ScrollToBottom() {
 func (s *Session) Snapshot(rs *vt.RenderState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closed {
+		return ErrClosed
+	}
 	return rs.Update(&s.term)
 }
 
@@ -293,26 +393,45 @@ func (s *Session) Snapshot(rs *vt.RenderState) error {
 func (s *Session) Text() (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closed {
+		return "", ErrClosed
+	}
 	b, err := s.term.PlainString()
 	return string(b), err
 }
 
-// Close hangs up the shell and waits for it.
-func (s *Session) Close() error {
-	if s.cmd.Process != nil {
-		// The shell's process group is its session (pty.Start).
-		_ = syscall.Kill(-s.cmd.Process.Pid, syscall.SIGHUP)
-	}
-	err := s.master.Close()
-	<-s.done
-	s.mu.Lock()
-	s.stream.Deinit()
-	s.term.Deinit()
-	s.mu.Unlock()
-	if errors.Is(err, os.ErrClosed) {
-		return nil
-	}
-	return err
-}
+// ErrClosed is returned by a Session that has been closed.
+var ErrClosed = errors.New("session: closed")
 
-var _ io.Writer = (*bytes.Buffer)(nil)
+// Close ends the session: it hangs up the shell, kills its process group
+// if it has not gone after closeGrace, and releases the terminal. It does
+// not wait longer than closeGrace + closeLimit. Calling it again does
+// nothing.
+func (s *Session) Close() error {
+	s.closeOnce.Do(func() {
+		// The shell's process group is its session (pty.Start).
+		group := -s.cmd.Process.Pid
+		_ = syscall.Kill(group, syscall.SIGHUP)
+		select {
+		case <-s.done:
+		case <-time.After(closeGrace):
+			_ = syscall.Kill(group, syscall.SIGKILL)
+			select {
+			case <-s.done:
+			case <-time.After(closeLimit):
+			}
+		}
+
+		// From here the reader feeds nothing more, whether or not it is
+		// still blocked in a read (Go cannot interrupt a read on a
+		// blocking descriptor; it ends when the last process holding the
+		// pseudo-terminal goes).
+		s.mu.Lock()
+		s.closed = true
+		s.stream.Deinit()
+		s.term.Deinit()
+		s.mu.Unlock()
+		_ = s.master.Close()
+	})
+	return nil
+}

@@ -123,3 +123,73 @@ func TestTitleBellAndExitAreEvents(t *testing.T) {
 		t.Errorf("title %v, bell %v", title, bell)
 	}
 }
+
+// Close returns promptly even when the shell ignores the hang-up signal, and
+// a second Close and later calls are safe.
+func TestCloseDoesNotHang(t *testing.T) {
+	s := start(t, `trap '' HUP; printf ready; sleep 30`)
+	waitText(t, s, "ready")
+	began := time.Now()
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Since(began); d > closeGrace+closeLimit+time.Second {
+		t.Errorf("Close took %v", d)
+	}
+	select {
+	case <-s.Done():
+	default:
+		t.Error("Done is not closed after Close")
+	}
+	if err := s.Close(); err != nil {
+		t.Errorf("second Close: %v", err)
+	}
+	if _, err := s.Text(); err != ErrClosed {
+		t.Errorf("Text after Close: %v", err)
+	}
+	if err := s.Key(input.KeyEvent{Action: input.KeyActionPress, UTF8: []byte("x")}); err != ErrClosed {
+		t.Errorf("Key after Close: %v", err)
+	}
+}
+
+// The shell's exit is reported when the shell exits, even while a background
+// job still holds the pseudo-terminal open.
+func TestExitWithABackgroundJob(t *testing.T) {
+	s := start(t, `(trap '' HUP; sleep 30) & printf started; exit 0`)
+	select {
+	case <-s.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("Done did not close while a background job held the terminal")
+	}
+	if err := s.ExitErr(); err != nil {
+		t.Errorf("exit error: %v", err)
+	}
+}
+
+func TestTermIsSet(t *testing.T) {
+	got := withTerm([]string{"A=1"})
+	if len(got) != 2 || got[1] != "TERM="+DefaultTerm {
+		t.Errorf("TERM added: %v", got)
+	}
+	if got := withTerm([]string{"TERM=vt100"}); len(got) != 1 || got[0] != "TERM=vt100" {
+		t.Errorf("TERM kept: %v", got)
+	}
+	found := 0
+	for _, kv := range withTerm(nil) {
+		if strings.HasPrefix(kv, "TERM=") {
+			found++
+			if kv != "TERM="+DefaultTerm {
+				t.Errorf("inherited environment: %s", kv)
+			}
+		}
+	}
+	if found != 1 {
+		t.Errorf("TERM entries in the inherited environment: %d", found)
+	}
+}
+
+// Output larger than one feed chunk arrives whole.
+func TestLargeOutput(t *testing.T) {
+	s := start(t, `head -c 300000 /dev/zero | tr '\0' 'x'; printf '\r\nEND'; sleep 5`)
+	waitText(t, s, "END")
+}

@@ -71,6 +71,10 @@ func (h *handler) Vt(action vt.StreamActionKey, value *vt.StreamAction) error {
 		h.answer(replies.Query{Kind: replies.KittyFlags})
 	case vt.StreamActionKeyColorOperation:
 		// Queries are answered here; sets and resets are the library's.
+		// The queries of one sequence are answered before its sets are
+		// applied, where upstream takes the requests in order: a sequence
+		// that sets a colour and then asks for the same colour gets the
+		// old value. No program is known to do that.
 		op := &value.ColorOperation
 		bel := op.Terminator == osc.TerminatorBel
 		for i := 0; i < op.Requests.Count(); i++ {

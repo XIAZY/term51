@@ -620,33 +620,44 @@ func (self *Screen) Deinit() {
 // ensure they're also calling page integrity checks if necessary.
 //
 // Zig: self is *const Screen.
+//
+// Go: the body is assertIntegrityChecked, so that this wrapper is small
+// enough for the compiler to inline: with the checks off (the default, as in
+// upstream's release builds) a call costs one test of the flag, as Zig's
+// comptime `if` costs nothing (docs/post-port-optimizations.md item 33).
 func (self *Screen) AssertIntegrity() {
 	if pageSlowRuntimeSafety {
-		// We don't run integrity checks on Valgrind because its soooooo slow,
-		// Valgrind is our integrity checker, and we run these during unit
-		// tests (non-Valgrind) anyways so we're verifying anyways.
-		//
-		// Zig: `if (std.valgrind.runningOnValgrind() > 0) return;`; no Go
-		// counterpart (file header).
-
-		assert(self.Cursor.X < self.Pages.cols)
-		assert(self.Cursor.Y < self.Pages.rows)
-
-		// Our cursor x/y should always match the pin. If this doesn't
-		// match then it indicates that the tracked pin moved and we didn't
-		// account for it by either calling cursorReload or manually
-		// adjusting.
-		pt_ := self.Pages.PointFromPin(
-			PointTagActive,
-			*self.Cursor.PagePin,
-		)
-		if !pt_.Valid {
-			panic("unreachable") // orelse unreachable
-		}
-		pt := pt_.Value
-		assert(self.Cursor.X == pt.Active.X)
-		assert(uint32(self.Cursor.Y) == pt.Active.Y)
+		self.assertIntegrityChecked()
 	}
+}
+
+// assertIntegrityChecked is the body of AssertIntegrity, run when the
+// integrity checks are on. Not a Zig declaration.
+func (self *Screen) assertIntegrityChecked() {
+	// We don't run integrity checks on Valgrind because its soooooo slow,
+	// Valgrind is our integrity checker, and we run these during unit
+	// tests (non-Valgrind) anyways so we're verifying anyways.
+	//
+	// Zig: `if (std.valgrind.runningOnValgrind() > 0) return;`; no Go
+	// counterpart (file header).
+
+	assert(self.Cursor.X < self.Pages.cols)
+	assert(self.Cursor.Y < self.Pages.rows)
+
+	// Our cursor x/y should always match the pin. If this doesn't
+	// match then it indicates that the tracked pin moved and we didn't
+	// account for it by either calling cursorReload or manually
+	// adjusting.
+	pt_ := self.Pages.PointFromPin(
+		PointTagActive,
+		*self.Cursor.PagePin,
+	)
+	if !pt_.Valid {
+		panic("unreachable") // orelse unreachable
+	}
+	pt := pt_.Value
+	assert(self.Cursor.X == pt.Active.X)
+	assert(uint32(self.Cursor.Y) == pt.Active.Y)
 }
 
 // Reset is Screen.reset.

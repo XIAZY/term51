@@ -580,15 +580,26 @@ func (self *Page) PauseIntegrityChecks(v bool) {
 // safety is disabled. This uses the libc allocator.
 //
 // Zig: self is *const Page.
+//
+// Go: the body is assertIntegrityChecked, so that this wrapper is small
+// enough for the compiler to inline: with the checks off (the default, as in
+// upstream's release builds) a call costs one test of the flag, as Zig's
+// comptime `if` costs nothing (docs/post-port-optimizations.md item 33).
 func (self *Page) AssertIntegrity() {
 	if pageSlowRuntimeSafety {
-		// Zig: a std.heap.DebugAllocator for verifyIntegrity's temporary
-		// allocations; Go memory.
-		if err := self.VerifyIntegrity(); err != nil {
-			// Zig: log.err
-			warn("page", "page integrity violation, crashing. err=error.%v", err)
-			panic("page integrity violation")
-		}
+		self.assertIntegrityChecked()
+	}
+}
+
+// assertIntegrityChecked is the body of AssertIntegrity, run when the
+// integrity checks are on. Not a Zig declaration.
+func (self *Page) assertIntegrityChecked() {
+	// Zig: a std.heap.DebugAllocator for verifyIntegrity's temporary
+	// allocations; Go memory.
+	if err := self.VerifyIntegrity(); err != nil {
+		// Zig: log.err
+		warn("page", "page integrity violation, crashing. err=error.%v", err)
+		panic("page integrity violation")
 	}
 }
 

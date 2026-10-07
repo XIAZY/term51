@@ -4,6 +4,7 @@
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
 #include <bb/cascades/QmlDocument>
+#include <bb/system/Clipboard>
 
 #include <QTextCodec>
 
@@ -16,6 +17,17 @@ static Bridge *bridge;
 void Bridge::send(const QString &name, const QString &argsJson) {
     QByteArray n = name.toUtf8(), a = argsJson.toUtf8();
     goCommand(n.data(), a.data());
+}
+
+void Bridge::copy(const QString &text) {
+    bb::system::Clipboard clipboard;
+    clipboard.clear();
+    clipboard.insert("text/plain", text.toUtf8());
+}
+
+QString Bridge::paste() {
+    bb::system::Clipboard clipboard;
+    return QString::fromUtf8(clipboard.value("text/plain"));
 }
 
 void Bridge::postState(const QString &json) { emit state(json); }

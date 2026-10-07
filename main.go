@@ -12,9 +12,10 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
-	"strings"
+	"time"
 
 	"term51/internal/app"
+	"term51/internal/settings"
 	"term51/internal/ui"
 )
 
@@ -32,24 +33,22 @@ func main() {
 	}
 	log.SetFlags(log.Lmicroseconds)
 
-	cfg := app.DefaultConfig()
-	// Which front end: the file data/frontend holds "text" or "pixels"
-	// (until there is a settings page).
-	if b, err := os.ReadFile("data/frontend"); err == nil {
-		if f := strings.TrimSpace(string(b)); f == app.FrontendText || f == app.FrontendPixels {
-			cfg.Frontend = f
-		}
+	// The settings: a text file in the app's data directory. A file with a
+	// mistake in it is not used at all, and the log says what is wrong.
+	cfg, warnings, err := settings.Load("data/settings.conf")
+	for _, w := range warnings {
+		log.Printf("settings: %s", w)
 	}
-	// data/rawkeys, when it exists, makes the pixel front end read raw
-	// Screen key events instead of Cascades key events.
-	if _, err := os.Stat("data/rawkeys"); err == nil {
-		cfg.RawKeys = true
+	if err != nil {
+		log.Printf("settings: %v; using the defaults", err)
 	}
-	a := app.New(cfg)
+	a := app.New(cfg, ui.Publisher{})
+	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
-		log.Printf("the session ended: %v", err)
-		// The shell is gone: the app has nothing left to show.
+		log.Printf("the app's loop ended: %v", err)
+		close(ended)
+		// The last shell is gone: the app has nothing left to show.
 		os.Exit(0)
 	}()
 
@@ -63,5 +62,12 @@ func main() {
 		}
 		a.Send(app.Command{Name: name, Args: args})
 	})
+	// The user closed the app: hang the shells up before going, and give
+	// that a bounded time.
+	a.Quit()
+	select {
+	case <-ended:
+	case <-time.After(4 * time.Second):
+	}
 	os.Exit(rc)
 }

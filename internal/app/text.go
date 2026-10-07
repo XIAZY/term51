@@ -239,7 +239,18 @@ func (a *App) runText() error {
 				break // nothing to act on before the first shell
 			}
 			sess := tabs[cur].sess
+			if a.cfg.LogInput {
+				log.Printf("input: %s %v", c.Name, c.Args)
+			}
 			switch c.Name {
+			case "text":
+				// Characters from the page's input field (the physical keys
+				// and the on-screen rows alike), one key press each, so that
+				// the key bar's sticky modifiers apply.
+				text, _ := c.Args["text"].(string)
+				for _, r := range text {
+					key(keys.FromCascades(int(r), 0, string(r), true, false, false, false))
+				}
 			case "key":
 				text, _ := c.Args["unicode"].(string)
 				down, _ := c.Args["down"].(bool)

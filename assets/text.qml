@@ -66,6 +66,7 @@ Page {
     }
 
     onCreationCompleted: {
+        input.requestFocus()
         bridge.state.connect(function(json) {
             var s = JSON.parse(json)
             if (s.ctrl !== undefined) page.ctrl = s.ctrl
@@ -141,9 +142,25 @@ Page {
         }
     ]
 
+    // Characters come through the input field at the bottom of the page (so
+    // that the phone shows its on-screen keyboard rows, and symbols can be
+    // typed). Key events are used only for keys that are not characters:
+    // Backspace, Tab, Escape, the arrows. Enter is the field's "submitted".
+    function isCharacterKey(event) {
+        var k = event.key
+        if (k == 13 || k == 10 || k == 0xF00D)
+            return true // Enter: handled by the input field
+        return k >= 0x20 && k != 0x7F && k < 0xF000
+    }
     keyListeners: KeyListener {
-        onKeyPressed: page.send("key", page.keyArgs(event, true))
-        onKeyReleased: page.send("key", page.keyArgs(event, false))
+        onKeyPressed: {
+            if (!page.isCharacterKey(event))
+                page.send("key", page.keyArgs(event, true))
+        }
+        onKeyReleased: {
+            if (!page.isCharacterKey(event))
+                page.send("key", page.keyArgs(event, false))
+        }
     }
 
     attachedObjects: [
@@ -282,6 +299,32 @@ Page {
                         page.send("scroll", { rows: -d })
                         grid.touchY += d * page.cellH
                     }
+                }
+            }
+        }
+
+        // The input field: it holds the focus, so the phone shows its
+        // on-screen keyboard rows as for any text field. What is typed goes
+        // to the shell at once and the field is emptied.
+        TextField {
+            id: input
+            hintText: "type here"
+            horizontalAlignment: HorizontalAlignment.Fill
+            inputMode: TextFieldInputMode.Text
+            input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff
+            input.submitKey: SubmitKey.EnterKey
+            input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
+            input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
+            onTextChanging: {
+                if (text.length > 0) {
+                    page.send("text", { text: text })
+                    input.text = ""
+                }
+            }
+            keyListeners: KeyListener {
+                onKeyPressed: {
+                    if (!page.isCharacterKey(event))
+                        page.send("key", page.keyArgs(event, true))
                 }
             }
         }

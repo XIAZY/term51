@@ -51,6 +51,9 @@ type Settings struct {
 	// RawKeys makes the pixel front end read the window's raw key events
 	// instead of Cascades key events.
 	RawKeys bool
+	// LogInput writes every key and text command from the page to the log,
+	// to see what the phone really delivers.
+	LogInput bool
 	// FontPx is the font size in pixels.
 	FontPx float64
 
@@ -313,6 +316,7 @@ func textField(name, comment string, p func(*Settings) *string) field {
 var fields = []field{
 	textField("frontend", "How the terminal is shown: text (Cascades text labels) or pixels (a window drawn by the app).",
 		func(s *Settings) *string { return &s.Frontend }),
+	boolField("logInput", "Write every key and text command from the page to the log (to see what the phone delivers).", func(s *Settings) *bool { return &s.LogInput }),
 	boolField("rawKeys", "With the pixels front end, read the window's raw key events instead of Cascades key events.",
 		func(s *Settings) *bool { return &s.RawKeys }),
 	{"fontPx", "The font size in pixels.",

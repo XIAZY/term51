@@ -264,3 +264,19 @@ func TestCopyIsCapped(t *testing.T) {
 	}
 	a.Quit()
 }
+
+// Characters typed into the page's input field arrive as "text"; the key
+// bar's sticky Ctrl applies to the first of them.
+func TestTextFromTheInputField(t *testing.T) {
+	a, p, _ := startApp(t)
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "echo $((6*7))-typed"}})
+	a.Send(Command{Name: "key", Args: map[string]any{"down": true, "key": 13.0, "keycap": 13.0}})
+	wait(t, "the output", func() bool { return strings.Contains(p.screen(), "42-typed") })
+
+	typeLine(a, "cat")
+	a.Send(Command{Name: "bar", Args: map[string]any{"name": "ctrl"}})
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "d"}})
+	typeLine(a, "echo after-cat")
+	wait(t, "cat ended by Ctrl-D", func() bool { return strings.Contains(p.screen(), "\nafter-cat ") })
+	a.Quit()
+}

@@ -71,6 +71,7 @@ type screen struct {
 	sheet      []byte
 	table      []byte
 	frames     int
+	resizes    int
 	shapes     map[string]rune // a slot's pixels -> the character, for text
 }
 
@@ -142,6 +143,7 @@ func (s *screen) Resize(w, h int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.w, s.h = w, h
+	s.resizes++
 	return nil
 }
 
@@ -338,11 +340,23 @@ func TestCopyAndResize(t *testing.T) {
 		return strings.Contains(p.clipboard, "copy-me")
 	})
 
-	a.Send(Command{Name: "size", Args: map[string]any{"w": float64(30 * p.scr.cw), "h": float64(5 * p.scr.ch)}})
+	// The sizes of one slide of the on-screen rows, close together, are
+	// one resize: to the last of them.
+	p.scr.mu.Lock()
+	before := p.scr.resizes
+	p.scr.mu.Unlock()
+	for _, rows := range []int{9, 7, 5} {
+		a.Send(Command{Name: "size", Args: map[string]any{"w": float64(30 * p.scr.cw), "h": float64(rows * p.scr.ch)}})
+	}
 	wait(t, "the resized screen", func() bool {
 		cols, rows := p.scr.size()
 		return cols == 30 && rows == 5 && p.get("cols") == 30.0
 	})
+	p.scr.mu.Lock()
+	if n := p.scr.resizes - before; n != 1 {
+		t.Errorf("three sizes close together resized the screen %d times, want once", n)
+	}
+	p.scr.mu.Unlock()
 	typeLine(a, "stty size")
 	wait(t, "the shell's new size", func() bool { return strings.Contains(p.screen(), "5 30") })
 

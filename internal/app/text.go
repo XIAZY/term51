@@ -27,6 +27,12 @@ const copyLimit = 512 << 10
 // are merged into one frame.
 const textFrame = 33 * time.Millisecond
 
+// sizeQuiet is how long the page's size must have stayed the same before
+// the window and the shells are resized: the page reports two or three
+// sizes while the on-screen keyboard rows slide in or out, and each resize
+// makes the window's buffers again and reflows every shell.
+const sizeQuiet = 150 * time.Millisecond
+
 // tab is one shell.
 type tab struct {
 	sess  *session.Session
@@ -83,6 +89,11 @@ func (a *App) Run() error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var scr Screen
+	defer func() {
+		if scr != nil {
+			scr.Close()
+		}
+	}()
 	var sheet *cells.Sheet // the character shapes, shared by all tabs
 	var table cells.Table  // the shown tab's cells
 	bg := a.cfg.SessionTheme().Background
@@ -228,66 +239,85 @@ func (a *App) Run() error {
 		sticky()
 	}
 
-	var pending <-chan time.Time // set while an update is due
+	// fit makes the window, the grid and the shells fit the place the page
+	// last reported (want).
+	var want Command
 	var settled <-chan time.Time // for now: a second look at the window's size
+	fit := func() error {
+		c := want
+		w, h := num(c.Args["w"]), num(c.Args["h"])
+		if scr != nil && w == winW && h == winH {
+			return nil // the page came back to the size the window has
+		}
+		winW, winH = w, h
+		if scr == nil {
+			group, _ := c.Args["group"].(string)
+			id, _ := c.Args["id"].(string)
+			s, err := a.open(group, id, w, h)
+			if err != nil {
+				log.Printf("app: %v", err)
+				a.notice("The screen could not be opened: " + err.Error())
+				return nil
+			}
+			scr = s
+			// The font size is in points: real ones, by the display's
+			// dots per inch.
+			sheet, err = cells.NewSheet(a.fonts, a.cfg.FontPt*float64(scr.DPI())/72)
+			if err != nil {
+				return err
+			}
+			cw, ch = sheet.CellSize()
+		} else if err := scr.Resize(w, h); err != nil {
+			log.Printf("app: %v", err)
+			return nil
+		}
+		nc, nr := sheet.Grid(w, h)
+		scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
+		// For now, every time: what the page said and what the window is.
+		win, buf, src := scr.Sizes()
+		log.Printf("app: %s: the page says %d by %d at %d, %d; the window is %v, its buffers %v, shown %v; %d dots per inch; %d by %d cells of %d by %d",
+			c.Name, w, h, num(c.Args["x"]), num(c.Args["y"]), win, buf, src, scr.DPI(), nc, nr, cw, ch)
+		settled = time.After(time.Second)
+		table = cells.Table{} // the screen's table is new: all of it goes again
+		switch {
+		case len(tabs) == 0:
+			// The first size starts the first shell.
+			cols, rows = nc, nr
+			if t := open(); t != nil {
+				tabs = append(tabs, t)
+				show(0)
+			}
+		case nc != cols || nr != rows:
+			cols, rows = nc, nr
+			for _, t := range tabs {
+				if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
+					log.Printf("app: %v", err)
+				}
+			}
+			tell()
+			post() // the reflowed screen, without waiting for output
+		default:
+			post()
+		}
+		return nil
+	}
+
+	var pending <-chan time.Time // set while an update is due
+	var quiet <-chan time.Time   // set while a new size waits to be used
 	for {
 		select {
 		case c := <-a.cmds:
 			if c.Name == "window" || c.Name == "size" {
-				// The page's place for the terminal, in pixels: the first
-				// time it creates the window, afterwards it resizes it.
-				w, h := num(c.Args["w"]), num(c.Args["h"])
-				winW, winH = w, h
+				// The page's place for the terminal, in pixels. The first
+				// one creates the window at once; a later one resizes it
+				// when no other has followed for sizeQuiet.
+				want = c
 				if scr == nil {
-					group, _ := c.Args["group"].(string)
-					id, _ := c.Args["id"].(string)
-					s, err := a.open(group, id, w, h)
-					if err != nil {
-						log.Printf("app: %v", err)
-						a.notice("The screen could not be opened: " + err.Error())
-						break
-					}
-					scr = s
-					defer scr.Close()
-					// The font size is in points: real ones, by the
-					// display's dots per inch.
-					sheet, err = cells.NewSheet(a.fonts, a.cfg.FontPt*float64(scr.DPI())/72)
-					if err != nil {
+					if err := fit(); err != nil {
 						return err
 					}
-					cw, ch = sheet.CellSize()
-				} else if err := scr.Resize(w, h); err != nil {
-					log.Printf("app: %v", err)
-					break
-				}
-				nc, nr := sheet.Grid(w, h)
-				scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
-				// For now, every time: what the page said and what the
-				// window is.
-				win, buf, src := scr.Sizes()
-				log.Printf("app: %s: the page says %d by %d at %d, %d; the window is %v, its buffers %v, shown %v; %d dots per inch; %d by %d cells of %d by %d",
-					c.Name, w, h, num(c.Args["x"]), num(c.Args["y"]), win, buf, src, scr.DPI(), nc, nr, cw, ch)
-				settled = time.After(time.Second)
-				table = cells.Table{} // the screen's table is new: all of it goes again
-				switch {
-				case len(tabs) == 0:
-					// The first size starts the first shell.
-					cols, rows = nc, nr
-					if t := open(); t != nil {
-						tabs = append(tabs, t)
-						show(0)
-					}
-				case nc != cols || nr != rows:
-					cols, rows = nc, nr
-					for _, t := range tabs {
-						if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
-							log.Printf("app: %v", err)
-						}
-					}
-					tell()
-					post() // the reflowed screen, without waiting for output
-				default:
-					post()
+				} else {
+					quiet = time.After(sizeQuiet)
 				}
 				break
 			}
@@ -423,6 +453,17 @@ func (a *App) Run() error {
 			settled = nil
 			win, buf, src := scr.Sizes()
 			log.Printf("app: a second later the window is %v, its buffers %v, shown %v", win, buf, src)
+		case <-quiet:
+			if len(a.cmds) > 0 {
+				// More from the page is waiting, perhaps a newer size:
+				// that first.
+				quiet = time.After(sizeQuiet)
+				break
+			}
+			quiet = nil
+			if err := fit(); err != nil {
+				return err
+			}
 		case <-pending:
 			pending = nil
 			post()

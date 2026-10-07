@@ -7,6 +7,7 @@ deleted.
 
 | Date (UTC) | Decision | By | Why |
 |---|---|---|---|
+| 2026-10-07 | A new size from the page is used when no other has followed for 150 ms; the first one, which creates the window, at once. | mitchellh, anchron | The page reports two or three sizes within 0.7 s while the on-screen keyboard rows slide, and each resize makes the window's buffers again and reflows every shell. |
 | 2026-10-07 | The on-screen keyboard rows appear when the terminal is tapped, not by themselves: the app opens at full height, a tap gives the hidden field the focus, and the phone's own swipe down puts the rows away. The physical keys reach the shell either way. | AlphaToad | The rows take a third of the screen; a user typing on the physical keys should not lose it until they ask for symbols. |
 | 2026-10-07 | The input field is hidden: it stays in the page and keeps the focus, but is not seen and takes no room; the "type here" bar is gone and the terminal reaches the bottom of the page. | AlphaToad | The field exists only because the phone shows its on-screen keyboard rows when a text field has the focus (see the input field row); a bar nobody types into by sight only took rows from the terminal. |
 | 2026-10-07 | The font size setting is in real points: pixels = points × the display's dots per inch / 72. | mitchellh | A size should look the same on any display. |

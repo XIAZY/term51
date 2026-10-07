@@ -37,6 +37,17 @@ Page {
             send("paste", { text: text })
     }
 
+    // The tabs drawer slides in from the left and out again.
+    function openDrawer() {
+        page.drawer = true
+        dimIn.play()
+        slideIn.play()
+    }
+    function closeDrawer() {
+        dimOut.play()
+        slideOut.play() // page.drawer goes false when it has ended
+    }
+
     function keyArgs(event, down) {
         return { down: down, key: event.key, keycap: event.keycap, unicode: event.unicode,
                  shift: event.shiftPressed, ctrl: event.ctrlPressed, alt: event.altPressed }
@@ -160,6 +171,36 @@ Page {
         layout: DockLayout {}
         background: Color.create(page.termBackground)
 
+        // The input field: while it has the focus the phone shows its
+        // on-screen keyboard rows, as for any text field. What is typed
+        // goes to the shell at once and the field is emptied. It is not
+        // seen, and lies under the rest of the page so that it takes no room
+        // (in the column it kept its height although it was told to have
+        // none).
+        TextField {
+            id: input
+            opacity: 0
+            verticalAlignment: VerticalAlignment.Bottom
+            horizontalAlignment: HorizontalAlignment.Fill
+            inputMode: TextFieldInputMode.Text
+            input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff
+            input.submitKey: SubmitKey.EnterKey
+            input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
+            input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
+            onTextChanging: {
+                if (text.length > 0) {
+                    page.send("text", { text: text })
+                    input.text = ""
+                }
+            }
+            keyListeners: KeyListener {
+                onKeyPressed: {
+                    if (!page.isCharacterKey(event))
+                        page.send("key", page.keyArgs(event, true))
+                }
+            }
+        }
+
         Container {
             layout: StackLayout {}
             horizontalAlignment: HorizontalAlignment.Fill
@@ -258,15 +299,18 @@ Page {
                     preferredHeight: 118
                     horizontalAlignment: HorizontalAlignment.Fill
 
-                    BarCell { text: "" + page.tabCount; icon: "asset:///images/tabs.png"
+                    BarCell { badge: "" + page.tabCount; icon: "asset:///images/tabs.png"
                               preferredWidth: 144
-                              onPressed: page.drawer = true }
-                    Container { // a divider
-                        background: Color.create("#3C3C3C")
-                        preferredWidth: 2
-                        topMargin: 18
-                        bottomMargin: 18
+                              onPressed: page.openDrawer() }
+                    Container { // a divider, short of the strip's edges
+                        topPadding: 18
+                        bottomPadding: 18
                         verticalAlignment: VerticalAlignment.Fill
+                        Container {
+                            background: Color.create("#3C3C3C")
+                            preferredWidth: 2
+                            verticalAlignment: VerticalAlignment.Fill
+                        }
                     }
                     Container {
                         layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
@@ -301,52 +345,29 @@ Page {
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                   leftMargin: 8; onPressed: page.send("bar", { name: "right" }) }
                     }
-                    Container { // a divider
-                        background: Color.create("#3C3C3C")
-                        preferredWidth: 2
-                        topMargin: 18
-                        bottomMargin: 18
+                    Container { // a divider, short of the strip's edges
+                        topPadding: 18
+                        bottomPadding: 18
                         verticalAlignment: VerticalAlignment.Fill
+                        Container {
+                            background: Color.create("#3C3C3C")
+                            preferredWidth: 2
+                            verticalAlignment: VerticalAlignment.Fill
+                        }
                     }
                     BarCell { icon: "asset:///images/dots.png"
                               preferredWidth: 144
                               onPressed: page.openActionMenu() }
                 }
             }
-
-            // The input field: while it has the focus the phone shows its
-            // on-screen keyboard rows, as for any text field. What is typed
-            // goes to the shell at once and the field is emptied. It is not
-            // seen and takes no room.
-            TextField {
-                id: input
-                opacity: 0
-                maxHeight: 0
-                horizontalAlignment: HorizontalAlignment.Fill
-                inputMode: TextFieldInputMode.Text
-                input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff
-                input.submitKey: SubmitKey.EnterKey
-                input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
-                input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
-                onTextChanging: {
-                    if (text.length > 0) {
-                        page.send("text", { text: text })
-                        input.text = ""
-                    }
-                }
-                keyListeners: KeyListener {
-                    onKeyPressed: {
-                        if (!page.isCharacterKey(event))
-                            page.send("key", page.keyArgs(event, true))
-                    }
-                }
-            }
         }
 
-        // The tabs drawer, from the left as in the browser: New Tab, then the
-        // tabs. The one on screen is in the primary colour and has a cross that
-        // closes it; one whose bell rang while another was shown says "bell".
-        // The rest of the page is dimmed, and a tap there closes the drawer.
+        // The tabs drawer, after the browser's: three quarters of the page
+        // wide, sliding in from the left; New Tab, then the tabs, in rows as
+        // high as the browser's. The tab on screen is a row in the primary
+        // colour with a cross that closes it; one whose bell rang while
+        // another was shown says "bell". The rest of the page is dimmed, and
+        // a tap there closes the drawer.
         Container {
             visible: page.drawer
             layout: DockLayout {}
@@ -355,75 +376,126 @@ Page {
 
             Container {
                 background: Color.Black
-                opacity: 0.6
+                opacity: 0
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
                 gestureHandlers: TapHandler {
-                    onTapped: page.drawer = false
+                    onTapped: page.closeDrawer()
                 }
+                animations: [
+                    FadeTransition { id: dimIn; fromOpacity: 0; toOpacity: 0.6; duration: 200 },
+                    FadeTransition { id: dimOut; fromOpacity: 0.6; toOpacity: 0; duration: 200 }
+                ]
             }
             Container {
-                background: Color.create("#262626")
-                preferredWidth: ui.du(70)
+                layout: DockLayout {}
+                background: Color.create("#1E1E1E")
+                preferredWidth: 1080
+                translationX: -1080
                 horizontalAlignment: HorizontalAlignment.Left
                 verticalAlignment: VerticalAlignment.Fill
+                animations: [
+                    TranslateTransition { id: slideIn; fromX: -1080; toX: 0; duration: 200 },
+                    TranslateTransition {
+                        id: slideOut
+                        fromX: 0
+                        toX: -1080
+                        duration: 200
+                        onEnded: page.drawer = false
+                    }
+                ]
 
+                // The rows stand at the bottom, within the thumb's reach.
                 Container {
-                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-                    leftPadding: ui.du(3)
-                    rightPadding: ui.du(3)
-                    topPadding: ui.du(3)
-                    bottomPadding: ui.du(3)
                     horizontalAlignment: HorizontalAlignment.Fill
-                    ImageView {
-                        imageSource: "asset:///images/newtab.png"
-                        verticalAlignment: VerticalAlignment.Center
-                    }
-                    Label {
-                        text: "New Tab"
-                        verticalAlignment: VerticalAlignment.Center
-                    }
-                    gestureHandlers: TapHandler {
-                        onTapped: {
-                            page.send("newtab")
-                            page.drawer = false
-                        }
-                    }
-                }
-                Divider {}
-                ListView {
-                    dataModel: tabsModel
-                    function closeTab(index) { page.send("closetab", { index: index }) }
-                    listItemComponents: ListItemComponent {
+                    verticalAlignment: VerticalAlignment.Bottom
+                    bottomPadding: 122 // the bar's height, which the drawer covers
+
+                    Container { background: Color.create("#383838"); preferredHeight: 2; horizontalAlignment: HorizontalAlignment.Fill }
+                    Container {
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                        preferredHeight: 130
+                        horizontalAlignment: HorizontalAlignment.Fill
                         Container {
-                            id: row
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-                            leftPadding: ui.du(3)
-                            rightPadding: ui.du(2)
-                            topPadding: ui.du(2)
-                            bottomPadding: ui.du(2)
-                            Label {
-                                text: ListItemData.title
-                                textStyle.color: ListItemData.shown ? ui.palette.primary : ui.palette.textOnPlain
-                                verticalAlignment: VerticalAlignment.Center
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                            }
-                            Label {
-                                text: ListItemData.status
-                                textStyle.color: Color.create("#e5c07b")
+                            layout: DockLayout {}
+                            preferredWidth: 130
+                            verticalAlignment: VerticalAlignment.Fill
+                            ImageView {
+                                imageSource: "asset:///images/newtab.png"
+                                horizontalAlignment: HorizontalAlignment.Center
                                 verticalAlignment: VerticalAlignment.Center
                             }
-                            ImageButton {
-                                visible: ListItemData.shown
-                                defaultImageSource: "asset:///images/closetab.png"
-                                verticalAlignment: VerticalAlignment.Center
-                                onClicked: row.ListItem.view.closeTab(row.ListItem.indexPath[0])
+                        }
+                        Label {
+                            text: "New Tab"
+                            textStyle.base: SystemDefaults.TextStyles.BigText
+                            verticalAlignment: VerticalAlignment.Center
+                            layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                        }
+                        gestureHandlers: TapHandler {
+                            onTapped: {
+                                page.send("newtab")
+                                page.closeDrawer()
                             }
                         }
                     }
-                    onTriggered: {
-                        page.send("tab", { index: indexPath[0] })
-                        page.drawer = false
+                    ListView {
+                        dataModel: tabsModel
+                        // As high as its rows, up to six of them; more scroll.
+                        preferredHeight: Math.min(page.tabCount, 6) * 132
+                        function closeTab(index) { page.send("closetab", { index: index }) }
+                        listItemComponents: ListItemComponent {
+                            Container {
+                                id: row
+                                preferredHeight: 132
+                                Container { background: Color.create("#383838"); preferredHeight: 2; horizontalAlignment: HorizontalAlignment.Fill }
+                                Container {
+                                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                                    preferredHeight: 130
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    Container {
+                                        layout: DockLayout {}
+                                        preferredWidth: 130
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        ImageView {
+                                            imageSource: "asset:///images/tabs.png"
+                                            opacity: ListItemData.shown ? 0.3 : 1
+                                            horizontalAlignment: HorizontalAlignment.Center
+                                            verticalAlignment: VerticalAlignment.Center
+                                        }
+                                    }
+                                    Container {
+                                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                                        background: ListItemData.shown ? ui.palette.primary : Color.Transparent
+                                        leftPadding: 16
+                                        rightPadding: 16
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                        Label {
+                                            text: ListItemData.title
+                                            textStyle.base: SystemDefaults.TextStyles.BigText
+                                            verticalAlignment: VerticalAlignment.Center
+                                            layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                                        }
+                                        Label {
+                                            text: ListItemData.status
+                                            textStyle.color: Color.create("#e5c07b")
+                                            verticalAlignment: VerticalAlignment.Center
+                                        }
+                                        ImageButton {
+                                            visible: ListItemData.shown
+                                            defaultImageSource: "asset:///images/closetab.png"
+                                            verticalAlignment: VerticalAlignment.Center
+                                            onClicked: row.ListItem.view.closeTab(row.ListItem.indexPath[0])
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        onTriggered: {
+                            page.send("tab", { index: indexPath[0] })
+                            page.closeDrawer()
+                        }
                     }
                 }
             }

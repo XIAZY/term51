@@ -107,6 +107,14 @@ The same error text is in the system log of an installed copy that fails
   say so. That is how the three dots on our own bar open BlackBerry 10's own
   menu. It needs 10.3.1; the Passport runs 10.3.3.
 
+- **A gap under the bottom bar** (2026-10-07, d1d9025). The hidden input
+  field, told to have no height (`maxHeight: 0`), kept its 120 pixels at the
+  end of the page's column. Changed: the field lies under the rest of the
+  page in a dock layout and is no part of the column.
+- **Margins across a row's direction are not applied:** a divider with a
+  top and bottom margin in a left-to-right stack ran the bar's whole height.
+  Changed: padding on a container around it.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

@@ -33,9 +33,9 @@ Page {
             return
         if (!created) {
             created = true
-            send("window", { group: fwc.windowGroup, id: fwc.windowId, w: frame.width, h: frame.height })
+            send("window", { group: fwc.windowGroup, id: fwc.windowId, x: frame.x, y: frame.y, w: frame.width, h: frame.height })
         } else {
-            send("size", { w: frame.width, h: frame.height })
+            send("size", { x: frame.x, y: frame.y, w: frame.width, h: frame.height })
         }
     }
 

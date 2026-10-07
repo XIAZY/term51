@@ -56,10 +56,11 @@ typedef struct t51_gpu {
 
 static const char *t51_vs =
 	"#version 300 es\n"
-	"layout(location = 0) in uvec2 a_what;\n" // slot, flags
-	"layout(location = 1) in vec4 a_fg;\n"
-	"layout(location = 2) in vec4 a_bg;\n"
-	"layout(location = 3) in vec4 a_line;\n"
+	"layout(location = 0) in vec2 a_corner;\n" // of the cell: 0,0 1,0 0,1 1,1
+	"layout(location = 1) in uvec2 a_what;\n"  // slot, flags
+	"layout(location = 2) in vec4 a_fg;\n"
+	"layout(location = 3) in vec4 a_bg;\n"
+	"layout(location = 4) in vec4 a_line;\n"
 	"uniform ivec2 u_grid;\n"       // columns, rows
 	"uniform vec2 u_cell;\n"        // a cell in pixels
 	"uniform vec2 u_view;\n"        // the window in pixels
@@ -72,14 +73,13 @@ static const char *t51_vs =
 	"flat out uint v_slot;\n"
 	"flat out uint v_flags;\n"
 	"void main() {\n"
-	"	vec2 corner = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));\n"
 	"	vec2 at = vec2(float(gl_InstanceID % u_grid.x), float(gl_InstanceID / u_grid.x));\n"
-	"	vec2 p = (at + corner) * u_cell / u_view * 2.0 - 1.0;\n"
+	"	vec2 p = (at + a_corner) * u_cell / u_view * 2.0 - 1.0;\n"
 	"	gl_Position = vec4(p.x, -p.y, 0.0, 1.0);\n" // record 0 is the top left
 	"	v_fg = a_fg;\n"
 	"	v_bg = a_bg;\n"
 	"	v_line = a_line;\n"
-	"	v_local = corner * u_cell;\n"
+	"	v_local = a_corner * u_cell;\n"
 	"	int slot = int(a_what.x);\n"
 	"	v_origin = ivec2(slot % u_sheet_cols, slot / u_sheet_cols) * ivec2(u_cell);\n"
 	"	v_slot = a_what.x;\n"
@@ -141,6 +141,10 @@ static int t51_surface(t51_gpu *g, int w, int h) {
 		return t51_fail(g, "setting the window's buffer size");
 	if (screen_create_window_buffers(g->win, 2) != 0)
 		return t51_fail(g, "creating the window's buffers");
+	// The part of the buffer shown is all of it. The system sets this with
+	// a window's first buffers only: after a resize it stays the old size.
+	if (screen_set_window_property_iv(g->win, SCREEN_PROPERTY_SOURCE_SIZE, size) != 0)
+		return t51_fail(g, "setting the part of the buffer shown");
 	g->surf = eglCreateWindowSurface(g->dpy, g->config, g->win, NULL);
 	if (g->surf == EGL_NO_SURFACE)
 		return t51_fail(g, "eglCreateWindowSurface");
@@ -210,23 +214,32 @@ static int t51_gpu_open(t51_gpu *g, const char *group, const char *id, int w, in
 	g->u_thick = glGetUniformLocation(g->prog, "u_thick");
 	glUniform1i(glGetUniformLocation(g->prog, "u_sheet"), 0);
 
-	// The cell table: one record per instance.
+	// A cell's four corners, the same for every cell.
 	glGenVertexArrays(1, &g->vao);
 	glBindVertexArray(g->vao);
+	static const GLubyte corners[] = {0, 0, 1, 0, 0, 1, 1, 1};
+	GLuint quad;
+	glGenBuffers(1, &quad);
+	glBindBuffer(GL_ARRAY_BUFFER, quad);
+	glBufferData(GL_ARRAY_BUFFER, sizeof corners, corners, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_UNSIGNED_BYTE, GL_FALSE, 2, (void *)0);
+
+	// The cell table: one record per instance. Its buffer stays bound.
 	glGenBuffers(1, &g->buf);
 	glBindBuffer(GL_ARRAY_BUFFER, g->buf);
-	glEnableVertexAttribArray(0);
-	glVertexAttribIPointer(0, 2, GL_UNSIGNED_SHORT, 16, (void *)0);
-	glVertexAttribDivisor(0, 1);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)4);
+	glVertexAttribIPointer(1, 2, GL_UNSIGNED_SHORT, 16, (void *)0);
 	glVertexAttribDivisor(1, 1);
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)8);
+	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)4);
 	glVertexAttribDivisor(2, 1);
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)12);
+	glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)8);
 	glVertexAttribDivisor(3, 1);
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE, 16, (void *)12);
+	glVertexAttribDivisor(4, 1);
 
 	// The character sheet, empty until Sheet is called.
 	glGenTextures(1, &g->tex);
@@ -266,6 +279,14 @@ static int t51_gpu_dpi(t51_gpu *g) {
 	screen_get_window_property_pv(g->win, SCREEN_PROPERTY_DISPLAY, (void **)&display);
 	screen_get_display_property_iv(display, SCREEN_PROPERTY_DPI, &dpi);
 	return dpi;
+}
+
+// The window's size, its buffers' size and the part of the buffer shown, as
+// libscreen has them: three pairs.
+static void t51_gpu_sizes(t51_gpu *g, int *out) {
+	screen_get_window_property_iv(g->win, SCREEN_PROPERTY_SIZE, out);
+	screen_get_window_property_iv(g->win, SCREEN_PROPERTY_BUFFER_SIZE, out + 2);
+	screen_get_window_property_iv(g->win, SCREEN_PROPERTY_SOURCE_SIZE, out + 4);
 }
 
 // The grid's shape and the colour of what lies outside it; the table's
@@ -354,6 +375,14 @@ func (s *Screen) Resize(w, h int) error {
 
 // DPI is the dots per inch of the display the window is on.
 func (s *Screen) DPI() int { return int(C.t51_gpu_dpi(&s.g)) }
+
+// Sizes are the window's size, its buffers' size and the part of the buffer
+// shown (width, height each), as libscreen reports them.
+func (s *Screen) Sizes() (window, buffer, source [2]int) {
+	var v [6]C.int
+	C.t51_gpu_sizes(&s.g, &v[0])
+	return [2]int{int(v[0]), int(v[1])}, [2]int{int(v[2]), int(v[3])}, [2]int{int(v[4]), int(v[5])}
+}
 
 // Size is the window's size in pixels.
 func (s *Screen) Size() (w, h int) { return int(s.g.w), int(s.g.h) }

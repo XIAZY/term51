@@ -33,6 +33,9 @@ type Screen interface {
 	Resize(w, h int) error
 	// DPI is the display's dots per inch.
 	DPI() int
+	// Sizes are the window's size, its buffers' size and the part of the
+	// buffer shown, as the system reports them.
+	Sizes() (window, buffer, source [2]int)
 	Grid(cols, rows, cellW, cellH int, r, g, b uint8)
 	Sheet(sheet []byte, x, y, w, h int)
 	// Frame draws the table, whose bytes lo <= i < hi changed. A shot

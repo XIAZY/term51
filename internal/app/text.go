@@ -261,6 +261,11 @@ func (a *App) Run() error {
 				}
 				nc, nr := sheet.Grid(w, h)
 				scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
+				// For now, every time: what the page said and what the
+				// window is.
+				win, buf, src := scr.Sizes()
+				log.Printf("app: %s: the page says %d by %d at %d, %d; the window is %v, its buffers %v, shown %v; %d dots per inch; %d by %d cells of %d by %d",
+					c.Name, w, h, num(c.Args["x"]), num(c.Args["y"]), win, buf, src, scr.DPI(), nc, nr, cw, ch)
 				table = cells.Table{} // the screen's table is new: all of it goes again
 				switch {
 				case len(tabs) == 0:

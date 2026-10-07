@@ -37,6 +37,17 @@ Page {
             send("paste", { text: text })
     }
 
+    // A development aid (internal/app/remote.go): what a developer asks the
+    // page to do from a file, to look at it without the phone in hand.
+    function remote(line) {
+        if (line == "drawer open") openDrawer()
+        else if (line == "drawer close") closeDrawer()
+        else if (line == "menu") page.openActionMenu()
+        else if (line == "settings") settingsSheet.open()
+        else if (line == "back") settingsSheet.close()
+        else if (line.indexOf("shot ") == 0) bridge.shot(line.substring(5))
+    }
+
     // The tabs drawer slides in from the left and out again.
     function openDrawer() {
         page.drawer = true
@@ -81,7 +92,7 @@ Page {
                 // The list of tabs, for the drawer.
                 var rows = []
                 for (var i = 0; i < s.tabs.length; i++)
-                    rows.push({ title: (i + 1) + "   " + s.tabs[i], shown: i == s.current,
+                    rows.push({ title: s.tabs[i], shown: i == s.current,
                                 status: s.rang[i] ? "bell" : "" })
                 tabsModel.clear()
                 tabsModel.append(rows)
@@ -96,6 +107,8 @@ Page {
             }
             if (e.bell !== undefined && page.bell)
                 bellSound.play()
+            if (e.remote !== undefined)
+                page.remote(e.remote)
             if (e.notice !== undefined) {
                 toast.body = e.notice
                 toast.show()
@@ -426,11 +439,14 @@ Page {
                                 verticalAlignment: VerticalAlignment.Center
                             }
                         }
-                        Label {
-                            text: "New Tab"
-                            textStyle.base: SystemDefaults.TextStyles.BigText
+                        Container {
+                            leftPadding: 16
                             verticalAlignment: VerticalAlignment.Center
                             layoutProperties: StackLayoutProperties { spaceQuota: 1 }
+                            Label {
+                                text: "New Tab"
+                                textStyle.fontSize: FontSize.XLarge
+                            }
                         }
                         gestureHandlers: TapHandler {
                             onTapped: {
@@ -442,6 +458,7 @@ Page {
                     ListView {
                         dataModel: tabsModel
                         // As high as its rows, up to six of them; more scroll.
+                        // A last line closes the block.
                         preferredHeight: Math.min(page.tabCount, 6) * 132
                         function closeTab(index) { page.send("closetab", { index: index }) }
                         listItemComponents: ListItemComponent {
@@ -473,7 +490,7 @@ Page {
                                         layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                         Label {
                                             text: ListItemData.title
-                                            textStyle.base: SystemDefaults.TextStyles.BigText
+                                            textStyle.fontSize: FontSize.XLarge
                                             verticalAlignment: VerticalAlignment.Center
                                             layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                         }
@@ -497,6 +514,7 @@ Page {
                             page.closeDrawer()
                         }
                     }
+                    Container { background: Color.create("#383838"); preferredHeight: 2; horizontalAlignment: HorizontalAlignment.Fill }
                 }
             }
         }

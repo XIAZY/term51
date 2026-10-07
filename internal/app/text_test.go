@@ -26,6 +26,7 @@ type page struct {
 	clipboard string
 	notices   []string
 	saved     []settings.Settings // each time the app saved the settings
+	remote    []string            // the development aid's commands for the page
 	scr       *screen
 }
 
@@ -44,6 +45,7 @@ func (p *page) State(js string) {
 func (p *page) Event(js string) {
 	var e struct {
 		Clipboard *string `json:"clipboard"`
+		Remote    *string `json:"remote"`
 		Notice    *string `json:"notice"`
 	}
 	if json.Unmarshal([]byte(js), &e) != nil {
@@ -53,6 +55,9 @@ func (p *page) Event(js string) {
 	defer p.mu.Unlock()
 	if e.Clipboard != nil {
 		p.clipboard = *e.Clipboard
+	}
+	if e.Remote != nil {
+		p.remote = append(p.remote, *e.Remote)
 	}
 	if e.Notice != nil {
 		p.notices = append(p.notices, *e.Notice)
@@ -232,6 +237,13 @@ func wait(t *testing.T, what string, cond func() bool) {
 
 func startApp(t *testing.T) (*App, *page, chan error) {
 	t.Helper()
+	return startAppWith(t, nil)
+}
+
+// startAppWith is startApp with a chance to change the settings and the app
+// before it runs.
+func startAppWith(t *testing.T, change func(*settings.Settings, *App)) (*App, *page, chan error) {
+	t.Helper()
 	cfg := settings.Default()
 	cfg.Shell, cfg.Args = "/bin/bash", []string{"--norc", "--noprofile"}
 	fonts := testFonts(t)
@@ -247,6 +259,9 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 		p.saved = append(p.saved, s)
 		return nil
 	})
+	if change != nil {
+		change(&a.cfg, a)
+	}
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	// The page's place for the terminal: 40 by 8 cells and a few pixels over.

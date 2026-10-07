@@ -13,6 +13,10 @@ public:
     // The system clipboard, as plain text.
     Q_INVOKABLE void copy(const QString &text);
     Q_INVOKABLE QString paste();
+    // A development aid (see internal/app/remote.go): a picture of the
+    // display as data/<name>.png. It returns the file's path, or nothing
+    // when the picture could not be taken (the reason is on stderr).
+    Q_INVOKABLE QString shot(const QString &name);
 
 public slots:
     void postState(const QString &json);

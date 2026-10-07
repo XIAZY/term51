@@ -5,8 +5,11 @@
 #include <bb/cascades/Application>
 #include <bb/cascades/QmlDocument>
 #include <bb/system/Clipboard>
+#include <bb/system/Screenshot>
 
 #include <QDeclarativeError>
+#include <QDir>
+#include <QUrl>
 #include <QTextCodec>
 
 #include <cstdio>
@@ -31,6 +34,15 @@ void Bridge::copy(const QString &text) {
 QString Bridge::paste() {
     bb::system::Clipboard clipboard;
     return QString::fromUtf8(clipboard.value("text/plain"));
+}
+
+QString Bridge::shot(const QString &name) {
+    bb::system::Screenshot screenshot;
+    QString file = QDir::current().absoluteFilePath("data/" + name + ".png");
+    QString path = screenshot.captureDisplay(QUrl::fromLocalFile(file));
+    if (path.isEmpty())
+        fprintf(stderr, "ui: no picture of the display: error %d\n", (int)screenshot.error());
+    return path;
 }
 
 void Bridge::postState(const QString &json) { emit state(json); }

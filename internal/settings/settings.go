@@ -59,6 +59,11 @@ type Settings struct {
 	// Bell makes a sound when a program rings the bell.
 	Bell bool
 
+	// Remote makes the app run commands from the file data/remote. A
+	// development aid, to be removed before release (internal/app,
+	// remote.go).
+	Remote bool
+
 	Theme    Theme
 	Identity Identity
 }
@@ -342,6 +347,7 @@ var fields = []field{
 		func(s *Settings) []string { return []string{strconv.FormatUint(s.ScrollbackBytes, 10)} }},
 	textField("cursor", "The cursor's shape while no program asks for one: block, bar or underline.", func(s *Settings) *string { return &s.Cursor }),
 	boolField("bell", "Make a sound when a program rings the bell.", func(s *Settings) *bool { return &s.Bell }),
+	boolField("remote", "Development aid: run the commands written to the file data/remote.", func(s *Settings) *bool { return &s.Remote }),
 
 	textField("theme.foreground", "The text colour, as #rrggbb.", func(s *Settings) *string { return &s.Theme.Foreground }),
 	textField("theme.background", "The background colour.", func(s *Settings) *string { return &s.Theme.Background }),

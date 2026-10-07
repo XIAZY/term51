@@ -40,10 +40,10 @@ func TestApiAccessors_cell_and_row(t *testing.T) {
 	for y := SizeCellCountInt(0); y < 2; y++ {
 		for x := SizeCellCountInt(0); x < 20; x++ {
 			c, r := at(x, y).Cell, at(x, y).Row
-			if c.ContentTag() != c.content_tag || c.StyleID() != c.style_id || c.Wide() != c.wide ||
-				c.Protected() != c.protected || c.Hyperlink() != c.hyperlink ||
-				c.SemanticContent() != c.semantic_content ||
-				c.ColorPalette() != c.content.color_palette || c.ColorRGB() != c.content.color_rgb {
+			if c.ContentTag() != c.ContentTag() || c.StyleID() != c.StyleID() || c.Wide() != c.Wide() ||
+				c.Protected() != c.Protected() || c.Hyperlink() != c.Hyperlink() ||
+				c.SemanticContent() != c.SemanticContent() ||
+				c.ColorPalette() != c.content().colorPalette() || c.ColorRGB() != c.content().colorRGB() {
 				t.Errorf("cell %d,%d: an accessor differs from its field", x, y)
 			}
 			if r.Wrap() != r.wrap || r.WrapContinuation() != r.wrap_continuation || r.Grapheme() != r.grapheme ||

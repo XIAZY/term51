@@ -313,7 +313,7 @@ func dumpScreenRow(w *bytes.Buffer, y int, row *PageRow, page *Page) {
 				runStart = x
 				fmt.Fprintf(w, " t %d: \"", x)
 			}
-			w.WriteByte(byte(cell.content.codepoint))
+			w.WriteByte(byte(cell.content().codepoint()))
 			continue
 		}
 		if runStart >= 0 {
@@ -335,11 +335,11 @@ func dumpScreenRow(w *bytes.Buffer, y int, row *PageRow, page *Page) {
 // hyperlink lookups.
 func dumpScreenCell(w *bytes.Buffer, x int, cell *PageCell, page *Page) {
 	fmt.Fprintf(w, " c %d:", x)
-	switch cell.content_tag {
+	switch cell.ContentTag() {
 	case PageCellContentTagCodepoint:
-		fmt.Fprintf(w, " cp=%x", cell.content.codepoint)
+		fmt.Fprintf(w, " cp=%x", cell.content().codepoint())
 	case PageCellContentTagCodepointGrapheme:
-		fmt.Fprintf(w, " cp=%x", cell.content.codepoint)
+		fmt.Fprintf(w, " cp=%x", cell.content().codepoint())
 		if cps := page.LookupGrapheme(cell); cps.Valid {
 			w.WriteString(" g=")
 			for i, cp := range cps.Value {
@@ -352,28 +352,28 @@ func dumpScreenCell(w *bytes.Buffer, x int, cell *PageCell, page *Page) {
 			w.WriteString(" g=MISSING")
 		}
 	case PageCellContentTagBgColorPalette:
-		fmt.Fprintf(w, " bgpal=%d", cell.content.color_palette)
+		fmt.Fprintf(w, " bgpal=%d", cell.content().colorPalette())
 	case PageCellContentTagBgColorRgb:
 		fmt.Fprintf(w, " bgrgb=%02x%02x%02x",
-			cell.content.color_rgb.R,
-			cell.content.color_rgb.G,
-			cell.content.color_rgb.B,
+			cell.content().colorRGB().R,
+			cell.content().colorRGB().G,
+			cell.content().colorRGB().B,
 		)
 	}
-	if cell.wide != PageCellWideNarrow {
-		fmt.Fprintf(w, " wide=%s", cell.wide.String())
+	if cell.Wide() != PageCellWideNarrow {
+		fmt.Fprintf(w, " wide=%s", cell.Wide().String())
 	}
-	if cell.protected {
+	if cell.Protected() {
 		w.WriteString(" protected")
 	}
-	if cell.semantic_content != PageCellSemanticContentOutput {
-		fmt.Fprintf(w, " sem=%s", cell.semantic_content.String())
+	if cell.SemanticContent() != PageCellSemanticContentOutput {
+		fmt.Fprintf(w, " sem=%s", cell.SemanticContent().String())
 	}
-	if cell.style_id != 0 {
+	if cell.StyleID() != 0 {
 		w.WriteString(" style=")
-		writeStyle(w, *page.styles.Get(cell.style_id))
+		writeStyle(w, *page.styles.Get(cell.StyleID()))
 	}
-	if cell.hyperlink {
+	if cell.Hyperlink() {
 		if id := page.LookupHyperlink(cell); id.Valid {
 			entry := page.hyperlink_set.Get(id.Value)
 			w.WriteString(" link=")
@@ -398,26 +398,26 @@ func dumpScreenCell(w *bytes.Buffer, x int, cell *PageCell, page *Page) {
 // True if every field of the cell that carries meaning has its default
 // value. It does not look at the raw bits (see the Zig comment).
 func cellIsDefault(cell *PageCell) bool {
-	return cell.content_tag == PageCellContentTagCodepoint &&
-		cell.content.codepoint == 0 &&
+	return cell.ContentTag() == PageCellContentTagCodepoint &&
+		cell.content().codepoint() == 0 &&
 		cellAttrsDefault(cell)
 }
 
 // Mirrors harness/src/dump.zig:292 cellAttrsDefault
 func cellAttrsDefault(cell *PageCell) bool {
-	return cell.style_id == 0 &&
-		cell.wide == PageCellWideNarrow &&
-		!cell.protected &&
-		!cell.hyperlink &&
-		cell.semantic_content == PageCellSemanticContentOutput
+	return cell.StyleID() == 0 &&
+		cell.Wide() == PageCellWideNarrow &&
+		!cell.Protected() &&
+		!cell.Hyperlink() &&
+		cell.SemanticContent() == PageCellSemanticContentOutput
 }
 
 // Mirrors harness/src/dump.zig:300 isPlainAscii
 func isPlainAscii(cell *PageCell) bool {
-	if cell.content_tag != PageCellContentTagCodepoint {
+	if cell.ContentTag() != PageCellContentTagCodepoint {
 		return false
 	}
-	cp := cell.content.codepoint
+	cp := cell.content().codepoint()
 	if cp < 0x20 || cp > 0x7e {
 		return false
 	}

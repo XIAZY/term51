@@ -115,10 +115,10 @@ func scaRow(t *testing.T, s *Screen, y uint) *PageRow {
 // scaSetCp is term51AASetCp.
 func scaSetCp(t *testing.T, s *Screen, x uint, y uint, cp uint32) {
 	t.Helper()
-	*scaCell(t, s, x, y) = PageCell{
+	*scaCell(t, s, x, y) = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // scaCp is term51AACp.
@@ -756,7 +756,7 @@ func TestSca_cursorDownOrScroll_a_background_color_fills_only_the_row_that_scrol
 						for x := uint(1); x < 5; x++ {
 							expectEqual[PageCellContentTag](t,
 								PageCellContentTagCodepoint,
-								scaCell(t, s, x, uint(s.Cursor.Y)).content_tag,
+								scaCell(t, s, x, uint(s.Cursor.Y)).ContentTag(),
 							)
 						}
 					}
@@ -767,13 +767,13 @@ func TestSca_cursorDownOrScroll_a_background_color_fills_only_the_row_that_scrol
 					for x := uint(0); x < 5; x++ {
 						cell := scaCell(t, s, x, uint(rows-1))
 						if palette {
-							expectEqual[PageCellContentTag](t, PageCellContentTagBgColorPalette, cell.content_tag)
-							expectEqual[uint8](t, 9, cell.content.color_palette)
+							expectEqual[PageCellContentTag](t, PageCellContentTagBgColorPalette, cell.ContentTag())
+							expectEqual[uint8](t, 9, cell.content().colorPalette())
 						} else {
-							expectEqual[PageCellContentTag](t, PageCellContentTagBgColorRgb, cell.content_tag)
-							expectEqual[uint8](t, 1, cell.content.color_rgb.R)
-							expectEqual[uint8](t, 2, cell.content.color_rgb.G)
-							expectEqual[uint8](t, 3, cell.content.color_rgb.B)
+							expectEqual[PageCellContentTag](t, PageCellContentTagBgColorRgb, cell.ContentTag())
+							expectEqual[uint8](t, 1, cell.content().colorRGB().R)
+							expectEqual[uint8](t, 2, cell.content().colorRGB().G)
+							expectEqual[uint8](t, 3, cell.content().colorRGB().B)
 						}
 					}
 					// The rows above hold shifted marks, not the fill.

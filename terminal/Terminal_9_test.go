@@ -166,7 +166,7 @@ func tm9RowAt(t *testing.T, term *Terminal, y uint) *PageRow {
 // head, '>' spacer tail, '<' spacer head, 'p' palette background cell, 'r'
 // RGB background cell.
 func tm9CellChar(cell PageCell) uint8 {
-	switch cell.wide {
+	switch cell.Wide() {
 	case PageCellWideWide:
 		return '#'
 	case PageCellWideSpacerTail:
@@ -174,12 +174,12 @@ func tm9CellChar(cell PageCell) uint8 {
 	case PageCellWideSpacerHead:
 		return '<'
 	default: // narrow
-		switch cell.content_tag {
+		switch cell.ContentTag() {
 		case PageCellContentTagCodepoint:
-			if cell.content.codepoint == 0 {
+			if cell.content().codepoint() == 0 {
 				return '.'
-			} else if cell.content.codepoint < 128 {
-				return uint8(cell.content.codepoint)
+			} else if cell.content().codepoint() < 128 {
+				return uint8(cell.content().codepoint())
 			}
 			return '?'
 		case PageCellContentTagCodepointGrapheme:
@@ -553,8 +553,8 @@ func TestTm9_eraseDisplay_protected_cells_that_remain_keep_their_protection(t *t
 	tm9ProtectAt(t, term, ANSIProtectedModeIso, 3, 2)
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
-	expect(t, tm9CellAt(t, term, 3, 2).protected, "term51UCellAt(&t, 3, 2).protected")
-	expect(t, !tm9CellAt(t, term, 4, 2).protected, "!term51UCellAt(&t, 4, 2).protected")
+	expect(t, tm9CellAt(t, term, 3, 2).Protected(), "term51UCellAt(&t, 3, 2).protected")
+	expect(t, !tm9CellAt(t, term, 4, 2).Protected(), "!term51UCellAt(&t, 4, 2).protected")
 }
 
 // ---- decaln ----
@@ -677,7 +677,7 @@ func TestTm9_decaln_does_not_carry_the_cursor_hyperlink_into_the_cells(t *testin
 	expect(t, term.Screens.Active.Cursor.HyperlinkID != 0, "t.screens.active.cursor.hyperlink_id != 0")
 	page := tm9Page(term)
 	expectEqual(t, uint(0), page.HyperlinkCount())
-	expect(t, !tm9CellAt(t, term, 0, 0).hyperlink, "!term51UCellAt(&t, 0, 0).hyperlink")
+	expect(t, !tm9CellAt(t, term, 0, 0).Hyperlink(), "!term51UCellAt(&t, 0, 0).hyperlink")
 }
 
 // Zig: test "term51: decaln: clears the style attributes but keeps the colors"
@@ -710,9 +710,9 @@ func TestTm9_decaln_clears_the_style_attributes_but_keeps_the_colors(t *testing.
 		expect(t, tm9RowAt(t, term, y).styled, "term51URowAt(&t, y).styled")
 		for x := uint(0); x < 8; x++ {
 			cell := *tm9CellAt(t, term, x, y)
-			expectEqual(t, id, cell.style_id)
-			expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
-			expectEqual(t, uint32('E'), cell.content.codepoint)
+			expectEqual(t, id, cell.StyleID())
+			expectEqual(t, PageCellContentTagCodepoint, cell.ContentTag())
+			expectEqual(t, uint32('E'), cell.content().codepoint())
 		}
 	}
 }
@@ -765,7 +765,7 @@ func TestTm9_decaln_does_not_respect_protection_and_keeps_the_cursor_protected(t
 	tm9ExpectGrid(t, term, []string{"EEEEEEEE", "EEEEEEEE", "EEEEEEEE", "EEEEEEEE"})
 	for y := uint(0); y < 4; y++ {
 		for x := uint(0); x < 8; x++ {
-			expect(t, !tm9CellAt(t, term, x, y).protected, "!term51UCellAt(&t, x, y).protected")
+			expect(t, !tm9CellAt(t, term, x, y).Protected(), "!term51UCellAt(&t, x, y).protected")
 		}
 	}
 	expect(t, term.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
@@ -1101,7 +1101,7 @@ func TestTm9_setAttribute_style_ids_are_reference_counted_in_the_page(t *testing
 
 	// A style used by a cell stays alive after the cursor moves on.
 	zigTry(t, term.Print('X'))
-	cell_id := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm9Active(0, 0))).Cell.style_id
+	cell_id := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm9Active(0, 0))).Cell.StyleID()
 	expectEqual(t, term.Screens.Active.Cursor.StyleID, cell_id)
 	tm9SetAttribute(t, term, tm9Attr(SGRAttributeTagUnset))
 	expectEqual(t, StyleDefaultID, term.Screens.Active.Cursor.StyleID)

@@ -38,8 +38,8 @@ func TestPageRuling_slow_runtime_safety_partial_clone_of_an_orphaned_spacer_tail
 		src := pg2New(t, 10, 1)
 		t.Cleanup(src.Deinit)
 		*src.GetRowAndCell(3, 0).cell = PageCellInit('a')
-		src.GetRowAndCell(3, 0).cell.wide = PageCellWideWide
-		src.GetRowAndCell(4, 0).cell.wide = PageCellWideSpacerTail
+		src.GetRowAndCell(3, 0).cell.setWide(PageCellWideWide)
+		src.GetRowAndCell(4, 0).cell.setWide(PageCellWideSpacerTail)
 		dst := pg2New(t, 10, 1)
 		t.Cleanup(dst.Deinit)
 		// The destination has no wide cell at x=3.
@@ -50,8 +50,8 @@ func TestPageRuling_slow_runtime_safety_partial_clone_of_an_orphaned_spacer_tail
 	setPageSlowRuntimeSafety(t, false)
 	dst, err := run()
 	zigTry(t, err)
-	expectEqual(t, PageCellWideNarrow, dst.GetRowAndCell(3, 0).cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, dst.GetRowAndCell(4, 0).cell.wide)
+	expectEqual(t, PageCellWideNarrow, dst.GetRowAndCell(3, 0).cell.Wide())
+	expectEqual(t, PageCellWideSpacerTail, dst.GetRowAndCell(4, 0).cell.Wide())
 	// What the release build leaves is a page that fails verifyIntegrity
 	// (which is not gated on the option).
 	pg2ExpectError(t, ErrInvalidSpacerTailLocation, dst.VerifyIntegrity())
@@ -70,7 +70,7 @@ func TestPageRuling_slow_runtime_safety_appendGrapheme_on_a_codepoint_zero_cell(
 	zigTry(t, page.AppendGrapheme(rac.row, rac.cell, 0x301))
 	// The release build takes the first-grapheme path: the cell becomes a
 	// grapheme cell whose codepoint is still 0 and the row is marked.
-	expectEqual(t, PageCellContentTagCodepointGrapheme, rac.cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, rac.cell.ContentTag())
 	expectEqual(t, uint32(0), rac.cell.Codepoint())
 	expect(t, rac.row.grapheme, "row.grapheme")
 	cps := page.LookupGrapheme(rac.cell)
@@ -91,8 +91,8 @@ func TestPageRuling_slow_runtime_safety_clone_of_an_unmarked_row_with_managed_ce
 		t.Cleanup(src.Deinit)
 		pg2FillRow(src, 0, 'a')
 		// Neither row.styled nor row.hyperlink is set.
-		src.GetRowAndCell(1, 0).cell.style_id = 1
-		src.GetRowAndCell(2, 0).cell.hyperlink = true
+		src.GetRowAndCell(1, 0).cell.setStyleID(1)
+		src.GetRowAndCell(2, 0).cell.setHyperlink(true)
 		dst := pg2New(t, 10, 1)
 		t.Cleanup(dst.Deinit)
 		err := dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 0, 10)
@@ -108,8 +108,8 @@ func TestPageRuling_slow_runtime_safety_clone_of_an_unmarked_row_with_managed_ce
 	for x := range uint(10) {
 		expectEqual(t, uint32('a')+uint32(x), dst.GetRowAndCell(x, 0).cell.Codepoint())
 	}
-	expectEqual(t, StyleID(1), dst.GetRowAndCell(1, 0).cell.style_id)
-	expect(t, dst.GetRowAndCell(2, 0).cell.hyperlink, "cell(2).hyperlink")
+	expectEqual(t, StyleID(1), dst.GetRowAndCell(1, 0).cell.StyleID())
+	expect(t, dst.GetRowAndCell(2, 0).cell.Hyperlink(), "cell(2).hyperlink")
 	row := dst.GetRow(0)
 	expect(t, !row.styled, "!row.styled")
 	expect(t, !row.hyperlink, "!row.hyperlink")

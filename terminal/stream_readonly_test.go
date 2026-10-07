@@ -3760,8 +3760,8 @@ func TestStreamReadonly_term51_Handler_vt_protected_mode_off_iso_and_dec(t *test
 	sroVt(t, &h, sroPrintAct('U'))
 	p := sroGetCell(t, &tm, 0, 0)
 	u := sroGetCell(t, &tm, 1, 0)
-	expect(t, p.Cell.protected, "p.cell.protected")
-	expect(t, !u.Cell.protected, "!u.cell.protected")
+	expect(t, p.Cell.Protected(), "p.cell.protected")
+	expect(t, !u.Cell.Protected(), "!u.cell.protected")
 }
 
 // Zig: test "term51: Handler.vt: delete_chars shifts the rest of the line left"
@@ -4530,14 +4530,14 @@ func TestStreamReadonly_term51_Handler_vt_set_attribute_applies_attributes_ignor
 	// A printed cell carries the style.
 	sroVt(t, &h, sroPrintAct('A'))
 	cell := sroGetCell(t, &tm, 0, 0)
-	expect(t, cell.Cell.style_id != 0, "cell.cell.style_id != 0")
+	expect(t, cell.Cell.StyleID() != 0, "cell.cell.style_id != 0")
 
 	// Unset clears everything.
 	sroVt(t, &h, sroSGRAct(SGRAttributeTagUnset))
 	expect(t, c.Style.Default(), "c.style.default()")
 	sroVt(t, &h, sroPrintAct('B'))
 	cell2 := sroGetCell(t, &tm, 1, 0)
-	expectEqual(t, 0, cell2.Cell.style_id)
+	expectEqual(t, 0, cell2.Cell.StyleID())
 }
 
 // Zig: test "term51: Handler.vt: mouse_shift_capture, active_status_display and mouse_shape"
@@ -4739,8 +4739,8 @@ func TestStreamReadonly_term51_Handler_vt_decaln_fills_with_E_resets_margins_and
 
 	// Cells do not carry the protection.
 	cell := sroGetCell(t, &tm, 3, 1)
-	expect(t, !cell.Cell.protected, "!cell.cell.protected")
-	expectEqual(t, uint32('E'), cell.Cell.content.codepoint)
+	expect(t, !cell.Cell.Protected(), "!cell.cell.protected")
+	expectEqual(t, uint32('E'), cell.Cell.content().codepoint())
 }
 
 // Zig: test "term51: Handler.vt: full_reset restores a pristine terminal but keeps colors and size"
@@ -4839,8 +4839,8 @@ func TestStreamReadonly_term51_Handler_vt_start_hyperlink_and_end_hyperlink(t *t
 	sroVt(t, &h, sroPrintAct('B'))
 	a := sroGetCell(t, &tm, 0, 0)
 	b := sroGetCell(t, &tm, 1, 0)
-	expect(t, a.Cell.hyperlink, "a.cell.hyperlink")
-	expect(t, !b.Cell.hyperlink, "!b.cell.hyperlink")
+	expect(t, a.Cell.Hyperlink(), "a.cell.hyperlink")
+	expect(t, !b.Cell.Hyperlink(), "!b.cell.hyperlink")
 
 	// Implicit ids count up.
 	sroVt(t, &h, sroStartHyperlinkAct("http://b.example", None[[]uint8]()))

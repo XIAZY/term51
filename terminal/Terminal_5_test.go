@@ -92,7 +92,7 @@ func tm5SExpectCell(t *testing.T, tm *Terminal, x uint, y uint, cp uint32, wide 
 	t.Helper()
 	lc := tm5SAt(t, tm, x, y)
 	expectEqual(t, cp, lc.Cell.Codepoint())
-	expectEqual(t, wide, lc.Cell.wide)
+	expectEqual(t, wide, lc.Cell.Wide())
 }
 
 // tm5SExpectGrapheme is term51SExpectGrapheme: expect the cell at (x, y) to
@@ -181,26 +181,26 @@ func tm5TGridRow(t *testing.T, tm *Terminal, y uint) []uint8 {
 	buf := make([]uint8, tm.Cols)
 	for x := uint(0); x < uint(tm.Cols); x++ {
 		c := tm5TCellAt(t, tm, x, y)
-		switch c.wide {
+		switch c.Wide() {
 		case PageCellWideSpacerTail:
 			buf[x] = '_'
 		case PageCellWideSpacerHead:
 			buf[x] = '>'
 		case PageCellWideWide:
-			if c.content.codepoint == 0 {
+			if c.content().codepoint() == 0 {
 				buf[x] = 'w'
 			} else {
 				buf[x] = 'W'
 			}
 		case PageCellWideNarrow:
-			switch c.content_tag {
+			switch c.ContentTag() {
 			case PageCellContentTagBgColorPalette, PageCellContentTagBgColorRgb:
 				buf[x] = '#'
 			case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
-				if c.content.codepoint == 0 {
+				if c.content().codepoint() == 0 {
 					buf[x] = '.'
-				} else if c.content.codepoint < 128 {
-					buf[x] = uint8(c.content.codepoint)
+				} else if c.content().codepoint() < 128 {
+					buf[x] = uint8(c.content().codepoint())
 				} else {
 					buf[x] = '?'
 				}
@@ -782,7 +782,7 @@ func TestTm5_term51_restoreCursor_restores_everything_that_was_saved(t *testing.
 	tm.Screens.Active.CursorAbsolute(0, 0)
 	zigTry(t, tm.Print('a'))
 	lc := tm5SAt(t, tm, 0, 0)
-	expect(t, lc.Node.data.styles.Get(lc.Cell.style_id).Flags.Bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
+	expect(t, lc.Node.data.styles.Get(lc.Cell.StyleID()).Flags.Bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
 
 	// The save is not consumed: restoring again gives the same state.
 	tm.Screens.Active.CursorAbsolute(0, 0)
@@ -1057,10 +1057,10 @@ func TestTm5_term51_setProtectedMode_printed_cells_carry_the_protected_flag_of_t
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	zigTry(t, tm.Print('d'))
 
-	expect(t, !tm5TCellAt(t, tm, 0, 0).protected, "!term51TCellAt(&t, 0, 0).protected")
-	expect(t, tm5TCellAt(t, tm, 1, 0).protected, "term51TCellAt(&t, 1, 0).protected")
-	expect(t, !tm5TCellAt(t, tm, 2, 0).protected, "!term51TCellAt(&t, 2, 0).protected")
-	expect(t, tm5TCellAt(t, tm, 3, 0).protected, "term51TCellAt(&t, 3, 0).protected")
+	expect(t, !tm5TCellAt(t, tm, 0, 0).Protected(), "!term51TCellAt(&t, 0, 0).protected")
+	expect(t, tm5TCellAt(t, tm, 1, 0).Protected(), "term51TCellAt(&t, 1, 0).protected")
+	expect(t, !tm5TCellAt(t, tm, 2, 0).Protected(), "!term51TCellAt(&t, 2, 0).protected")
+	expect(t, tm5TCellAt(t, tm, 3, 0).Protected(), "term51TCellAt(&t, 3, 0).protected")
 }
 
 // Zig: test "term51: setProtectedMode: applies to the active screen only"
@@ -2638,8 +2638,8 @@ func TestTm5_term51_index_fast_path_keeps_a_non_background_cursor_style(t *testi
 	// Printing afterwards uses the style.
 	zigTry(t, tm.Print('z'))
 	c := tm5TCellAt(t, tm, 2, 3)
-	expectEqual(t, uint32('z'), c.content.codepoint)
-	expectEqual(t, tm.Screens.Active.Cursor.StyleID, c.style_id)
+	expectEqual(t, uint32('z'), c.content().codepoint())
+	expectEqual(t, tm.Screens.Active.Cursor.StyleID, c.StyleID())
 }
 
 // Zig: test "term51: index: background colour forces the slow path and fills the blank row"
@@ -2682,16 +2682,16 @@ func TestTm5_term51_index_background_colour_forces_the_slow_path_and_fills_the_b
 				switch c.attr.Tag {
 				case SGRAttributeTagDirectColorBg:
 					v := c.attr.DirectColorBg
-					expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-					expectEqual(t, PageCellRGB{R: v.R, G: v.G, B: v.B}, cell.content.color_rgb)
+					expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+					expectEqual(t, PageCellRGB{R: v.R, G: v.G, B: v.B}, cell.content().colorRGB())
 				case SGRAttributeTag256Bg:
 					v := c.attr.X256Bg
-					expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-					expectEqual(t, v, cell.content.color_palette)
+					expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+					expectEqual(t, v, cell.content().colorPalette())
 				case SGRAttributeTag8Bg:
 					v := c.attr.X8Bg
-					expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-					expectEqual(t, uint8(v), cell.content.color_palette)
+					expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+					expectEqual(t, uint8(v), cell.content().colorPalette())
 				default:
 					panic("unreachable")
 				}
@@ -2712,7 +2712,7 @@ func TestTm5_term51_index_reset_background_returns_to_plain_blank_cells(t *testi
 	tm.Screens.Active.CursorAbsolute(0, 3)
 	zigTry(t, tm.Index())
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "KLMNO", "PQRST", ".....", "UVWXY"})
-	expectEqual(t, PageCellContentTagCodepoint, tm5TCellAt(t, tm, 0, 3).content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, tm5TCellAt(t, tm, 0, 3).ContentTag())
 }
 
 // Zig: test "term51: index: attributes without a background colour leave blank cells plain"
@@ -2737,8 +2737,8 @@ func TestTm5_term51_index_attributes_without_a_background_colour_leave_blank_cel
 			zigTry(t, tm.Index())
 			tm5TExpectGrid(t, tm, []string{"ABCDE", "KLMNO", "PQRST", ".....", "UVWXY"})
 			cell := tm5TCellAt(t, tm, 1, 3)
-			expectEqual(t, PageCellContentTagCodepoint, cell.content_tag)
-			expectEqual(t, uint32(0), cell.content.codepoint)
+			expectEqual(t, PageCellContentTagCodepoint, cell.ContentTag())
+			expectEqual(t, uint32(0), cell.content().codepoint())
 		}()
 	}
 }
@@ -3097,8 +3097,8 @@ func TestTm5_term51_reverseIndex_scrolling_keeps_pending_wrap_background_fills_t
 	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm5TExpectGrid(t, tm, []string{"ABCDE", "#####", "FGHIJ", "KLMNO", "UVWXY"})
 	cell := tm5TCellAt(t, tm, 0, 1)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content.color_rgb)
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, PageCellRGB{R: 1, G: 2, B: 3}, cell.content().colorRGB())
 }
 
 // Zig: test "term51: setCursorPos: zero means one and the limits clamp"

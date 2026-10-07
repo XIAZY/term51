@@ -892,27 +892,27 @@ func TestCorpusReplaySelfWriters(t *testing.T) {
 		t.Errorf("writeEscaped %q, want %q", got, want)
 	}
 
-	plain := PageCell{content_tag: PageCellContentTagCodepoint}
-	plain.content.codepoint = 'A'
-	empty := PageCell{}
-	space := PageCell{}
-	space.content.codepoint = 0x20
-	ctrl := PageCell{}
-	ctrl.content.codepoint = 0x1f
-	del := PageCell{}
-	del.content.codepoint = 0x7f
+	plain := pageCellFields{content_tag: PageCellContentTagCodepoint}.pack()
+	plain.setContentCodepoint('A')
+	empty := PageCell(0)
+	space := PageCell(0)
+	space.setContentCodepoint(0x20)
+	ctrl := PageCell(0)
+	ctrl.setContentCodepoint(0x1f)
+	del := PageCell(0)
+	del.setContentCodepoint(0x7f)
 	styled := plain
-	styled.style_id = 1
+	styled.setStyleID(1)
 	wide := plain
-	wide.wide = PageCellWideWide
+	wide.setWide(PageCellWideWide)
 	prot := plain
-	prot.protected = true
+	prot.setProtected(true)
 	link := plain
-	link.hyperlink = true
+	link.setHyperlink(true)
 	sem := plain
-	sem.semantic_content = PageCellSemanticContentInput
-	bg := PageCell{content_tag: PageCellContentTagBgColorPalette}
-	bg.content.color_palette = 9
+	sem.setSemanticContent(PageCellSemanticContentInput)
+	bg := pageCellFields{content_tag: PageCellContentTagBgColorPalette}.pack()
+	bg.setContentColorPalette(9)
 	for _, c := range []struct {
 		name                       string
 		cell                       PageCell
@@ -1708,22 +1708,22 @@ func TestCorpusReplaySelfDumpScreenCellRecorded(t *testing.T) {
 			switch {
 			case m[3] != "":
 				v, _ := strconv.ParseUint(m[3], 16, 32)
-				cell.content_tag = PageCellContentTagCodepoint
-				cell.content.codepoint = uint32(v)
+				cell.setContentTag(PageCellContentTagCodepoint)
+				cell.setContentCodepoint(uint32(v))
 				shapes["cp"] = true
 			case m[4] != "":
 				v, _ := strconv.ParseUint(m[4], 10, 8)
-				cell.content_tag = PageCellContentTagBgColorPalette
-				cell.content.color_palette = uint8(v)
+				cell.setContentTag(PageCellContentTagBgColorPalette)
+				cell.setContentColorPalette(uint8(v))
 				shapes["bgpal"] = true
 			default:
 				v, _ := strconv.ParseUint(m[5], 16, 32)
-				cell.content_tag = PageCellContentTagBgColorRgb
-				cell.content.color_rgb = PageCellRGB{uint8(v >> 16), uint8(v >> 8), uint8(v)}
+				cell.setContentTag(PageCellContentTagBgColorRgb)
+				cell.setContentColorRGB(PageCellRGB{uint8(v >> 16), uint8(v >> 8), uint8(v)})
 				shapes["bgrgb"] = true
 			}
 			if m[6] != "" {
-				cell.protected = true
+				cell.setProtected(true)
 				shapes["protected"] = true
 			}
 			var buf bytes.Buffer

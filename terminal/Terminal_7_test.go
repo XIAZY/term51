@@ -104,7 +104,7 @@ func tm7RowAt(t *testing.T, term *Terminal, y uint) *PageRow {
 // head, '>' spacer tail, '<' spacer head, 'p' palette background cell, 'r'
 // RGB background cell.
 func tm7CellChar(cell PageCell) uint8 {
-	switch cell.wide {
+	switch cell.Wide() {
 	case PageCellWideWide:
 		return '#'
 	case PageCellWideSpacerTail:
@@ -112,12 +112,12 @@ func tm7CellChar(cell PageCell) uint8 {
 	case PageCellWideSpacerHead:
 		return '<'
 	case PageCellWideNarrow:
-		switch cell.content_tag {
+		switch cell.ContentTag() {
 		case PageCellContentTagCodepoint:
-			if cell.content.codepoint == 0 {
+			if cell.content().codepoint() == 0 {
 				return '.'
-			} else if cell.content.codepoint < 128 {
-				return uint8(cell.content.codepoint)
+			} else if cell.content().codepoint() < 128 {
+				return uint8(cell.content().codepoint())
 			}
 			return '?'
 		case PageCellContentTagCodepointGrapheme:
@@ -547,7 +547,7 @@ func tm7CrossHyperlink(t *testing.T, cross tm7Cross, full tm7HyperlinkFull) {
 	}
 	expectEqual(t, placed+1, after.HyperlinkCount())
 	cell := tm7CellAt(t, term, 0, cross.dstY())
-	expect(t, cell.hyperlink, "cell.hyperlink")
+	expect(t, cell.Hyperlink(), "cell.hyperlink")
 	expect(t, tm7RowAt(t, term, cross.dstY()).hyperlink, "term51URowAt(&t, cross.dstY()).hyperlink")
 	id := zigUnwrap(t, after.LookupHyperlink(cell))
 	expectEqualStrings(t, "http://s.test", string(after.hyperlink_set.Get(id).uri))
@@ -719,8 +719,8 @@ func TestTm7_term51_deleteLines_style_reference_counts_follow_the_shifted_and_di
 	tm7PutStr(t, term, 0, 2, "YYYYYY")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	page := tm7Page(term)
-	bold := tm7CellAt(t, term, 0, 1).style_id
-	italic := tm7CellAt(t, term, 0, 2).style_id
+	bold := tm7CellAt(t, term, 0, 1).StyleID()
+	italic := tm7CellAt(t, term, 0, 2).StyleID()
 	expectEqual(t, uint(2), page.styles.Count())
 
 	// Deleting the plain top row moves both styled rows up.
@@ -763,8 +763,8 @@ func TestTm7_term51_deleteLines_style_reference_counts_with_left_and_right_margi
 	tm7PutStr(t, term, 0, 2, "YYYYYY")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	page := tm7Page(term)
-	bold := tm7CellAt(t, term, 0, 1).style_id
-	italic := tm7CellAt(t, term, 0, 2).style_id
+	bold := tm7CellAt(t, term, 0, 1).StyleID()
+	italic := tm7CellAt(t, term, 0, 2).StyleID()
 
 	term.ScrollingRegion.Left = 1
 	term.ScrollingRegion.Right = 3
@@ -841,10 +841,10 @@ func TestTm7_term51_deleteLines_hyperlinks_with_left_and_right_margins(t *testin
 	expectEqual(t, uint(1), page.hyperlink_set.Count())
 	expect(t, tm7RowAt(t, term, 0).hyperlink, "term51URowAt(&t, 0).hyperlink")
 	expect(t, tm7RowAt(t, term, 1).hyperlink, "term51URowAt(&t, 1).hyperlink")
-	expect(t, !tm7CellAt(t, term, 0, 0).hyperlink, "!term51UCellAt(&t, 0, 0).hyperlink")
-	expect(t, tm7CellAt(t, term, 1, 0).hyperlink, "term51UCellAt(&t, 1, 0).hyperlink")
-	expect(t, tm7CellAt(t, term, 0, 1).hyperlink, "term51UCellAt(&t, 0, 1).hyperlink")
-	expect(t, !tm7CellAt(t, term, 1, 1).hyperlink, "!term51UCellAt(&t, 1, 1).hyperlink")
+	expect(t, !tm7CellAt(t, term, 0, 0).Hyperlink(), "!term51UCellAt(&t, 0, 0).hyperlink")
+	expect(t, tm7CellAt(t, term, 1, 0).Hyperlink(), "term51UCellAt(&t, 1, 0).hyperlink")
+	expect(t, tm7CellAt(t, term, 0, 1).Hyperlink(), "term51UCellAt(&t, 0, 1).hyperlink")
+	expect(t, !tm7CellAt(t, term, 1, 1).Hyperlink(), "!term51UCellAt(&t, 1, 1).hyperlink")
 
 	term.SetCursorPos(1, 2)
 	term.DeleteLines(math.MaxUint)
@@ -1009,12 +1009,12 @@ func TestTm7_term51_deleteLines_left_and_right_margins_across_a_page_boundary_co
 	expectEqual(t, uint(1), second.data.GraphemeCount())
 	expectEqual(t, uint(2), second.data.HyperlinkCount())
 	expectEqual(t, uint(1), second.data.styles.Count())
-	expectEqual(t, SizeCellCountInt(2), second.data.styles.RefCount(tm7CellAt(t, term, 0, 3).style_id))
+	expectEqual(t, SizeCellCountInt(2), second.data.styles.RefCount(tm7CellAt(t, term, 0, 3).StyleID()))
 	// The margin columns were copied into the first page.
 	expectEqual(t, uint(0), first.data.GraphemeCount())
 	expectEqual(t, uint(8), first.data.HyperlinkCount())
 	expectEqual(t, uint(1), first.data.styles.Count())
-	expectEqual(t, SizeCellCountInt(8), first.data.styles.RefCount(tm7CellAt(t, term, 1, 2).style_id))
+	expectEqual(t, SizeCellCountInt(8), first.data.styles.RefCount(tm7CellAt(t, term, 1, 2).StyleID()))
 	expect(t, tm7RowAt(t, term, 2).hyperlink, "term51URowAt(&t, 2).hyperlink")
 	expect(t, tm7RowAt(t, term, 2).styled, "term51URowAt(&t, 2).styled")
 	expect(t, !tm7RowAt(t, term, 2).grapheme, "!term51URowAt(&t, 2).grapheme")
@@ -1066,7 +1066,7 @@ func TestTm7_term51_insertLines_a_full_style_set_in_the_destination_page_is_grow
 	expectEqual(t, uint(old_capacity)*2, uint(grown.data.capacity.styles))
 	expectEqual(t, uint(0), first.data.styles.Count())
 	expectEqual(t, need+1, grown.data.styles.Count())
-	bold := tm7CellAt(t, term, 0, 1).style_id
+	bold := tm7CellAt(t, term, 0, 1).StyleID()
 	expectEqual(t, SizeCellCountInt(60), grown.data.styles.RefCount(bold))
 	expect(t, tm7RowAt(t, term, 1).styled, "term51URowAt(&t, 1).styled")
 }
@@ -1158,7 +1158,7 @@ func TestTm7_term51_deleteLines_a_full_style_set_in_the_destination_page_is_grow
 	expectEqual(t, need+1, grown.data.styles.Count())
 	expect(t, grown.next == term.Screens.Active.Pages.pages.last, "grown.next.? == t.screens.active.pages.pages.last.?")
 	expectEqual(t, uint(0), tm7Node(t, grown.next).data.styles.Count())
-	bold := tm7CellAt(t, term, 0, 3).style_id
+	bold := tm7CellAt(t, term, 0, 3).StyleID()
 	expectEqual(t, SizeCellCountInt(60), grown.data.styles.RefCount(bold))
 }
 
@@ -1537,9 +1537,9 @@ func TestTm7_term51_insertBlanks_blanks_take_the_background_color_of_the_cursor_
 	tm7ExpectGrid(t, term, []string{"arrbcdef", "ijklmnop"})
 	for x := uint(1); x < 3; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
-		expectEqual(t, StyleDefaultID, cell.style_id)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
+		expectEqual(t, StyleDefaultID, cell.StyleID())
 	}
 }
 
@@ -1556,8 +1556,8 @@ func TestTm7_term51_insertBlanks_blanks_take_a_palette_background_color(t *testi
 	tm7ExpectGrid(t, term, []string{"pppabcde", "ijklmnop"})
 	for x := uint(0); x < 3; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-		expectEqual(t, uint8(9), cell.content.color_palette)
+		expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+		expectEqual(t, uint8(9), cell.content().colorPalette())
 	}
 }
 
@@ -1587,7 +1587,7 @@ func TestTm7_term51_insertBlanks_a_cursor_style_without_a_background_leaves_blan
 	term.InsertBlanks(2)
 
 	tm7ExpectGrid(t, term, []string{"a..bcdef", "ijklmnop"})
-	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).StyleID())
 }
 
 // Zig: test "term51: insertBlanks: protected cells move with their text and blanks are unprotected"
@@ -1607,7 +1607,7 @@ func TestTm7_term51_insertBlanks_protected_cells_move_with_their_text_and_blanks
 
 	tm7ExpectGrid(t, term, []string{"..abCDef", "ijklmnop"})
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, x == 4 || x == 5, tm7CellAt(t, term, x, 0).protected)
+		expectEqual(t, x == 4 || x == 5, tm7CellAt(t, term, x, 0).Protected())
 	}
 }
 
@@ -1627,7 +1627,7 @@ func TestTm7_term51_insertBlanks_ISO_protection_does_not_keep_cells_from_being_p
 
 	tm7ExpectGrid(t, term, []string{"..abcdef", "ijklmnop"})
 	for x := uint(0); x < 8; x++ {
-		expect(t, !tm7CellAt(t, term, x, 0).protected, "!term51UCellAt(&t, x, 0).protected")
+		expect(t, !tm7CellAt(t, term, x, 0).Protected(), "!term51UCellAt(&t, x, 0).protected")
 	}
 }
 
@@ -1642,17 +1642,17 @@ func TestTm7_term51_insertBlanks_style_reference_counts_follow_the_shifted_and_p
 	tm7PutStr(t, term, 0, 0, "abcdefgh")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	page := tm7Page(term)
-	bold := tm7CellAt(t, term, 0, 0).style_id
+	bold := tm7CellAt(t, term, 0, 0).StyleID()
 	expectEqual(t, SizeCellCountInt(8), page.styles.RefCount(bold))
 
 	term.SetCursorPos(1, 2)
 	term.InsertBlanks(2)
 	tm7ExpectGrid(t, term, []string{"a..bcdef", "ijklmnop"})
 	expectEqual(t, SizeCellCountInt(6), page.styles.RefCount(bold))
-	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).style_id)
-	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 2, 0).style_id)
-	expectEqual(t, bold, tm7CellAt(t, term, 3, 0).style_id)
-	expectEqual(t, bold, tm7CellAt(t, term, 7, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).StyleID())
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 2, 0).StyleID())
+	expectEqual(t, bold, tm7CellAt(t, term, 3, 0).StyleID())
+	expectEqual(t, bold, tm7CellAt(t, term, 7, 0).StyleID())
 	expect(t, tm7RowAt(t, term, 0).styled, "term51URowAt(&t, 0).styled")
 
 	// Clearing the whole row releases the rest and clears the row flag.
@@ -1684,7 +1684,7 @@ func TestTm7_term51_insertBlanks_the_styled_flag_of_a_partially_cleared_row_stay
 	// Quirk: the flag is refreshed before the cells are blanked, so it stays.
 	expect(t, tm7RowAt(t, term, 0).styled, "term51URowAt(&t, 0).styled")
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, StyleDefaultID, tm7CellAt(t, term, x, 0).style_id)
+		expectEqual(t, StyleDefaultID, tm7CellAt(t, term, x, 0).StyleID())
 	}
 }
 
@@ -1748,7 +1748,7 @@ func TestTm7_term51_insertBlanks_hyperlinks_move_right_and_are_released_when_pus
 	tm7ExpectGrid(t, term, []string{"..abcdef", "ijklmnop"})
 	expectEqual(t, uint(2), page.HyperlinkCount())
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, x >= 6, tm7CellAt(t, term, x, 0).hyperlink)
+		expectEqual(t, x >= 6, tm7CellAt(t, term, x, 0).Hyperlink())
 	}
 	expect(t, tm7RowAt(t, term, 0).hyperlink, "term51URowAt(&t, 0).hyperlink")
 
@@ -2048,7 +2048,7 @@ func TestTm7_term51_insertBlanks_a_styled_wide_character_that_is_dropped_release
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	page := tm7Page(term)
 	expectEqual(t, uint(1), page.styles.Count())
-	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(tm7CellAt(t, term, 6, 0).style_id))
+	expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(tm7CellAt(t, term, 6, 0).StyleID()))
 
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(1)
@@ -2321,8 +2321,8 @@ func TestTm7_term51_deleteChars_blanks_take_the_background_color_of_the_cursor_s
 	tm7ExpectGrid(t, term, []string{"adefghrr", "ijklmnop"})
 	for x := uint(6); x < 8; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
 	}
 }
 
@@ -2339,8 +2339,8 @@ func TestTm7_term51_deleteChars_blanks_take_a_palette_background_color(t *testin
 	tm7ExpectGrid(t, term, []string{"defghppp", "ijklmnop"})
 	for x := uint(5); x < 8; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-		expectEqual(t, uint8(9), cell.content.color_palette)
+		expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+		expectEqual(t, uint8(9), cell.content().colorPalette())
 	}
 }
 
@@ -2370,7 +2370,7 @@ func TestTm7_term51_deleteChars_a_cursor_style_without_a_background_leaves_blank
 	term.DeleteChars(2)
 
 	tm7ExpectGrid(t, term, []string{"adefgh..", "ijklmnop"})
-	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 7, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 7, 0).StyleID())
 }
 
 // Zig: test "term51: deleteChars: protected cells are deleted and move with their text"
@@ -2392,7 +2392,7 @@ func TestTm7_term51_deleteChars_protected_cells_are_deleted_and_move_with_their_
 	// Protection does not stop the deletion, and the protected cells shift.
 	tm7ExpectGrid(t, term, []string{"BcdeFgh.", "ijklmnop"})
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, x == 0 || x == 4, tm7CellAt(t, term, x, 0).protected)
+		expectEqual(t, x == 0 || x == 4, tm7CellAt(t, term, x, 0).Protected())
 	}
 }
 
@@ -2412,7 +2412,7 @@ func TestTm7_term51_deleteChars_ISO_protection_does_not_keep_cells_from_being_de
 
 	tm7ExpectGrid(t, term, []string{"cdefgh..", "ijklmnop"})
 	for x := uint(0); x < 8; x++ {
-		expect(t, !tm7CellAt(t, term, x, 0).protected, "!term51UCellAt(&t, x, 0).protected")
+		expect(t, !tm7CellAt(t, term, x, 0).Protected(), "!term51UCellAt(&t, x, 0).protected")
 	}
 }
 
@@ -2427,14 +2427,14 @@ func TestTm7_term51_deleteChars_style_reference_counts_follow_the_shifted_and_de
 	tm7PutStr(t, term, 0, 0, "abcdefgh")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	page := tm7Page(term)
-	bold := tm7CellAt(t, term, 0, 0).style_id
+	bold := tm7CellAt(t, term, 0, 0).StyleID()
 
 	term.SetCursorPos(1, 2)
 	term.DeleteChars(2)
 	tm7ExpectGrid(t, term, []string{"adefgh..", "ijklmnop"})
 	expectEqual(t, SizeCellCountInt(6), page.styles.RefCount(bold))
-	expectEqual(t, bold, tm7CellAt(t, term, 5, 0).style_id)
-	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 6, 0).style_id)
+	expectEqual(t, bold, tm7CellAt(t, term, 5, 0).StyleID())
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 6, 0).StyleID())
 	expect(t, tm7RowAt(t, term, 0).styled, "term51URowAt(&t, 0).styled")
 
 	term.SetCursorPos(1, 1)
@@ -2485,7 +2485,7 @@ func TestTm7_term51_deleteChars_hyperlinks_move_left_and_are_released_when_delet
 	tm7ExpectGrid(t, term, []string{"cdefgh..", "ijklmnop"})
 	expectEqual(t, uint(4), page.HyperlinkCount())
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, x >= 2 && x < 6, tm7CellAt(t, term, x, 0).hyperlink)
+		expectEqual(t, x >= 2 && x < 6, tm7CellAt(t, term, x, 0).Hyperlink())
 	}
 	expect(t, tm7RowAt(t, term, 0).hyperlink, "term51URowAt(&t, 0).hyperlink")
 
@@ -2902,9 +2902,9 @@ func TestTm7_term51_eraseChars_blanks_take_the_background_color_of_the_cursor_st
 	tm7ExpectGrid(t, term, []string{"arrdefgh", "ijklmnop"})
 	for x := uint(1); x < 3; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
-		expectEqual(t, StyleDefaultID, cell.style_id)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content().colorRGB())
+		expectEqual(t, StyleDefaultID, cell.StyleID())
 	}
 }
 
@@ -2921,8 +2921,8 @@ func TestTm7_term51_eraseChars_blanks_take_a_palette_background_color(t *testing
 	tm7ExpectGrid(t, term, []string{"abcdefpp", "ijklmnop"})
 	for x := uint(6); x < 8; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
-		expectEqual(t, PageCellContentTagBgColorPalette, cell.content_tag)
-		expectEqual(t, uint8(9), cell.content.color_palette)
+		expectEqual(t, PageCellContentTagBgColorPalette, cell.ContentTag())
+		expectEqual(t, uint8(9), cell.content().colorPalette())
 	}
 }
 
@@ -2937,7 +2937,7 @@ func TestTm7_term51_eraseChars_a_cursor_style_without_a_background_leaves_blanks
 	term.EraseChars(2)
 
 	tm7ExpectGrid(t, term, []string{"a..defgh", "ijklmnop"})
-	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).StyleID())
 }
 
 // Zig: test "term51: eraseChars: style reference counts follow the erased cells"
@@ -2951,7 +2951,7 @@ func TestTm7_term51_eraseChars_style_reference_counts_follow_the_erased_cells(t 
 	tm7PutStr(t, term, 0, 0, "abcdefgh")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 	page := tm7Page(term)
-	bold := tm7CellAt(t, term, 0, 0).style_id
+	bold := tm7CellAt(t, term, 0, 0).StyleID()
 
 	term.SetCursorPos(1, 3)
 	term.EraseChars(3)
@@ -2991,7 +2991,7 @@ func TestTm7_panic_insertBlanks_spacer_tail_in_column_zero(t *testing.T) {
 	defer term.Deinit()
 
 	// A spacer tail can never be in column 0; force one.
-	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.setWide(PageCellWideSpacerTail)
 	tm7ExpectPanic(t, func() { term.InsertBlanks(1) })
 }
 
@@ -3003,6 +3003,6 @@ func TestTm7_panic_insertBlanks_wide_head_without_spacer_tail(t *testing.T) {
 
 	// Cell 2 is a wide head but cell 3 is a narrow cell: with a count of 5
 	// the last cell shifted is cell 2.
-	tm7CellAt(t, term, 2, 0).wide = PageCellWideWide
+	tm7CellAt(t, term, 2, 0).setWide(PageCellWideWide)
 	tm7ExpectPanic(t, func() { term.InsertBlanks(5) })
 }

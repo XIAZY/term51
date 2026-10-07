@@ -569,7 +569,7 @@ func TestSc4_selectionString_wide_character_wrapped_with_spacer_head(t *testing.
 	sc4Write(t, s, "abcd世e")
 
 	// Row 0 ends with a spacer head, the wide char moved to row 1.
-	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s, 4, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s, 4, 0).RowAndCell().cell.Wide())
 	{
 		text := sc4RSelStr(t, s, 0, 0, 2, 1, false, true)
 		expectEqualStrings(t, "abcd世e", string(text))
@@ -1440,7 +1440,7 @@ func TestSc4_selectWord_wide_character_wrapped_with_spacer_head(t *testing.T) {
 	sc4Write(t, s, "abcd世e")
 	b := sc4R_boundary
 
-	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s, 4, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s, 4, 0).RowAndCell().cell.Wide())
 	// The spacer head (no text) splits the word on the first row.
 	sc4RExpectSel(t, s, s.SelectWord(sc4RPin(t, s, 0, 0), b), 0, 0, 3, 0)
 	expect(t, !s.SelectWord(sc4RPin(t, s, 4, 0), b).Valid, "s.selectWord(term51RPin(&s, 4, 0), b) == null")
@@ -1673,12 +1673,12 @@ func TestSc4_promptClickMove_cursor_must_be_on_input_content(t *testing.T) {
 	// Cursor cell is input even though the cursor itself is not in input
 	// mode: still moves.
 	s.CursorSetSemanticContent(sc4Output())
-	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentInput, "s.cursor.page_cell.semantic_content == .input")
+	expect(t, s.Cursor.PageCell.SemanticContent() == PageCellSemanticContentInput, "s.cursor.page_cell.semantic_content == .input")
 	expectEqual(t, sc4RMove(0, 2), s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
 	// Cursor in neither input mode nor on an input cell: no movement.
 	s.CursorAbsolute(10, 0)
-	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
+	expect(t, s.Cursor.PageCell.SemanticContent() == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
 	// Cursor in input mode but on a non-input cell: moves left over the
@@ -1689,7 +1689,7 @@ func TestSc4_promptClickMove_cursor_must_be_on_input_content(t *testing.T) {
 	// Cursor in prompt mode on a prompt cell: no movement.
 	s.CursorSetSemanticContent(sc4Prompt(OSCParsersSemanticPromptPromptKindInitial))
 	s.CursorAbsolute(0, 0)
-	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentPrompt, "s.cursor.page_cell.semantic_content == .prompt")
+	expect(t, s.Cursor.PageCell.SemanticContent() == PageCellSemanticContentPrompt, "s.cursor.page_cell.semantic_content == .prompt")
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
 	// Cursor on an output cell with output mode: no movement.
@@ -1790,7 +1790,7 @@ func TestSc4_promptClickLine_cursor_on_the_blank_cell_after_the_input(t *testing
 
 	// The cursor is naturally after the input.
 	expectEqual(t, SizeCellCountInt(7), s.Cursor.X)
-	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
+	expect(t, s.Cursor.PageCell.SemanticContent() == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
 
 	// To the right there is nothing: no +1 because the cursor cell is
 	// not an input cell.
@@ -1996,7 +1996,7 @@ func TestSc4_promptClickLine_wide_characters_count_both_cells(t *testing.T) {
 	defer s.Deinit()
 	sc4RWritePrompt(t, s, "> ", "a世b")
 
-	expect(t, sc4RPin(t, s, 4, 0).RowAndCell().cell.semantic_content == PageCellSemanticContentInput, "term51RPin(&s, 4, 0).rowAndCell().cell.semantic_content == .input")
+	expect(t, sc4RPin(t, s, 4, 0).RowAndCell().cell.SemanticContent() == PageCellSemanticContentInput, "term51RPin(&s, 4, 0).rowAndCell().cell.semantic_content == .input")
 
 	s.CursorAbsolute(2, 0)
 	expectEqual(t, sc4RMove(0, 3), s.promptClickLine(sc4RPin(t, s, 5, 0)))
@@ -2480,9 +2480,9 @@ func TestSc4_testWriteString_narrow_cells_cursor_advance_and_pending_wrap(t *tes
 	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().row.wrap, "!term51RPin(&s, 0, 0).rowAndCell().row.wrap")
 	for x, c := range []uint8("abcde") {
 		cell := sc4RPin(t, s, SizeCellCountInt(x), 0).RowAndCell().cell
-		expectEqual(t, uint32(c), cell.content.codepoint)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
-		expectEqual(t, StyleDefaultID, cell.style_id)
+		expectEqual(t, uint32(c), cell.content().codepoint())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
+		expectEqual(t, StyleDefaultID, cell.StyleID())
 	}
 
 	// The next character wraps.
@@ -2494,7 +2494,7 @@ func TestSc4_testWriteString_narrow_cells_cursor_advance_and_pending_wrap(t *tes
 	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().row.wrap_continuation, "!term51RPin(&s, 0, 0).rowAndCell().row.wrap_continuation")
 	expect(t, sc4RPin(t, s, 0, 1).RowAndCell().row.wrap_continuation, "term51RPin(&s, 0, 1).rowAndCell().row.wrap_continuation")
 	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().row.wrap, "!term51RPin(&s, 0, 1).rowAndCell().row.wrap")
-	expectEqual(t, uint32('f'), sc4RPin(t, s, 0, 1).RowAndCell().cell.content.codepoint)
+	expectEqual(t, uint32('f'), sc4RPin(t, s, 0, 1).RowAndCell().cell.content().codepoint())
 }
 
 // Zig: test "term51: testWriteString: invalid UTF-8 is rejected before writing"
@@ -2551,8 +2551,8 @@ func TestSc4_testWriteString_carriage_return_and_nul_are_plain_cells(t *testing.
 	// Only '\n' is special. A '\r' is printed into a cell.
 	sc4Write(t, s, "a\rb")
 	expectEqual(t, SizeCellCountInt(3), s.Cursor.X)
-	expectEqual(t, uint32('\r'), sc4RPin(t, s, 1, 0).RowAndCell().cell.content.codepoint)
-	expectEqual(t, uint32('b'), sc4RPin(t, s, 2, 0).RowAndCell().cell.content.codepoint)
+	expectEqual(t, uint32('\r'), sc4RPin(t, s, 1, 0).RowAndCell().cell.content().codepoint())
+	expectEqual(t, uint32('b'), sc4RPin(t, s, 2, 0).RowAndCell().cell.content().codepoint())
 
 	// NUL advances the cursor but leaves a cell without text.
 	sc4Write(t, s, "\x00")
@@ -2572,14 +2572,14 @@ func TestSc4_testWriteString_codepoints_up_to_0xFF_always_take_one_cell(t *testi
 	expected := []uint32{0xe9, 0xff, 0xad, 0x85, 0xa0}
 	for x, cp := range expected {
 		cell := sc4RPin(t, s, SizeCellCountInt(x), 0).RowAndCell().cell
-		expectEqual(t, cp, cell.content.codepoint)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
+		expectEqual(t, cp, cell.content().codepoint())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
 	}
 
 	// U+0100 is the first codepoint looked up in the width table.
 	sc4Write(t, s, "Ā")
 	expectEqual(t, SizeCellCountInt(6), s.Cursor.X)
-	expectEqual(t, PageCellWideNarrow, sc4RPin(t, s, 5, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideNarrow, sc4RPin(t, s, 5, 0).RowAndCell().cell.Wide())
 }
 
 // Zig: test "term51: testWriteString: wide characters write a head and a tail"
@@ -2593,16 +2593,16 @@ func TestSc4_testWriteString_wide_characters_write_a_head_and_a_tail(t *testing.
 	{
 		head := sc4RPin(t, s, 1, 0).RowAndCell().cell
 		tail := sc4RPin(t, s, 2, 0).RowAndCell().cell
-		expectEqual(t, PageCellWideWide, head.wide)
-		expectEqual(t, uint32(0x4e16), head.content.codepoint)
-		expectEqual(t, PageCellWideSpacerTail, tail.wide)
+		expectEqual(t, PageCellWideWide, head.Wide())
+		expectEqual(t, uint32(0x4e16), head.content().codepoint())
+		expectEqual(t, PageCellWideSpacerTail, tail.Wide())
 		expect(t, !tail.HasText(), "!tail.hasText()")
 	}
 
 	// An emoji beyond the BMP is wide as well.
 	sc4Write(t, s, "\U0001f600")
-	expectEqual(t, PageCellWideWide, sc4RPin(t, s, 3, 0).RowAndCell().cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s, 4, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideWide, sc4RPin(t, s, 3, 0).RowAndCell().cell.Wide())
+	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s, 4, 0).RowAndCell().cell.Wide())
 	// The tail was in the last column, so the cursor waits to wrap.
 	expectEqual(t, SizeCellCountInt(4), s.Cursor.X)
 	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
@@ -2617,13 +2617,13 @@ func TestSc4_testWriteString_wide_character_at_the_last_column_leaves_a_spacer_h
 	sc4Write(t, s, "abc世")
 	{
 		head := sc4RPin(t, s, 3, 0).RowAndCell()
-		expectEqual(t, PageCellWideSpacerHead, head.cell.wide)
+		expectEqual(t, PageCellWideSpacerHead, head.cell.Wide())
 		expect(t, !head.cell.HasText(), "!head.cell.hasText()")
 		expect(t, head.row.wrap, "head.row.wrap")
 	}
 	expect(t, sc4RPin(t, s, 0, 1).RowAndCell().row.wrap_continuation, "term51RPin(&s, 0, 1).rowAndCell().row.wrap_continuation")
-	expectEqual(t, PageCellWideWide, sc4RPin(t, s, 0, 1).RowAndCell().cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s, 1, 1).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideWide, sc4RPin(t, s, 0, 1).RowAndCell().cell.Wide())
+	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s, 1, 1).RowAndCell().cell.Wide())
 	expectEqual(t, SizeCellCountInt(2), s.Cursor.X)
 	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
 
@@ -2631,15 +2631,15 @@ func TestSc4_testWriteString_wide_character_at_the_last_column_leaves_a_spacer_h
 	s2 := sc4Init(t, 4, 3, 0)
 	defer s2.Deinit()
 	sc4Write(t, s2, "ab世")
-	expectEqual(t, PageCellWideWide, sc4RPin(t, s2, 2, 0).RowAndCell().cell.wide)
-	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s2, 3, 0).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideWide, sc4RPin(t, s2, 2, 0).RowAndCell().cell.Wide())
+	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s2, 3, 0).RowAndCell().cell.Wide())
 	expect(t, s2.Cursor.PendingWrap, "s2.cursor.pending_wrap")
 	expect(t, !sc4RPin(t, s2, 0, 0).RowAndCell().row.wrap, "!term51RPin(&s2, 0, 0).rowAndCell().row.wrap")
 
 	// A wide character when the cursor is pending-wrap at the end.
 	sc4Write(t, s2, "世")
 	expect(t, sc4RPin(t, s2, 0, 0).RowAndCell().row.wrap, "term51RPin(&s2, 0, 0).rowAndCell().row.wrap")
-	expectEqual(t, PageCellWideWide, sc4RPin(t, s2, 0, 1).RowAndCell().cell.wide)
+	expectEqual(t, PageCellWideWide, sc4RPin(t, s2, 0, 1).RowAndCell().cell.Wide())
 }
 
 // Zig: test "term51: testWriteString: zero width codepoints become graphemes"
@@ -2654,8 +2654,8 @@ func TestSc4_testWriteString_zero_width_codepoints_become_graphemes(t *testing.T
 	{
 		pin := sc4RPin(t, s, 0, 0)
 		cell := pin.RowAndCell().cell
-		expectEqual(t, PageCellContentTagCodepointGrapheme, cell.content_tag)
-		expectEqual(t, uint32('e'), cell.content.codepoint)
+		expectEqual(t, PageCellContentTagCodepointGrapheme, cell.ContentTag())
+		expectEqual(t, uint32('e'), cell.content().codepoint())
 		expectEqualSlices(t, []uint32{0x301, 0x302}, zigUnwrap(t, pin.Grapheme(cell)))
 	}
 
@@ -2666,11 +2666,11 @@ func TestSc4_testWriteString_zero_width_codepoints_become_graphemes(t *testing.T
 	{
 		pin := sc4RPin(t, s, 1, 0)
 		head := pin.RowAndCell().cell
-		expectEqual(t, PageCellWideWide, head.wide)
-		expectEqual(t, PageCellContentTagCodepointGrapheme, head.content_tag)
+		expectEqual(t, PageCellWideWide, head.Wide())
+		expectEqual(t, PageCellContentTagCodepointGrapheme, head.ContentTag())
 		expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, pin.Grapheme(head)))
 		tail := sc4RPin(t, s, 2, 0).RowAndCell().cell
-		expectEqual(t, PageCellContentTagCodepoint, tail.content_tag)
+		expectEqual(t, PageCellContentTagCodepoint, tail.ContentTag())
 	}
 }
 
@@ -2688,10 +2688,10 @@ func TestSc4_testWriteString_zero_width_codepoint_at_pending_wrap_attaches_to_th
 	sc4Write(t, s, "́")
 
 	b := sc4RPin(t, s, 1, 0)
-	expectEqual(t, PageCellContentTagCodepointGrapheme, b.RowAndCell().cell.content_tag)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, b.RowAndCell().cell.ContentTag())
 	expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, b.Grapheme(b.RowAndCell().cell)))
 	c := sc4RPin(t, s, 2, 0).RowAndCell().cell
-	expectEqual(t, PageCellContentTagCodepoint, c.content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, c.ContentTag())
 }
 
 // Zig: test "term51: testWriteString: cells take the cursor style and protection"
@@ -2708,8 +2708,8 @@ func TestSc4_testWriteString_cells_take_the_cursor_style_and_protection(t *testi
 	sc4Write(t, s, "a")
 	{
 		rac := sc4RPin(t, s, 0, 0).RowAndCell()
-		expectEqual(t, id, rac.cell.style_id)
-		expect(t, rac.cell.protected, "rac.cell.protected")
+		expectEqual(t, id, rac.cell.StyleID())
+		expect(t, rac.cell.Protected(), "rac.cell.protected")
 		expect(t, rac.row.styled, "rac.row.styled")
 	}
 	{
@@ -2723,11 +2723,11 @@ func TestSc4_testWriteString_cells_take_the_cursor_style_and_protection(t *testi
 	{
 		head := sc4RPin(t, s, 1, 0).RowAndCell().cell
 		tail := sc4RPin(t, s, 2, 0).RowAndCell().cell
-		expectEqual(t, id, head.style_id)
-		expect(t, head.protected, "head.protected")
+		expectEqual(t, id, head.StyleID())
+		expect(t, head.Protected(), "head.protected")
 		// The tail cell is protected but carries no style id itself.
-		expectEqual(t, StyleDefaultID, tail.style_id)
-		expect(t, tail.protected, "tail.protected")
+		expectEqual(t, StyleDefaultID, tail.StyleID())
+		expect(t, tail.Protected(), "tail.protected")
 		page := &s.Cursor.PagePin.Node.data
 		expectEqual(t, SizeCellCountInt(4), page.styles.RefCount(id))
 	}
@@ -2737,7 +2737,7 @@ func TestSc4_testWriteString_cells_take_the_cursor_style_and_protection(t *testi
 	zigTry(t, s.SetAttribute(SGRAttribute{Tag: SGRAttributeTagResetBold}))
 	sc4Write(t, s, "\nz")
 	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().row.styled, "!term51RPin(&s, 0, 1).rowAndCell().row.styled")
-	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().cell.protected, "!term51RPin(&s, 0, 1).rowAndCell().cell.protected")
+	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().cell.Protected(), "!term51RPin(&s, 0, 1).rowAndCell().cell.protected")
 }
 
 // Zig: test "term51: testWriteString: cells take the cursor hyperlink"
@@ -2747,17 +2747,17 @@ func TestSc4_testWriteString_cells_take_the_cursor_hyperlink(t *testing.T) {
 	defer s.Deinit()
 
 	sc4Write(t, s, "a")
-	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().cell.hyperlink, "!term51RPin(&s, 0, 0).rowAndCell().cell.hyperlink")
+	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().cell.Hyperlink(), "!term51RPin(&s, 0, 0).rowAndCell().cell.hyperlink")
 
 	zigTry(t, s.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	sc4Write(t, s, "b世")
-	expect(t, sc4RPin(t, s, 1, 0).RowAndCell().cell.hyperlink, "term51RPin(&s, 1, 0).rowAndCell().cell.hyperlink")
-	expect(t, sc4RPin(t, s, 2, 0).RowAndCell().cell.hyperlink, "term51RPin(&s, 2, 0).rowAndCell().cell.hyperlink")
-	expect(t, sc4RPin(t, s, 3, 0).RowAndCell().cell.hyperlink, "term51RPin(&s, 3, 0).rowAndCell().cell.hyperlink")
+	expect(t, sc4RPin(t, s, 1, 0).RowAndCell().cell.Hyperlink(), "term51RPin(&s, 1, 0).rowAndCell().cell.hyperlink")
+	expect(t, sc4RPin(t, s, 2, 0).RowAndCell().cell.Hyperlink(), "term51RPin(&s, 2, 0).rowAndCell().cell.hyperlink")
+	expect(t, sc4RPin(t, s, 3, 0).RowAndCell().cell.Hyperlink(), "term51RPin(&s, 3, 0).rowAndCell().cell.hyperlink")
 	expect(t, sc4RPin(t, s, 3, 0).RowAndCell().row.hyperlink, "term51RPin(&s, 3, 0).rowAndCell().row.hyperlink")
 	s.EndHyperlink()
 	sc4Write(t, s, "c")
-	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().cell.hyperlink, "!term51RPin(&s, 0, 1).rowAndCell().cell.hyperlink")
+	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().cell.Hyperlink(), "!term51RPin(&s, 0, 1).rowAndCell().cell.hyperlink")
 
 	// The spacer head of a wide character that wraps is part of the link.
 	// Upstream defect (test helper): the hyperlink is attached to the spacer
@@ -2771,10 +2771,10 @@ func TestSc4_testWriteString_cells_take_the_cursor_hyperlink(t *testing.T) {
 	s2.Cursor.PagePin.Node.data.PauseIntegrityChecks(true)
 	sc4Write(t, s2, "ab世")
 	s2.Cursor.PagePin.Node.data.PauseIntegrityChecks(false)
-	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s2, 2, 0).RowAndCell().cell.wide)
-	expect(t, sc4RPin(t, s2, 2, 0).RowAndCell().cell.hyperlink, "term51RPin(&s2, 2, 0).rowAndCell().cell.hyperlink")
-	expect(t, sc4RPin(t, s2, 0, 1).RowAndCell().cell.hyperlink, "term51RPin(&s2, 0, 1).rowAndCell().cell.hyperlink")
-	expect(t, sc4RPin(t, s2, 1, 1).RowAndCell().cell.hyperlink, "term51RPin(&s2, 1, 1).rowAndCell().cell.hyperlink")
+	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s2, 2, 0).RowAndCell().cell.Wide())
+	expect(t, sc4RPin(t, s2, 2, 0).RowAndCell().cell.Hyperlink(), "term51RPin(&s2, 2, 0).rowAndCell().cell.hyperlink")
+	expect(t, sc4RPin(t, s2, 0, 1).RowAndCell().cell.Hyperlink(), "term51RPin(&s2, 0, 1).rowAndCell().cell.hyperlink")
+	expect(t, sc4RPin(t, s2, 1, 1).RowAndCell().cell.Hyperlink(), "term51RPin(&s2, 1, 1).rowAndCell().cell.hyperlink")
 }
 
 // Zig: test "term51: testWriteString: semantic content is stamped on cells"
@@ -2787,18 +2787,18 @@ func TestSc4_testWriteString_semantic_content_is_stamped_on_cells(t *testing.T) 
 	sc4Write(t, s, "p")
 	s.CursorSetSemanticContent(sc4Input(ScreenCursorSetSemanticContentInputClearExplicit))
 	sc4Write(t, s, "i世")
-	expect(t, sc4RPin(t, s, 0, 0).RowAndCell().cell.semantic_content == PageCellSemanticContentPrompt, "term51RPin(&s, 0, 0).rowAndCell().cell.semantic_content == .prompt")
-	expect(t, sc4RPin(t, s, 1, 0).RowAndCell().cell.semantic_content == PageCellSemanticContentInput, "term51RPin(&s, 1, 0).rowAndCell().cell.semantic_content == .input")
-	expect(t, sc4RPin(t, s, 2, 0).RowAndCell().cell.semantic_content == PageCellSemanticContentInput, "term51RPin(&s, 2, 0).rowAndCell().cell.semantic_content == .input")
-	expect(t, sc4RPin(t, s, 3, 0).RowAndCell().cell.semantic_content == PageCellSemanticContentInput, "term51RPin(&s, 3, 0).rowAndCell().cell.semantic_content == .input")
+	expect(t, sc4RPin(t, s, 0, 0).RowAndCell().cell.SemanticContent() == PageCellSemanticContentPrompt, "term51RPin(&s, 0, 0).rowAndCell().cell.semantic_content == .prompt")
+	expect(t, sc4RPin(t, s, 1, 0).RowAndCell().cell.SemanticContent() == PageCellSemanticContentInput, "term51RPin(&s, 1, 0).rowAndCell().cell.semantic_content == .input")
+	expect(t, sc4RPin(t, s, 2, 0).RowAndCell().cell.SemanticContent() == PageCellSemanticContentInput, "term51RPin(&s, 2, 0).rowAndCell().cell.semantic_content == .input")
+	expect(t, sc4RPin(t, s, 3, 0).RowAndCell().cell.SemanticContent() == PageCellSemanticContentInput, "term51RPin(&s, 3, 0).rowAndCell().cell.semantic_content == .input")
 
 	// The spacer head carries it as well.
 	s2 := sc4Init(t, 3, 3, 0)
 	defer s2.Deinit()
 	s2.CursorSetSemanticContent(sc4Input(ScreenCursorSetSemanticContentInputClearExplicit))
 	sc4Write(t, s2, "ab世")
-	expect(t, sc4RPin(t, s2, 2, 0).RowAndCell().cell.semantic_content == PageCellSemanticContentInput, "term51RPin(&s2, 2, 0).rowAndCell().cell.semantic_content == .input")
-	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s2, 2, 0).RowAndCell().cell.wide)
+	expect(t, sc4RPin(t, s2, 2, 0).RowAndCell().cell.SemanticContent() == PageCellSemanticContentInput, "term51RPin(&s2, 2, 0).rowAndCell().cell.semantic_content == .input")
+	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s2, 2, 0).RowAndCell().cell.Wide())
 }
 
 // Zig: test "term51: testWriteString: newline semantic prompt handling"
@@ -2898,6 +2898,6 @@ func TestSc4_panic_testWriteString_zero_width_codepoint_after_a_spacer_head(t *t
 	testStdCapacity(t)
 	s := sc4Init(t, 5, 3, 0)
 	sc4Write(t, s, "a")
-	sc4RPin(t, s, 0, 0).RowAndCell().cell.wide = PageCellWideSpacerHead
+	sc4RPin(t, s, 0, 0).RowAndCell().cell.setWide(PageCellWideSpacerHead)
 	sc4ExpectPanic(t, func() { _ = s.TestWriteString([]uint8("́")) })
 }

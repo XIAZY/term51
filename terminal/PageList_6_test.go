@@ -279,11 +279,11 @@ func TestPl6_Cell_style_default_and_non_default_style(t *testing.T) {
 	zigTry(t, err)
 	rac := page.GetRowAndCell(3, 2)
 	rac.row.styled = true
-	*rac.cell = PageCell{
+	*rac.cell = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 'I'},
+		content:     pageCellContentFields{codepoint: 'I'}.pack(),
 		style_id:    id,
-	}
+	}.pack()
 
 	styled := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 3, Y: 2}}))
 	expect(t, styled.Style().Eql(italic), "styled.style().eql(italic)")
@@ -1410,7 +1410,7 @@ func TestPl6_clearDirty_leaves_rows_beyond_the_page_size_alone_and_keeps_content
 	expect(t, rows[page.size.rows].dirty, "rows[page.size.rows].dirty")
 	rows[page.size.rows].dirty = false
 	// Other data is not touched.
-	expectEqual(t, uint32('K'), page.GetRowAndCell(1, 1).cell.content.codepoint)
+	expectEqual(t, uint32('K'), page.GetRowAndCell(1, 1).cell.content().codepoint())
 	expect(t, page.GetRowAndCell(0, 2).row.wrap, "page.getRowAndCell(0, 2).row.wrap")
 }
 
@@ -3368,29 +3368,29 @@ func pl6Cells(page *Page, y uint, pattern string) {
 		cell := page.GetRowAndCell(x, y).cell
 		switch c {
 		case 'p':
-			*cell = PageCell{
+			*cell = pageCellFields{
 				content_tag:      PageCellContentTagCodepoint,
-				content:          PageCellContent{codepoint: '$'},
+				content:          pageCellContentFields{codepoint: '$'}.pack(),
 				semantic_content: PageCellSemanticContentPrompt,
-			}
+			}.pack()
 		case 'i':
-			*cell = PageCell{
+			*cell = pageCellFields{
 				content_tag:      PageCellContentTagCodepoint,
-				content:          PageCellContent{codepoint: 'i'},
+				content:          pageCellContentFields{codepoint: 'i'}.pack(),
 				semantic_content: PageCellSemanticContentInput,
-			}
+			}.pack()
 		case 'o':
-			*cell = PageCell{
+			*cell = pageCellFields{
 				content_tag:      PageCellContentTagCodepoint,
-				content:          PageCellContent{codepoint: 'o'},
+				content:          pageCellContentFields{codepoint: 'o'}.pack(),
 				semantic_content: PageCellSemanticContentOutput,
-			}
+			}.pack()
 		case 'q':
-			*cell = PageCell{semantic_content: PageCellSemanticContentPrompt}
+			*cell = pageCellFields{semantic_content: PageCellSemanticContentPrompt}.pack()
 		case 'n':
-			*cell = PageCell{semantic_content: PageCellSemanticContentInput}
+			*cell = pageCellFields{semantic_content: PageCellSemanticContentInput}.pack()
 		default:
-			*cell = PageCell{}
+			*cell = PageCell(0)
 		}
 	}
 }
@@ -4520,10 +4520,10 @@ func TestPl6_highlightSemanticContent_output_skips_cells_without_text(t *testing
 
 	// A background-only cell is output without text, and skipped.
 	pl6Cells(page, 5, "ppii")
-	*page.GetRowAndCell(4, 5).cell = PageCell{
+	*page.GetRowAndCell(4, 5).cell = pageCellFields{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
-	}
+		content:     pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack(),
+	}.pack()
 	*page.GetRowAndCell(5, 5).cell = PageCellInit('x')
 	hl = s.HighlightSemanticContent(pl6At(t, &s, 0, 5), PageCellSemanticContentOutput)
 	pl6ExpectHl(t, &s, hl, 5, 5, 5, 5)
@@ -4617,10 +4617,10 @@ func TestPl6_highlightSemanticContent_output_without_text_is_null(t *testing.T) 
 	expect(t, !s.HighlightSemanticContent(pl6At(t, &s, 0, 5), PageCellSemanticContentOutput).Valid, "s.highlightSemanticContent(s.pin(term51NPt(0, 5)).?, .output) == null")
 
 	// Only background cells in the output.
-	*page.GetRowAndCell(0, 6).cell = PageCell{
+	*page.GetRowAndCell(0, 6).cell = pageCellFields{
 		content_tag: PageCellContentTagBgColorPalette,
-		content:     PageCellContent{color_palette: 2},
-	}
+		content:     pageCellContentFields{color_palette: 2}.pack(),
+	}.pack()
 	expect(t, !s.HighlightSemanticContent(pl6At(t, &s, 0, 5), PageCellSemanticContentOutput).Valid, "s.highlightSemanticContent(s.pin(term51NPt(0, 5)).?, .output) == null")
 
 	// Text beyond the next prompt row is not output of this prompt.

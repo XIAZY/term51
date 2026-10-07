@@ -317,19 +317,19 @@ var fm3Modes = []struct {
 func fm3CellStyle(term *Terminal, x SizeCellCountInt, y SizeCellCountInt) Style {
 	p := fm3Page(term)
 	c := fm3Cell(term, x, y)
-	switch c.content_tag {
+	switch c.ContentTag() {
 	case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
-		if c.style_id == 0 {
+		if c.StyleID() == 0 {
 			return Style{}
 		}
-		return *p.styles.Get(c.style_id)
+		return *p.styles.Get(c.StyleID())
 	case PageCellContentTagBgColorPalette:
-		return Style{BgColor: StyleColor{Tag: StyleColorPalette, Palette: c.content.color_palette}}
+		return Style{BgColor: StyleColor{Tag: StyleColorPalette, Palette: c.content().colorPalette()}}
 	case PageCellContentTagBgColorRgb:
 		return Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			R: c.content.color_rgb.R,
-			G: c.content.color_rgb.G,
-			B: c.content.color_rgb.B,
+			R: c.content().colorRGB().R,
+			G: c.content().colorRGB().G,
+			B: c.content().colorRGB().B,
 		}}}
 	}
 	panic("unreachable")
@@ -736,10 +736,10 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	// Row 0: a b c d [spacer_head], row 1: wide, tail, e.
 	fm3Write(t, term, "abcd\xe4\xb8\xade")
 	page := fm3Page(term)
-	expectEqual(t, PageCellWideSpacerHead, fm3Cell(term, 4, 0).wide)
+	expectEqual(t, PageCellWideSpacerHead, fm3Cell(term, 4, 0).Wide())
 	expect(t, page.GetRow(0).wrap, "page.getRow(0).wrap")
-	expectEqual(t, PageCellWideWide, fm3Cell(term, 0, 1).wide)
-	expectEqual(t, PageCellWideSpacerTail, fm3Cell(term, 1, 1).wide)
+	expectEqual(t, PageCellWideWide, fm3Cell(term, 0, 1).Wide())
+	expectEqual(t, PageCellWideSpacerTail, fm3Cell(term, 1, 1).Wide())
 
 	// Whole page, unwrap: no newline, spacer cells skipped.
 	{
@@ -808,7 +808,7 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	// On the last row of the page the end cannot move: put a spacer head
 	// at (4, 2) manually.
 	fm3Write(t, term, "\x1b[3;1Hwxyz")
-	fm3Cell(term, 4, 2).wide = PageCellWideSpacerHead
+	fm3Cell(term, 4, 2).setWide(PageCellWideSpacerHead)
 	{
 		opts := fm3Opts(FormatterFormatPlain)
 		opts.Unwrap = true
@@ -868,9 +868,9 @@ func TestFm3_term51_PageFormatter_formatWithState_start_and_end_inside_wide_char
 	// a [wide][tail] b [wide][tail] c
 	fm3Write(t, term, "a\xe4\xb8\xadb\xe6\x96\x87c")
 	page := fm3Page(term)
-	expectEqual(t, PageCellWideWide, fm3Cell(term, 1, 0).wide)
-	expectEqual(t, PageCellWideSpacerTail, fm3Cell(term, 2, 0).wide)
-	expectEqual(t, PageCellWideWide, fm3Cell(term, 4, 0).wide)
+	expectEqual(t, PageCellWideWide, fm3Cell(term, 1, 0).Wide())
+	expectEqual(t, PageCellWideSpacerTail, fm3Cell(term, 2, 0).Wide())
+	expectEqual(t, PageCellWideWide, fm3Cell(term, 4, 0).Wide())
 
 	const zhong = "\xe4\xb8\xad"
 	const wen = "\xe6\x96\x87"
@@ -1008,9 +1008,9 @@ func TestFm3_term51_PageFormatter_formatWithState_grapheme_clusters_per_format(t
 	defer term.Deinit()
 	// e + combining acute, then a ZWJ family pair (grapheme clustering on).
 	fm3Write(t, term, "\x1b[?2027he\xcc\x81x\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9y")
-	expectEqual(t, PageCellContentTagCodepointGrapheme, fm3Cell(term, 0, 0).content_tag)
-	expectEqual(t, PageCellContentTagCodepointGrapheme, fm3Cell(term, 2, 0).content_tag)
-	expectEqual(t, PageCellWideWide, fm3Cell(term, 2, 0).wide)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, fm3Cell(term, 0, 0).ContentTag())
+	expectEqual(t, PageCellContentTagCodepointGrapheme, fm3Cell(term, 2, 0).ContentTag())
+	expectEqual(t, PageCellWideWide, fm3Cell(term, 2, 0).Wide())
 
 	fm3ExpectPage(t, term, FormatterOptionsPlain,
 		"e\xcc\x81x\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9y")
@@ -1183,8 +1183,8 @@ func TestFm3_term51_PageFormatter_formatWithState_background_only_cells(t *testi
 	// Text then a red background fill to the end of the row; next row text
 	// with an rgb background fill; third row only background.
 	fm3Write(t, term, "CPU:\x1b[41m\x1b[K\x1b[0m\r\nB\x1b[48;2;1;2;3m\x1b[K\x1b[0m\r\n\x1b[42m\x1b[K\x1b[0m")
-	expectEqual(t, PageCellContentTagBgColorPalette, fm3Cell(term, 4, 0).content_tag)
-	expectEqual(t, PageCellContentTagBgColorRgb, fm3Cell(term, 1, 1).content_tag)
+	expectEqual(t, PageCellContentTagBgColorPalette, fm3Cell(term, 4, 0).ContentTag())
+	expectEqual(t, PageCellContentTagBgColorRgb, fm3Cell(term, 1, 1).ContentTag())
 
 	// Plain: bg cells have no text so they are trailing blanks; the row of
 	// only background cells is a blank row.
@@ -3129,7 +3129,7 @@ func TestFm3_term51_TerminalFormatter_format_vt_output_replays_into_an_equivalen
 		for x := SizeCellCountInt(0); x < 20; x++ {
 			c1 := fm3Cell(term, x, y)
 			c2 := fm3Cell(term2, x, y)
-			expectEqual(t, c1.wide, c2.wide)
+			expectEqual(t, c1.Wide(), c2.Wide())
 			if c1.HasText() {
 				expectEqual(t, c1.Codepoint(), c2.Codepoint())
 				expect(t, fm3CellStyle(term, x, y).Eql(fm3CellStyle(term2, x, y)),
@@ -3223,7 +3223,7 @@ func TestFm3_panic_PageFormatter_formatWithState_grapheme_cell_without_grapheme_
 	term := fm3Init(t, 10, 2)
 	defer term.Deinit()
 	fm3Write(t, term, "x")
-	fm3Cell(term, 0, 0).content_tag = PageCellContentTagCodepointGrapheme
+	fm3Cell(term, 0, 0).setContentTag(PageCellContentTagCodepointGrapheme)
 	b := oscWriterAllocatingInit()
 	defer b.deinit()
 

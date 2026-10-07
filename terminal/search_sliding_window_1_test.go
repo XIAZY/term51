@@ -211,10 +211,10 @@ func sw1AKPut(node *PageListNode, y uint, x uint, text string) {
 	row := node.data.GetRow(y)
 	cells := node.data.GetCells(row)
 	for i, c := range []uint8(text) {
-		cells[x+uint(i)] = PageCell{
+		cells[x+uint(i)] = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: uint32(c)},
-		}
+			content:     pageCellContentFields{codepoint: uint32(c)}.pack(),
+		}.pack()
 	}
 }
 

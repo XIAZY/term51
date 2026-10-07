@@ -2222,10 +2222,10 @@ func TestFm2_PageFormatter_writeCell_blank_text_and_grapheme_cells(t *testing.T)
 
 	page := fm2Page(t, term)
 	expectEqual(t, uint32('a'), fm2Cell(t, term, 0, 0).Codepoint())
-	expectEqual(t, PageCellContentTagCodepoint, fm2Cell(t, term, 0, 0).content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, fm2Cell(t, term, 0, 0).ContentTag())
 	// x=1 was skipped by CUF so it is empty; x=2 is the grapheme cell.
 	expect(t, !fm2Cell(t, term, 1, 0).HasText(), "!term51ZCell(&t, 1, 0).hasText()")
-	expectEqual(t, PageCellContentTagCodepointGrapheme, fm2Cell(t, term, 2, 0).content_tag)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, fm2Cell(t, term, 2, 0).ContentTag())
 
 	plain := FormatterPageFormatterInit(page, FormatterOptionsPlain)
 	html := FormatterPageFormatterInit(page, FormatterOptionsHtml)
@@ -2312,13 +2312,13 @@ func TestFm2_PageFormatter_writeCell_replacement_applies_to_graphemes_and_not_to
 
 	// Background-only cells (no text) are spaces as well.
 	bg_cell := PageCellInit(0)
-	bg_cell.content_tag = PageCellContentTagBgColorPalette
-	bg_cell.content = PageCellContent{color_palette: 'e'}
+	bg_cell.setContentTag(PageCellContentTagBgColorPalette)
+	bg_cell.setContent(pageCellContentFields{color_palette: 'e'}.pack())
 	zigTry(t, f.writeCell(PageCellContentTagBgColorPalette, &b.writer, &bg_cell))
 	expectEqualStrings(t, " ", string(b.writer.buffered()))
 	b.writer.end = 0
-	bg_cell.content_tag = PageCellContentTagBgColorRgb
-	bg_cell.content = PageCellContent{color_rgb: PageCellRGB{R: 'e', G: 'e', B: 'e'}}
+	bg_cell.setContentTag(PageCellContentTagBgColorRgb)
+	bg_cell.setContent(pageCellContentFields{color_rgb: PageCellRGB{R: 'e', G: 'e', B: 'e'}}.pack())
 	zigTry(t, f.writeCell(PageCellContentTagBgColorRgb, &b.writer, &bg_cell))
 	expectEqualStrings(t, " ", string(b.writer.buffered()))
 }
@@ -2348,18 +2348,18 @@ func TestFm2_PageFormatter_cellStyle_unstyled_styled_and_background_cells(t *tes
 	expect(t, s1.BgColor.Eql(StyleColor{}), "s1.bg_color.eql(.none)")
 
 	s2 := f.cellStyle(fm2Cell(t, term, 2, 0))
-	expectEqual(t, PageCellContentTagCodepointGrapheme, fm2Cell(t, term, 2, 0).content_tag)
+	expectEqual(t, PageCellContentTagCodepointGrapheme, fm2Cell(t, term, 2, 0).ContentTag())
 	expect(t, s2.Flags.Italic, "s2.flags.italic")
 	expect(t, !s2.Flags.Bold, "!s2.flags.bold")
 	expect(t, s2.FgColor.Eql(StyleColor{}), "s2.fg_color.eql(.none)")
 
 	// Background palette cell: only the bg color, nothing else.
-	expectEqual(t, PageCellContentTagBgColorPalette, fm2Cell(t, term, 0, 1).content_tag)
+	expectEqual(t, PageCellContentTagBgColorPalette, fm2Cell(t, term, 0, 1).ContentTag())
 	s3 := f.cellStyle(fm2Cell(t, term, 0, 1))
 	expect(t, s3.Eql(Style{BgColor: fm2Palette(5)}), "s3.eql(.{ .bg_color = .{ .palette = 5 } })")
 
 	// Background rgb cell.
-	expectEqual(t, PageCellContentTagBgColorRgb, fm2Cell(t, term, 2, 1).content_tag)
+	expectEqual(t, PageCellContentTagBgColorRgb, fm2Cell(t, term, 2, 1).ContentTag())
 	s4 := f.cellStyle(fm2Cell(t, term, 2, 1))
 	expect(t, s4.Eql(Style{BgColor: fm2Rgb(10, 20, 30)}), "s4.eql(.{ .bg_color = .{ .rgb = .{ .r = 10, .g = 20, .b = 30 } } })")
 	expect(t, s4.FgColor.Eql(StyleColor{}), "s4.fg_color.eql(.none)")

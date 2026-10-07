@@ -146,11 +146,11 @@ func sc3StartLinkImplicit(t *testing.T, s *Screen, uri string) {
 // wide state, `.{ .content_tag = .codepoint, .content = .{ .codepoint = cp },
 // .wide = wide }`.
 func sc3CellWide(cp uint32, wide PageCellWide) PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
+		content:     pageCellContentFields{codepoint: cp}.pack(),
 		wide:        wide,
-	}
+	}.pack()
 }
 
 // ---- term51O helpers ------------------------------------------------------
@@ -177,10 +177,10 @@ func sc3ORow(t *testing.T, s *Screen, y int) *PageRow {
 // at active (x, y).
 func sc3OSetCp(t *testing.T, s *Screen, x int, y int, cp uint32) {
 	t.Helper()
-	*sc3OCell(t, s, x, y) = PageCell{
+	*sc3OCell(t, s, x, y) = pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // sc3OCp is term51OCp: the codepoint of the cell at active (x, y).
@@ -308,10 +308,10 @@ func sc3OExpectBgRow(t *testing.T, s *Screen, y int, rgb [3]uint8) {
 	t.Helper()
 	for x := 0; x < int(s.Pages.cols); x++ {
 		cell := sc3OCell(t, s, x, y)
-		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, rgb[0], cell.content.color_rgb.R)
-		expectEqual(t, rgb[1], cell.content.color_rgb.G)
-		expectEqual(t, rgb[2], cell.content.color_rgb.B)
+		expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+		expectEqual(t, rgb[0], cell.content().colorRGB().R)
+		expectEqual(t, rgb[1], cell.content().colorRGB().G)
+		expectEqual(t, rgb[2], cell.content().colorRGB().B)
 	}
 }
 
@@ -364,10 +364,10 @@ func sc3OWrapped(t *testing.T) *Screen {
 	t.Helper()
 	s := sc3Init(t, 5, 3, 0)
 	sc3Write(t, s, "abcd\U0001F600")
-	expectEqual(t, PageCellWideSpacerHead, sc3OCell(t, s, 4, 0).wide)
+	expectEqual(t, PageCellWideSpacerHead, sc3OCell(t, s, 4, 0).Wide())
 	expect(t, sc3ORow(t, s, 0).wrap, "term51ORow(&s, 0).wrap")
 	expect(t, sc3ORow(t, s, 1).wrap_continuation, "term51ORow(&s, 1).wrap_continuation")
-	expectEqual(t, PageCellWideWide, sc3OCell(t, s, 0, 1).wide)
+	expectEqual(t, PageCellWideWide, sc3OCell(t, s, 0, 1).Wide())
 	expectEqual(t, 2, s.Cursor.X)
 	expectEqual(t, 1, s.Cursor.Y)
 	return s
@@ -436,7 +436,7 @@ func sc3QStyleUses(page *Page, id StyleID) uint {
 	for i := range rows {
 		cells := page.GetCells(&rows[i])[0:page.size.cols]
 		for _, c := range cells {
-			if c.style_id == id {
+			if c.StyleID() == id {
 				n++
 			}
 		}
@@ -453,7 +453,7 @@ func sc3QLinkUses(page *Page, id HyperlinkID) uint {
 		cells := page.GetCells(&rows[i])[0:page.size.cols]
 		for j := range cells {
 			c := &cells[j]
-			if c.hyperlink {
+			if c.Hyperlink() {
 				got := page.LookupHyperlink(c)
 				if got.Valid && got.Value == id {
 					n++
@@ -848,7 +848,7 @@ func TestSc3_term51_cursorScrollAboveRotate_new_page_after_a_grow_styled_rows_ar
 	// reference; the original row's reference was released.
 	copy := sc3OCell(t, s, 0, 2)
 	expectEqual(t, 1, new_node.data.styles.Count())
-	expectEqual(t, 1, sc3OStyleRefs(&new_node.data, copy.style_id))
+	expectEqual(t, 1, sc3OStyleRefs(&new_node.data, copy.StyleID()))
 	expectEqual(t, 1, sc3OStyleRefs(&first.data, style_id))
 	expect(t, first.data.dirty, "first.data.dirty")
 	expect(t, new_node.data.dirty, "new_node.data.dirty")
@@ -1397,7 +1397,7 @@ func TestSc3_term51_cursorResetWrap_row_without_wrap_only_clears_the_pending_wra
 	expect(t, !sc3ORow(t, s, 0).wrap, "!term51ORow(&s, 0).wrap")
 	expect(t, sc3ORow(t, s, 1).wrap_continuation, "term51ORow(&s, 1).wrap_continuation")
 	// No wrap on the row: the spacer head stays.
-	expectEqual(t, PageCellWideSpacerHead, sc3OCell(t, s, 4, 0).wide)
+	expectEqual(t, PageCellWideSpacerHead, sc3OCell(t, s, 4, 0).Wide())
 	expectEqual(t, 2, s.Cursor.X)
 	expectEqual(t, 0, s.Cursor.Y)
 
@@ -1422,7 +1422,7 @@ func TestSc3_term51_cursorResetWrap_wrapped_row_clears_wrap_next_continuation_an
 	// The spacer head is gone, the rest of the rows untouched.
 	sc3OExpectBlank(t, sc3OCell(t, s, 4, 0))
 	expectEqual(t, 'd', sc3OCp(t, s, 3, 0))
-	expectEqual(t, PageCellWideWide, sc3OCell(t, s, 0, 1).wide)
+	expectEqual(t, PageCellWideWide, sc3OCell(t, s, 0, 1).Wide())
 	expectEqual(t, 0x1F600, sc3OCp(t, s, 0, 1))
 	expectEqual(t, 1, s.Cursor.X)
 	expectEqual(t, 0, s.Cursor.Y)
@@ -1445,11 +1445,11 @@ func TestSc3_term51_cursorResetWrap_spacer_head_is_cleared_with_the_background_c
 
 	s.CursorResetWrap()
 	cell := sc3OCell(t, s, 4, 0)
-	expectEqual(t, PageCellWideNarrow, cell.wide)
-	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, 4, cell.content.color_rgb.R)
-	expectEqual(t, 5, cell.content.color_rgb.G)
-	expectEqual(t, 6, cell.content.color_rgb.B)
+	expectEqual(t, PageCellWideNarrow, cell.Wide())
+	expectEqual(t, PageCellContentTagBgColorRgb, cell.ContentTag())
+	expectEqual(t, 4, cell.content().colorRGB().R)
+	expectEqual(t, 5, cell.content().colorRGB().G)
+	expectEqual(t, 6, cell.content().colorRGB().B)
 	expect(t, !sc3ORow(t, s, 0).wrap, "!term51ORow(&s, 0).wrap")
 }
 
@@ -1471,19 +1471,19 @@ func TestSc3_term51_cursorResetWrap_a_spacer_head_with_a_hyperlink_releases_it(t
 	zigTry(t, s.CursorSetHyperlink())
 	page := &s.Cursor.PagePin.Node.data
 	link_id := s.Cursor.HyperlinkID
-	expect(t, sc3OCell(t, s, 4, 0).hyperlink, "term51OCell(&s, 4, 0).hyperlink")
+	expect(t, sc3OCell(t, s, 4, 0).Hyperlink(), "term51OCell(&s, 4, 0).hyperlink")
 	// abcd (4) + spacer head + the cursor
 	expectEqual(t, 6, sc3OLinkRefs(page, link_id))
 
 	s.CursorAbsolute(0, 0)
 	s.CursorResetWrap()
-	expect(t, !sc3OCell(t, s, 4, 0).hyperlink, "!term51OCell(&s, 4, 0).hyperlink")
+	expect(t, !sc3OCell(t, s, 4, 0).Hyperlink(), "!term51OCell(&s, 4, 0).hyperlink")
 	sc3OExpectBlank(t, sc3OCell(t, s, 4, 0))
 	expectEqual(t, 5, sc3OLinkRefs(page, link_id))
 	expect(t, !sc3ORow(t, s, 0).wrap, "!term51ORow(&s, 0).wrap")
 	expect(t, !sc3ORow(t, s, 1).wrap_continuation, "!term51ORow(&s, 1).wrap_continuation")
 	// The other cells of the row keep theirs and the row flag stays.
-	expect(t, sc3OCell(t, s, 0, 0).hyperlink, "term51OCell(&s, 0, 0).hyperlink")
+	expect(t, sc3OCell(t, s, 0, 0).Hyperlink(), "term51OCell(&s, 0, 0).hyperlink")
 	expect(t, sc3ORow(t, s, 0).hyperlink, "term51ORow(&s, 0).hyperlink")
 }
 
@@ -1511,12 +1511,12 @@ func TestSc3_term51_cursorResetWrap_wrapped_row_whose_last_cell_is_not_a_spacer_
 		s := sc3Init(t, 5, 3, 0)
 		defer s.Deinit()
 		sc3Write(t, s, "abc\U0001F600")
-		expectEqual(t, PageCellWideSpacerTail, sc3OCell(t, s, 4, 0).wide)
+		expectEqual(t, PageCellWideSpacerTail, sc3OCell(t, s, 4, 0).Wide())
 		sc3ORow(t, s, 0).wrap = true
 		s.CursorAbsolute(0, 0)
 		s.CursorResetWrap()
 		expect(t, !sc3ORow(t, s, 0).wrap, "!term51ORow(&s, 0).wrap")
-		expectEqual(t, PageCellWideSpacerTail, sc3OCell(t, s, 4, 0).wide)
+		expectEqual(t, PageCellWideSpacerTail, sc3OCell(t, s, 4, 0).Wide())
 		expectEqual(t, 0x1F600, sc3OCp(t, s, 3, 0))
 	}()
 }
@@ -2221,7 +2221,7 @@ func TestSc3_term51_clearRows_unprotected_clears_the_cells_and_resets_every_row_
 
 	// Row 1 is untouched and not marked dirty.
 	expect(t, !sc3QRow(t, s, 1).dirty, "!term51QRow(&s, 1).dirty")
-	expectEqual(t, 'x', sc3QCell(t, s, 0, 1).content.codepoint)
+	expectEqual(t, 'x', sc3QCell(t, s, 0, 1).content().codepoint())
 
 	// All the managed memory of row 0 was released.
 	expectEqual(t, 0, page.GraphemeCount())
@@ -2246,8 +2246,8 @@ func TestSc3_term51_clearRows_protected_keeps_protected_cells_and_every_row_attr
 		row.wrap_continuation = true
 		row.semantic_prompt = PageRowSemanticPromptPromptContinuation
 		// Cells 1 and 3 are protected.
-		sc3QCell(t, s, 1, 0).protected = true
-		sc3QCell(t, s, 3, 0).protected = true
+		sc3QCell(t, s, 1, 0).setProtected(true)
+		sc3QCell(t, s, 3, 0).setProtected(true)
 	}
 
 	page := &s.Cursor.PagePin.Node.data
@@ -2263,26 +2263,26 @@ func TestSc3_term51_clearRows_protected_keeps_protected_cells_and_every_row_attr
 	expectEqual(t, PageRowSemanticPromptPromptContinuation, row0.semantic_prompt)
 
 	expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 0)))
-	expectEqual(t, 'b', sc3QCell(t, s, 1, 0).content.codepoint)
-	expect(t, sc3QCell(t, s, 1, 0).protected, "term51QCell(&s, 1, 0).protected")
+	expectEqual(t, 'b', sc3QCell(t, s, 1, 0).content().codepoint())
+	expect(t, sc3QCell(t, s, 1, 0).Protected(), "term51QCell(&s, 1, 0).protected")
 	expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 2, 0)))
-	expectEqual(t, 'd', sc3QCell(t, s, 3, 0).content.codepoint)
+	expectEqual(t, 'd', sc3QCell(t, s, 3, 0).content().codepoint())
 	expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 4, 0)))
 
 	// The two protected cells keep their style references.
 	expectEqual(t, 1, page.styles.Count())
-	expectEqual(t, 2, page.styles.RefCount(sc3QCell(t, s, 1, 0).style_id))
+	expectEqual(t, 2, page.styles.RefCount(sc3QCell(t, s, 1, 0).StyleID()))
 	sc3QExpectExactRefs(t, s)
 
 	// Clearing protected again changes nothing; clearing unprotected
 	// removes the rest.
 	s.ClearRows(sc3Active(0, 0), Some(sc3Active(0, 0)), true)
-	expectEqual(t, 2, page.styles.RefCount(sc3QCell(t, s, 1, 0).style_id))
+	expectEqual(t, 2, page.styles.RefCount(sc3QCell(t, s, 1, 0).StyleID()))
 	s.ClearRows(sc3Active(0, 0), Some(sc3Active(0, 0)), false)
 	expectEqual(t, 0, page.styles.Count())
 	expect(t, !row0.wrap, "!row0.wrap")
 	expect(t, !row0.styled, "!row0.styled")
-	expect(t, !sc3QCell(t, s, 1, 0).protected, "!term51QCell(&s, 1, 0).protected")
+	expect(t, !sc3QCell(t, s, 1, 0).Protected(), "!term51QCell(&s, 1, 0).protected")
 }
 
 // Zig: test "term51: clearRows: bounds select the rows that are cleared"
@@ -2336,7 +2336,7 @@ func TestSc3_term51_clearRows_cleared_cells_get_the_cursor_background(t *testing
 	s := sc3Init(t, 4, 2, 0)
 	defer s.Deinit()
 	sc3Write(t, s, "abcd")
-	sc3QCell(t, s, 1, 0).protected = true
+	sc3QCell(t, s, 1, 0).setProtected(true)
 
 	sc3SetAttr(t, s, sc3AttrBg256(9))
 	s.ClearRows(sc3Active(0, 0), Some(sc3Active(0, 0)), true)
@@ -2344,21 +2344,21 @@ func TestSc3_term51_clearRows_cleared_cells_get_the_cursor_background(t *testing
 	// Unprotected cells are bg-only cells, the protected cell is intact.
 	for _, x := range []SizeCellCountInt{0, 2, 3} {
 		c := sc3QCell(t, s, x, 0)
-		expectEqual(t, PageCellContentTagBgColorPalette, c.content_tag)
-		expectEqual(t, 9, c.content.color_palette)
-		expectEqual(t, StyleDefaultID, c.style_id)
+		expectEqual(t, PageCellContentTagBgColorPalette, c.ContentTag())
+		expectEqual(t, 9, c.content().colorPalette())
+		expectEqual(t, StyleDefaultID, c.StyleID())
 	}
-	expectEqual(t, 'b', sc3QCell(t, s, 1, 0).content.codepoint)
+	expectEqual(t, 'b', sc3QCell(t, s, 1, 0).content().codepoint())
 
 	// Unprotected clears everything including the protected cell.
 	sc3SetAttr(t, s, sc3AttrBgRGB(1, 2, 3))
 	s.ClearRows(sc3Active(0, 0), Some(sc3Active(0, 0)), false)
 	for x := 0; x < 4; x++ {
 		c := sc3QCell(t, s, SizeCellCountInt(x), 0)
-		expectEqual(t, PageCellContentTagBgColorRgb, c.content_tag)
-		expectEqual(t, 1, c.content.color_rgb.R)
-		expectEqual(t, 2, c.content.color_rgb.G)
-		expectEqual(t, 3, c.content.color_rgb.B)
+		expectEqual(t, PageCellContentTagBgColorRgb, c.ContentTag())
+		expectEqual(t, 1, c.content().colorRGB().R)
+		expectEqual(t, 2, c.content().colorRGB().G)
+		expectEqual(t, 3, c.content().colorRGB().B)
 	}
 	sc3QExpectExactRefs(t, s)
 }
@@ -2373,12 +2373,12 @@ func TestSc3_term51_clearRows_across_a_page_boundary(t *testing.T) {
 	sc3SetAttr(t, s, sc3A(SGRAttributeTagBold))
 	for _, y := range []uint32{0, 1, 2} {
 		s.CursorAbsolute(0, SizeCellCountInt(y))
-		*s.Cursor.PageCell = PageCell{
+		*s.Cursor.PageCell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: 'x'},
+			content:     pageCellContentFields{codepoint: 'x'}.pack(),
 			style_id:    s.Cursor.StyleID,
-		}
-		s.Cursor.PageCell.style_id = s.Cursor.StyleID
+		}.pack()
+		s.Cursor.PageCell.setStyleID(s.Cursor.StyleID)
 		s.Cursor.PagePin.Node.data.styles.Use(s.Cursor.StyleID)
 		s.Cursor.PageRow.styled = true
 	}
@@ -2392,7 +2392,7 @@ func TestSc3_term51_clearRows_across_a_page_boundary(t *testing.T) {
 
 	s.ClearRows(sc3Active(0, 1), None[Point](), false)
 
-	expectEqual(t, 'x', sc3QCell(t, s, 0, 0).content.codepoint)
+	expectEqual(t, 'x', sc3QCell(t, s, 0, 0).content().codepoint())
 	expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 1)))
 	expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 2)))
 	expect(t, sc3QRow(t, s, 1).dirty, "term51QRow(&s, 1).dirty")
@@ -2433,12 +2433,12 @@ func TestSc3_term51_blankCell_palette_and_rgb_backgrounds(t *testing.T) {
 	for _, idx := range []uint8{0, 1, 127, 255} {
 		sc3SetAttr(t, s, sc3AttrBg256(idx))
 		c := s.BlankCell()
-		expectEqual(t, PageCellContentTagBgColorPalette, c.content_tag)
-		expectEqual(t, idx, c.content.color_palette)
-		expectEqual(t, StyleDefaultID, c.style_id)
-		expectEqual(t, PageCellWideNarrow, c.wide)
-		expect(t, !c.protected, "!c.protected")
-		expect(t, !c.hyperlink, "!c.hyperlink")
+		expectEqual(t, PageCellContentTagBgColorPalette, c.ContentTag())
+		expectEqual(t, idx, c.content().colorPalette())
+		expectEqual(t, StyleDefaultID, c.StyleID())
+		expectEqual(t, PageCellWideNarrow, c.Wide())
+		expect(t, !c.Protected(), "!c.protected")
+		expect(t, !c.Hyperlink(), "!c.hyperlink")
 	}
 
 	rgbs := []SGRAttribute{
@@ -2449,15 +2449,15 @@ func TestSc3_term51_blankCell_palette_and_rgb_backgrounds(t *testing.T) {
 	for _, attr := range rgbs {
 		sc3SetAttr(t, s, attr)
 		c := s.BlankCell()
-		expectEqual(t, PageCellContentTagBgColorRgb, c.content_tag)
-		expectEqual(t, attr.DirectColorBg.R, c.content.color_rgb.R)
-		expectEqual(t, attr.DirectColorBg.G, c.content.color_rgb.G)
-		expectEqual(t, attr.DirectColorBg.B, c.content.color_rgb.B)
+		expectEqual(t, PageCellContentTagBgColorRgb, c.ContentTag())
+		expectEqual(t, attr.DirectColorBg.R, c.content().colorRGB().R)
+		expectEqual(t, attr.DirectColorBg.G, c.content().colorRGB().G)
+		expectEqual(t, attr.DirectColorBg.B, c.content().colorRGB().B)
 	}
 
 	// A named background.
 	sc3SetAttr(t, s, SGRAttribute{Tag: SGRAttributeTag8Bg, X8Bg: ColorNameRed})
-	expectEqual(t, 1, s.BlankCell().content.color_palette)
+	expectEqual(t, 1, s.BlankCell().content().colorPalette())
 
 	// Resetting the background goes back to the zero cell, the style stays.
 	sc3SetAttr(t, s, sc3A(SGRAttributeTagBold))
@@ -2506,11 +2506,11 @@ func TestSc3_term51_clearCells_a_plain_row_clears_only_the_given_range_and_nothi
 
 	// A partial range.
 	s.ClearCells(page, row, cells[1:4])
-	expectEqual(t, 'a', cells[0].content.codepoint)
+	expectEqual(t, 'a', cells[0].content().codepoint())
 	expectEqual(t, uint64(0), sc3QBits(cells[1]))
 	expectEqual(t, uint64(0), sc3QBits(cells[2]))
 	expectEqual(t, uint64(0), sc3QBits(cells[3]))
-	expectEqual(t, 'e', cells[4].content.codepoint)
+	expectEqual(t, 'e', cells[4].content().codepoint())
 
 	// The row attributes are not touched, not even the dirty flag.
 	expect(t, row.wrap, "row.wrap")
@@ -2569,7 +2569,7 @@ func TestSc3_term51_clearCells_graphemes(t *testing.T) {
 	s.ClearCells(page, row, cells[2:5])
 	expectEqual(t, 0, page.GraphemeCount())
 	expect(t, !row.grapheme, "!row.grapheme")
-	expectEqual(t, PageCellContentTagCodepoint, cells[3].content_tag)
+	expectEqual(t, PageCellContentTagCodepoint, cells[3].ContentTag())
 
 	// A full-row clear resets the flag directly.
 	sc3QGrapheme(t, s, 5, 0, 'f')
@@ -2609,9 +2609,9 @@ func TestSc3_term51_clearCells_hyperlinks(t *testing.T) {
 	s.ClearCells(page, row, cells[1:3])
 	expectEqual(t, 2, page.hyperlink_set.RefCount(id))
 	expectEqual(t, 2, page.HyperlinkCount())
-	expect(t, !cells[1].hyperlink, "!cells[1].hyperlink")
+	expect(t, !cells[1].Hyperlink(), "!cells[1].hyperlink")
 	expect(t, !page.LookupHyperlink(&cells[1]).Valid, "page.lookupHyperlink(&cells[1]) == null")
-	expect(t, cells[0].hyperlink, "cells[0].hyperlink")
+	expect(t, cells[0].Hyperlink(), "cells[0].hyperlink")
 	expect(t, row.hyperlink, "row.hyperlink")
 	expectEqual(t, 1, page.hyperlink_set.Count())
 
@@ -2674,7 +2674,7 @@ func TestSc3_term51_clearCells_styles(t *testing.T) {
 	expectEqual(t, 1, page.styles.RefCount(id))
 	expect(t, row.styled, "row.styled")
 	for _, c := range cells {
-		expectEqual(t, StyleDefaultID, c.style_id)
+		expectEqual(t, StyleDefaultID, c.StyleID())
 	}
 
 	// The cursor's own reference is untouched.
@@ -2710,7 +2710,7 @@ func TestSc3_term51_clearCells_mixed_managed_memory_in_one_range(t *testing.T) {
 	row := sc3QRow(t, s, 0)
 	cells := page.GetCells(row)
 	zigTry(t, page.AppendGrapheme(row, &cells[2], 0x301))
-	style_id := cells[0].style_id
+	style_id := cells[0].StyleID()
 	link_id := zigUnwrap(t, page.LookupHyperlink(&cells[0]))
 	expect(t, row.grapheme && row.hyperlink && row.styled, "row.grapheme and row.hyperlink and row.styled")
 	expectEqual(t, 4, page.styles.RefCount(style_id))
@@ -2744,8 +2744,8 @@ func TestSc3_term51_clearCells_cleared_cells_take_the_cursor_background_and_drop
 	page := &s.Cursor.PagePin.Node.data
 	row := sc3QRow(t, s, 0)
 	cells := page.GetCells(row)
-	cells[1].protected = true
-	cells[1].semantic_content = PageCellSemanticContentPrompt
+	cells[1].setProtected(true)
+	cells[1].setSemanticContent(PageCellSemanticContentPrompt)
 
 	// Default cursor: zero cells.
 	s.ClearCells(page, row, cells[1:2])
@@ -2754,18 +2754,18 @@ func TestSc3_term51_clearCells_cleared_cells_take_the_cursor_background_and_drop
 	// Cursor with a palette background.
 	sc3QMove(s, 0, 1)
 	sc3SetAttr(t, s, SGRAttribute{Tag: SGRAttributeTag8Bg, X8Bg: ColorNameCyan})
-	cells[0].protected = true
+	cells[0].setProtected(true)
 	cells[1] = PageCellInit('z')
-	cells[1].semantic_content = PageCellSemanticContentPrompt
+	cells[1].setSemanticContent(PageCellSemanticContentPrompt)
 	s.ClearCells(page, row, cells[0:2])
 	for _, c := range cells[0:2] {
-		expectEqual(t, PageCellContentTagBgColorPalette, c.content_tag)
-		expectEqual(t, 6, c.content.color_palette)
-		expectEqual(t, StyleDefaultID, c.style_id)
-		expect(t, !c.protected, "!c.protected")
-		expectEqual(t, PageCellSemanticContentOutput, c.semantic_content)
+		expectEqual(t, PageCellContentTagBgColorPalette, c.ContentTag())
+		expectEqual(t, 6, c.content().colorPalette())
+		expectEqual(t, StyleDefaultID, c.StyleID())
+		expect(t, !c.Protected(), "!c.protected")
+		expectEqual(t, PageCellSemanticContentOutput, c.SemanticContent())
 	}
-	expectEqual(t, 'c', cells[2].content.codepoint)
+	expectEqual(t, 'c', cells[2].content().codepoint())
 
 	// A non-background style gives zero cells.
 	sc3SetAttr(t, s, sc3A(SGRAttributeTagResetBg))
@@ -2786,15 +2786,15 @@ func TestSc3_term51_clearCells_a_wide_character_and_its_spacer_tail(t *testing.T
 	page := &s.Cursor.PagePin.Node.data
 	row := sc3QRow(t, s, 0)
 	cells := page.GetCells(row)
-	expectEqual(t, PageCellWideWide, cells[1].wide)
-	expectEqual(t, PageCellWideSpacerTail, cells[2].wide)
+	expectEqual(t, PageCellWideWide, cells[1].Wide())
+	expectEqual(t, PageCellWideSpacerTail, cells[2].Wide())
 
 	// Clearing both halves together leaves a consistent page.
 	s.ClearCells(page, row, cells[1:3])
 	expectEqual(t, uint64(0), sc3QBits(cells[1]))
 	expectEqual(t, uint64(0), sc3QBits(cells[2]))
-	expectEqual(t, 'A', cells[0].content.codepoint)
-	expectEqual(t, 'B', cells[3].content.codepoint)
+	expectEqual(t, 'A', cells[0].content().codepoint())
+	expectEqual(t, 'B', cells[3].content().codepoint())
 	page.AssertIntegrity()
 }
 
@@ -2809,14 +2809,14 @@ func TestSc3_term51_clearUnprotectedCells_runs_of_unprotected_cells_between_prot
 	row := sc3QRow(t, s, 0)
 	cells := page.GetCells(row)
 	for _, i := range []int{2, 3, 6} {
-		cells[i].protected = true
+		cells[i].setProtected(true)
 	}
 
 	s.ClearUnprotectedCells(page, row, cells)
 	expected := "\x00\x00CD\x00\x00G\x00"
 	for i, c := range cells {
-		expectEqual(t, uint32(expected[i]), c.content.codepoint)
-		expectEqual(t, i == 2 || i == 3 || i == 6, c.protected)
+		expectEqual(t, uint32(expected[i]), c.content().codepoint())
+		expectEqual(t, i == 2 || i == 3 || i == 6, c.Protected())
 	}
 	sc3QExpectExactRefs(t, s)
 }
@@ -2864,16 +2864,16 @@ func TestSc3_term51_clearUnprotectedCells_all_protected_clears_nothing(t *testin
 	cells := page.GetCells(row)
 	zigTry(t, page.AppendGrapheme(row, &cells[0], 0x301))
 	for i := range cells {
-		cells[i].protected = true
+		cells[i].setProtected(true)
 	}
 
 	s.ClearUnprotectedCells(page, row, cells)
-	expectEqual(t, 'a', cells[0].content.codepoint)
-	expectEqual(t, 'd', cells[3].content.codepoint)
+	expectEqual(t, 'a', cells[0].content().codepoint())
+	expectEqual(t, 'd', cells[3].content().codepoint())
 	expect(t, row.styled && row.grapheme, "row.styled and row.grapheme")
 	expectEqual(t, 1, page.GraphemeCount())
 	expectEqual(t, 1, page.styles.Count())
-	expectEqual(t, 4, page.styles.RefCount(cells[0].style_id))
+	expectEqual(t, 4, page.styles.RefCount(cells[0].StyleID()))
 	sc3QExpectExactRefs(t, s)
 }
 
@@ -2892,13 +2892,13 @@ func TestSc3_term51_clearUnprotectedCells_protection_at_the_ends_of_the_slice(t 
 	for _, pat := range patterns {
 		for i := range cells {
 			cells[i] = PageCellInit('x')
-			cells[i].protected = pat[i] == 'P'
+			cells[i].setProtected(pat[i] == 'P')
 		}
 		s.ClearUnprotectedCells(page, row, cells)
 		for i, c := range cells {
 			if pat[i] == 'P' {
-				expectEqual(t, 'x', c.content.codepoint)
-				expect(t, c.protected, "c.protected")
+				expectEqual(t, 'x', c.content().codepoint())
+				expect(t, c.Protected(), "c.protected")
 			} else {
 				expectEqual(t, uint64(0), sc3QBits(c))
 			}
@@ -2920,23 +2920,23 @@ func TestSc3_term51_clearUnprotectedCells_empty_and_partial_slices(t *testing.T)
 	// An empty slice does nothing.
 	s.ClearUnprotectedCells(page, row, cells[2:2])
 	s.ClearUnprotectedCells(page, row, cells[0:0])
-	expectEqual(t, 'a', cells[0].content.codepoint)
-	expectEqual(t, 'c', cells[2].content.codepoint)
+	expectEqual(t, 'a', cells[0].content().codepoint())
+	expectEqual(t, 'c', cells[2].content().codepoint())
 
 	// A sub-slice only touches its range.
-	cells[3].protected = true
+	cells[3].setProtected(true)
 	s.ClearUnprotectedCells(page, row, cells[1:4])
-	expectEqual(t, 'a', cells[0].content.codepoint)
+	expectEqual(t, 'a', cells[0].content().codepoint())
 	expectEqual(t, uint64(0), sc3QBits(cells[1]))
 	expectEqual(t, uint64(0), sc3QBits(cells[2]))
-	expectEqual(t, 'd', cells[3].content.codepoint)
-	expectEqual(t, 'e', cells[4].content.codepoint)
+	expectEqual(t, 'd', cells[3].content().codepoint())
+	expectEqual(t, 'e', cells[4].content().codepoint())
 
 	// A single unprotected and a single protected cell.
 	s.ClearUnprotectedCells(page, row, cells[4:5])
 	expectEqual(t, uint64(0), sc3QBits(cells[4]))
 	s.ClearUnprotectedCells(page, row, cells[3:4])
-	expectEqual(t, 'd', cells[3].content.codepoint)
+	expectEqual(t, 'd', cells[3].content().codepoint())
 }
 
 // Zig: test "term51: clearUnprotectedCells: managed memory is released only for cleared cells"
@@ -2956,8 +2956,8 @@ func TestSc3_term51_clearUnprotectedCells_managed_memory_is_released_only_for_cl
 	cells := page.GetCells(row)
 	zigTry(t, page.AppendGrapheme(row, &cells[1], 0x301))
 	zigTry(t, page.AppendGrapheme(row, &cells[4], 0x302))
-	cells[4].protected = true
-	style_id := cells[0].style_id
+	cells[4].setProtected(true)
+	style_id := cells[0].StyleID()
 	link_id := zigUnwrap(t, page.LookupHyperlink(&cells[0]))
 	sc3QExpectExactRefs(t, s)
 
@@ -2980,16 +2980,16 @@ func TestSc3_term51_clearUnprotectedCells_cleared_cells_take_the_cursor_backgrou
 	page := &s.Cursor.PagePin.Node.data
 	row := sc3QRow(t, s, 0)
 	cells := page.GetCells(row)
-	cells[2].protected = true
+	cells[2].setProtected(true)
 	sc3QMove(s, 0, 1)
 	sc3SetAttr(t, s, sc3AttrBgRGB(9, 8, 7))
 
 	s.ClearUnprotectedCells(page, row, cells)
 	for _, i := range []int{0, 1, 3} {
-		expectEqual(t, PageCellContentTagBgColorRgb, cells[i].content_tag)
-		expectEqual(t, 9, cells[i].content.color_rgb.R)
+		expectEqual(t, PageCellContentTagBgColorRgb, cells[i].ContentTag())
+		expectEqual(t, 9, cells[i].content().colorRGB().R)
 	}
-	expectEqual(t, 'c', cells[2].content.codepoint)
+	expectEqual(t, 'c', cells[2].content().codepoint())
 }
 
 // Zig: test "term51: splitCellBoundary: the boundary after the last cell only matters for a wrapped spacer head"
@@ -3014,7 +3014,7 @@ func TestSc3_term51_splitCellBoundary_the_boundary_after_the_last_cell_only_matt
 		s.CursorAbsolute(0, 0)
 		expect(t, s.Cursor.PageRow.wrap, "s.cursor.page_row.wrap")
 		s.SplitCellBoundary(6)
-		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content.codepoint)
+		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content().codepoint())
 		expect(t, s.Cursor.PageRow.wrap, "s.cursor.page_row.wrap")
 	}()
 
@@ -3022,15 +3022,15 @@ func TestSc3_term51_splitCellBoundary_the_boundary_after_the_last_cell_only_matt
 	func() {
 		s := sc3QTextScreen(t, "ABCDE橋", 0)
 		defer s.Deinit()
-		expectEqual(t, PageCellWideSpacerHead, sc3QCell(t, s, 5, 0).wide)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).wide)
+		expectEqual(t, PageCellWideSpacerHead, sc3QCell(t, s, 5, 0).Wide())
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).Wide())
 		s.CursorAbsolute(0, 0)
 		s.SplitCellBoundary(6)
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 5, 0)))
-		expectEqual(t, 'E', sc3QCell(t, s, 4, 0).content.codepoint)
+		expectEqual(t, 'E', sc3QCell(t, s, 4, 0).content().codepoint())
 		expect(t, s.Cursor.PageRow.wrap, "s.cursor.page_row.wrap")
 		expect(t, sc3QRow(t, s, 1).wrap_continuation, "term51QRow(&s, 1).wrap_continuation")
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).Wide())
 		s.Cursor.PagePin.Node.data.AssertIntegrity()
 	}()
 }
@@ -3047,8 +3047,8 @@ func TestSc3_term51_splitCellBoundary_x_of_0_and_1_on_a_wrapped_row_that_starts_
 		expect(t, s.Cursor.PageRow.wrap_continuation, "s.cursor.page_row.wrap_continuation")
 		s.SplitCellBoundary(0)
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 5, 0)))
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).wide)
-		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 1, 1).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).Wide())
+		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 1, 1).Wide())
 		expect(t, sc3QRow(t, s, 0).wrap, "term51QRow(&s, 0).wrap")
 		expect(t, s.Cursor.PageRow.wrap_continuation, "s.cursor.page_row.wrap_continuation")
 	}()
@@ -3062,7 +3062,7 @@ func TestSc3_term51_splitCellBoundary_x_of_0_and_1_on_a_wrapped_row_that_starts_
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 5, 0)))
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 1)))
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 1, 1)))
-		expectEqual(t, 'E', sc3QCell(t, s, 4, 0).content.codepoint)
+		expectEqual(t, 'E', sc3QCell(t, s, 4, 0).content().codepoint())
 		s.Cursor.PagePin.Node.data.AssertIntegrity()
 	}()
 
@@ -3074,9 +3074,9 @@ func TestSc3_term51_splitCellBoundary_x_of_0_and_1_on_a_wrapped_row_that_starts_
 		s.SplitCellBoundary(2)
 		// The left neighbour of x=2 is the spacer tail: nothing is cleared,
 		// in particular not the spacer head of the previous row.
-		expectEqual(t, PageCellWideSpacerHead, sc3QCell(t, s, 5, 0).wide)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).wide)
-		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 1, 1).wide)
+		expectEqual(t, PageCellWideSpacerHead, sc3QCell(t, s, 5, 0).Wide())
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).Wide())
+		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 1, 1).Wide())
 	}()
 }
 
@@ -3092,8 +3092,8 @@ func TestSc3_term51_splitCellBoundary_wrapped_rows_without_a_spacer_head_or_with
 		expect(t, s.Cursor.PageRow.wrap_continuation, "s.cursor.page_row.wrap_continuation")
 		s.SplitCellBoundary(0)
 		s.SplitCellBoundary(1)
-		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content.codepoint)
-		expectEqual(t, 'G', sc3QCell(t, s, 0, 1).content.codepoint)
+		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content().codepoint())
+		expectEqual(t, 'G', sc3QCell(t, s, 0, 1).content().codepoint())
 	}()
 
 	// Wide first cell on a continuation row, but the previous row's last
@@ -3103,14 +3103,14 @@ func TestSc3_term51_splitCellBoundary_wrapped_rows_without_a_spacer_head_or_with
 		s := sc3QTextScreen(t, "ABCDEF橋", 0)
 		defer s.Deinit()
 		s.CursorAbsolute(0, 1)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).Wide())
 		expect(t, s.Cursor.PageRow.wrap_continuation, "s.cursor.page_row.wrap_continuation")
 		s.SplitCellBoundary(0)
-		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content.codepoint)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).wide)
+		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content().codepoint())
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 1).Wide())
 		// x = 1 splits the wide character.
 		s.SplitCellBoundary(1)
-		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content.codepoint)
+		expectEqual(t, 'F', sc3QCell(t, s, 5, 0).content().codepoint())
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 1)))
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 1, 1)))
 	}()
@@ -3122,11 +3122,11 @@ func TestSc3_term51_splitCellBoundary_wrapped_rows_without_a_spacer_head_or_with
 		s.CursorAbsolute(0, 0)
 		expect(t, !s.Cursor.PageRow.wrap_continuation, "!s.cursor.page_row.wrap_continuation")
 		s.SplitCellBoundary(0)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 0).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 0).Wide())
 		s.SplitCellBoundary(1)
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 0)))
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 1, 0)))
-		expectEqual(t, 'C', sc3QCell(t, s, 2, 0).content.codepoint)
+		expectEqual(t, 'C', sc3QCell(t, s, 2, 0).content().codepoint())
 	}()
 
 	// A continuation flag on the very first row of the screen: there is no
@@ -3137,7 +3137,7 @@ func TestSc3_term51_splitCellBoundary_wrapped_rows_without_a_spacer_head_or_with
 		s.CursorAbsolute(0, 0)
 		s.Cursor.PageRow.wrap_continuation = true
 		s.SplitCellBoundary(0)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 0).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 0).Wide())
 		s.SplitCellBoundary(1)
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 0, 0)))
 	}()
@@ -3157,10 +3157,10 @@ func TestSc3_term51_splitCellBoundary_boundaries_in_the_middle_of_the_row(t *tes
 			defer s.Deinit()
 			s.CursorAbsolute(0, 0)
 			s.SplitCellBoundary(x)
-			expectEqual(t, 'A', sc3QCell(t, s, 0, 0).content.codepoint)
-			expectEqual(t, PageCellWideWide, sc3QCell(t, s, 1, 0).wide)
-			expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 2, 0).wide)
-			expectEqual(t, 'B', sc3QCell(t, s, 3, 0).content.codepoint)
+			expectEqual(t, 'A', sc3QCell(t, s, 0, 0).content().codepoint())
+			expectEqual(t, PageCellWideWide, sc3QCell(t, s, 1, 0).Wide())
+			expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 2, 0).Wide())
+			expectEqual(t, 'B', sc3QCell(t, s, 3, 0).content().codepoint())
 		}()
 	}
 
@@ -3170,8 +3170,8 @@ func TestSc3_term51_splitCellBoundary_boundaries_in_the_middle_of_the_row(t *tes
 		defer s.Deinit()
 		s.CursorAbsolute(0, 0)
 		s.SplitCellBoundary(3)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 1, 0).wide)
-		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 2, 0).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 1, 0).Wide())
+		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 2, 0).Wide())
 	}()
 
 	// Left of the boundary is the wide cell: both halves are cleared.
@@ -3180,10 +3180,10 @@ func TestSc3_term51_splitCellBoundary_boundaries_in_the_middle_of_the_row(t *tes
 		defer s.Deinit()
 		s.CursorAbsolute(0, 0)
 		s.SplitCellBoundary(2)
-		expectEqual(t, 'A', sc3QCell(t, s, 0, 0).content.codepoint)
+		expectEqual(t, 'A', sc3QCell(t, s, 0, 0).content().codepoint())
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 1, 0)))
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 2, 0)))
-		expectEqual(t, 'B', sc3QCell(t, s, 3, 0).content.codepoint)
+		expectEqual(t, 'B', sc3QCell(t, s, 3, 0).content().codepoint())
 		s.Cursor.PagePin.Node.data.AssertIntegrity()
 	}()
 
@@ -3192,10 +3192,10 @@ func TestSc3_term51_splitCellBoundary_boundaries_in_the_middle_of_the_row(t *tes
 		s := sc3QTextScreen(t, "ABCD橋", 0)
 		defer s.Deinit()
 		s.CursorAbsolute(0, 0)
-		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 4, 0).wide)
-		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 5, 0).wide)
+		expectEqual(t, PageCellWideWide, sc3QCell(t, s, 4, 0).Wide())
+		expectEqual(t, PageCellWideSpacerTail, sc3QCell(t, s, 5, 0).Wide())
 		s.SplitCellBoundary(5)
-		expectEqual(t, 'D', sc3QCell(t, s, 3, 0).content.codepoint)
+		expectEqual(t, 'D', sc3QCell(t, s, 3, 0).content().codepoint())
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 4, 0)))
 		expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 5, 0)))
 		// And x == cols afterwards is a no-op on an unwrapped row.
@@ -3210,9 +3210,9 @@ func TestSc3_term51_splitCellBoundary_boundaries_in_the_middle_of_the_row(t *tes
 		s.CursorAbsolute(0, 0)
 		sc3SetAttr(t, s, sc3AttrBg256(4))
 		s.SplitCellBoundary(2)
-		expectEqual(t, PageCellContentTagBgColorPalette, sc3QCell(t, s, 1, 0).content_tag)
-		expectEqual(t, PageCellContentTagBgColorPalette, sc3QCell(t, s, 2, 0).content_tag)
-		expectEqual(t, PageCellWideNarrow, sc3QCell(t, s, 1, 0).wide)
+		expectEqual(t, PageCellContentTagBgColorPalette, sc3QCell(t, s, 1, 0).ContentTag())
+		expectEqual(t, PageCellContentTagBgColorPalette, sc3QCell(t, s, 2, 0).ContentTag())
+		expectEqual(t, PageCellWideNarrow, sc3QCell(t, s, 1, 0).Wide())
 		sc3QExpectExactRefs(t, s)
 	}()
 }
@@ -3236,7 +3236,7 @@ func TestSc3_term51_splitCellBoundary_a_spacer_head_on_a_previous_row_in_another
 	s.SplitCellBoundary(0)
 
 	expectEqual(t, uint64(0), sc3QBits(*sc3QCell(t, s, 5, 1)))
-	expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 2).wide)
+	expectEqual(t, PageCellWideWide, sc3QCell(t, s, 0, 2).Wide())
 	expect(t, sc3QRow(t, s, 1).wrap, "term51QRow(&s, 1).wrap")
 	s.Pages.pages.first.data.AssertIntegrity()
 	s.Pages.pages.last.data.AssertIntegrity()
@@ -3928,8 +3928,8 @@ func TestSc3_term51_manualStyleUpdate_out_of_space_at_the_maximum_capacity_split
 	expect(t, s.Cursor.PageCell == rac.cell, "s.cursor.page_cell == rac.cell")
 	first.data.AssertIntegrity()
 	last.data.AssertIntegrity()
-	expectEqual(t, 'a', sc3QCell(t, s, 0, 1).content.codepoint)
-	expectEqual(t, 'd', sc3QCell(t, s, 1, 28).content.codepoint)
+	expectEqual(t, 'a', sc3QCell(t, s, 0, 1).content().codepoint())
+	expectEqual(t, 'd', sc3QCell(t, s, 1, 28).content().codepoint())
 	expectEqual(t, 1, last.data.styles.RefCount(s.Cursor.StyleID))
 }
 
@@ -4249,7 +4249,7 @@ func TestSc3_term51_resize_a_default_cursor_style_stays_default_and_cells_keep_t
 	expect(t, s.Cursor.Style.Default(), "s.cursor.style.default()")
 	page := &s.Cursor.PagePin.Node.data
 	expectEqual(t, 1, page.styles.Count())
-	expectEqual(t, 2, page.styles.RefCount(sc3QCell(t, s, 0, 0).style_id))
+	expectEqual(t, 2, page.styles.RefCount(sc3QCell(t, s, 0, 0).StyleID()))
 	sc3QExpectExactRefs(t, s)
 }
 
@@ -4263,7 +4263,7 @@ func TestSc3_term51_resize_cells_dropped_without_reflow_release_their_styles(t *
 	sc3SetAttr(t, s, sc3A(SGRAttributeTagUnset))
 	{
 		page := &s.Cursor.PagePin.Node.data
-		expectEqual(t, 5, page.styles.RefCount(sc3QCell(t, s, 0, 0).style_id))
+		expectEqual(t, 5, page.styles.RefCount(sc3QCell(t, s, 0, 0).StyleID()))
 	}
 
 	// Truncated to three columns: d and e are gone.
@@ -4273,7 +4273,7 @@ func TestSc3_term51_resize_cells_dropped_without_reflow_release_their_styles(t *
 	sc3QExpectDump(t, s, sc3Screen(0, 0), "abc")
 	page := &s.Cursor.PagePin.Node.data
 	expectEqual(t, 1, page.styles.Count())
-	expectEqual(t, 3, page.styles.RefCount(sc3QCell(t, s, 0, 0).style_id))
+	expectEqual(t, 3, page.styles.RefCount(sc3QCell(t, s, 0, 0).StyleID()))
 	sc3QExpectExactRefs(t, s)
 }
 
@@ -4817,7 +4817,7 @@ func sc3QFillGraphemes(t *testing.T, s *Screen) uint {
 			cell := sc3QCell(t, s, SizeCellCountInt(x), y)
 			*cell = PageCellInit('x')
 			if err := page.AppendGrapheme(row, cell, 0x301); err != nil {
-				*cell = PageCell{}
+				*cell = PageCell(0)
 				return n
 			}
 			n += 1
@@ -4847,8 +4847,8 @@ func TestSc3_term51_appendGrapheme_grows_a_cell_s_grapheme_across_chunk_boundari
 		zigTry(t, s.AppendGrapheme(cell, expected[n-1]))
 		expectEqualSlices(t, expected[0:n], zigUnwrap(t, page.LookupGrapheme(cell)))
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqual(t, PageCellContentTagCodepointGrapheme, cell.content_tag)
-		expectEqual(t, 'a', cell.content.codepoint)
+		expectEqual(t, PageCellContentTagCodepointGrapheme, cell.ContentTag())
+		expectEqual(t, 'a', cell.content().codepoint())
 		expect(t, s.Cursor.PageRow.grapheme, "s.cursor.page_row.grapheme")
 		expectEqual(t, 1, page.GraphemeCount())
 	}
@@ -4910,7 +4910,7 @@ func TestSc3_term51_appendGrapheme_out_of_grapheme_storage_grows_the_page_and_fi
 			expectEqual(t, bytes_before*2, page.capacity.grapheme_bytes)
 			expectEqual(t, filled+1, page.GraphemeCount())
 			expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, page.LookupGrapheme(sc3QCell(t, s, SizeCellCountInt(target), 0))))
-			expectEqual(t, uint32("abcde"[target]), sc3QCell(t, s, SizeCellCountInt(target), 0).content.codepoint)
+			expectEqual(t, uint32("abcde"[target]), sc3QCell(t, s, SizeCellCountInt(target), 0).content().codepoint())
 			expectEqual(t, 2, s.Cursor.X)
 			expectEqual(t, 0, s.Cursor.Y)
 			expect(t, s.Cursor.PageRow.grapheme, "s.cursor.page_row.grapheme")
@@ -4957,7 +4957,7 @@ func TestSc3_term51_appendGrapheme_out_of_storage_while_extending_a_full_chunk(t
 				n += 1
 			}
 			if n == 0 {
-				*c = PageCell{}
+				*c = PageCell(0)
 			}
 		}
 	}
@@ -5348,10 +5348,10 @@ func TestSc3_term51_cursorSetHyperlink_marks_the_cursor_cell_and_counts_the_refe
 	sc3StartLink(t, s, "https://a/", "a")
 	id := s.Cursor.HyperlinkID
 	expect(t, !s.Cursor.PageRow.hyperlink, "!s.cursor.page_row.hyperlink")
-	expect(t, !s.Cursor.PageCell.hyperlink, "!s.cursor.page_cell.hyperlink")
+	expect(t, !s.Cursor.PageCell.Hyperlink(), "!s.cursor.page_cell.hyperlink")
 
 	zigTry(t, s.CursorSetHyperlink())
-	expect(t, s.Cursor.PageCell.hyperlink, "s.cursor.page_cell.hyperlink")
+	expect(t, s.Cursor.PageCell.Hyperlink(), "s.cursor.page_cell.hyperlink")
 	expect(t, s.Cursor.PageRow.hyperlink, "s.cursor.page_row.hyperlink")
 	expectEqual(t, id, zigUnwrap(t, page.LookupHyperlink(s.Cursor.PageCell)))
 	expectEqual(t, 1, page.HyperlinkCount())
@@ -5426,7 +5426,7 @@ func TestSc3_term51_cursorSetHyperlink_a_full_cell_map_grows_hyperlink_bytes_and
 	// The capacity growth did not consume an implicit id.
 	expectEqual(t, 1, s.Cursor.HyperlinkImplicitID)
 	expectEqual(t, 0, s.Cursor.Hyperlink.ID.Implicit)
-	expect(t, s.Cursor.PageCell.hyperlink, "s.cursor.page_cell.hyperlink")
+	expect(t, s.Cursor.PageCell.Hyperlink(), "s.cursor.page_cell.hyperlink")
 	sc3QExpectExactRefs(t, s)
 }
 
@@ -5548,9 +5548,9 @@ func TestSc3_term51_cursorSetSemanticContent_new_cells_take_the_cursor_s_content
 	sc3Write(t, s, "a")
 	sc3Output(s)
 	sc3Write(t, s, "o")
-	expectEqual(t, PageCellSemanticContentPrompt, sc3QCell(t, s, 0, 0).semantic_content)
-	expectEqual(t, PageCellSemanticContentInput, sc3QCell(t, s, 1, 0).semantic_content)
-	expectEqual(t, PageCellSemanticContentOutput, sc3QCell(t, s, 2, 0).semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, sc3QCell(t, s, 0, 0).SemanticContent())
+	expectEqual(t, PageCellSemanticContentInput, sc3QCell(t, s, 1, 0).SemanticContent())
+	expectEqual(t, PageCellSemanticContentOutput, sc3QCell(t, s, 2, 0).SemanticContent())
 }
 
 // sc3ExpectPoint is Zig's `expectEqual` of two point.Point values: the tags

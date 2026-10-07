@@ -122,10 +122,10 @@ func pg1InsertHyperlink(t *testing.T, page *Page, link Hyperlink) HyperlinkID {
 // pg1Codepoint is the Zig literal `.{ .content_tag = .codepoint, .content =
 // .{ .codepoint = cp } }`.
 func pg1Codepoint(cp uint32) PageCell {
-	return PageCell{
+	return pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: cp},
-	}
+		content:     pageCellContentFields{codepoint: cp}.pack(),
+	}.pack()
 }
 
 // pg1Implicit is the Zig literal `.{ .implicit = n }` of Hyperlink.Id.
@@ -173,7 +173,7 @@ func TestPg1_Cell_is_zero_by_default(t *testing.T) {
 
 	// The zero value should be output type for semantic content.
 	// This is very important for our assumptions elsewhere.
-	expectEqual(t, PageCellSemanticContentOutput, cell.semantic_content)
+	expectEqual(t, PageCellSemanticContentOutput, cell.SemanticContent())
 }
 
 // Zig: test "Page capacity adjust cols down"
@@ -308,7 +308,7 @@ func TestPg1_Page_read_and_write_cells(t *testing.T) {
 	// Read it again
 	for y := range uint(page.capacity.rows) {
 		rac := page.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 }
 
@@ -399,7 +399,7 @@ func TestPg1_Page_clone(t *testing.T) {
 	// Read it again
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 
 	// Write again
@@ -411,13 +411,13 @@ func TestPg1_Page_clone(t *testing.T) {
 	// Read it again, should be unchanged
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 
 	// Read the original
 	for y := range uint(page.capacity.rows) {
 		rac := page.GetRowAndCell(1, y)
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
 	}
 }
 
@@ -457,11 +457,11 @@ func TestPg1_Page_clone_styles(t *testing.T) {
 		for x := range uint(page.size.cols) {
 			rac := page.GetRowAndCell(x, 0)
 			rac.row.styled = true
-			*rac.cell = PageCell{
+			*rac.cell = pageCellFields{
 				content_tag: PageCellContentTagCodepoint,
-				content:     PageCellContent{codepoint: uint32(x + 1)},
+				content:     pageCellContentFields{codepoint: uint32(x + 1)}.pack(),
 				style_id:    id,
-			}
+			}.pack()
 			page.styles.Use(id)
 		}
 	}
@@ -472,13 +472,13 @@ func TestPg1_Page_clone_styles(t *testing.T) {
 	{
 		id := func() uint16 {
 			rac := page2.GetRowAndCell(0, 0)
-			return rac.cell.style_id
+			return rac.cell.StyleID()
 		}()
 
 		for x := range uint(page.size.cols) {
 			rac := page.GetRowAndCell(x, 0)
 			expect(t, rac.row.styled, "rac.row.styled")
-			expectEqual(t, id, rac.cell.style_id)
+			expectEqual(t, id, rac.cell.StyleID())
 		}
 
 		style := page.styles.Get(id)
@@ -505,7 +505,7 @@ func TestPg1_Page_cloneFrom(t *testing.T) {
 	// Read it again
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 
 	// Write again
@@ -517,13 +517,13 @@ func TestPg1_Page_cloneFrom(t *testing.T) {
 	// Read it again, should be unchanged
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 
 	// Read the original
 	for y := range uint(page.capacity.rows) {
 		rac := page.GetRowAndCell(1, y)
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
 	}
 }
 
@@ -547,7 +547,7 @@ func TestPg1_Page_cloneFrom_shrink_columns(t *testing.T) {
 	// Read it again
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 }
 
@@ -570,11 +570,11 @@ func TestPg1_Page_cloneFrom_partial(t *testing.T) {
 	// Read it again
 	for y := range uint(5) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y), rac.cell.content().codepoint())
 	}
 	for y := uint(5); y < uint(page2.size.rows); y++ {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
 	}
 }
 
@@ -638,7 +638,7 @@ func TestPg1_Page_cloneFrom_graphemes(t *testing.T) {
 	// Read it again
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y+1), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y+1), rac.cell.content().codepoint())
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 		expect(t, rac.cell.HasGrapheme(), "rac.cell.hasGrapheme()")
 		expectEqualSlices(t, []uint32{0x0A}, zigUnwrap(t, page2.LookupGrapheme(rac.cell)))
@@ -655,7 +655,7 @@ func TestPg1_Page_cloneFrom_graphemes(t *testing.T) {
 	// Read it again, should be unchanged
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y+1), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y+1), rac.cell.content().codepoint())
 		expect(t, rac.row.grapheme, "rac.row.grapheme")
 		expect(t, rac.cell.HasGrapheme(), "rac.cell.hasGrapheme()")
 		expectEqualSlices(t, []uint32{0x0A}, zigUnwrap(t, page2.LookupGrapheme(rac.cell)))
@@ -664,7 +664,7 @@ func TestPg1_Page_cloneFrom_graphemes(t *testing.T) {
 	// Read the original
 	for y := range uint(page.capacity.rows) {
 		rac := page.GetRowAndCell(1, y)
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
 	}
 }
 
@@ -692,7 +692,7 @@ func TestPg1_Page_cloneFrom_frees_dst_graphemes(t *testing.T) {
 	// Read it again
 	for y := range uint(page2.capacity.rows) {
 		rac := page2.GetRowAndCell(1, y)
-		expectEqual(t, uint32(y+1), rac.cell.content.codepoint)
+		expectEqual(t, uint32(y+1), rac.cell.content().codepoint())
 		expect(t, !rac.row.grapheme, "!rac.row.grapheme")
 		expect(t, !rac.cell.HasGrapheme(), "!rac.cell.hasGrapheme()")
 	}
@@ -733,7 +733,7 @@ func TestPg1_Page_cloneRowFrom_partial(t *testing.T) {
 				expected = uint32(x + 1)
 			}
 			rac := page2.GetRowAndCell(x, y)
-			expectEqual(t, expected, rac.cell.content.codepoint)
+			expectEqual(t, expected, rac.cell.content().codepoint())
 		}
 	}
 }
@@ -781,7 +781,7 @@ func TestPg1_Page_cloneRowFrom_partial_grapheme_in_non_copied_source_region(t *t
 				expected = uint32(x + 1)
 			}
 			rac := page2.GetRowAndCell(x, y)
-			expectEqual(t, expected, rac.cell.content.codepoint)
+			expectEqual(t, expected, rac.cell.content().codepoint())
 			expect(t, !rac.cell.HasGrapheme(), "!rac.cell.hasGrapheme()")
 		}
 		{
@@ -842,7 +842,7 @@ func TestPg1_Page_cloneRowFrom_partial_grapheme_in_non_copied_dest_region(t *tes
 				expected = uint32(x + 1)
 			}
 			rac := page2.GetRowAndCell(x, y)
-			expectEqual(t, expected, rac.cell.content.codepoint)
+			expectEqual(t, expected, rac.cell.content().codepoint())
 		}
 		{
 			rac := page2.GetRowAndCell(9, y)
@@ -898,12 +898,12 @@ func TestPg1_Page_cloneRowFrom_partial_hyperlink_in_same_page_copy(t *testing.T)
 				expected = uint32(x + 1)
 			}
 			rac := page.GetRowAndCell(x, y)
-			expectEqual(t, expected, rac.cell.content.codepoint)
+			expectEqual(t, expected, rac.cell.content().codepoint())
 		}
 		{
 			rac := page.GetRowAndCell(7, y)
 			expect(t, rac.row.hyperlink, "rac.row.hyperlink")
-			expect(t, rac.cell.hyperlink, "rac.cell.hyperlink")
+			expect(t, rac.cell.Hyperlink(), "rac.cell.hyperlink")
 		}
 	}
 	expectEqual(t, uint(2), page.HyperlinkCount())
@@ -955,12 +955,12 @@ func TestPg1_Page_cloneRowFrom_partial_hyperlink_in_same_page_omit(t *testing.T)
 				expected = uint32(x + 1)
 			}
 			rac := page.GetRowAndCell(x, y)
-			expectEqual(t, expected, rac.cell.content.codepoint)
+			expectEqual(t, expected, rac.cell.content().codepoint())
 		}
 		{
 			rac := page.GetRowAndCell(7, y)
 			expect(t, !rac.row.hyperlink, "!rac.row.hyperlink")
-			expect(t, !rac.cell.hyperlink, "!rac.cell.hyperlink")
+			expect(t, !rac.cell.Hyperlink(), "!rac.cell.hyperlink")
 		}
 	}
 	expectEqual(t, uint(1), page.HyperlinkCount())
@@ -984,13 +984,13 @@ func TestPg1_Page_moveCells_text_only(t *testing.T) {
 	// New rows should have text
 	for x := range uint(page.capacity.cols) {
 		rac := page.GetRowAndCell(x, 1)
-		expectEqual(t, uint32(x+1), rac.cell.content.codepoint)
+		expectEqual(t, uint32(x+1), rac.cell.content().codepoint())
 	}
 
 	// Old row should be blank
 	for x := range uint(page.capacity.cols) {
 		rac := page.GetRowAndCell(x, 0)
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
 	}
 }
 
@@ -1015,14 +1015,14 @@ func TestPg1_Page_moveCells_graphemes(t *testing.T) {
 	// New rows should have text
 	for x := range uint(page.size.cols) {
 		rac := page.GetRowAndCell(x, 1)
-		expectEqual(t, uint32(x+1), rac.cell.content.codepoint)
+		expectEqual(t, uint32(x+1), rac.cell.content().codepoint())
 		expectEqualSlices(t, []uint32{0x0A}, zigUnwrap(t, page.LookupGrapheme(rac.cell)))
 	}
 
 	// Old row should be blank
 	for x := range uint(page.size.cols) {
 		rac := page.GetRowAndCell(x, 0)
-		expectEqual(t, uint32(0), rac.cell.content.codepoint)
+		expectEqual(t, uint32(0), rac.cell.content().codepoint())
 	}
 }
 
@@ -1083,11 +1083,11 @@ func TestPg1_Page_verifyIntegrity_styles_good(t *testing.T) {
 	for x := range uint(page.size.cols) {
 		rac := page.GetRowAndCell(x, 0)
 		rac.row.styled = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: uint32(x + 1)},
+			content:     pageCellContentFields{codepoint: uint32(x + 1)}.pack(),
 			style_id:    id,
-		}
+		}.pack()
 		page.styles.Use(id)
 	}
 
@@ -1114,11 +1114,11 @@ func TestPg1_Page_verifyIntegrity_styles_ref_count_mismatch(t *testing.T) {
 	for x := range uint(page.size.cols) {
 		rac := page.GetRowAndCell(x, 0)
 		rac.row.styled = true
-		*rac.cell = PageCell{
+		*rac.cell = pageCellFields{
 			content_tag: PageCellContentTagCodepoint,
-			content:     PageCellContent{codepoint: uint32(x + 1)},
+			content:     pageCellContentFields{codepoint: uint32(x + 1)}.pack(),
 			style_id:    id,
-		}
+		}.pack()
 		page.styles.Use(id)
 	}
 
@@ -1190,7 +1190,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	{
 		rac := page.GetRowAndCell(0, 0)
 		rac.row.styled = true
-		rac.cell.style_id = style1_id
+		rac.cell.setStyleID(style1_id)
 	}
 
 	// One unique style - capacity accounts for load factor
@@ -1202,7 +1202,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	// Add same style to another cell (duplicate) - capacity unchanged
 	{
 		rac := page.GetRowAndCell(1, 0)
-		rac.cell.style_id = style1_id
+		rac.cell.setStyleID(style1_id)
 	}
 	{
 		got := page.ExactRowCapacity(0, 5)
@@ -1213,7 +1213,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	style2_id := pg1StylesAdd(t, page, Style{Flags: StyleFlags{Italic: true}})
 	{
 		rac := page.GetRowAndCell(2, 0)
-		rac.cell.style_id = style2_id
+		rac.cell.setStyleID(style2_id)
 	}
 
 	// Two unique styles - capacity accounts for load factor
@@ -1227,7 +1227,7 @@ func TestPg1_Page_exactRowCapacity_styles(t *testing.T) {
 	{
 		rac := page.GetRowAndCell(0, 7)
 		rac.row.styled = true
-		rac.cell.style_id = pg1StylesAdd(t, page, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}})
+		rac.cell.setStyleID(pg1StylesAdd(t, page, Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}}))
 	}
 	{
 		got := page.ExactRowCapacity(0, 5)
@@ -1267,7 +1267,7 @@ func TestPg1_Page_exactRowCapacity_single_style_clone(t *testing.T) {
 	{
 		rac := page.GetRowAndCell(0, 0)
 		rac.row.styled = true
-		rac.cell.style_id = style_id
+		rac.cell.setStyleID(style_id)
 	}
 
 	// exactRowCapacity for just row 0 should give capacity for 1 style
@@ -1286,7 +1286,7 @@ func TestPg1_Page_exactRowCapacity_single_style_clone(t *testing.T) {
 
 	// Verify the style was cloned correctly
 	cloned_cell := &cloned.GetCells(&cloned.rows[0])[0]
-	expect(t, cloned_cell.style_id != StyleDefaultID, "cloned_cell.style_id != stylepkg.default_id")
+	expect(t, cloned_cell.StyleID() != StyleDefaultID, "cloned_cell.style_id != stylepkg.default_id")
 }
 
 // Zig: test "Page exactRowCapacity styles max single row"
@@ -1320,7 +1320,7 @@ func TestPg1_Page_exactRowCapacity_styles_max_single_row(t *testing.T) {
 		if err != nil {
 			break
 		}
-		cell.style_id = style_id
+		cell.setStyleID(style_id)
 		count += 1
 	}
 
@@ -1588,7 +1588,7 @@ func TestPg1_Page_exactRowCapacity_single_hyperlink_clone(t *testing.T) {
 
 	// Verify the hyperlink was cloned correctly
 	cloned_cell := &cloned.GetCells(&cloned.rows[0])[0]
-	expect(t, cloned_cell.hyperlink, "cloned_cell.hyperlink")
+	expect(t, cloned_cell.Hyperlink(), "cloned_cell.hyperlink")
 }
 
 // Zig: test "Page exactRowCapacity hyperlink map capacity for many cells"
@@ -1644,7 +1644,7 @@ func TestPg1_Page_exactRowCapacity_hyperlink_map_capacity_for_many_cells(t *test
 	// Verify all hyperlinks were cloned correctly
 	for x := range uint(cols) {
 		cloned_cell := &cloned.GetCells(&cloned.rows[0])[x]
-		expect(t, cloned_cell.hyperlink, "cloned_cell.hyperlink")
+		expect(t, cloned_cell.Hyperlink(), "cloned_cell.hyperlink")
 	}
 }
 
@@ -1697,7 +1697,7 @@ func pg1HStyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleID 
 	for _, c := range cells {
 		rac := page.GetRowAndCell(c[0], c[1])
 		rac.row.styled = true
-		rac.cell.style_id = id
+		rac.cell.setStyleID(id)
 		page.styles.Use(id)
 	}
 	page.styles.Release(id)
@@ -1758,8 +1758,8 @@ func pg1HPopulate(t *testing.T, page *Page) {
 	pg1HStyleCells(t, page, 9, [][2]uint{{0, 3}})
 	pg1HLinkCells(t, page, pg1HLink("https://one.example/"), [][2]uint{{5, 4}, {6, 4}})
 	pg1HLinkCells(t, page, Hyperlink{ID: pg1Explicit("my-id"), URI: []uint8("https://two.example/")}, [][2]uint{{7, 5}})
-	page.GetRowAndCell(8, 1).cell.wide = PageCellWideWide
-	page.GetRowAndCell(9, 1).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(8, 1).cell.setWide(PageCellWideWide)
+	page.GetRowAndCell(9, 1).cell.setWide(PageCellWideSpacerTail)
 	page.GetRow(2).wrap = true
 	page.GetRow(3).wrap_continuation = true
 	page.GetRow(3).semantic_prompt = PageRowSemanticPromptPrompt
@@ -2045,7 +2045,7 @@ func TestPg1_term51_Page_pauseIntegrityChecks_nests_as_a_counter(t *testing.T) {
 func TestPg1_term51_Page_pauseIntegrityChecks_suppresses_verifyIntegrity_only_while_paused(t *testing.T) {
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
-	page.GetRowAndCell(1, 1).cell.content_tag = PageCellContentTagCodepointGrapheme // corrupt
+	page.GetRowAndCell(1, 1).cell.setContentTag(PageCellContentTagCodepointGrapheme) // corrupt
 
 	pg1ExpectError(t, ErrMissingGraphemeData, page.VerifyIntegrity())
 
@@ -2114,18 +2114,18 @@ func TestPg1_term51_Page_verifyIntegrity_empty_and_fully_featured_pages_are_vali
 	pg1HLinkCells(t, page, pg1HLink("https://a.example"), [][2]uint{{1, 3}, {2, 3}})
 	pg1HLinkCells(t, page, Hyperlink{ID: pg1Explicit("id"), URI: []uint8("https://b")}, [][2]uint{{4, 3}})
 	// wide + tail
-	page.GetRowAndCell(6, 2).cell.wide = PageCellWideWide
-	page.GetRowAndCell(7, 2).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(6, 2).cell.setWide(PageCellWideWide)
+	page.GetRowAndCell(7, 2).cell.setWide(PageCellWideSpacerTail)
 	// wide at the very end without its tail is accepted
-	page.GetRowAndCell(9, 2).cell.wide = PageCellWideWide
+	page.GetRowAndCell(9, 2).cell.setWide(PageCellWideWide)
 	// wrapped row with a spacer head in the last column
 	page.GetRow(0).wrap = true
-	page.GetRowAndCell(9, 0).cell.wide = PageCellWideSpacerHead
+	page.GetRowAndCell(9, 0).cell.setWide(PageCellWideSpacerHead)
 	// bg-color-only cells are fine
-	*page.GetRowAndCell(0, 4).cell = PageCell{
+	*page.GetRowAndCell(0, 4).cell = pageCellFields{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
-	}
+		content:     pageCellContentFields{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}.pack(),
+	}.pack()
 	zigTry(t, page.VerifyIntegrity())
 }
 
@@ -2159,9 +2159,9 @@ func TestPg1_term51_Page_verifyIntegrity_size_smaller_than_capacity_limits_what_
 	page := pg1HNew(t, 10, 10)
 	defer page.Deinit()
 	// Corrupt cells outside the logical size.
-	page.GetRowAndCell(8, 2).cell.content_tag = PageCellContentTagCodepointGrapheme
-	page.GetRowAndCell(3, 8).cell.wide = PageCellWideSpacerTail
-	page.GetRowAndCell(8, 8).cell.hyperlink = true
+	page.GetRowAndCell(8, 2).cell.setContentTag(PageCellContentTagCodepointGrapheme)
+	page.GetRowAndCell(3, 8).cell.setWide(PageCellWideSpacerTail)
+	page.GetRowAndCell(8, 8).cell.setHyperlink(true)
 	page.size.rows = 5
 	page.size.cols = 5
 	zigTry(t, page.VerifyIntegrity())
@@ -2169,7 +2169,7 @@ func TestPg1_term51_Page_verifyIntegrity_size_smaller_than_capacity_limits_what_
 	// Growing the size back exposes the corruption (row 2 first).
 	page.size.cols = 10
 	pg1HExpectIntegrity(t, page, ErrMissingGraphemeData)
-	page.GetRowAndCell(8, 2).cell.content_tag = PageCellContentTagCodepoint
+	page.GetRowAndCell(8, 2).cell.setContentTag(PageCellContentTagCodepoint)
 	zigTry(t, page.VerifyIntegrity())
 	page.size.rows = 10
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
@@ -2180,7 +2180,7 @@ func TestPg1_term51_Page_verifyIntegrity_MissingGraphemeData(t *testing.T) {
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
 	*page.GetRowAndCell(2, 1).cell = PageCellInit('a')
-	page.GetRowAndCell(2, 1).cell.content_tag = PageCellContentTagCodepointGrapheme
+	page.GetRowAndCell(2, 1).cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg1HExpectIntegrity(t, page, ErrMissingGraphemeData)
 
 	// Even with the row flagged, the data is still missing.
@@ -2197,7 +2197,7 @@ func TestPg1_term51_Page_verifyIntegrity_UnmarkedGraphemeCell(t *testing.T) {
 	zigTry(t, page.VerifyIntegrity())
 
 	// Un-mark one cell but leave its map entry behind.
-	page.GetRowAndCell(3, 3).cell.content_tag = PageCellContentTagCodepoint
+	page.GetRowAndCell(3, 3).cell.setContentTag(PageCellContentTagCodepoint)
 	pg1HExpectIntegrity(t, page, ErrUnmarkedGraphemeCell)
 }
 
@@ -2277,7 +2277,7 @@ func TestPg1_term51_Page_verifyIntegrity_style_ref_counts_are_checked_per_style_
 func TestPg1_term51_Page_verifyIntegrity_MissingHyperlinkData(t *testing.T) {
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
-	page.GetRowAndCell(1, 1).cell.hyperlink = true
+	page.GetRowAndCell(1, 1).cell.setHyperlink(true)
 	// Reported even when the row flag is also missing (data check is first).
 	pg1HExpectIntegrity(t, page, ErrMissingHyperlinkData)
 	page.GetRow(1).hyperlink = true
@@ -2315,7 +2315,7 @@ func TestPg1_term51_Page_verifyIntegrity_UnmarkedHyperlinkCell(t *testing.T) {
 	pg1HLinkCells(t, page, pg1HLink("https://a"), [][2]uint{{1, 1}, {2, 1}})
 	zigTry(t, page.VerifyIntegrity())
 	// Clear the cell flag but leave the map entry.
-	page.GetRowAndCell(2, 1).cell.hyperlink = false
+	page.GetRowAndCell(2, 1).cell.setHyperlink(false)
 	pg1HExpectIntegrity(t, page, ErrUnmarkedHyperlinkCell)
 }
 
@@ -2323,7 +2323,7 @@ func TestPg1_term51_Page_verifyIntegrity_UnmarkedHyperlinkCell(t *testing.T) {
 func TestPg1_term51_Page_verifyIntegrity_InvalidSpacerTailLocation_at_column_zero(t *testing.T) {
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
-	page.GetRowAndCell(0, 2).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(0, 2).cell.setWide(PageCellWideSpacerTail)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
 }
 
@@ -2332,17 +2332,17 @@ func TestPg1_term51_Page_verifyIntegrity_InvalidSpacerTailLocation_not_following
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
 	// Previous cell narrow.
-	page.GetRowAndCell(1, 0).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(1, 0).cell.setWide(PageCellWideSpacerTail)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
 	// Previous cell wide: valid.
-	page.GetRowAndCell(0, 0).cell.wide = PageCellWideWide
+	page.GetRowAndCell(0, 0).cell.setWide(PageCellWideWide)
 	zigTry(t, page.VerifyIntegrity())
 	// A tail after a tail is not valid.
-	page.GetRowAndCell(2, 0).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(2, 0).cell.setWide(PageCellWideSpacerTail)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
 	// A tail after a wide cell that is itself a tail is not valid either.
-	page.GetRowAndCell(1, 0).cell.wide = PageCellWideNarrow
-	page.GetRowAndCell(0, 0).cell.wide = PageCellWideNarrow
+	page.GetRowAndCell(1, 0).cell.setWide(PageCellWideNarrow)
+	page.GetRowAndCell(0, 0).cell.setWide(PageCellWideNarrow)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
 }
 
@@ -2351,11 +2351,11 @@ func TestPg1_term51_Page_verifyIntegrity_spacer_tail_after_wide_in_every_column_
 	page := pg1HNew(t, 5, 1)
 	defer page.Deinit()
 	for x := range uint(4) {
-		page.GetRowAndCell(x, 0).cell.wide = PageCellWideWide
-		page.GetRowAndCell(x+1, 0).cell.wide = PageCellWideSpacerTail
+		page.GetRowAndCell(x, 0).cell.setWide(PageCellWideWide)
+		page.GetRowAndCell(x+1, 0).cell.setWide(PageCellWideSpacerTail)
 		zigTry(t, page.VerifyIntegrity())
-		page.GetRowAndCell(x, 0).cell.wide = PageCellWideNarrow
-		page.GetRowAndCell(x+1, 0).cell.wide = PageCellWideNarrow
+		page.GetRowAndCell(x, 0).cell.setWide(PageCellWideNarrow)
+		page.GetRowAndCell(x+1, 0).cell.setWide(PageCellWideNarrow)
 	}
 }
 
@@ -2365,13 +2365,13 @@ func TestPg1_term51_Page_verifyIntegrity_InvalidSpacerHeadLocation(t *testing.T)
 	defer page.Deinit()
 	page.GetRow(1).wrap = true
 	for _, x := range []uint{0, 1, 3} {
-		page.GetRowAndCell(x, 1).cell.wide = PageCellWideSpacerHead
+		page.GetRowAndCell(x, 1).cell.setWide(PageCellWideSpacerHead)
 		pg1HExpectIntegrity(t, page, ErrInvalidSpacerHeadLocation)
-		page.GetRowAndCell(x, 1).cell.wide = PageCellWideNarrow
+		page.GetRowAndCell(x, 1).cell.setWide(PageCellWideNarrow)
 	}
 	// Both wrong: the location error wins over the missing wrap.
 	page.GetRow(1).wrap = false
-	page.GetRowAndCell(2, 1).cell.wide = PageCellWideSpacerHead
+	page.GetRowAndCell(2, 1).cell.setWide(PageCellWideSpacerHead)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerHeadLocation)
 }
 
@@ -2379,7 +2379,7 @@ func TestPg1_term51_Page_verifyIntegrity_InvalidSpacerHeadLocation(t *testing.T)
 func TestPg1_term51_Page_verifyIntegrity_UnwrappedSpacerHead(t *testing.T) {
 	page := pg1HNew(t, 5, 3)
 	defer page.Deinit()
-	page.GetRowAndCell(4, 1).cell.wide = PageCellWideSpacerHead
+	page.GetRowAndCell(4, 1).cell.setWide(PageCellWideSpacerHead)
 	pg1HExpectIntegrity(t, page, ErrUnwrappedSpacerHead)
 	page.GetRow(1).wrap = true
 	zigTry(t, page.VerifyIntegrity())
@@ -2393,7 +2393,7 @@ func TestPg1_term51_Page_verifyIntegrity_UnwrappedSpacerHead(t *testing.T) {
 func TestPg1_term51_Page_verifyIntegrity_spacer_head_in_a_one_column_page(t *testing.T) {
 	page := pg1HNew(t, 1, 2)
 	defer page.Deinit()
-	page.GetRowAndCell(0, 0).cell.wide = PageCellWideSpacerHead
+	page.GetRowAndCell(0, 0).cell.setWide(PageCellWideSpacerHead)
 	pg1HExpectIntegrity(t, page, ErrUnwrappedSpacerHead)
 	page.GetRow(0).wrap = true
 	zigTry(t, page.VerifyIntegrity())
@@ -2403,9 +2403,9 @@ func TestPg1_term51_Page_verifyIntegrity_spacer_head_in_a_one_column_page(t *tes
 func TestPg1_term51_Page_verifyIntegrity_wide_cells_themselves_are_never_rejected(t *testing.T) {
 	page := pg1HNew(t, 3, 1)
 	defer page.Deinit()
-	page.GetRowAndCell(0, 0).cell.wide = PageCellWideWide
-	page.GetRowAndCell(1, 0).cell.wide = PageCellWideWide
-	page.GetRowAndCell(2, 0).cell.wide = PageCellWideWide
+	page.GetRowAndCell(0, 0).cell.setWide(PageCellWideWide)
+	page.GetRowAndCell(1, 0).cell.setWide(PageCellWideWide)
+	page.GetRowAndCell(2, 0).cell.setWide(PageCellWideWide)
 	zigTry(t, page.VerifyIntegrity())
 }
 
@@ -2413,10 +2413,10 @@ func TestPg1_term51_Page_verifyIntegrity_wide_cells_themselves_are_never_rejecte
 func TestPg1_term51_Page_verifyIntegrity_rows_are_checked_top_to_bottom_first_error_wins(t *testing.T) {
 	page := pg1HNew(t, 4, 4)
 	defer page.Deinit()
-	page.GetRowAndCell(0, 3).cell.wide = PageCellWideSpacerTail // InvalidSpacerTailLocation
-	page.GetRowAndCell(1, 1).cell.hyperlink = true              // MissingHyperlinkData
+	page.GetRowAndCell(0, 3).cell.setWide(PageCellWideSpacerTail) // InvalidSpacerTailLocation
+	page.GetRowAndCell(1, 1).cell.setHyperlink(true)              // MissingHyperlinkData
 	pg1HExpectIntegrity(t, page, ErrMissingHyperlinkData)
-	page.GetRowAndCell(1, 1).cell.hyperlink = false
+	page.GetRowAndCell(1, 1).cell.setHyperlink(false)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
 }
 
@@ -2424,10 +2424,10 @@ func TestPg1_term51_Page_verifyIntegrity_rows_are_checked_top_to_bottom_first_er
 func TestPg1_term51_Page_verifyIntegrity_cells_are_checked_left_to_right_first_error_wins(t *testing.T) {
 	page := pg1HNew(t, 4, 1)
 	defer page.Deinit()
-	page.GetRowAndCell(3, 0).cell.content_tag = PageCellContentTagCodepointGrapheme // MissingGraphemeData
-	page.GetRowAndCell(1, 0).cell.hyperlink = true                                  // MissingHyperlinkData
+	page.GetRowAndCell(3, 0).cell.setContentTag(PageCellContentTagCodepointGrapheme) // MissingGraphemeData
+	page.GetRowAndCell(1, 0).cell.setHyperlink(true)                                 // MissingHyperlinkData
 	pg1HExpectIntegrity(t, page, ErrMissingHyperlinkData)
-	page.GetRowAndCell(1, 0).cell.hyperlink = false
+	page.GetRowAndCell(1, 0).cell.setHyperlink(false)
 	pg1HExpectIntegrity(t, page, ErrMissingGraphemeData)
 }
 
@@ -2439,17 +2439,17 @@ func TestPg1_term51_Page_verifyIntegrity_per_cell_check_order_is_grapheme_style_
 	style_id := pg1HStyleCells(t, page, 1, [][2]uint{{0, 0}})
 	page.GetRow(0).styled = false // UnmarkedStyleRow
 	cell := page.GetRowAndCell(0, 0).cell
-	cell.content_tag = PageCellContentTagCodepointGrapheme // MissingGraphemeData
-	cell.hyperlink = true                                  // MissingHyperlinkData
-	cell.wide = PageCellWideSpacerTail                     // InvalidSpacerTailLocation
+	cell.setContentTag(PageCellContentTagCodepointGrapheme) // MissingGraphemeData
+	cell.setHyperlink(true)                                 // MissingHyperlinkData
+	cell.setWide(PageCellWideSpacerTail)                    // InvalidSpacerTailLocation
 	pg1HExpectIntegrity(t, page, ErrMissingGraphemeData)
-	cell.content_tag = PageCellContentTagCodepoint
+	cell.setContentTag(PageCellContentTagCodepoint)
 	pg1HExpectIntegrity(t, page, ErrUnmarkedStyleRow)
 	page.GetRow(0).styled = true
 	pg1HExpectIntegrity(t, page, ErrMissingHyperlinkData)
-	cell.hyperlink = false
+	cell.setHyperlink(false)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
-	cell.wide = PageCellWideNarrow
+	cell.setWide(PageCellWideNarrow)
 	zigTry(t, page.VerifyIntegrity())
 	_ = style_id
 }
@@ -2459,12 +2459,12 @@ func TestPg1_term51_Page_verifyIntegrity_row_level_grapheme_check_runs_after_the
 	page := pg1HNew(t, 4, 2)
 	defer page.Deinit()
 	pg1HGrapheme(t, page, 0, 0, 'a', []uint32{0x301})
-	page.GetRow(0).grapheme = false                             // UnmarkedGraphemeRow, reported after row 0's cells
-	page.GetRowAndCell(1, 1).cell.wide = PageCellWideSpacerTail // x=1 follows narrow
+	page.GetRow(0).grapheme = false                               // UnmarkedGraphemeRow, reported after row 0's cells
+	page.GetRowAndCell(1, 1).cell.setWide(PageCellWideSpacerTail) // x=1 follows narrow
 	pg1HExpectIntegrity(t, page, ErrUnmarkedGraphemeRow)
 
 	// A cell error later in the same row is found before the row check.
-	page.GetRowAndCell(3, 0).cell.wide = PageCellWideSpacerTail
+	page.GetRowAndCell(3, 0).cell.setWide(PageCellWideSpacerTail)
 	pg1HExpectIntegrity(t, page, ErrInvalidSpacerTailLocation)
 }
 
@@ -2523,7 +2523,7 @@ func TestPg1_term51_Page_clone_copies_every_cell_row_and_table(t *testing.T) {
 	expectEqualStrings(t, "https://two.example/", string(entry.uri))
 	expect(t, entry.id.Tag == HyperlinkPageEntryIdExplicit, "entry.id == .explicit")
 	expectEqualStrings(t, "my-id", string(entry.id.Explicit))
-	sid := cpy.GetRowAndCell(2, 1).cell.style_id
+	sid := cpy.GetRowAndCell(2, 1).cell.StyleID()
 	expect(t, Style{FgColor: StyleColor{Tag: StyleColorPalette, Palette: 7}}.Eql(*cpy.styles.Get(sid)), "(Style{ .fg_color = .{ .palette = 7 } }).eql(copy.styles.get(copy.memory, sid).*)")
 }
 
@@ -2700,7 +2700,7 @@ func TestPg1_term51_Page_exactRowCapacity_a_grapheme_tag_without_map_data_adds_n
 	page := pg1HNew(t, 4, 2)
 	defer page.Deinit()
 	*page.GetRowAndCell(1, 0).cell = PageCellInit('a')
-	page.GetRowAndCell(1, 0).cell.content_tag = PageCellContentTagCodepointGrapheme
+	page.GetRowAndCell(1, 0).cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	expectEqual(t, SizeGraphemeBytesInt(0), page.ExactRowCapacity(0, 1).grapheme_bytes)
 }
 
@@ -2760,7 +2760,7 @@ func TestPg1_panic_Page_exactRowCapacity_styles_capacity_overflows_u16(t *testin
 	defer page.Deinit()
 	cells := page.GetCells(page.GetRow(0))
 	for i := range 54000 {
-		cells[i].style_id = StyleID(i + 1)
+		cells[i].setStyleID(StyleID(i + 1))
 	}
 	pg1ExpectPanic(t, func() {
 		page.ExactRowCapacity(0, 1)
@@ -2819,7 +2819,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_grapheme_c
 	page2 := pg1Init(t, pg1Cap(10, 10, 8))
 	defer page2.Deinit()
 	// The row is not flagged grapheme, so it has no managed memory.
-	page.GetRowAndCell(3, 0).cell.content_tag = PageCellContentTagCodepointGrapheme
+	page.GetRowAndCell(3, 0).cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg1ExpectPanic(t, func() {
 		_ = page2.ClonePartialRowFrom(page, page2.GetRow(0), page.GetRow(0), 0, 10)
 	})
@@ -2832,7 +2832,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_hyperlink_
 	defer page.Deinit()
 	page2 := pg1Init(t, pg1Cap(10, 10, 8))
 	defer page2.Deinit()
-	page.GetRowAndCell(3, 0).cell.hyperlink = true
+	page.GetRowAndCell(3, 0).cell.setHyperlink(true)
 	pg1ExpectPanic(t, func() {
 		_ = page2.ClonePartialRowFrom(page, page2.GetRow(0), page.GetRow(0), 0, 10)
 	})
@@ -2845,7 +2845,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_unmanaged_source_row_with_styled_cel
 	defer page.Deinit()
 	page2 := pg1Init(t, pg1Cap(10, 10, 8))
 	defer page2.Deinit()
-	page.GetRowAndCell(3, 0).cell.style_id = 1
+	page.GetRowAndCell(3, 0).cell.setStyleID(1)
 	pg1ExpectPanic(t, func() {
 		_ = page2.ClonePartialRowFrom(page, page2.GetRow(0), page.GetRow(0), 0, 10)
 	})
@@ -2859,7 +2859,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_source_grapheme_cell_without_data(t 
 	defer page2.Deinit()
 	// Zig: `other.lookupGrapheme(src_cell).?` on a null optional.
 	page.GetRow(0).grapheme = true
-	page.GetRowAndCell(3, 0).cell.content_tag = PageCellContentTagCodepointGrapheme
+	page.GetRowAndCell(3, 0).cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg1ExpectPanic(t, func() {
 		_ = page2.ClonePartialRowFrom(page, page2.GetRow(0), page.GetRow(0), 0, 10)
 	})
@@ -2873,7 +2873,7 @@ func TestPg1_panic_Page_clonePartialRowFrom_source_hyperlink_cell_without_data(t
 	defer page2.Deinit()
 	// Zig: `other.lookupHyperlink(src_cell).?` on a null optional.
 	page.GetRow(0).hyperlink = true
-	page.GetRowAndCell(3, 0).cell.hyperlink = true
+	page.GetRowAndCell(3, 0).cell.setHyperlink(true)
 	pg1ExpectPanic(t, func() {
 		_ = page2.ClonePartialRowFrom(page, page2.GetRow(0), page.GetRow(0), 0, 10)
 	})
@@ -2969,7 +2969,7 @@ func TestPg1_panic_Page_appendGrapheme_grapheme_cell_in_unmarked_row(t *testing.
 	// Zig: assert(row.grapheme) once the cell already has graphemes.
 	rac := page.GetRowAndCell(0, 0)
 	*rac.cell = PageCellInit(0x09)
-	rac.cell.content_tag = PageCellContentTagCodepointGrapheme
+	rac.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg1ExpectPanic(t, func() {
 		_ = page.AppendGrapheme(rac.row, rac.cell, 0x0A)
 	})
@@ -2982,7 +2982,7 @@ func TestPg1_panic_Page_appendGrapheme_grapheme_cell_without_data(t *testing.T) 
 	// Zig: `map.getPtr(cell_offset).?` on a null optional.
 	rac := page.GetRowAndCell(0, 0)
 	*rac.cell = PageCellInit(0x09)
-	rac.cell.content_tag = PageCellContentTagCodepointGrapheme
+	rac.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	rac.row.grapheme = true
 	pg1ExpectPanic(t, func() {
 		_ = page.AppendGrapheme(rac.row, rac.cell, 0x0A)
@@ -3008,7 +3008,7 @@ func TestPg1_panic_Page_clearGrapheme_grapheme_cell_without_data(t *testing.T) {
 	// Zig: `map.getEntry(cell_offset).?` on a null optional.
 	rac := page.GetRowAndCell(0, 0)
 	*rac.cell = PageCellInit(0x09)
-	rac.cell.content_tag = PageCellContentTagCodepointGrapheme
+	rac.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	pg1ExpectPanic(t, func() {
 		page.ClearGrapheme(rac.cell)
 	})
@@ -3098,7 +3098,7 @@ func TestPg1_panic_Page_moveCells_source_grapheme_cell_without_data(t *testing.T
 	// Zig: moveGrapheme does `map.getEntry(src_offset).?` on a null optional.
 	rac := page.GetRowAndCell(0, 0)
 	*rac.cell = PageCellInit('a')
-	rac.cell.content_tag = PageCellContentTagCodepointGrapheme
+	rac.cell.setContentTag(PageCellContentTagCodepointGrapheme)
 	rac.row.grapheme = true
 	pg1ExpectPanic(t, func() {
 		page.MoveCells(page.GetRow(0), 0, page.GetRow(1), 0, 1)
@@ -3111,7 +3111,7 @@ func TestPg1_panic_Page_moveCells_source_hyperlink_cell_without_data(t *testing.
 	defer page.Deinit()
 	// Zig: moveHyperlink does `map.getEntry(src_offset).?` on a null optional.
 	rac := page.GetRowAndCell(0, 0)
-	rac.cell.hyperlink = true
+	rac.cell.setHyperlink(true)
 	rac.row.hyperlink = true
 	pg1ExpectPanic(t, func() {
 		page.MoveCells(page.GetRow(0), 0, page.GetRow(1), 0, 1)
@@ -3174,7 +3174,7 @@ func TestPg1_panic_Page_verifyIntegrity_cell_style_not_in_set(t *testing.T) {
 	// Zig: `self.styles.get` asserts the id is present in the set.
 	rac := page.GetRowAndCell(1, 1)
 	rac.row.styled = true
-	rac.cell.style_id = 5
+	rac.cell.setStyleID(5)
 	pg1ExpectPanic(t, func() {
 		_ = page.VerifyIntegrity()
 	})
@@ -3187,7 +3187,7 @@ func TestPg1_panic_Page_verifyIntegrity_hyperlink_id_not_in_set(t *testing.T) {
 	// Zig: `self.hyperlink_set.get` asserts the id is present in the set.
 	rac := page.GetRowAndCell(1, 1)
 	rac.row.hyperlink = true
-	rac.cell.hyperlink = true
+	rac.cell.setHyperlink(true)
 	zigTry(t, page.hyperlink_map.Map().PutNoClobber(page.cellOffset(rac.cell), 3))
 	pg1ExpectPanic(t, func() {
 		_ = page.VerifyIntegrity()

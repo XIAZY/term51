@@ -331,13 +331,13 @@ func TestTm2_Terminal_eraseChars_preserves_background_sgr(t *testing.T) {
 		expectEqualStrings(t, "  C", str)
 		{
 			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
-			expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+			expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 		}
 		{
 			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(1, 0)))
-			expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+			expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 		}
 	}
 }
@@ -831,7 +831,7 @@ func TestTm2_Terminal_index_scrolling_with_hyperlink(t *testing.T) {
 		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, cell.hyperlink, "cell.hyperlink")
+		expect(t, cell.Hyperlink(), "cell.hyperlink")
 		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, HyperlinkID(1), id)
 	}
@@ -840,7 +840,7 @@ func TestTm2_Terminal_index_scrolling_with_hyperlink(t *testing.T) {
 		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, !cell.hyperlink, "!cell.hyperlink")
+		expect(t, !cell.Hyperlink(), "!cell.hyperlink")
 		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
@@ -944,8 +944,8 @@ func TestTm2_Terminal_index_bottom_of_primary_screen_background_sgr(t *testing.T
 		expectEqualStrings(t, "\n\n\nA", str)
 		for x := 0; x < 5; x++ {
 			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 4)))
-			expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+			expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 		}
 	}
 }
@@ -1002,7 +1002,7 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_hyperlinks(t *testing.T
 		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, cell.hyperlink, "cell.hyperlink")
+		expect(t, cell.Hyperlink(), "cell.hyperlink")
 		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, HyperlinkID(1), id)
 	}
@@ -1011,7 +1011,7 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_hyperlinks(t *testing.T
 		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, !cell.hyperlink, "!cell.hyperlink")
+		expect(t, !cell.Hyperlink(), "!cell.hyperlink")
 		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
@@ -1049,7 +1049,7 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_clear_hyperlinks(t *testing.
 		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, !cell.hyperlink, "!cell.hyperlink")
+		expect(t, !cell.Hyperlink(), "!cell.hyperlink")
 		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 		page := &list_cell.Node.data
@@ -1080,8 +1080,8 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_background_SGR(t *testi
 
 	for x := 0; x < int(term.Cols); x++ {
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 2)))
-		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+		expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 	}
 }
 
@@ -1255,8 +1255,8 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_blank_line_preserves_SGR(t *
 	}
 	for x := 0; x < int(term.Cols); x++ {
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 2)))
-		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+		expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 	}
 }
 
@@ -1854,8 +1854,8 @@ func TestTm2_Terminal_deleteLines_colors_with_bg_color(t *testing.T) {
 
 	for x := 0; x < int(term.Cols); x++ {
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 4)))
-		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+		expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 	}
 }
 
@@ -2500,8 +2500,8 @@ func TestTm2_Terminal_default_style_is_empty(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('A'), cell.content.codepoint)
-		expectEqual(t, StyleID(0), cell.style_id)
+		expectEqual(t, uint32('A'), cell.content().codepoint())
+		expectEqual(t, StyleID(0), cell.StyleID())
 	}
 }
 
@@ -2518,8 +2518,8 @@ func TestTm2_Terminal_bold_style(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('A'), cell.content.codepoint)
-		expect(t, cell.style_id != 0, "cell.style_id != 0")
+		expectEqual(t, uint32('A'), cell.content().codepoint())
+		expect(t, cell.StyleID() != 0, "cell.style_id != 0")
 		page := &term.Screens.Active.Cursor.PagePin.Node.data
 		expect(t, page.styles.RefCount(term.Screens.Active.Cursor.StyleID) > 1, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 1")
 	}
@@ -2541,8 +2541,8 @@ func TestTm2_Terminal_garbage_collect_overwritten(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('B'), cell.content.codepoint)
-		expect(t, cell.style_id == 0, "cell.style_id == 0")
+		expectEqual(t, uint32('B'), cell.content().codepoint())
+		expect(t, cell.StyleID() == 0, "cell.style_id == 0")
 	}
 
 	// verify we have no styles in our style map
@@ -2565,8 +2565,8 @@ func TestTm2_Terminal_do_not_garbage_collect_old_styles_in_use(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(1, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('B'), cell.content.codepoint)
-		expect(t, cell.style_id == 0, "cell.style_id == 0")
+		expectEqual(t, uint32('B'), cell.content().codepoint())
+		expect(t, cell.StyleID() == 0, "cell.style_id == 0")
 	}
 
 	// verify we have no styles in our style map
@@ -2662,8 +2662,8 @@ func TestTm2_Terminal_decaln_preserves_color(t *testing.T) {
 
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
-		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+		expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 	}
 }
 
@@ -2845,8 +2845,8 @@ func TestTm2_Terminal_insertBlanks_preserves_background_sgr(t *testing.T) {
 	}
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
-		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+		expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 	}
 }
 
@@ -3099,14 +3099,14 @@ func TestTm2_Terminal_insertBlanks_shifts_hyperlinks(t *testing.T) {
 		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, cell.hyperlink, "cell.hyperlink")
+		expect(t, cell.Hyperlink(), "cell.hyperlink")
 		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, HyperlinkID(1), id)
 	}
 	for x := 0; x < 2; x++ {
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
 		cell := list_cell.Cell
-		expect(t, !cell.hyperlink, "!cell.hyperlink")
+		expect(t, !cell.Hyperlink(), "!cell.hyperlink")
 		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
@@ -3135,7 +3135,7 @@ func TestTm2_Terminal_insertBlanks_pushes_hyperlink_off_end_completely(t *testin
 		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
 		cell := list_cell.Cell
-		expect(t, !cell.hyperlink, "!cell.hyperlink")
+		expect(t, !cell.Hyperlink(), "!cell.hyperlink")
 		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
@@ -3557,8 +3557,8 @@ func TestTm2_Terminal_deleteChars_preserves_background_sgr(t *testing.T) {
 	}
 	for x := int(term.Cols) - 2; x < int(term.Cols); x++ {
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 0)))
-		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
+		expect(t, list_cell.Cell.ContentTag() == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content().colorRGB())
 	}
 }
 
@@ -3640,14 +3640,14 @@ func TestTm2_Terminal_deleteChars_split_wide_character_from_wide(t *testing.T) {
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, uint32(0), cell.content.codepoint)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
+		expectEqual(t, uint32(0), cell.content().codepoint())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
 	}
 	{
 		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(1, 0)))
 		cell := list_cell.Cell
-		expectEqual(t, uint32('1'), cell.content.codepoint)
-		expectEqual(t, PageCellWideNarrow, cell.wide)
+		expectEqual(t, uint32('1'), cell.content().codepoint())
+		expectEqual(t, PageCellWideNarrow, cell.Wide())
 	}
 }
 
@@ -3671,7 +3671,7 @@ func TestTm2_panic_insertBlanks_spacer_tail_at_column_zero(t *testing.T) {
 
 	// Zig: assert(self.screens.active.cursor.x > 0), when the cursor cell
 	// is a spacer tail.
-	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.setWide(PageCellWideSpacerTail)
 	tm2ExpectPanic(t, func() { term.InsertBlanks(1) })
 }
 
@@ -3684,7 +3684,7 @@ func TestTm2_panic_insertBlanks_wide_without_spacer_tail(t *testing.T) {
 	// Zig: assert(end_multi[1].wide == .spacer_tail). With the cursor at
 	// x = 0 and count 1, the last shifted cell is x = 8.
 	lc := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(8, 0)))
-	lc.Cell.wide = PageCellWideWide
+	lc.Cell.setWide(PageCellWideWide)
 	tm2ExpectPanic(t, func() { term.InsertBlanks(1) })
 }
 
@@ -3698,6 +3698,6 @@ func TestTm2_panic_deleteLines_spacer_tail_at_left_margin_zero(t *testing.T) {
 	// when the left margin cell is a spacer tail; with left = 0 the u16
 	// subtraction overflows, which traps.
 	lc := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
-	lc.Cell.wide = PageCellWideSpacerTail
+	lc.Cell.setWide(PageCellWideSpacerTail)
 	tm2ExpectPanic(t, func() { term.DeleteLines(1) })
 }

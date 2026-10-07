@@ -1849,7 +1849,7 @@ func (self *Screen) CursorResetWrap() {
 	// If the last cell in the row is a spacer head we need to clear it.
 	cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
 	cell := cells[self.Cursor.PagePin.Node.data.size.cols-1]
-	if cell.wide == PageCellWideSpacerHead {
+	if cell.Wide() == PageCellWideSpacerHead {
 		self.ClearCells(
 			&self.Cursor.PagePin.Node.data,
 			page_row,
@@ -2082,7 +2082,7 @@ func (self *Screen) ClearCells(page *Page, row *PageRow, cells []PageCell) {
 	if row.hyperlink {
 		for i := range cells {
 			cell := &cells[i]
-			if cell.hyperlink {
+			if cell.Hyperlink() {
 				page.ClearHyperlink(cell)
 			}
 		}
@@ -2101,7 +2101,7 @@ func (self *Screen) ClearCells(page *Page, row *PageRow, cells []PageCell) {
 		for i := range cells {
 			cell := &cells[i]
 			if cell.HasStyling() {
-				page.styles.Release(cell.style_id)
+				page.styles.Release(cell.StyleID())
 			}
 		}
 
@@ -2135,7 +2135,7 @@ func (self *Screen) ClearUnprotectedCells(page *Page, row *PageRow, cells []Page
 	// Zig: `while (x0 < cells.len) clear: { ... }`; `break :clear` leaves
 	// the loop body, so it is `continue`.
 	for x0 < uint(len(cells)) {
-		for cells[x0].protected {
+		for cells[x0].Protected() {
 			x0 += 1
 			if x0 >= uint(len(cells)) {
 				break
@@ -2145,7 +2145,7 @@ func (self *Screen) ClearUnprotectedCells(page *Page, row *PageRow, cells []Page
 			continue // break :clear
 		}
 		x1 = x0 + 1
-		for x1 < uint(len(cells)) && !cells[x1].protected {
+		for x1 < uint(len(cells)) && !cells[x1].Protected() {
 			x1 += 1
 		}
 		self.ClearCells(page, row, cells[x0:x1])
@@ -2212,7 +2212,7 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 		cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
 
 		// Spacer head at end of wrapped row.
-		if cells[cols-1].wide == PageCellWideSpacerHead {
+		if cells[cols-1].Wide() == PageCellWideSpacerHead {
 			self.ClearCells(
 				page,
 				self.Cursor.PageRow,
@@ -2238,13 +2238,13 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 
 		// If the first cell in a row is wide the previous row
 		// may have a spacer head which needs to be cleared.
-		if cells[0].wide == PageCellWideWide {
+		if cells[0].Wide() == PageCellWideWide {
 			if p_row_ := self.Cursor.PagePin.Up(1); p_row_.Valid {
 				p_row := p_row_.Value
 				p_rac := p_row.RowAndCell()
 				p_cells := p_row.Cells(PageListPinCellSubsetAll)
 				p_cell := p_cells[p_row.Node.data.size.cols-1]
-				if p_cell.wide == PageCellWideSpacerHead {
+				if p_cell.Wide() == PageCellWideSpacerHead {
 					self.ClearCells(
 						&p_row.Node.data,
 						p_rac.row,
@@ -2269,7 +2269,7 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 		cells := self.Cursor.PagePin.Cells(PageListPinCellSubsetAll)
 
 		left := cells[x-1]
-		switch left.wide {
+		switch left.Wide() {
 		// There should not be spacer heads in the middle of the row.
 		case PageCellWideSpacerHead:
 			panic("unreachable")
@@ -2299,12 +2299,12 @@ func (self *Screen) SplitCellBoundary(x SizeCellCountInt) {
 // Zig: self is *const Screen.
 func (self *Screen) BlankCell() PageCell {
 	if self.Cursor.StyleID == StyleDefaultID {
-		return PageCell{}
+		return PageCell(0)
 	}
 	if bg := self.Cursor.Style.BgCell(); bg.Valid {
 		return bg.Value
 	}
-	return PageCell{}
+	return PageCell(0)
 }
 
 // ScreenResize is Screen.Resize: the options of resize.
@@ -3565,7 +3565,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 	var semantic_prompt_state Optional[PageCellSemanticContent]
 	if opts.SemanticPromptBoundary {
 		rac := opts.Pin.RowAndCell()
-		semantic_prompt_state = Some(rac.cell.semantic_content)
+		semantic_prompt_state = Some(rac.cell.SemanticContent())
 	}
 
 	// The real start of the row is the first row in the soft-wrap.
@@ -3586,7 +3586,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 			n := uint(opts.Pin.X) + 1
 			for i := uint(0); i < n; i++ {
 				x_rev := uint(opts.Pin.X) - i
-				if cells[x_rev].semantic_content != v {
+				if cells[x_rev].SemanticContent() != v {
 					copy_ := it_prev
 					// Zig: @intCast to u16; x_rev < pin.x here.
 					copy_.X = SizeCellCountInt(x_rev + 1)
@@ -3617,7 +3617,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 				for x := 0; x < len(cells); x++ {
 					x_rev := len(cells) - 1 - x
 					cell := cells[x_rev]
-					if cell.semantic_content != v {
+					if cell.SemanticContent() != v {
 						return it_prev
 					}
 					it_prev = p
@@ -3662,7 +3662,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 				// col doesn't match then we end at the end of the prior
 				// row. But if this is the first row, we can't go back,
 				// so we scan forward to find where our content ends.
-				if start_offset == 0 && cells[0].semantic_content != v {
+				if start_offset == 0 && cells[0].SemanticContent() != v {
 					prev_ := p.Up(1)
 					assert(prev_.Valid) // .?
 					prev := prev_.Value
@@ -3673,7 +3673,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 				// For every other case, we end at the prior cell.
 				for x := start_offset; x < uint(len(cells)); x++ {
 					cell := cells[x]
-					if cell.semantic_content != v {
+					if cell.SemanticContent() != v {
 						copy_ := p
 						assert(x >= 1) // Zig: - traps
 						copy_.X = SizeCellCountInt(x - 1)
@@ -3716,7 +3716,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 			// Non-empty means we found it.
 			this_whitespace := stdMemIndexOfAny(
 				whitespace,
-				[]uint32{cell.content.codepoint},
+				[]uint32{cell.content().codepoint()},
 			).Valid
 			if this_whitespace {
 				continue
@@ -3752,7 +3752,7 @@ func (self *Screen) SelectLine(opts ScreenSelectLine) Optional[Selection] {
 			// Non-empty means we found it.
 			this_whitespace := stdMemIndexOfAny(
 				whitespace,
-				[]uint32{cell.content.codepoint},
+				[]uint32{cell.content().codepoint()},
 			).Valid
 			if this_whitespace {
 				continue
@@ -3799,7 +3799,7 @@ func (self *Screen) SelectAll() Optional[Selection] {
 			// Non-empty means we found it.
 			this_whitespace := stdMemIndexOfAny(
 				whitespace,
-				[]uint32{cell.content.codepoint},
+				[]uint32{cell.content().codepoint()},
 			).Valid
 			if this_whitespace {
 				continue
@@ -3834,7 +3834,7 @@ func (self *Screen) SelectAll() Optional[Selection] {
 			// Non-empty means we found it.
 			this_whitespace := stdMemIndexOfAny(
 				whitespace,
-				[]uint32{cell.content.codepoint},
+				[]uint32{cell.content().codepoint()},
 			).Valid
 			if this_whitespace {
 				continue
@@ -3930,7 +3930,7 @@ func (self *Screen) SelectWord(pin PageListPin, boundary_codepoints []uint32) Op
 	// Determine if we are a boundary or not to determine what our boundary is.
 	expect_boundary := stdMemIndexOfAny(
 		boundary_codepoints,
-		[]uint32{start_cell.content.codepoint},
+		[]uint32{start_cell.content().codepoint()},
 	).Valid
 
 	// Go forwards to find our end boundary
@@ -3954,7 +3954,7 @@ func (self *Screen) SelectWord(pin PageListPin, boundary_codepoints []uint32) Op
 			// If we do not match our expected set, we hit a boundary
 			this_boundary := stdMemIndexOfAny(
 				boundary_codepoints,
-				[]uint32{cell.content.codepoint},
+				[]uint32{cell.content().codepoint()},
 			).Valid
 			if this_boundary != expect_boundary {
 				return prev
@@ -3999,7 +3999,7 @@ func (self *Screen) SelectWord(pin PageListPin, boundary_codepoints []uint32) Op
 			// If we do not match our expected set, we hit a boundary
 			this_boundary := stdMemIndexOfAny(
 				boundary_codepoints,
-				[]uint32{cell.content.codepoint},
+				[]uint32{cell.content().codepoint()},
 			).Valid
 			if this_boundary != expect_boundary {
 				return prev
@@ -4027,7 +4027,7 @@ func (self *Screen) SelectWord(pin PageListPin, boundary_codepoints []uint32) Op
 // Zig: pub fn selectOutput(self: *Screen, pin: Pin) ?Selection.
 func (self *Screen) SelectOutput(pin PageListPin) Optional[Selection] {
 	// If our pin right now is not on output, then we return nothing.
-	if pin.RowAndCell().cell.semantic_content != PageCellSemanticContentOutput {
+	if pin.RowAndCell().cell.SemanticContent() != PageCellSemanticContentOutput {
 		return None[Selection]()
 	}
 
@@ -4180,7 +4180,7 @@ func (self *Screen) PromptClickMove(click_pin PageListPin) ScreenPromptClickMove
 	// If we're not at an input cell with our cursor, no movement will
 	// ever be possible.
 	if self.Cursor.SemanticContent != PageCellSemanticContentInput &&
-		self.Cursor.PageCell.semantic_content != PageCellSemanticContentInput {
+		self.Cursor.PageCell.SemanticContent() != PageCellSemanticContentInput {
 		return ScreenPromptClickMoveZero
 	}
 
@@ -4264,7 +4264,7 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 				// where input starts on subsequent lines so we must do
 				// this.
 				for x, cell := range cells {
-					if cell.semantic_content == PageCellSemanticContentInput {
+					if cell.SemanticContent() == PageCellSemanticContentInput {
 						return uint(x)
 					}
 				}
@@ -4281,7 +4281,7 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 				// Ignore non-input cells, but allow breaks. We assume
 				// the shell will translate arrow keys to only input
 				// areas.
-				if cell.semantic_content != PageCellSemanticContentInput {
+				if cell.SemanticContent() != PageCellSemanticContentInput {
 					continue
 				}
 
@@ -4304,7 +4304,7 @@ func (self *Screen) promptClickLine(click_pin PageListPin) ScreenPromptClickMove
 				// right/beyond it. If we're already on a non-empty input cell
 				// then we add one so we can move to the newest, empty cell
 				// at the end, matching typical editor behavior.
-				if self.Cursor.PageCell.semantic_content == PageCellSemanticContentInput {
+				if self.Cursor.PageCell.SemanticContent() == PageCellSemanticContentInput {
 					count += 1
 				}
 
@@ -4349,7 +4349,7 @@ left_row_it:
 			cell := cells[x]
 
 			// Ignore non-input cells.
-			if cell.semantic_content != PageCellSemanticContentInput {
+			if cell.SemanticContent() != PageCellSemanticContentInput {
 				continue
 			}
 
@@ -4556,7 +4556,7 @@ func (self *Screen) TestWriteString(text []uint8) error {
 		if width == 0 {
 			// Zig: the labeled block `cell:`.
 			cell := self.CursorCellLeft(1)
-			switch cell.wide {
+			switch cell.Wide() {
 			case PageCellWideNarrow:
 			case PageCellWideWide:
 			case PageCellWideSpacerHead:
@@ -4598,13 +4598,13 @@ func (self *Screen) TestWriteString(text []uint8) error {
 		assert(width == 1 || width == 2)
 		switch width {
 		case 1:
-			*self.Cursor.PageCell = PageCell{
+			*self.Cursor.PageCell = pageCellFields{
 				content_tag:      PageCellContentTagCodepoint,
-				content:          PageCellContent{codepoint: c},
+				content:          pageCellContentFields{codepoint: c}.pack(),
 				style_id:         self.Cursor.StyleID,
 				protected:        self.Cursor.Protected,
 				semantic_content: self.Cursor.SemanticContent,
-			}
+			}.pack()
 
 			// If we have a ref-counted style, increase.
 			if self.Cursor.StyleID != StyleDefaultID {
@@ -4626,13 +4626,13 @@ func (self *Screen) TestWriteString(text []uint8) error {
 		case 2:
 			// Need a wide spacer head
 			if self.Cursor.X == self.Pages.cols-1 {
-				*self.Cursor.PageCell = PageCell{
+				*self.Cursor.PageCell = pageCellFields{
 					content_tag:      PageCellContentTagCodepoint,
-					content:          PageCellContent{codepoint: 0},
+					content:          pageCellContentFields{codepoint: 0}.pack(),
 					wide:             PageCellWideSpacerHead,
 					protected:        self.Cursor.Protected,
 					semantic_content: self.Cursor.SemanticContent,
-				}
+				}.pack()
 
 				// If we have a hyperlink, add it to the cell.
 				if self.Cursor.HyperlinkID > 0 {
@@ -4650,14 +4650,14 @@ func (self *Screen) TestWriteString(text []uint8) error {
 			}
 
 			// Write our wide char
-			*self.Cursor.PageCell = PageCell{
+			*self.Cursor.PageCell = pageCellFields{
 				content_tag:      PageCellContentTagCodepoint,
-				content:          PageCellContent{codepoint: c},
+				content:          pageCellContentFields{codepoint: c}.pack(),
 				style_id:         self.Cursor.StyleID,
 				wide:             PageCellWideWide,
 				protected:        self.Cursor.Protected,
 				semantic_content: self.Cursor.SemanticContent,
-			}
+			}.pack()
 
 			// If we have a hyperlink, add it to the cell.
 			if self.Cursor.HyperlinkID > 0 {
@@ -4668,13 +4668,13 @@ func (self *Screen) TestWriteString(text []uint8) error {
 
 			// Write our tail
 			self.CursorRight(1)
-			*self.Cursor.PageCell = PageCell{
+			*self.Cursor.PageCell = pageCellFields{
 				content_tag:      PageCellContentTagCodepoint,
-				content:          PageCellContent{codepoint: 0},
+				content:          pageCellContentFields{codepoint: 0}.pack(),
 				wide:             PageCellWideSpacerTail,
 				protected:        self.Cursor.Protected,
 				semantic_content: self.Cursor.SemanticContent,
-			}
+			}.pack()
 
 			// If we have a hyperlink, add it to the cell.
 			if self.Cursor.HyperlinkID > 0 {

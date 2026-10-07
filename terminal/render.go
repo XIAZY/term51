@@ -229,7 +229,7 @@ var RenderStateEmpty = RenderState{
 	Cursor: RenderStateCursor{
 		Active:        PointCoordinate{X: 0, Y: 0},
 		Viewport:      None[RenderStateCursorViewport](),
-		Cell:          PageCell{},
+		Cell:          PageCell(0),
 		Style:         Style{}, // Zig: undefined.
 		VisualStyle:   CursorStyleBlock,
 		PasswordInput: false,
@@ -600,7 +600,7 @@ bg_fg_done:
 			row_pin.Y == s.Cursor.PagePin.Y {
 			var wide_tail bool
 			if s.Cursor.X > 0 {
-				wide_tail = s.CursorCellLeft(1).wide == PageCellWideWide
+				wide_tail = s.CursorCellLeft(1).Wide() == PageCellWideWide
 			} else {
 				wide_tail = false
 			}
@@ -714,14 +714,14 @@ bg_fg_done:
 			page_cell := &page_cells[x]
 			// Append assuming its a single-codepoint, styled cell
 			// (most common by far).
-			if page_cell.style_id > 0 {
+			if page_cell.StyleID() > 0 {
 				cells_slice[x].Style = *p.styles.Get(
-					page_cell.style_id,
+					page_cell.StyleID(),
 				)
 			}
 
 			// Switch on our content tag to handle less likely cases.
-			switch page_cell.content_tag {
+			switch page_cell.ContentTag() {
 			case PageCellContentTagCodepoint:
 				// Primary codepoint goes into `raw` field.
 
@@ -742,15 +742,15 @@ bg_fg_done:
 
 			case PageCellContentTagBgColorRgb:
 				cells_slice[x].Style = Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-					R: page_cell.content.color_rgb.R,
-					G: page_cell.content.color_rgb.G,
-					B: page_cell.content.color_rgb.B,
+					R: page_cell.content().colorRGB().R,
+					G: page_cell.content().colorRGB().G,
+					B: page_cell.content().colorRGB().B,
 				}}}
 
 			case PageCellContentTagBgColorPalette:
 				cells_slice[x].Style = Style{BgColor: StyleColor{
 					Tag:     StyleColorPalette,
-					Palette: page_cell.content.color_palette,
+					Palette: page_cell.content().colorPalette(),
 				}}
 
 			default:
@@ -1186,7 +1186,7 @@ func (self *RenderState) LinkCells(viewport_point PointCoordinate) (RenderStateC
 		)
 
 		// The likely scenario is that our mouse isn't even over a link.
-		if !rac.cell.hyperlink {
+		if !rac.cell.Hyperlink() {
 			return result, nil
 		}
 
@@ -1204,7 +1204,7 @@ func (self *RenderState) LinkCells(viewport_point PointCoordinate) (RenderStateC
 		cells := row_data[y].Cells
 		for x := range cells {
 			cell := cells[x].Raw
-			if !cell.hyperlink {
+			if !cell.Hyperlink() {
 				continue
 			}
 

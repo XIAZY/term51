@@ -4,14 +4,14 @@ import "testing"
 
 // Go-only: ruling (pageCellsFill, the doubling copy that stands for @memset over cells, sets every cell and nothing else)
 func TestPage_go_only_pageCellsFill_equals_a_loop(t *testing.T) {
-	value := PageCell{
+	value := pageCellFields{
 		content_tag: PageCellContentTagCodepoint,
-		content:     PageCellContent{codepoint: 'E'},
+		content:     pageCellContentFields{codepoint: 'E'}.pack(),
 		style_id:    7,
 		wide:        PageCellWideWide,
 		protected:   true,
-	}
-	other := PageCell{content: PageCellContent{codepoint: 'x'}, hyperlink: true}
+	}.pack()
+	other := pageCellFields{content: pageCellContentFields{codepoint: 'x'}.pack(), hyperlink: true}.pack()
 	for n := 0; n <= 300; n++ {
 		// One guard cell on each side of the filled range.
 		buf := make([]PageCell, n+2)

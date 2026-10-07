@@ -181,11 +181,11 @@ func (self Style) Eql(other Style) bool {
 // Zig: cell is *const page.Cell, palette is *const color.Palette; returns
 // ?color.RGB.
 func (self Style) Bg(cell *PageCell, palette *ColorPalette) Optional[ColorRGB] {
-	switch cell.content_tag {
+	switch cell.ContentTag() {
 	case PageCellContentTagBgColorPalette:
-		return Some(palette[cell.content.color_palette])
+		return Some(palette[cell.content().colorPalette()])
 	case PageCellContentTagBgColorRgb:
-		rgb := cell.content.color_rgb
+		rgb := cell.content().colorRGB()
 		return Some(ColorRGB{R: rgb.R, G: rgb.G, B: rgb.B})
 
 	default:
@@ -305,20 +305,20 @@ func (self Style) BgCell() Optional[PageCell] {
 		return None[PageCell]()
 	case StyleColorPalette:
 		idx := self.BgColor.Palette
-		return Some(PageCell{
+		return Some(pageCellFields{
 			content_tag: PageCellContentTagBgColorPalette,
-			content:     PageCellContent{color_palette: idx},
-		})
+			content:     pageCellContentFields{color_palette: idx}.pack(),
+		}.pack())
 	case StyleColorRgb:
 		rgb := self.BgColor.Rgb
-		return Some(PageCell{
+		return Some(pageCellFields{
 			content_tag: PageCellContentTagBgColorRgb,
-			content: PageCellContent{color_rgb: PageCellRGB{
+			content: pageCellContentFields{color_rgb: PageCellRGB{
 				R: rgb.R,
 				G: rgb.G,
 				B: rgb.B,
-			}},
-		})
+			}}.pack(),
+		}.pack())
 	}
 	panic("unreachable")
 }

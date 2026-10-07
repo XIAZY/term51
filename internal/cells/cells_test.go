@@ -525,7 +525,8 @@ func TestPicture(t *testing.T) {
 
 // TestPhoneFonts draws from the phone's own font files, which are not ours to
 // keep in the repository: TERM51_PHONE_FONTS=dir names a directory holding
-// copies of the phone's DejaVuSansMono*.ttf and MHeiM.GB18030_200910.ttf.
+// copies of the phone's DejaVuSansMono*.ttf, MHeiM.GB18030_200910.ttf,
+// HeiseiKakuGothW5_213_C.ttf and malgun.ttf.
 func TestPhoneFonts(t *testing.T) {
 	dir := os.Getenv("TERM51_PHONE_FONTS")
 	if dir == "" {
@@ -535,7 +536,9 @@ func TestPhoneFonts(t *testing.T) {
 	for i, name := range []string{"DejaVuSansMono.ttf", "DejaVuSansMono-Bold.ttf", "DejaVuSansMono-Oblique.ttf", "DejaVuSansMono-BoldOblique.ttf"} {
 		f.Faces[i] = parse(t, read(t, filepath.Join(dir, name)))
 	}
-	f.Others = []*opentype.Font{parse(t, read(t, filepath.Join(dir, "MHeiM.GB18030_200910.ttf")))}
+	for _, name := range []string{"MHeiM.GB18030_200910.ttf", "HeiseiKakuGothW5_213_C.ttf", "malgun.ttf"} {
+		f.Others = append(f.Others, parse(t, read(t, filepath.Join(dir, name))))
+	}
 	s, err := NewSheet(f, 28)
 	if err != nil {
 		t.Fatal(err)
@@ -545,16 +548,20 @@ func TestPhoneFonts(t *testing.T) {
 			t.Errorf("style %d: 'A' is empty", style)
 		}
 	}
-	for _, r := range "中文日本語한" {
+	// Chinese, Japanese kana (which MHei lacks) and Korean: each is in one
+	// of the fonts, and drawn in both halves of its two cells.
+	for _, r := range "中文日本語ひらがなカタカナ한국어" {
+		if s.face(s.faces[0], r) == nil {
+			t.Errorf("%c: in none of the fonts", r)
+		}
 		n := s.slot([]rune{r}, 0, true)
 		if s.ink(n) == 0 || s.ink(n+1) == 0 {
 			t.Errorf("%c: ink %d and %d", r, s.ink(n), s.ink(n+1))
 		}
-		t.Logf("%c: found=%v", r, s.face(s.faces[0], r) != nil)
 	}
 	x := newTerm(t, 40, 3)
 	var tb Table
-	tb.Update(x.feed(t, "$ ls \x1b[1mbold\x1b[0m \x1b[3mitalic\x1b[0m \x1b[1;3mboth\x1b[0m\r\n中文 wide 日本語 한국어 e\u0301 │┌─┐ ✓ →\r\nprompt> "), s)
+	tb.Update(x.feed(t, "$ ls \x1b[1mbold\x1b[0m \x1b[3mitalic\x1b[0m \x1b[1;3mboth\x1b[0m\r\n中文 wide 日本語 ひらがな カタカナ 한국어 e\u0301 │┌─┐ ✓ →\r\nprompt> "), s)
 	if out := os.Getenv("TERM51_CELLS_OUT"); out != "" {
 		file, err := os.Create(filepath.Join(out, "phone.png"))
 		if err != nil {

@@ -94,9 +94,11 @@ func main() {
 const fontDir = "/usr/fonts/font_repository/"
 
 // phoneFonts reads the fonts the terminal is drawn with: DejaVu Sans Mono in
-// its four styles, and for the characters it lacks MHei (Chinese, Japanese)
-// and then Malgun (Korean). The files are part of the phone, so one that
-// cannot be read ends the app, with the reason in the log.
+// its four styles, and for the characters it lacks MHei (Chinese, and the
+// characters Japanese shares with it), then Heisei Kaku Gothic (the Japanese
+// kana, which MHei lacks) and then Malgun (Korean). The files are part of
+// the phone, so one that cannot be read ends the app, with the reason in the
+// log.
 func phoneFonts() cells.Fonts {
 	read := func(name string) *opentype.Font {
 		data, err := os.ReadFile(fontDir + name)
@@ -118,6 +120,7 @@ func phoneFonts() cells.Fonts {
 		},
 		Others: []*opentype.Font{
 			read("monotype/MHeiM.GB18030_200910.ttf"),
+			read("monotype/HeiseiKakuGothW5_213_C.ttf"),
 			read("monotype/malgun.ttf"),
 		},
 	}

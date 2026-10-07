@@ -122,11 +122,7 @@ func (a *App) Run() error {
 		for i, t := range tabs {
 			titles[i], rang[i] = t.title, t.rang
 		}
-		st := map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt}
-		if cur >= 0 {
-			st["title"] = tabs[cur].title
-		}
-		a.state(st)
+		a.state(map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt})
 	}
 	sticky := func() {
 		if cur < 0 {

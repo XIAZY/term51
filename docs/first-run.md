@@ -104,8 +104,9 @@ The same error text is in the system log of an installed copy that fails
   `Page.openActionMenu()` opens the menu from the right for a page's
   overflow actions also while the action bar is hidden
   (`actionBarVisibility: ChromeVisibility.Hidden`); the SDK's headers do not
-  say so. That is how the three dots on our own bar open BlackBerry 10's own
-  menu. It needs 10.3.1; the Passport runs 10.3.3.
+  say so. It needs 10.3.1; the Passport runs 10.3.3. The app used it while it
+  had a bar of its own; with the system's bar, which has its own three dots,
+  it no longer does.
 
 - **A gap under the bottom bar** (2026-10-07, d1d9025). The hidden input
   field, told to have no height (`maxHeight: 0`), kept its 120 pixels at the

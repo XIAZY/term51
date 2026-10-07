@@ -100,6 +100,13 @@ The same error text is in the system log of an installed copy that fails
   bridge prints why a page does not load; and pages are checked on the phone
   before they are installed (above).
 
+- **The system's menu opens without its bar** (2026-10-07, 5c1046a).
+  `Page.openActionMenu()` opens the menu from the right for a page's
+  overflow actions also while the action bar is hidden
+  (`actionBarVisibility: ChromeVisibility.Hidden`); the SDK's headers do not
+  say so. That is how the three dots on our own bar open BlackBerry 10's own
+  menu. It needs 10.3.1; the Passport runs 10.3.3.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

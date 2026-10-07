@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"time"
 
 	"term51/internal/app"
 	"term51/internal/settings"
@@ -42,10 +43,12 @@ func main() {
 		log.Printf("settings: %v; using the defaults", err)
 	}
 	a := app.New(cfg, ui.Publisher{})
+	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
-		log.Printf("the session ended: %v", err)
-		// The shell is gone: the app has nothing left to show.
+		log.Printf("the app's loop ended: %v", err)
+		close(ended)
+		// The last shell is gone: the app has nothing left to show.
 		os.Exit(0)
 	}()
 
@@ -59,5 +62,12 @@ func main() {
 		}
 		a.Send(app.Command{Name: name, Args: args})
 	})
+	// The user closed the app: hang the shells up before going, and give
+	// that a bounded time.
+	a.Quit()
+	select {
+	case <-ended:
+	case <-time.After(4 * time.Second):
+	}
 	os.Exit(rc)
 }

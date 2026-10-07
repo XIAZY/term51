@@ -18,6 +18,7 @@ type page struct {
 	rows      map[int]string
 	count     int
 	clipboard string
+	notices   []string
 }
 
 func (p *page) State(js string) {
@@ -40,6 +41,7 @@ func (p *page) Event(js string) {
 		} `json:"rows"`
 		Count     int     `json:"count"`
 		Clipboard *string `json:"clipboard"`
+		Notice    *string `json:"notice"`
 	}
 	if json.Unmarshal([]byte(js), &e) != nil {
 		return
@@ -48,6 +50,9 @@ func (p *page) Event(js string) {
 	defer p.mu.Unlock()
 	if e.Clipboard != nil {
 		p.clipboard = *e.Clipboard
+	}
+	if e.Notice != nil {
+		p.notices = append(p.notices, *e.Notice)
 	}
 	if e.Rows != nil {
 		if e.Count != p.count {
@@ -190,9 +195,18 @@ func TestTabs(t *testing.T) {
 }
 
 func TestCopyAndResize(t *testing.T) {
-	a, p, _ := startApp(t)
+	a, p, done := startApp(t)
 	typeLine(a, "echo copy-me")
 	wait(t, "output", func() bool { return strings.Contains(p.screen(), "copy-me") })
+
+	// Copy with nothing selected copies nothing and says so.
+	a.Send(Command{Name: "copy"})
+	wait(t, "the notice", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return len(p.notices) == 1 && p.clipboard == ""
+	})
+	a.Send(Command{Name: "selectall"})
 	a.Send(Command{Name: "copy"})
 	wait(t, "the clipboard", func() bool {
 		p.mu.Lock()
@@ -208,5 +222,45 @@ func TestCopyAndResize(t *testing.T) {
 	})
 	typeLine(a, "stty size")
 	wait(t, "the shell's new size", func() bool { return strings.Contains(p.screen(), "5 30") })
-	a.Send(Command{Name: "closetab"})
+
+	// Quit (the user closing the app) hangs up every shell and ends the
+	// loop, also with a shell that ignores the hang-up.
+	a.Send(Command{Name: "newtab"})
+	wait(t, "a second tab", func() bool { return p.get("current") == 1.0 })
+	typeLine(a, "trap '' HUP; echo armed")
+	wait(t, "the trap", func() bool { return strings.Contains(p.screen(), "armed") })
+	began := time.Now()
+	a.Quit()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Run returned %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Quit did not end the loop")
+	}
+	if d := time.Since(began); d > 5*time.Second {
+		t.Errorf("Quit took %v", d)
+	}
+}
+
+// A long selection is cut to its end before it goes to the page.
+func TestCopyIsCapped(t *testing.T) {
+	a, p, _ := startApp(t)
+	typeLine(a, "head -c 700000 /dev/zero | tr '\\0' 'x' | fold -w 39; echo THE-END")
+	wait(t, "the output", func() bool { return strings.Contains(p.screen(), "THE-END") })
+	a.Send(Command{Name: "selectall"})
+	a.Send(Command{Name: "copy"})
+	wait(t, "the clipboard", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return p.clipboard != ""
+	})
+	p.mu.Lock()
+	n, end, notices := len(p.clipboard), strings.Contains(p.clipboard, "THE-END"), len(p.notices)
+	p.mu.Unlock()
+	if n > copyLimit || n < copyLimit/2 || !end || notices != 1 {
+		t.Errorf("copied %d bytes (limit %d), end kept: %v, notices: %d", n, copyLimit, end, notices)
+	}
+	a.Quit()
 }

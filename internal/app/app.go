@@ -61,6 +61,20 @@ func (a *App) Send(c Command) {
 	}
 }
 
+// Quit asks the running loop to hang up every shell and end; Run returns
+// when that is done. The page's own exit calls it, so that no shell outlives
+// the app.
+func (a *App) Quit() {
+	a.cmds <- Command{Name: "quit"}
+}
+
+// notice shows the user a short message (a toast on the phone).
+func (a *App) notice(text string) {
+	if b, err := json.Marshal(map[string]any{"notice": text}); err == nil {
+		a.pub.Event(string(b))
+	}
+}
+
 func num(v any) int {
 	f, _ := v.(float64)
 	return int(f)

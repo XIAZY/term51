@@ -1,4 +1,5 @@
 import bb.cascades 1.4
+import bb.system 1.2
 
 // The terminal as a column of text labels, one per row, in a monospace
 // font. Go sends the rows that changed as rich text; this page only shows
@@ -79,6 +80,11 @@ Page {
                 bridge.copy(e.clipboard)
                 return
             }
+            if (e.notice !== undefined) {
+                toast.body = e.notice
+                toast.show()
+                return
+            }
             if (e.rows === undefined)
                 return
             if (e.count != page.labels.length)
@@ -97,8 +103,8 @@ Page {
         title: page.tabCount > 1 ? (page.tabIndex + 1) + "/" + page.tabCount + "  " + page.termTitle : page.termTitle
     }
 
-    // Copy takes the selection, or the whole screen when nothing is
-    // selected. Go answers with the text; the page owns the clipboard.
+    // Copy takes the selection (long press a word, or Select all). Go
+    // answers with the text; the page owns the clipboard.
     actions: [
         ActionItem {
             title: "Copy"
@@ -141,6 +147,7 @@ Page {
     }
 
     attachedObjects: [
+        SystemToast { id: toast },
         ComponentDefinition {
             id: rowLabel
             Label {

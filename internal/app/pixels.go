@@ -143,16 +143,17 @@ func (a *App) runPixels() error {
 				case "unselect":
 					sess.ClearSelection()
 				case "copy":
-					// The selection, or the whole screen when nothing is selected, goes
-					// back to the page, which owns the clipboard.
 					text, ok, _ := sess.SelectionText()
 					if !ok {
-						text, _ = sess.Text()
+						a.notice("Nothing is selected")
+						break
 					}
 					if b, err := json.Marshal(map[string]any{"clipboard": text}); err == nil {
 						a.pub.Event(string(b))
 					}
 					sess.ClearSelection()
+				case "quit":
+					return nil // the deferred Close hangs the shell up and waits
 				case "paste":
 					if text, _ := c.Args["text"].(string); text != "" {
 						sess.ScrollToBottom()

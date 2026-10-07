@@ -1,4 +1,5 @@
 import bb.cascades 1.4
+import bb.system 1.2
 
 // The terminal page: a key bar with the keys the phone's keyboard lacks, and
 // below it the native window Go draws the terminal into.
@@ -49,14 +50,20 @@ Page {
             var e = JSON.parse(json)
             if (e.clipboard !== undefined)
                 bridge.copy(e.clipboard)
+            if (e.notice !== undefined) {
+                toast.body = e.notice
+                toast.show()
+            }
         })
         fwc.requestFocus()
     }
 
+    attachedObjects: SystemToast { id: toast }
+
     titleBar: TitleBar { title: page.termTitle }
 
-    // Copy takes the selection, or the whole screen when nothing is
-    // selected. Go answers with the text; the page owns the clipboard.
+    // Copy takes the selection (long press a word, or Select all). Go
+    // answers with the text; the page owns the clipboard.
     actions: [
         ActionItem {
             title: "Copy"

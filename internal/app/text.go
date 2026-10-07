@@ -3,7 +3,9 @@ package app
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/XIAZY/libghostty-vt-go/vt"
 
@@ -11,6 +13,11 @@ import (
 	"term51/internal/session"
 	"term51/internal/textgrid"
 )
+
+// copyLimit is the most text Copy hands to the page: the text travels as
+// one message that the page's thread parses, and "select all" over a long
+// scrollback can be megabytes. The end of the selection is kept.
+const copyLimit = 512 << 10
 
 // textFrame is how often, at most, the labels are updated: Cascades lays a
 // label out again for every change, so bursts of output are merged.
@@ -78,6 +85,7 @@ func (a *App) runText() error {
 		sess, err := session.Start(a.cfg.Session(cols, rows, cw, ch, nil))
 		if err != nil {
 			log.Printf("app: %v", err)
+			a.notice("The shell could not be started: " + err.Error())
 			return nil
 		}
 		t := &tab{sess: sess, title: a.cfg.Shell, stop: make(chan struct{})}
@@ -132,6 +140,20 @@ func (a *App) runText() error {
 		tell()
 		post()
 	}
+	// closing counts the shells being hung up in the background.
+	var closing sync.WaitGroup
+	// shutdown hangs up every shell and waits for them (each within the
+	// session's bound of a few seconds). The app must not exit before: a
+	// shell left behind may outlive it.
+	shutdown := func() {
+		for _, t := range tabs {
+			close(t.stop)
+			closing.Add(1)
+			go func(t *tab) { defer closing.Done(); t.sess.Close() }(t)
+		}
+		tabs, cur = nil, -1
+		closing.Wait()
+	}
 	// drop removes a tab; its shell is hung up in the background (Close
 	// can take a moment and must not hold the loop).
 	drop := func(t *tab) {
@@ -140,12 +162,18 @@ func (a *App) runText() error {
 				continue
 			}
 			close(t.stop)
-			go t.sess.Close()
+			closing.Add(1)
+			go func() { defer closing.Done(); t.sess.Close() }()
 			tabs = append(tabs[:i], tabs[i+1:]...)
 			switch {
 			case len(tabs) == 0:
 				cur = -1
-			case i < cur || cur >= len(tabs):
+			case i < cur:
+				// The shown tab moved down one place; its screen is the
+				// same.
+				cur--
+				tell()
+			case cur >= len(tabs):
 				show(cur - 1)
 			case i == cur:
 				show(cur)
@@ -203,6 +231,10 @@ func (a *App) runText() error {
 				post() // the reflowed screen, without waiting for output
 				break
 			}
+			if c.Name == "quit" {
+				shutdown()
+				return nil
+			}
 			if cur < 0 {
 				break // nothing to act on before the first shell
 			}
@@ -234,14 +266,23 @@ func (a *App) runText() error {
 			case "unselect":
 				sess.ClearSelection()
 			case "copy":
-				// The selection, or the whole screen when nothing is
-				// selected, goes back to the page, which owns the
+				// The selection goes back to the page, which owns the
 				// clipboard.
 				text, ok, _ := sess.SelectionText()
 				if !ok {
-					text, _ = sess.Text()
+					a.notice("Nothing is selected")
+					break
 				}
-				if b, err := json.Marshal(map[string]any{"clipboard": text}); err == nil {
+				msg := map[string]any{"clipboard": text}
+				if len(text) > copyLimit {
+					cut := len(text) - copyLimit
+					for cut < len(text) && !utf8.RuneStart(text[cut]) {
+						cut++
+					}
+					msg["clipboard"] = text[cut:]
+					a.notice("The selection is very long: its last 512 KB were copied")
+				}
+				if b, err := json.Marshal(msg); err == nil {
 					a.pub.Event(string(b))
 				}
 				sess.ClearSelection()
@@ -264,6 +305,7 @@ func (a *App) runText() error {
 				if i >= 0 && i < len(tabs) {
 					drop(tabs[i])
 					if len(tabs) == 0 {
+						closing.Wait()
 						return nil
 					}
 				}
@@ -277,6 +319,7 @@ func (a *App) runText() error {
 				}
 				drop(n.t)
 				if len(tabs) == 0 {
+					closing.Wait()
 					return err
 				}
 			case n.ev != nil:
@@ -285,7 +328,15 @@ func (a *App) runText() error {
 					n.t.title = n.ev.Text
 					tell()
 				case session.EventBell:
-					a.pub.Event(`{"bell":true}`)
+					// With the tab, so that the page can mark a tab that
+					// is not shown instead of beeping for it.
+					for i, t := range tabs {
+						if t == n.t {
+							if b, err := json.Marshal(map[string]any{"bell": true, "tab": i, "shown": i == cur}); err == nil {
+								a.pub.Event(string(b))
+							}
+						}
+					}
 				}
 			case n.changed:
 				if cur < 0 || tabs[cur] != n.t || pending != nil {

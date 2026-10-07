@@ -86,10 +86,10 @@ func TestParser_osc_112_incomplete_sequence(t *testing.T) {
 		cmd := zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch
 		expect(t, cmd.Tag == OSCCommandKeyColorOperation, "cmd == .color_operation")
 		// Zig passes these two in this order: (actual, expected).
-		expectEqual(t, cmd.ColorOperation.terminator, OSCTerminatorBel)
-		expect(t, cmd.ColorOperation.op == OSCParsersColorOperationOsc112, "cmd.color_operation.op == .osc_112")
-		expect(t, cmd.ColorOperation.requests.count() == 1, "cmd.color_operation.requests.count() == 1")
-		it := cmd.ColorOperation.requests.constIterator(0)
+		expectEqual(t, cmd.ColorOperation.Terminator, OSCTerminatorBel)
+		expect(t, cmd.ColorOperation.Op == OSCParsersColorOperationOsc112, "cmd.color_operation.op == .osc_112")
+		expect(t, cmd.ColorOperation.Requests.count() == 1, "cmd.color_operation.requests.count() == 1")
+		it := cmd.ColorOperation.Requests.constIterator(0)
 		{
 			op := it.next()
 			expect(t, op != nil, "it.next().?")
@@ -125,10 +125,10 @@ func TestParser_osc_104_empty(t *testing.T) {
 		cmd := zigPayload(t, a[0], ParserActionOscDispatch).OscDispatch
 		expect(t, cmd.Tag == OSCCommandKeyColorOperation, "cmd == .color_operation")
 		// Zig passes these two in this order: (actual, expected).
-		expectEqual(t, cmd.ColorOperation.terminator, OSCTerminatorBel)
-		expect(t, cmd.ColorOperation.op == OSCParsersColorOperationOsc104, "cmd.color_operation.op == .osc_104")
-		expect(t, cmd.ColorOperation.requests.count() == 1, "cmd.color_operation.requests.count() == 1")
-		it := cmd.ColorOperation.requests.constIterator(0)
+		expectEqual(t, cmd.ColorOperation.Terminator, OSCTerminatorBel)
+		expect(t, cmd.ColorOperation.Op == OSCParsersColorOperationOsc104, "cmd.color_operation.op == .osc_104")
+		expect(t, cmd.ColorOperation.Requests.count() == 1, "cmd.color_operation.requests.count() == 1")
+		it := cmd.ColorOperation.Requests.constIterator(0)
 		{
 			op := it.next()
 			expect(t, op != nil, "it.next().?")

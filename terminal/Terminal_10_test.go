@@ -40,19 +40,19 @@ func tmaInit(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Termin
 // tmaPrint is `try h.vt(.print, .{ .cp = cp })`.
 func tmaPrint(t *testing.T, h *StreamReadonlyHandler, cp uint32) {
 	t.Helper()
-	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: cp}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{Cp: cp}}))
 }
 
 // tmaSetMode is `try h.vt(.set_mode, .{ .mode = mode })`.
 func tmaSetMode(t *testing.T, h *StreamReadonlyHandler, mode ModesMode) {
 	t.Helper()
-	zigTry(t, h.Vt(StreamActionKeySetMode, &StreamAction{Tag: StreamActionKeySetMode, SetMode: StreamActionMode{mode: mode}}))
+	zigTry(t, h.Vt(StreamActionKeySetMode, &StreamAction{Tag: StreamActionKeySetMode, SetMode: StreamActionMode{Mode: mode}}))
 }
 
 // tmaResetMode is `try h.vt(.reset_mode, .{ .mode = mode })`.
 func tmaResetMode(t *testing.T, h *StreamReadonlyHandler, mode ModesMode) {
 	t.Helper()
-	zigTry(t, h.Vt(StreamActionKeyResetMode, &StreamAction{Tag: StreamActionKeyResetMode, ResetMode: StreamActionMode{mode: mode}}))
+	zigTry(t, h.Vt(StreamActionKeyResetMode, &StreamAction{Tag: StreamActionKeyResetMode, ResetMode: StreamActionMode{Mode: mode}}))
 }
 
 // tmaTerminalExpectPlain is term51AATerminalExpectPlain: expect the plain
@@ -73,8 +73,8 @@ func TestTma_term51_MouseEvents_motion_read_from_the_terminal_flags_after_each_m
 	h := term.VtHandler()
 	defer h.Deinit()
 
-	expectEqual(t, TerminalMouseEventsNone, term.flags.mouse_event)
-	expect(t, !term.flags.mouse_event.Motion(), "!t.flags.mouse_event.motion()")
+	expectEqual(t, TerminalMouseEventsNone, term.Flags.MouseEvent)
+	expect(t, !term.Flags.MouseEvent.Motion(), "!t.flags.mouse_event.motion()")
 
 	type Case struct {
 		mode   ModesMode
@@ -89,11 +89,11 @@ func TestTma_term51_MouseEvents_motion_read_from_the_terminal_flags_after_each_m
 	}
 	for _, c := range cases {
 		tmaSetMode(t, &h, c.mode)
-		expectEqual(t, c.event, term.flags.mouse_event)
-		expectEqual(t, c.motion, term.flags.mouse_event.Motion())
+		expectEqual(t, c.event, term.Flags.MouseEvent)
+		expectEqual(t, c.motion, term.Flags.MouseEvent.Motion())
 		tmaResetMode(t, &h, c.mode)
-		expectEqual(t, TerminalMouseEventsNone, term.flags.mouse_event)
-		expect(t, !term.flags.mouse_event.Motion(), "!t.flags.mouse_event.motion()")
+		expectEqual(t, TerminalMouseEventsNone, term.Flags.MouseEvent)
+		expect(t, !term.Flags.MouseEvent.Motion(), "!t.flags.mouse_event.motion()")
 	}
 
 	// The flag can also be written directly; the method follows it.
@@ -104,8 +104,8 @@ func TestTma_term51_MouseEvents_motion_read_from_the_terminal_flags_after_each_m
 		TerminalMouseEventsButton,
 		TerminalMouseEventsAny,
 	} {
-		term.flags.mouse_event = e
-		expectEqual(t, e == TerminalMouseEventsButton || e == TerminalMouseEventsAny, term.flags.mouse_event.Motion())
+		term.Flags.MouseEvent = e
+		expectEqual(t, e == TerminalMouseEventsButton || e == TerminalMouseEventsAny, term.Flags.MouseEvent.Motion())
 	}
 }
 
@@ -120,7 +120,7 @@ func TestTma_term51_gpa_follows_the_active_screen(t *testing.T) {
 	// Zig-only: const other = fa2.allocator();
 	// Zig-only: const orig = std.testing.allocator;
 
-	primary := term.screens.Get(ScreenSetKeyPrimary)
+	primary := term.Screens.Get(ScreenSetKeyPrimary)
 	expect(t, primary != nil, "t.screens.get(.primary) != null")
 	term.gpa() // Zig: t.gpa().ptr == orig.ptr
 	// Zig-only: try std.testing.expect(t.gpa().ptr == orig.ptr);
@@ -133,7 +133,7 @@ func TestTma_term51_gpa_follows_the_active_screen(t *testing.T) {
 	// replaces, and is then the one asked.
 	_, err := term.SwitchScreen(ScreenSetKeyAlternate)
 	zigTry(t, err)
-	alt := term.screens.Get(ScreenSetKeyAlternate)
+	alt := term.Screens.Get(ScreenSetKeyAlternate)
 	expect(t, alt != nil, "t.screens.get(.alternate) != null")
 	expect(t, alt != primary, "alt != primary")
 	term.gpa() // Zig: t.gpa().ptr == orig.ptr
@@ -180,12 +180,12 @@ func TestTma_term51_vtHandler_handlers_of_one_terminal_are_equal_and_share_its_s
 	defer term.Deinit()
 
 	// Creating a handler does not touch the terminal.
-	cursor_before := term.screens.active.cursor.x
+	cursor_before := term.Screens.Active.Cursor.X
 	h1 := term.VtHandler()
 	defer h1.Deinit()
 	h2 := term.VtHandler()
 	defer h2.Deinit()
-	expectEqual(t, cursor_before, term.screens.active.cursor.x)
+	expectEqual(t, cursor_before, term.Screens.Active.Cursor.X)
 	tmaTerminalExpectPlain(t, term, "")
 
 	expect(t, h1.terminal == term, "h1.terminal == &t")
@@ -196,7 +196,7 @@ func TestTma_term51_vtHandler_handlers_of_one_terminal_are_equal_and_share_its_s
 	tmaPrint(t, &h2, 'b')
 	tmaPrint(t, &h1, 'c')
 	tmaTerminalExpectPlain(t, term, "abc")
-	expectEqual(t, SizeCellCountInt(3), term.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(3), term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "term51: vtHandler: a copy of the handler works after the original was deinitialized"
@@ -254,8 +254,8 @@ func TestTma_term51_vtHandler_a_stream_built_over_the_handler_drives_the_termina
 	expect(t, st.handler.terminal == term, "st.handler.terminal == &t")
 	zigTry(t, st.NextSlice([]uint8("ab\r\ncd")))
 	tmaTerminalExpectPlain(t, term, "ab\ncd")
-	expectEqual(t, SizeCellCountInt(2), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(2), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), term.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "term51: vtHandler: layout of the returned handler"

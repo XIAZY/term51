@@ -46,7 +46,7 @@ func ssSelAt(t *testing.T, s *Screen, sx SizeCellCountInt, sy uint32, ex SizeCel
 // .x = x, .y = y } }, s.pages.pointFromPin(.screen, p).?)`.
 func ssExpectScreenPoint(t *testing.T, s *Screen, p PageListPin, x SizeCellCountInt, y uint32) {
 	t.Helper()
-	expectEqualPoint(t, ssScreen(x, y), zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p)))
+	expectEqualPoint(t, ssScreen(x, y), zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, p)))
 }
 
 // Zig: test "Selection: adjust right"
@@ -474,28 +474,28 @@ func TestSelection_topLeft(t *testing.T) {
 		sel := ssSelAt(t, s, 1, 1, 3, 1, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.Pages.PointFromPin(PointTagScreen, tl))
 	}
 	{
 		// reverse
 		sel := ssSelAt(t, s, 3, 1, 1, 1, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.Pages.PointFromPin(PointTagScreen, tl))
 	}
 	{
 		// mirrored_forward
 		sel := ssSelAt(t, s, 3, 1, 1, 3, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.Pages.PointFromPin(PointTagScreen, tl))
 	}
 	{
 		// mirrored_reverse
 		sel := ssSelAt(t, s, 1, 3, 3, 1, true)
 		defer sel.Deinit(s)
 		tl := sel.TopLeft(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.pages.PointFromPin(PointTagScreen, tl))
+		expectEqualOptionalPoint(t, Some(ssScreen(1, 1)), s.Pages.PointFromPin(PointTagScreen, tl))
 	}
 }
 
@@ -510,28 +510,28 @@ func TestSelection_bottomRight(t *testing.T) {
 		sel := ssSelAt(t, s, 1, 1, 3, 1, false)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(3, 1)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 1)), s.Pages.PointFromPin(PointTagScreen, br))
 	}
 	{
 		// reverse
 		sel := ssSelAt(t, s, 3, 1, 1, 1, false)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(3, 1)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 1)), s.Pages.PointFromPin(PointTagScreen, br))
 	}
 	{
 		// mirrored_forward
 		sel := ssSelAt(t, s, 3, 1, 1, 3, true)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(3, 3)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 3)), s.Pages.PointFromPin(PointTagScreen, br))
 	}
 	{
 		// mirrored_reverse
 		sel := ssSelAt(t, s, 1, 3, 3, 1, true)
 		defer sel.Deinit(s)
 		br := sel.BottomRight(s)
-		expectEqualOptionalPoint(t, Some(ssScreen(3, 3)), s.pages.PointFromPin(PointTagScreen, br))
+		expectEqualOptionalPoint(t, Some(ssScreen(3, 3)), s.Pages.PointFromPin(PointTagScreen, br))
 	}
 }
 
@@ -679,7 +679,7 @@ func TestSelection_Selection_containedRow(t *testing.T) {
 		// Start line
 		expectEqual(t, SelectionInit(
 			sel.Start(),
-			ssYPin(t, s, s.pages.cols-1, 1),
+			ssYPin(t, s, s.Pages.cols-1, 1),
 			false,
 		), zigUnwrap(t, sel.ContainedRow(s, ssYPin(t, s, 1, 1))))
 
@@ -693,7 +693,7 @@ func TestSelection_Selection_containedRow(t *testing.T) {
 		// Middle line
 		expectEqual(t, SelectionInit(
 			ssYPin(t, s, 0, 2),
-			ssYPin(t, s, s.pages.cols-1, 2),
+			ssYPin(t, s, s.Pages.cols-1, 2),
 			false,
 		), zigUnwrap(t, sel.ContainedRow(s, ssYPin(t, s, 2, 2))))
 	}
@@ -751,7 +751,7 @@ func ssYExpectSel(t *testing.T, s *Screen, sel Selection, sx SizeCellCountInt, s
 	expect(t, !sel.Tracked(), "!sel.tracked()")
 	ssYExpectPin(t, s, sel.Start(), sx, sy)
 	ssYExpectPin(t, s, sel.End(), ex, ey)
-	expectEqual(t, rect, sel.rectangle)
+	expectEqual(t, rect, sel.Rectangle)
 }
 
 // ssYSetText is term51YSetText: writes narrow ASCII cells directly into the
@@ -765,7 +765,7 @@ func ssYSetText(t *testing.T, s *Screen, x SizeCellCountInt, y uint32, text stri
 			content_tag: PageCellContentTagCodepoint,
 			content:     PageCellContent{codepoint: uint32(c)},
 		}
-		p.x += 1
+		p.X += 1
 	}
 }
 
@@ -779,7 +779,7 @@ func ssYSetWide(t *testing.T, s *Screen, x SizeCellCountInt, y uint32, cp uint32
 		content:     PageCellContent{codepoint: cp},
 		wide:        PageCellWideWide,
 	}
-	p.x += 1
+	p.X += 1
 	*p.RowAndCell().cell = PageCell{
 		content_tag: PageCellContentTagCodepoint,
 		content:     PageCellContent{codepoint: 0},
@@ -793,7 +793,7 @@ func ssYSetBg(t *testing.T, s *Screen, x SizeCellCountInt, y uint32) {
 	t.Helper()
 	*ssYPin(t, s, x, y).RowAndCell().cell = PageCell{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}},
+		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
 	}
 }
 
@@ -873,12 +873,12 @@ func TestSelection_term51_Selection_Bounds_union_tags_and_payloads(t *testing.T)
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
 	sel := SelectionInit(ssYPin(t, s, 1, 1), ssYPin(t, s, 2, 2), false)
-	expect(t, sel.bounds.Tag == SelectionBoundsTagUntracked, "std.meta.activeTag(sel.bounds) == .untracked")
+	expect(t, sel.Bounds.Tag == SelectionBoundsTagUntracked, "std.meta.activeTag(sel.bounds) == .untracked")
 	var err error
 	sel, err = sel.Track(s)
 	zigTry(t, err)
 	defer sel.Deinit(s)
-	expect(t, sel.bounds.Tag == SelectionBoundsTagTracked, "std.meta.activeTag(sel.bounds) == .tracked")
+	expect(t, sel.Bounds.Tag == SelectionBoundsTagTracked, "std.meta.activeTag(sel.bounds) == .tracked")
 }
 
 // Zig: test "term51: Selection.Order: variants and order"
@@ -922,20 +922,20 @@ func TestSelection_term51_init_stores_untracked_pins_and_the_rectangle_flag(t *t
 	testStdCapacity(t)
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 
 	a := ssYPin(t, s, 2, 1)
 	b := ssYPin(t, s, 7, 4)
 
 	linear := SelectionInit(a, b, false)
 	expect(t, !linear.Tracked(), "!linear.tracked()")
-	expect(t, linear.bounds.Tag == SelectionBoundsTagUntracked, "std.meta.activeTag(linear.bounds) == .untracked")
+	expect(t, linear.Bounds.Tag == SelectionBoundsTagUntracked, "std.meta.activeTag(linear.bounds) == .untracked")
 	expect(t, linear.Start().Eql(a), "linear.start().eql(a)")
 	expect(t, linear.End().Eql(b), "linear.end().eql(b)")
-	expect(t, !linear.rectangle, "!linear.rectangle")
+	expect(t, !linear.Rectangle, "!linear.rectangle")
 
 	rect := SelectionInit(a, b, true)
-	expect(t, rect.rectangle, "rect.rectangle")
+	expect(t, rect.Rectangle, "rect.rectangle")
 	expect(t, rect.Start().Eql(a), "rect.start().eql(a)")
 	expect(t, rect.End().Eql(b), "rect.end().eql(b)")
 
@@ -949,7 +949,7 @@ func TestSelection_term51_init_stores_untracked_pins_and_the_rectangle_flag(t *t
 	expect(t, one.Start().Eql(one.End()), "one.start().eql(one.end())")
 
 	// Nothing was tracked.
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 }
 
 // Zig: test "term51: deinit: untracked does nothing, tracked releases both pins"
@@ -957,26 +957,26 @@ func TestSelection_term51_deinit_untracked_does_nothing_tracked_releases_both_pi
 	testStdCapacity(t)
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 
 	sel := SelectionInit(ssYPin(t, s, 2, 1), ssYPin(t, s, 7, 4), false)
 	sel.Deinit(s)
 	sel.Deinit(s)
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
 	tsel.Deinit(s)
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 
 	// A one-cell tracked selection still owns two separate pins.
 	one := SelectionInit(ssYPin(t, s, 3, 3), ssYPin(t, s, 3, 3), true)
 	tone, err := one.Track(s)
 	zigTry(t, err)
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
 	tone.Deinit(s)
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 }
 
 // Zig: test "term51: tracked: false for untracked, true after track"
@@ -999,31 +999,31 @@ func TestSelection_term51_track_tracked_copy_keeps_pins_and_flag_original_stays_
 	testStdCapacity(t)
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 
 	for _, rect := range []bool{false, true} {
 		sel := SelectionInit(ssYPin(t, s, 2, 1), ssYPin(t, s, 7, 4), rect)
 		tsel, err := sel.Track(s)
 		zigTry(t, err)
 		expect(t, tsel.Tracked(), "tsel.tracked()")
-		expectEqual(t, rect, tsel.rectangle)
+		expectEqual(t, rect, tsel.Rectangle)
 		ssYExpectPin(t, s, tsel.Start(), 2, 1)
 		ssYExpectPin(t, s, tsel.End(), 7, 4)
 		expect(t, tsel.Eql(sel), "tsel.eql(sel)")
-		expectEqual(t, base+2, s.pages.CountTrackedPins())
+		expectEqual(t, base+2, s.Pages.CountTrackedPins())
 
 		// Distinct heap pins, not pointers into the untracked selection.
-		expect(t, tsel.bounds.Tracked.start != tsel.bounds.Tracked.end, "tsel.bounds.tracked.start != tsel.bounds.tracked.end")
+		expect(t, tsel.Bounds.Tracked.Start != tsel.Bounds.Tracked.End, "tsel.bounds.tracked.start != tsel.bounds.tracked.end")
 		expect(t, !sel.Tracked(), "!sel.tracked()")
-		expect(t, sel.bounds.Untracked.start.Eql(ssYPin(t, s, 2, 1)), "sel.bounds.untracked.start.eql(term51YPin(&s, 2, 1))")
+		expect(t, sel.Bounds.Untracked.Start.Eql(ssYPin(t, s, 2, 1)), "sel.bounds.untracked.start.eql(term51YPin(&s, 2, 1))")
 
 		// Moving the tracked pin does not move the original.
-		tsel.bounds.Tracked.end.x = 9
+		tsel.Bounds.Tracked.End.X = 9
 		ssYExpectPin(t, s, sel.End(), 7, 4)
 		ssYExpectPin(t, s, tsel.End(), 9, 4)
 
 		tsel.Deinit(s)
-		expectEqual(t, base, s.pages.CountTrackedPins())
+		expectEqual(t, base, s.Pages.CountTrackedPins())
 	}
 }
 
@@ -1032,7 +1032,7 @@ func TestSelection_term51_track_tracked_pins_follow_erased_rows(t *testing.T) {
 	testStdCapacity(t)
 	s := ssYHistory(t, 10, 3, 12)
 	defer s.Deinit()
-	expectEqual(t, uint(12), s.pages.total_rows)
+	expectEqual(t, uint(12), s.Pages.total_rows)
 
 	sel := SelectionInit(ssYPin(t, s, 1, 3), ssYPin(t, s, 2, 6), false)
 	tsel, err := sel.Track(s)
@@ -1040,16 +1040,16 @@ func TestSelection_term51_track_tracked_pins_follow_erased_rows(t *testing.T) {
 	defer tsel.Deinit(s)
 
 	// Erase history rows 0 and 1: both pins shift up by two rows.
-	s.pages.EraseRows(ssScreen(0, 0), Some(ssScreen(0, 1)))
-	expectEqual(t, uint(10), s.pages.total_rows)
+	s.Pages.EraseRows(ssScreen(0, 0), Some(ssScreen(0, 1)))
+	expectEqual(t, uint(10), s.Pages.total_rows)
 	ssYExpectPin(t, s, tsel.Start(), 1, 1)
 	ssYExpectPin(t, s, tsel.End(), 2, 4)
 	// The untracked original is not updated (it is stale by design).
-	expectEqual(t, sel.Start().y, SizeCellCountInt(3))
+	expectEqual(t, sel.Start().Y, SizeCellCountInt(3))
 
 	// Erase rows 0 and 1 again: the start pin is inside the erased range and
 	// goes to the top-left of the page, the end shifts.
-	s.pages.EraseRows(ssScreen(0, 0), Some(ssScreen(0, 1)))
+	s.Pages.EraseRows(ssScreen(0, 0), Some(ssScreen(0, 1)))
 	ssYExpectPin(t, s, tsel.Start(), 0, 0)
 	ssYExpectPin(t, s, tsel.End(), 2, 2)
 	expectEqual(t, SelectionOrderForward, tsel.Order(s))
@@ -1067,14 +1067,14 @@ func TestSelection_term51_track_tracked_pins_follow_an_erased_first_page(t *test
 	zigTry(t, err)
 	defer tsel.Deinit(s)
 
-	s.pages.EraseRows(ssScreen(0, 0), Some(ssScreen(0, n-1)))
-	expectEqual(t, uint(1), s.pages.TotalPages())
+	s.Pages.EraseRows(ssScreen(0, 0), Some(ssScreen(0, n-1)))
+	expectEqual(t, uint(1), s.Pages.TotalPages())
 	// Start was inside the erased page: moved to the top-left of the next page.
 	ssYExpectPin(t, s, tsel.Start(), 0, 0)
 	ssYExpectPin(t, s, tsel.End(), 4, 1)
-	expect(t, s.pages.pages.first != nil, "s.pages.pages.first.?")
-	expect(t, tsel.Start().node == s.pages.pages.first, "tsel.start().node == s.pages.pages.first.?")
-	expect(t, tsel.End().node == s.pages.pages.first, "tsel.end().node == s.pages.pages.first.?")
+	expect(t, s.Pages.pages.first != nil, "s.pages.pages.first.?")
+	expect(t, tsel.Start().Node == s.Pages.pages.first, "tsel.start().node == s.pages.pages.first.?")
+	expect(t, tsel.End().Node == s.Pages.pages.first, "tsel.end().node == s.pages.pages.first.?")
 }
 
 // Zig: test "term51: start: reads the current value of tracked pins"
@@ -1087,8 +1087,8 @@ func TestSelection_term51_start_reads_the_current_value_of_tracked_pins(t *testi
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
 	defer tsel.Deinit(s)
-	tsel.bounds.Tracked.start.x = 5
-	tsel.bounds.Tracked.start.y = 3
+	tsel.Bounds.Tracked.Start.X = 5
+	tsel.Bounds.Tracked.Start.Y = 3
 	ssYExpectPin(t, s, tsel.Start(), 5, 3)
 	// end() is independent of start().
 	ssYExpectPin(t, s, tsel.End(), 7, 4)
@@ -1104,8 +1104,8 @@ func TestSelection_term51_end_reads_the_current_value_of_tracked_pins(t *testing
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
 	defer tsel.Deinit(s)
-	tsel.bounds.Tracked.end.x = 0
-	tsel.bounds.Tracked.end.y = 9
+	tsel.Bounds.Tracked.End.X = 0
+	tsel.Bounds.Tracked.End.Y = 9
 	ssYExpectPin(t, s, tsel.End(), 0, 9)
 	ssYExpectPin(t, s, tsel.Start(), 2, 1)
 }
@@ -1118,9 +1118,9 @@ func TestSelection_term51_startPtr_points_at_the_stored_start_pin(t *testing.T) 
 
 	// Untracked: a pointer into the selection itself.
 	sel := SelectionInit(ssYPin(t, s, 2, 1), ssYPin(t, s, 7, 4), false)
-	expect(t, sel.StartPtr() == &sel.bounds.Untracked.start, "sel.startPtr() == &sel.bounds.untracked.start")
+	expect(t, sel.StartPtr() == &sel.Bounds.Untracked.Start, "sel.startPtr() == &sel.bounds.untracked.start")
 	expect(t, sel.StartPtr() != sel.EndPtr(), "sel.startPtr() != sel.endPtr()")
-	sel.StartPtr().x = 4
+	sel.StartPtr().X = 4
 	ssYExpectPin(t, s, sel.Start(), 4, 1)
 	ssYExpectPin(t, s, sel.End(), 7, 4)
 
@@ -1128,9 +1128,9 @@ func TestSelection_term51_startPtr_points_at_the_stored_start_pin(t *testing.T) 
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
 	defer tsel.Deinit(s)
-	expect(t, tsel.StartPtr() == tsel.bounds.Tracked.start, "tsel.startPtr() == tsel.bounds.tracked.start")
+	expect(t, tsel.StartPtr() == tsel.Bounds.Tracked.Start, "tsel.startPtr() == tsel.bounds.tracked.start")
 	expect(t, tsel.StartPtr() != sel.StartPtr(), "tsel.startPtr() != sel.startPtr()")
-	tsel.StartPtr().y = 6
+	tsel.StartPtr().Y = 6
 	ssYExpectPin(t, s, tsel.Start(), 4, 6)
 	ssYExpectPin(t, s, tsel.End(), 7, 4)
 	ssYExpectPin(t, s, sel.Start(), 4, 1)
@@ -1143,17 +1143,17 @@ func TestSelection_term51_endPtr_points_at_the_stored_end_pin(t *testing.T) {
 	defer s.Deinit()
 
 	sel := SelectionInit(ssYPin(t, s, 2, 1), ssYPin(t, s, 7, 4), false)
-	expect(t, sel.EndPtr() == &sel.bounds.Untracked.end, "sel.endPtr() == &sel.bounds.untracked.end")
-	sel.EndPtr().y = 8
+	expect(t, sel.EndPtr() == &sel.Bounds.Untracked.End, "sel.endPtr() == &sel.bounds.untracked.end")
+	sel.EndPtr().Y = 8
 	ssYExpectPin(t, s, sel.End(), 7, 8)
 	ssYExpectPin(t, s, sel.Start(), 2, 1)
 
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
 	defer tsel.Deinit(s)
-	expect(t, tsel.EndPtr() == tsel.bounds.Tracked.end, "tsel.endPtr() == tsel.bounds.tracked.end")
+	expect(t, tsel.EndPtr() == tsel.Bounds.Tracked.End, "tsel.endPtr() == tsel.bounds.tracked.end")
 	expect(t, tsel.EndPtr() != tsel.StartPtr(), "tsel.endPtr() != tsel.startPtr()")
-	tsel.EndPtr().x = 1
+	tsel.EndPtr().X = 1
 	ssYExpectPin(t, s, tsel.End(), 1, 8)
 	ssYExpectPin(t, s, tsel.Start(), 2, 1)
 	ssYExpectPin(t, s, sel.End(), 7, 8)
@@ -1192,7 +1192,7 @@ func TestSelection_term51_eql_compares_start_end_and_rectangle(t *testing.T) {
 	expect(t, sel.Eql(tsel), "sel.eql(tsel)")
 	expect(t, tsel.Eql(sel), "tsel.eql(sel)")
 	expect(t, tsel.Eql(tsel), "tsel.eql(tsel)")
-	tsel.bounds.Tracked.end.x = 8
+	tsel.Bounds.Tracked.End.X = 8
 	expect(t, !sel.Eql(tsel), "!sel.eql(tsel)")
 
 	// Pins on different pages with the same x/y are different.
@@ -1200,8 +1200,8 @@ func TestSelection_term51_eql_compares_start_end_and_rectangle(t *testing.T) {
 	defer s2.Deinit()
 	p1 := ssYPin(t, s2, 1, 1)
 	p2 := p1
-	expect(t, s2.pages.pages.last != nil, "s2.pages.pages.last.?")
-	p2.node = s2.pages.pages.last
+	expect(t, s2.Pages.pages.last != nil, "s2.pages.pages.last.?")
+	p2.Node = s2.Pages.pages.last
 	expect(t, !SelectionInit(p1, p1, false).Eql(SelectionInit(p1, p2, false)), "!Selection.init(p1, p1, false).eql(Selection.init(p1, p2, false))")
 	expect(t, !SelectionInit(p1, p1, false).Eql(SelectionInit(p2, p1, false)), "!Selection.init(p1, p1, false).eql(Selection.init(p2, p1, false))")
 }
@@ -1277,8 +1277,8 @@ func TestSelection_term51_topLeft_tracked_selection_across_pages(t *testing.T) {
 	expectEqual(t, SelectionOrderMirroredReverse, tsel.Order(s))
 	tl := tsel.TopLeft(s)
 	ssYExpectPin(t, s, tl, 3, n-2)
-	expect(t, s.pages.pages.first != nil, "s.pages.pages.first.?")
-	expect(t, tl.node == s.pages.pages.first, "tl.node == s.pages.pages.first.?")
+	expect(t, s.Pages.pages.first != nil, "s.pages.pages.first.?")
+	expect(t, tl.Node == s.Pages.pages.first, "tl.node == s.pages.pages.first.?")
 }
 
 // Zig: test "term51: bottomRight: linear selections return end or start unchanged"
@@ -1336,8 +1336,8 @@ func TestSelection_term51_bottomRight_tracked_selection_across_pages(t *testing.
 	expectEqual(t, SelectionOrderForward, tfwd.Order(s))
 	br := tfwd.BottomRight(s)
 	ssYExpectPin(t, s, br, 90, n+1)
-	expect(t, s.pages.pages.last != nil, "s.pages.pages.last.?")
-	expect(t, br.node == s.pages.pages.last, "br.node == s.pages.pages.last.?")
+	expect(t, s.Pages.pages.last != nil, "s.pages.pages.last.?")
+	expect(t, br.Node == s.Pages.pages.last, "br.node == s.pages.pages.last.?")
 
 	// Mirrored forward: bottom-right takes the x of the start pin.
 	mir := SelectionInit(ssYPin(t, s, 90, n-2), ssYPin(t, s, 3, n+1), true)
@@ -1347,7 +1347,7 @@ func TestSelection_term51_bottomRight_tracked_selection_across_pages(t *testing.
 	expectEqual(t, SelectionOrderMirroredForward, tmir.Order(s))
 	br2 := tmir.BottomRight(s)
 	ssYExpectPin(t, s, br2, 90, n+1)
-	expect(t, br2.node == s.pages.pages.last, "br2.node == s.pages.pages.last.?")
+	expect(t, br2.Node == s.Pages.pages.last, "br2.node == s.pages.pages.last.?")
 }
 
 // Zig: test "term51: order: every relative position of start to end"
@@ -1432,7 +1432,7 @@ func TestSelection_term51_order_tracked_selections_history_and_page_boundaries(t
 	zigTry(t, err)
 	defer tr.Deinit(s)
 	expectEqual(t, SelectionOrderForward, tr.Order(s))
-	tr.bounds.Tracked.start.y = 11
+	tr.Bounds.Tracked.Start.Y = 11
 	expectEqual(t, SelectionOrderReverse, tr.Order(s))
 
 	s2 := ssYPages(t, 2)
@@ -1452,7 +1452,7 @@ func TestSelection_term51_ordered_returns_an_untracked_copy_in_the_requested_dir
 	testStdCapacity(t)
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 
 	// Same order requested: the pins are copied as they are.
 	fwd := SelectionInit(ssYPin(t, s, 5, 1), ssYPin(t, s, 3, 4), false)
@@ -1474,7 +1474,7 @@ func TestSelection_term51_ordered_returns_an_untracked_copy_in_the_requested_dir
 	ssYExpectSel(t, s, one.Ordered(s, SelectionOrderReverse), 4, 4, 4, 4, false)
 
 	// Nothing was tracked by any of this.
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 }
 
 // Zig: test "term51: ordered: rectangle selections for every order"
@@ -1523,16 +1523,16 @@ func TestSelection_term51_ordered_tracked_selection_yields_an_independent_untrac
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
 	defer tsel.Deinit(s)
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 
 	same := tsel.Ordered(s, SelectionOrderReverse)
 	ssYExpectSel(t, s, same, 5, 4, 3, 1, false)
 	flipped := tsel.Ordered(s, SelectionOrderForward)
 	ssYExpectSel(t, s, flipped, 3, 1, 5, 4, false)
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 
 	// Moving the tracked pins afterwards does not affect the copies.
-	tsel.bounds.Tracked.end.x = 9
+	tsel.Bounds.Tracked.End.X = 9
 	ssYExpectSel(t, s, flipped, 3, 1, 5, 4, false)
 	ssYExpectSel(t, s, same, 5, 4, 3, 1, false)
 }
@@ -1888,13 +1888,13 @@ func TestSelection_term51_containedRow_tracked_selection_yields_untracked_rows(t
 	tsel, err := sel.Track(s)
 	zigTry(t, err)
 	defer tsel.Deinit(s)
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 
 	row := zigUnwrap(t, tsel.ContainedRow(s, ssYPin(t, s, 0, 1)))
 	ssYExpectSel(t, s, row, 5, 1, 9, 1, false)
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 	// Moving the tracked pin afterwards does not affect the returned row.
-	tsel.bounds.Tracked.start.x = 8
+	tsel.Bounds.Tracked.Start.X = 8
 	ssYExpectSel(t, s, row, 5, 1, 9, 1, false)
 	ssYExpectSel(t, s, zigUnwrap(t, tsel.ContainedRow(s, ssYPin(t, s, 0, 1))), 8, 1, 9, 1, false)
 }
@@ -1914,18 +1914,18 @@ func TestSelection_term51_containedRow_history_rows_and_page_boundaries(t *testi
 	s2 := ssYPages(t, 2)
 	defer s2.Deinit()
 	n := ssYFirstRows(s2)
-	expect(t, s2.pages.pages.first != nil, "s2.pages.pages.first.?")
-	first := s2.pages.pages.first
-	expect(t, s2.pages.pages.last != nil, "s2.pages.pages.last.?")
-	last := s2.pages.pages.last
+	expect(t, s2.Pages.pages.first != nil, "s2.pages.pages.first.?")
+	first := s2.Pages.pages.first
+	expect(t, s2.Pages.pages.last != nil, "s2.pages.pages.last.?")
+	last := s2.Pages.pages.last
 	psel := SelectionInit(ssYPin(t, s2, 2, n-1), ssYPin(t, s2, 5, n+1), false)
 	expect(t, !psel.ContainedRow(s2, ssYPin(t, s2, 0, n-2)).Valid, "psel.containedRow(&s2, (0, n - 2)) == null")
 	r1 := zigUnwrap(t, psel.ContainedRow(s2, ssYPin(t, s2, 0, n-1)))
 	ssYExpectSel(t, s2, r1, 2, n-1, 199, n-1, false)
-	expect(t, r1.Start().node == first && r1.End().node == first, "r1.start().node == first and r1.end().node == first")
+	expect(t, r1.Start().Node == first && r1.End().Node == first, "r1.start().node == first and r1.end().node == first")
 	r2 := zigUnwrap(t, psel.ContainedRow(s2, ssYPin(t, s2, 0, n)))
 	ssYExpectSel(t, s2, r2, 0, n, 199, n, false)
-	expect(t, r2.Start().node == last && r2.End().node == last, "r2.start().node == last and r2.end().node == last")
+	expect(t, r2.Start().Node == last && r2.End().Node == last, "r2.start().node == last and r2.end().node == last")
 	r3 := zigUnwrap(t, psel.ContainedRow(s2, ssYPin(t, s2, 0, n+1)))
 	ssYExpectSel(t, s2, r3, 0, n+1, 5, n+1, false)
 	expect(t, !psel.ContainedRow(s2, ssYPin(t, s2, 0, n+2)).Valid, "psel.containedRow(&s2, (0, n + 2)) == null")
@@ -1934,7 +1934,7 @@ func TestSelection_term51_containedRow_history_rows_and_page_boundaries(t *testi
 	rsel := SelectionInit(ssYPin(t, s2, 150, n-1), ssYPin(t, s2, 3, n+1), true)
 	q := zigUnwrap(t, rsel.ContainedRow(s2, ssYPin(t, s2, 0, n)))
 	ssYExpectSel(t, s2, q, 3, n, 150, n, true)
-	expect(t, q.Start().node == last, "q.start().node == last")
+	expect(t, q.Start().Node == last, "q.start().node == last")
 	expect(t, !rsel.ContainedRow(s2, ssYPin(t, s2, 0, n+2)).Valid, "rsel.containedRow(&s2, (0, n + 2)) == null")
 }
 
@@ -1955,17 +1955,17 @@ func TestSelection_term51_containedRowCached_row_outside_the_coordinate_range_is
 	defer s.Deinit()
 	tl_pin := ssYPin(t, s, 2, 2)
 	br_pin := ssYPin(t, s, 6, 5)
-	tl := PointCoordinate{x: 2, y: 2}
-	br := PointCoordinate{x: 6, y: 5}
+	tl := PointCoordinate{X: 2, Y: 2}
+	br := PointCoordinate{X: 6, Y: 5}
 
 	for _, rect := range []bool{false, true} {
 		sel := SelectionInit(tl_pin, br_pin, rect)
 		// One row above the top and one row below the bottom.
-		expect(t, !sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 1), tl, br, PointCoordinate{x: 4, y: 1}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 1), tl, br, .{ .x = 4, .y = 1 }) == null")
-		expect(t, !sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 6), tl, br, PointCoordinate{x: 4, y: 6}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 6), tl, br, .{ .x = 4, .y = 6 }) == null")
+		expect(t, !sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 1), tl, br, PointCoordinate{X: 4, Y: 1}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 1), tl, br, .{ .x = 4, .y = 1 }) == null")
+		expect(t, !sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 6), tl, br, PointCoordinate{X: 4, Y: 6}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 6), tl, br, .{ .x = 4, .y = 6 }) == null")
 		// The first and last rows are in range.
-		expect(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 2), tl, br, PointCoordinate{x: 4, y: 2}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 2), tl, br, .{ .x = 4, .y = 2 }) != null")
-		expect(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 5), tl, br, PointCoordinate{x: 4, y: 5}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 5), tl, br, .{ .x = 4, .y = 5 }) != null")
+		expect(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 2), tl, br, PointCoordinate{X: 4, Y: 2}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 2), tl, br, .{ .x = 4, .y = 2 }) != null")
+		expect(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 4, 5), tl, br, PointCoordinate{X: 4, Y: 5}).Valid, "sel.containedRowCached(&s, tl_pin, br_pin, (4, 5), tl, br, .{ .x = 4, .y = 5 }) != null")
 	}
 }
 
@@ -1977,44 +1977,44 @@ func TestSelection_term51_containedRowCached_only_the_coordinates_decide_the_bra
 	tl_pin := ssYPin(t, s, 2, 2)
 	br_pin := ssYPin(t, s, 6, 5)
 	sel := SelectionInit(tl_pin, br_pin, false)
-	tl := PointCoordinate{x: 2, y: 2}
-	br := PointCoordinate{x: 6, y: 5}
+	tl := PointCoordinate{X: 2, Y: 2}
+	br := PointCoordinate{X: 6, Y: 5}
 
 	// Top row branch: start is tl_pin, end is the probe pin with x = cols - 1.
 	// The probe pin is deliberately on another row than the coordinates say.
-	top := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{x: 0, y: 2}))
+	top := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{X: 0, Y: 2}))
 	ssYExpectSel(t, s, top, 2, 2, 9, 7, false)
 
 	// Bottom row branch: start is the probe pin with x = 0, end is br_pin.
-	bot := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{x: 0, y: 5}))
+	bot := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{X: 0, Y: 5}))
 	ssYExpectSel(t, s, bot, 0, 7, 6, 5, false)
 
 	// Middle branch: the full probe row.
-	mid := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{x: 0, y: 3}))
+	mid := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{X: 0, Y: 3}))
 	ssYExpectSel(t, s, mid, 0, 7, 9, 7, false)
-	mid2 := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{x: 9, y: 4}))
+	mid2 := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), tl, br, PointCoordinate{X: 9, Y: 4}))
 	ssYExpectSel(t, s, mid2, 0, 7, 9, 7, false)
 
 	// Single-row branch (tl.y == br.y == p.y): the pins are returned as given,
 	// without reordering, and the rectangle flag is false.
-	one_tl := PointCoordinate{x: 4, y: 3}
-	one_br := PointCoordinate{x: 8, y: 3}
-	single := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), one_tl, one_br, PointCoordinate{x: 0, y: 3}))
+	one_tl := PointCoordinate{X: 4, Y: 3}
+	one_br := PointCoordinate{X: 8, Y: 3}
+	single := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 3, 7), one_tl, one_br, PointCoordinate{X: 0, Y: 3}))
 	ssYExpectSel(t, s, single, 2, 2, 6, 5, false)
-	swapped := zigUnwrap(t, sel.ContainedRowCached(s, br_pin, tl_pin, ssYPin(t, s, 3, 7), one_tl, one_br, PointCoordinate{x: 0, y: 3}))
+	swapped := zigUnwrap(t, sel.ContainedRowCached(s, br_pin, tl_pin, ssYPin(t, s, 3, 7), one_tl, one_br, PointCoordinate{X: 0, Y: 3}))
 	ssYExpectSel(t, s, swapped, 6, 5, 2, 2, false)
 
 	// Rectangle: the x range comes from the coordinates, y from the probe pin,
 	// and the result is a rectangle regardless of the coordinates' rows.
 	rect := SelectionInit(tl_pin, br_pin, true)
-	rtl := PointCoordinate{x: 1, y: 2}
-	rbr := PointCoordinate{x: 8, y: 5}
-	r1 := zigUnwrap(t, rect.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 9, 7), rtl, rbr, PointCoordinate{x: 9, y: 3}))
+	rtl := PointCoordinate{X: 1, Y: 2}
+	rbr := PointCoordinate{X: 8, Y: 5}
+	r1 := zigUnwrap(t, rect.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 9, 7), rtl, rbr, PointCoordinate{X: 9, Y: 3}))
 	ssYExpectSel(t, s, r1, 1, 7, 8, 7, true)
 	// Rectangle also applies to a single-row range.
-	rs := PointCoordinate{x: 1, y: 4}
-	re := PointCoordinate{x: 8, y: 4}
-	r2 := zigUnwrap(t, rect.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 9, 4), rs, re, PointCoordinate{x: 0, y: 4}))
+	rs := PointCoordinate{X: 1, Y: 4}
+	re := PointCoordinate{X: 8, Y: 4}
+	r2 := zigUnwrap(t, rect.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 9, 4), rs, re, PointCoordinate{X: 0, Y: 4}))
 	ssYExpectSel(t, s, r2, 1, 4, 8, 4, true)
 }
 
@@ -2026,8 +2026,8 @@ func TestSelection_term51_containedRowCached_one_row_range_with_unequal_tl_and_b
 	tl_pin := ssYPin(t, s, 2, 2)
 	br_pin := ssYPin(t, s, 6, 3)
 	sel := SelectionInit(tl_pin, br_pin, false)
-	tl := PointCoordinate{x: 2, y: 2}
-	br := PointCoordinate{x: 6, y: 3}
+	tl := PointCoordinate{X: 2, Y: 2}
+	br := PointCoordinate{X: 6, Y: 3}
 	// Top: end at cols - 1.
 	top := zigUnwrap(t, sel.ContainedRowCached(s, tl_pin, br_pin, ssYPin(t, s, 0, 2), tl, br, tl))
 	ssYExpectSel(t, s, top, 2, 2, 9, 2, false)
@@ -2253,7 +2253,7 @@ func TestSelection_term51_adjust_page_up(t *testing.T) {
 	testStdCapacity(t)
 	s := ssYHistory(t, 10, 3, 12)
 	defer s.Deinit()
-	expectEqual(t, SizeCellCountInt(3), s.pages.rows)
+	expectEqual(t, SizeCellCountInt(3), s.Pages.rows)
 
 	ssYCheckAdjust(t, s, SelectionAdjustmentPageUp, []ssYEndCase{
 		{ex: 4, ey: 7, nx: 4, ny: 4},
@@ -2320,8 +2320,8 @@ func TestSelection_term51_adjust_home(t *testing.T) {
 	})
 	sel := SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 4, 5), false)
 	sel.Adjust(s, SelectionAdjustmentHome)
-	expect(t, s.pages.pages.first != nil, "s.pages.pages.first.?")
-	expect(t, sel.End().node == s.pages.pages.first, "sel.end().node == s.pages.pages.first.?")
+	expect(t, s.Pages.pages.first != nil, "s.pages.pages.first.?")
+	expect(t, sel.End().Node == s.Pages.pages.first, "sel.end().node == s.pages.pages.first.?")
 }
 
 // Zig: test "term51: adjust: end"
@@ -2395,9 +2395,9 @@ func TestSelection_term51_adjust_tracked_selection_moves_the_tracked_end_pin_in_
 	sel, err := untracked.Track(s)
 	zigTry(t, err)
 	defer sel.Deinit(s)
-	end_ptr := sel.bounds.Tracked.end
-	start_ptr := sel.bounds.Tracked.start
-	base := s.pages.CountTrackedPins()
+	end_ptr := sel.Bounds.Tracked.End
+	start_ptr := sel.Bounds.Tracked.Start
+	base := s.Pages.CountTrackedPins()
 
 	all := []SelectionAdjustment{
 		SelectionAdjustmentLeft, SelectionAdjustmentRight, SelectionAdjustmentUp, SelectionAdjustmentDown,
@@ -2407,11 +2407,11 @@ func TestSelection_term51_adjust_tracked_selection_moves_the_tracked_end_pin_in_
 	for _, adj := range all {
 		sel.Adjust(s, adj)
 		// The same pins, never replaced, and the start never moves.
-		expect(t, sel.bounds.Tracked.end == end_ptr, "sel.bounds.tracked.end == end_ptr")
-		expect(t, sel.bounds.Tracked.start == start_ptr, "sel.bounds.tracked.start == start_ptr")
+		expect(t, sel.Bounds.Tracked.End == end_ptr, "sel.bounds.tracked.end == end_ptr")
+		expect(t, sel.Bounds.Tracked.Start == start_ptr, "sel.bounds.tracked.start == start_ptr")
 		ssYExpectPin(t, s, sel.Start(), 5, 1)
 		expect(t, sel.Tracked(), "sel.tracked()")
-		expectEqual(t, base, s.pages.CountTrackedPins())
+		expectEqual(t, base, s.Pages.CountTrackedPins())
 	}
 
 	// And the move itself is visible through the tracked pin.
@@ -2427,10 +2427,10 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	s := ssYPages(t, 2)
 	defer s.Deinit()
 	n := ssYFirstRows(s)
-	expect(t, s.pages.pages.first != nil, "s.pages.pages.first.?")
-	first := s.pages.pages.first
-	expect(t, s.pages.pages.last != nil, "s.pages.pages.last.?")
-	last := s.pages.pages.last
+	expect(t, s.Pages.pages.first != nil, "s.pages.pages.first.?")
+	first := s.Pages.pages.first
+	expect(t, s.Pages.pages.last != nil, "s.pages.pages.last.?")
+	last := s.Pages.pages.last
 	// "ab" ends page one, "cd" starts page two, "ef" is three rows in.
 	ssYSetText(t, s, 0, n-1, "ab")
 	ssYSetText(t, s, 0, n, "cd")
@@ -2440,7 +2440,7 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel := SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n), false)
 	sel.Adjust(s, SelectionAdjustmentUp)
 	ssYExpectPin(t, s, sel.End(), 5, n-1)
-	expect(t, sel.End().node == first, "sel.end().node == first")
+	expect(t, sel.End().Node == first, "sel.end().node == first")
 	sel.Adjust(s, SelectionAdjustmentUp)
 	ssYExpectPin(t, s, sel.End(), 5, n-2)
 
@@ -2448,10 +2448,10 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n-4), false)
 	sel.Adjust(s, SelectionAdjustmentDown)
 	ssYExpectPin(t, s, sel.End(), 5, n-1)
-	expect(t, sel.End().node == first, "sel.end().node == first")
+	expect(t, sel.End().Node == first, "sel.end().node == first")
 	sel.Adjust(s, SelectionAdjustmentDown)
 	ssYExpectPin(t, s, sel.End(), 5, n)
-	expect(t, sel.End().node == last, "sel.end().node == last")
+	expect(t, sel.End().Node == last, "sel.end().node == last")
 	sel.Adjust(s, SelectionAdjustmentDown)
 	ssYExpectPin(t, s, sel.End(), 5, n+3)
 	sel.Adjust(s, SelectionAdjustmentDown)
@@ -2461,7 +2461,7 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 0, n), false)
 	sel.Adjust(s, SelectionAdjustmentLeft)
 	ssYExpectPin(t, s, sel.End(), 1, n-1)
-	expect(t, sel.End().node == first, "sel.end().node == first")
+	expect(t, sel.End().Node == first, "sel.end().node == first")
 	// left across blank rows within page two.
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 3, n+3), false)
 	sel.Adjust(s, SelectionAdjustmentLeft)
@@ -2471,7 +2471,7 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 1, n-1), false)
 	sel.Adjust(s, SelectionAdjustmentRight)
 	ssYExpectPin(t, s, sel.End(), 0, n)
-	expect(t, sel.End().node == last, "sel.end().node == last")
+	expect(t, sel.End().Node == last, "sel.end().node == last")
 	sel.Adjust(s, SelectionAdjustmentRight)
 	ssYExpectPin(t, s, sel.End(), 1, n)
 	sel.Adjust(s, SelectionAdjustmentRight)
@@ -2485,7 +2485,7 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n+2), false)
 	sel.Adjust(s, SelectionAdjustmentPageUp)
 	ssYExpectPin(t, s, sel.End(), 5, n-3)
-	expect(t, sel.End().node == first, "sel.end().node == first")
+	expect(t, sel.End().Node == first, "sel.end().node == first")
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n+4), false)
 	sel.Adjust(s, SelectionAdjustmentPageUp)
 	ssYExpectPin(t, s, sel.End(), 5, n-1)
@@ -2494,7 +2494,7 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n-3), false)
 	sel.Adjust(s, SelectionAdjustmentPageDown)
 	ssYExpectPin(t, s, sel.End(), 5, n+2)
-	expect(t, sel.End().node == last, "sel.end().node == last")
+	expect(t, sel.End().Node == last, "sel.end().node == last")
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n+1), false)
 	sel.Adjust(s, SelectionAdjustmentPageDown)
 	ssYExpectPin(t, s, sel.End(), 199, n+3)
@@ -2503,10 +2503,10 @@ func TestSelection_term51_adjust_page_boundaries(t *testing.T) {
 	sel = SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n+1), false)
 	sel.Adjust(s, SelectionAdjustmentHome)
 	ssYExpectPin(t, s, sel.End(), 0, 0)
-	expect(t, sel.End().node == first, "sel.end().node == first")
+	expect(t, sel.End().Node == first, "sel.end().node == first")
 	sel.Adjust(s, SelectionAdjustmentEnd)
 	ssYExpectPin(t, s, sel.End(), 199, n+3)
-	expect(t, sel.End().node == last, "sel.end().node == last")
+	expect(t, sel.End().Node == last, "sel.end().node == last")
 	sel.Adjust(s, SelectionAdjustmentBeginningOfLine)
 	ssYExpectPin(t, s, sel.End(), 0, n+3)
 	sel.Adjust(s, SelectionAdjustmentEndOfLine)
@@ -2526,8 +2526,8 @@ func TestSelection_term51_adjust_end_finds_text_on_an_earlier_page(t *testing.T)
 	sel := SelectionInit(ssYPin(t, s, 7, 0), ssYPin(t, s, 5, n+2), false)
 	sel.Adjust(s, SelectionAdjustmentEnd)
 	ssYExpectPin(t, s, sel.End(), 199, n-2)
-	expect(t, s.pages.pages.first != nil, "s.pages.pages.first.?")
-	expect(t, sel.End().node == s.pages.pages.first, "sel.end().node == s.pages.pages.first.?")
+	expect(t, s.Pages.pages.first != nil, "s.pages.pages.first.?")
+	expect(t, sel.End().Node == s.Pages.pages.first, "sel.end().node == s.pages.pages.first.?")
 }
 
 // Go-only: panic test: Selection.track: the selection is already tracked (assert(!self.tracked()))
@@ -2548,7 +2548,7 @@ func TestSelection_panic_order_pin_not_in_screen(t *testing.T) {
 	testStdCapacity(t)
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
-	foreign := PageListPin{node: new(PageListNode)}
+	foreign := PageListPin{Node: new(PageListNode)}
 	sel := SelectionInit(ssYPin(t, s, 2, 1), foreign, false)
 
 	ssExpectPanic(t, func() { _ = sel.Order(s) })
@@ -2560,7 +2560,7 @@ func TestSelection_panic_contains_pin_not_in_screen(t *testing.T) {
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
 	sel := SelectionInit(ssYPin(t, s, 2, 1), ssYPin(t, s, 7, 4), false)
-	foreign := PageListPin{node: new(PageListNode)}
+	foreign := PageListPin{Node: new(PageListNode)}
 
 	ssExpectPanic(t, func() { _ = sel.Contains(s, foreign) })
 }
@@ -2571,7 +2571,7 @@ func TestSelection_panic_containedRow_pin_not_in_screen(t *testing.T) {
 	s := ssScreenInit(t, 10, 10, 0)
 	defer s.Deinit()
 	sel := SelectionInit(ssYPin(t, s, 2, 1), ssYPin(t, s, 7, 4), false)
-	foreign := PageListPin{node: new(PageListNode)}
+	foreign := PageListPin{Node: new(PageListNode)}
 
 	ssExpectPanic(t, func() { _ = sel.ContainedRow(s, foreign) })
 }

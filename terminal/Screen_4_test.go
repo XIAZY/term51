@@ -89,10 +89,10 @@ func sc4Sentinel(t *testing.T, s []uint8) uint8 {
 func sc4Init(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Screen {
 	t.Helper()
 	s, err := ScreenInit(ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            max_scrollback,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          max_scrollback,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	})
 	zigTry(t, err)
 	return &s
@@ -114,18 +114,18 @@ var sc4R_boundary = []uint32{
 // sc4RPin is term51RPin: the pin at the given screen coordinates.
 func sc4RPin(t *testing.T, s *Screen, x SizeCellCountInt, y uint32) PageListPin {
 	t.Helper()
-	return zigUnwrap(t, s.pages.Pin(sc4ScreenPt(x, y)))
+	return zigUnwrap(t, s.Pages.Pin(sc4ScreenPt(x, y)))
 }
 
 // sc4ScreenPt is the Zig literal `point.Point{ .screen = .{ .x = x, .y = y } }`.
 func sc4ScreenPt(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 // sc4RPt is term51RPt: the screen point of a pin.
 func sc4RPt(t *testing.T, s *Screen, p PageListPin) Point {
 	t.Helper()
-	return zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, p))
+	return zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, p))
 }
 
 // sc4RExpectSel is term51RExpectSel: expect a non-null, untracked,
@@ -143,7 +143,7 @@ func sc4RExpectSel(
 	expect(t, sel_.Valid, "sel_ != null")
 	sel := sel_.Value
 	expect(t, !sel.Tracked(), "!sel.tracked()")
-	expect(t, !sel.rectangle, "!sel.rectangle")
+	expect(t, !sel.Rectangle, "!sel.rectangle")
 	expectEqualPoint(t, sc4ScreenPt(x0, y0), sc4RPt(t, s, sel.Start()))
 	expectEqualPoint(t, sc4ScreenPt(x1, y1), sc4RPt(t, s, sel.End()))
 }
@@ -162,12 +162,12 @@ func sc4RSelStr(
 ) []uint8 {
 	t.Helper()
 	text, err := s.SelectionString(ScreenSelectionString{
-		sel: SelectionInit(
+		Sel: SelectionInit(
 			sc4RPin(t, s, x0, y0),
 			sc4RPin(t, s, x1, y1),
 			rect,
 		),
-		trim: trim,
+		Trim: trim,
 	})
 	zigTry(t, err)
 	return text
@@ -178,19 +178,19 @@ func sc4RSelStr(
 // in a second page.
 func sc4RFillFirstPage(t *testing.T, s *Screen) uint32 {
 	t.Helper()
-	first_page_size := uint32(s.pages.pages.first.data.capacity.rows)
-	s.pages.pages.first.data.PauseIntegrityChecks(true)
+	first_page_size := uint32(s.Pages.pages.first.data.capacity.rows)
+	s.Pages.pages.first.data.PauseIntegrityChecks(true)
 	for i := uint32(0); i < first_page_size-1; i++ {
 		sc4Write(t, s, "\n")
 	}
-	s.pages.pages.first.data.PauseIntegrityChecks(false)
+	s.Pages.pages.first.data.PauseIntegrityChecks(false)
 	return first_page_size
 }
 
 // sc4RCursorTo is term51RCursorTo: move the cursor to the cell at screen row y.
 func sc4RCursorTo(t *testing.T, s *Screen, x SizeCellCountInt, y uint32) {
 	t.Helper()
-	top := zigUnwrap(t, s.pages.PointFromPin(PointTagScreen, s.pages.GetTopLeft(PointTagActive))).Screen.y
+	top := zigUnwrap(t, s.Pages.PointFromPin(PointTagScreen, s.Pages.GetTopLeft(PointTagActive))).Screen.Y
 	s.CursorAbsolute(x, SizeCellCountInt(y-top))
 }
 
@@ -221,7 +221,7 @@ func sc4RWritePrompt(t *testing.T, s *Screen, prompt string, input string) {
 
 // sc4RMove is term51RMove.
 func sc4RMove(left uint, right uint) ScreenPromptClickMove {
-	return ScreenPromptClickMove{left: left, right: right}
+	return ScreenPromptClickMove{Left: left, Right: right}
 }
 
 // sc4Click is the Zig literal `.{ .cl = cl }` of a SemanticClick.
@@ -237,7 +237,7 @@ func sc4Line(s *Screen, pin PageListPin) Optional[Selection] {
 // sc4LineWS is `s.selectLine(.{ .pin = pin, .whitespace = ws })`.
 func sc4LineWS(s *Screen, pin PageListPin, ws Optional[[]uint32]) Optional[Selection] {
 	opts := screenSelectLineDefault(pin)
-	opts.whitespace = ws
+	opts.Whitespace = ws
 	return s.SelectLine(opts)
 }
 
@@ -247,7 +247,7 @@ func sc4RDump(t *testing.T, s *Screen, tl PageListPin, br Optional[PageListPin],
 	t.Helper()
 	aw := oscWriterAllocatingInit()
 	defer aw.deinit()
-	zigTry(t, s.dumpString(&aw.writer, ScreenDumpStringOptions{tl: tl, br: br, unwrap: unwrap}))
+	zigTry(t, s.dumpString(&aw.writer, ScreenDumpStringOptions{Tl: tl, Br: br, Unwrap: unwrap}))
 	// toOwnedSlice
 	return append([]uint8(nil), aw.written()...)
 }
@@ -266,22 +266,22 @@ func TestSc4_select_untracked_selection_becomes_tracked_and_keeps_bounds(t *test
 
 	input := SelectionInit(sc4RPin(t, s, 3, 1), sc4RPin(t, s, 1, 0), false)
 	expect(t, !input.Tracked(), "!input.tracked()")
-	s.dirty.selection = false
+	s.Dirty.Selection = false
 	zigTry(t, s.Select(Some(input)))
 
 	// The caller's value stays untracked, the screen holds a tracked copy.
 	expect(t, !input.Tracked(), "!input.tracked()")
-	sel := zigUnwrap(t, s.selection)
+	sel := zigUnwrap(t, s.Selection)
 	expect(t, sel.Tracked(), "sel.tracked()")
-	expect(t, !sel.rectangle, "!sel.rectangle")
-	expect(t, s.dirty.selection, "s.dirty.selection")
+	expect(t, !sel.Rectangle, "!sel.rectangle")
+	expect(t, s.Dirty.Selection, "s.dirty.selection")
 
 	// Start/end order is preserved (a backwards selection stays backwards).
 	expectEqualPoint(t, sc4ScreenPt(3, 1), sc4RPt(t, s, sel.Start()))
 	expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, sel.End()))
 
 	// The tracked pins are distinct objects from the input pins.
-	expect(t, sel.bounds.Tracked.start != sel.bounds.Tracked.end, "sel.bounds.tracked.start != sel.bounds.tracked.end")
+	expect(t, sel.Bounds.Tracked.Start != sel.Bounds.Tracked.End, "sel.bounds.tracked.start != sel.bounds.tracked.end")
 }
 
 // Zig: test "term51: select: rectangle flag is preserved"
@@ -292,9 +292,9 @@ func TestSc4_select_rectangle_flag_is_preserved(t *testing.T) {
 	sc4Write(t, s, "hello\nworld")
 
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 2, 1), true))))
-	expect(t, zigUnwrap(t, s.selection).rectangle, "s.selection.?.rectangle")
+	expect(t, zigUnwrap(t, s.Selection).Rectangle, "s.selection.?.rectangle")
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 2, 1), false))))
-	expect(t, !zigUnwrap(t, s.selection).rectangle, "!s.selection.?.rectangle")
+	expect(t, !zigUnwrap(t, s.Selection).Rectangle, "!s.selection.?.rectangle")
 }
 
 // Zig: test "term51: select: tracked selection is adopted without new pins"
@@ -304,20 +304,20 @@ func TestSc4_select_tracked_selection_is_adopted_without_new_pins(t *testing.T) 
 	defer s.Deinit()
 	sc4Write(t, s, "hello")
 
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 	input := SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 4, 0), false)
 	tracked, err := input.Track(s)
 	zigTry(t, err)
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
 
-	s.dirty.selection = false
+	s.Dirty.Selection = false
 	zigTry(t, s.Select(Some(tracked)))
-	expect(t, s.dirty.selection, "s.dirty.selection")
+	expect(t, s.Dirty.Selection, "s.dirty.selection")
 
 	// No additional pins, and the very same tracked pins are adopted.
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
-	expect(t, zigUnwrap(t, s.selection).bounds.Tracked.start == tracked.bounds.Tracked.start, "s.selection.?.bounds.tracked.start == tracked.bounds.tracked.start")
-	expect(t, zigUnwrap(t, s.selection).bounds.Tracked.end == tracked.bounds.Tracked.end, "s.selection.?.bounds.tracked.end == tracked.bounds.tracked.end")
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
+	expect(t, zigUnwrap(t, s.Selection).Bounds.Tracked.Start == tracked.Bounds.Tracked.Start, "s.selection.?.bounds.tracked.start == tracked.bounds.tracked.start")
+	expect(t, zigUnwrap(t, s.Selection).Bounds.Tracked.End == tracked.Bounds.Tracked.End, "s.selection.?.bounds.tracked.end == tracked.bounds.tracked.end")
 }
 
 // Zig: test "term51: select: replacing a selection untracks the previous one"
@@ -327,26 +327,26 @@ func TestSc4_select_replacing_a_selection_untracks_the_previous_one(t *testing.T
 	defer s.Deinit()
 	sc4Write(t, s, "hello\nworld")
 
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 4, 0), false))))
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
 
-	s.dirty.selection = false
+	s.Dirty.Selection = false
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 1), sc4RPin(t, s, 4, 1), false))))
-	expect(t, s.dirty.selection, "s.dirty.selection")
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
-	expectEqualPoint(t, sc4ScreenPt(0, 1), sc4RPt(t, s, zigUnwrap(t, s.selection).Start()))
-	expectEqualPoint(t, sc4ScreenPt(4, 1), sc4RPt(t, s, zigUnwrap(t, s.selection).End()))
+	expect(t, s.Dirty.Selection, "s.dirty.selection")
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
+	expectEqualPoint(t, sc4ScreenPt(0, 1), sc4RPt(t, s, zigUnwrap(t, s.Selection).Start()))
+	expectEqualPoint(t, sc4ScreenPt(4, 1), sc4RPt(t, s, zigUnwrap(t, s.Selection).End()))
 
 	// Selecting identical bounds again still marks the screen dirty.
-	s.dirty.selection = false
+	s.Dirty.Selection = false
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 1), sc4RPin(t, s, 4, 1), false))))
-	expect(t, s.dirty.selection, "s.dirty.selection")
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
+	expect(t, s.Dirty.Selection, "s.dirty.selection")
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
 
 	// Clean up leaves no tracked pins behind.
 	zigTry(t, s.Select(None[Selection]()))
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 }
 
 // term51: select: allocation failure leaves prior selection untouched: not
@@ -359,15 +359,15 @@ func TestSc4_clearSelection_untracks_pins_and_sets_dirty(t *testing.T) {
 	defer s.Deinit()
 	sc4Write(t, s, "hello")
 
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 4, 0), true))))
-	expectEqual(t, base+2, s.pages.CountTrackedPins())
+	expectEqual(t, base+2, s.Pages.CountTrackedPins())
 
-	s.dirty.selection = false
+	s.Dirty.Selection = false
 	s.ClearSelection()
-	expect(t, !s.selection.Valid, "s.selection == null")
-	expect(t, s.dirty.selection, "s.dirty.selection")
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expect(t, !s.Selection.Valid, "s.selection == null")
+	expect(t, s.Dirty.Selection, "s.dirty.selection")
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 }
 
 // Zig: test "term51: clearSelection: without selection does not set dirty"
@@ -376,16 +376,16 @@ func TestSc4_clearSelection_without_selection_does_not_set_dirty(t *testing.T) {
 	s := sc4Init(t, 10, 5, 0)
 	defer s.Deinit()
 
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 	s.ClearSelection()
-	expect(t, !s.selection.Valid, "s.selection == null")
-	expect(t, !s.dirty.selection, "!s.dirty.selection")
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expect(t, !s.Selection.Valid, "s.selection == null")
+	expect(t, !s.Dirty.Selection, "!s.dirty.selection")
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 
 	// A dirty flag that is already set is not cleared.
-	s.dirty.selection = true
+	s.Dirty.Selection = true
 	s.ClearSelection()
-	expect(t, s.dirty.selection, "s.dirty.selection")
+	expect(t, s.Dirty.Selection, "s.dirty.selection")
 }
 
 // Zig: test "term51: clearSelection: is idempotent"
@@ -395,14 +395,14 @@ func TestSc4_clearSelection_is_idempotent(t *testing.T) {
 	defer s.Deinit()
 	sc4Write(t, s, "hello")
 
-	base := s.pages.CountTrackedPins()
+	base := s.Pages.CountTrackedPins()
 	zigTry(t, s.Select(Some(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 4, 0), false))))
 	s.ClearSelection()
-	s.dirty.selection = false
+	s.Dirty.Selection = false
 	s.ClearSelection()
-	expect(t, !s.selection.Valid, "s.selection == null")
-	expect(t, !s.dirty.selection, "!s.dirty.selection")
-	expectEqual(t, base, s.pages.CountTrackedPins())
+	expect(t, !s.Selection.Valid, "s.selection == null")
+	expect(t, !s.Dirty.Selection, "!s.dirty.selection")
+	expectEqual(t, base, s.Pages.CountTrackedPins())
 }
 
 // Zig: test "term51: selectionString: basic single row is sentinel terminated"
@@ -596,22 +596,22 @@ func TestSc4_selectionString_map_has_one_pin_per_output_byte(t *testing.T) {
 
 	var map_ StringMap
 	opts := screenSelectionStringDefault(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 1, 1), false))
-	opts.map_ = &map_
+	opts.Map = &map_
 	text, err := s.SelectionString(opts)
 	zigTry(t, err)
 	defer func() { map_.Deinit() }()
 
 	expectEqualStrings(t, "ab\ncd", string(text))
-	expectEqualStrings(t, "ab\ncd", string(map_.string))
-	expectEqual(t, uint8(0), sc4Sentinel(t, map_.string))
+	expectEqualStrings(t, "ab\ncd", string(map_.String))
+	expectEqual(t, uint8(0), sc4Sentinel(t, map_.String))
 	// The map string is a copy, not the returned slice.
-	expect(t, &map_.string[0] != &text[0], "map.string.ptr != text.ptr")
-	expectEqual(t, len(text), len(map_.map_))
+	expect(t, &map_.String[0] != &text[0], "map.string.ptr != text.ptr")
+	expectEqual(t, len(text), len(map_.Map))
 
-	expectEqualPoint(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.map_[0]))
-	expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.map_[1]))
-	expectEqualPoint(t, sc4ScreenPt(0, 1), sc4RPt(t, s, map_.map_[3]))
-	expectEqualPoint(t, sc4ScreenPt(1, 1), sc4RPt(t, s, map_.map_[4]))
+	expectEqualPoint(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.Map[0]))
+	expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.Map[1]))
+	expectEqualPoint(t, sc4ScreenPt(0, 1), sc4RPt(t, s, map_.Map[3]))
+	expectEqualPoint(t, sc4ScreenPt(1, 1), sc4RPt(t, s, map_.Map[4]))
 }
 
 // Zig: test "term51: selectionString: map maps every byte of a multibyte character"
@@ -623,18 +623,18 @@ func TestSc4_selectionString_map_maps_every_byte_of_a_multibyte_character(t *tes
 
 	var map_ StringMap
 	opts := screenSelectionStringDefault(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 5, 0), false))
-	opts.map_ = &map_
+	opts.Map = &map_
 	text, err := s.SelectionString(opts)
 	zigTry(t, err)
 	defer func() { map_.Deinit() }()
 
 	expectEqualStrings(t, "a世b", string(text))
-	expectEqual(t, 5, len(map_.map_))
-	expectEqualPoint(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.map_[0]))
+	expectEqual(t, 5, len(map_.Map))
+	expectEqualPoint(t, sc4ScreenPt(0, 0), sc4RPt(t, s, map_.Map[0]))
 	for i := 1; i < 4; i++ {
-		expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.map_[i]))
+		expectEqualPoint(t, sc4ScreenPt(1, 0), sc4RPt(t, s, map_.Map[i]))
 	}
-	expectEqualPoint(t, sc4ScreenPt(3, 0), sc4RPt(t, s, map_.map_[4]))
+	expectEqualPoint(t, sc4ScreenPt(3, 0), sc4RPt(t, s, map_.Map[4]))
 }
 
 // Zig: test "term51: selectionString: map is untouched when not requested and empty selection map"
@@ -645,13 +645,13 @@ func TestSc4_selectionString_map_is_untouched_when_not_requested_and_empty_selec
 
 	var map_ StringMap
 	opts := screenSelectionStringDefault(SelectionInit(sc4RPin(t, s, 0, 0), sc4RPin(t, s, 5, 0), false))
-	opts.map_ = &map_
+	opts.Map = &map_
 	text, err := s.SelectionString(opts)
 	zigTry(t, err)
 	defer func() { map_.Deinit() }()
 	expectEqualStrings(t, "", string(text))
-	expectEqualStrings(t, "", string(map_.string))
-	expectEqual(t, 0, len(map_.map_))
+	expectEqualStrings(t, "", string(map_.String))
+	expectEqual(t, 0, len(map_.Map))
 }
 
 // term51: selectionString: allocation failure while copying the map: not
@@ -671,7 +671,7 @@ func TestSc4_selectionString_selection_across_pages(t *testing.T) {
 
 	// The rows really are in two different pages.
 	expect(t,
-		sc4RPin(t, s, 0, first_page_size-1).node != sc4RPin(t, s, 0, first_page_size).node,
+		sc4RPin(t, s, 0, first_page_size-1).Node != sc4RPin(t, s, 0, first_page_size).Node,
 		"term51RPin(&s, 0, first_page_size - 1).node != term51RPin(&s, 0, first_page_size).node",
 	)
 
@@ -689,12 +689,12 @@ func TestSc4_selectionString_selection_across_pages(t *testing.T) {
 		sc4RPin(t, s, 2, first_page_size+1),
 		false,
 	))
-	opts.map_ = &map_
+	opts.Map = &map_
 	t2, err := s.SelectionString(opts)
 	zigTry(t, err)
 	defer func() { map_.Deinit() }()
 	expectEqualStrings(t, "abc\ndef\nghi", string(t2))
-	expect(t, map_.map_[0].node != map_.map_[len(map_.map_)-1].node, "map.map[0].node != map.map[map.map.len - 1].node")
+	expect(t, map_.Map[0].Node != map_.Map[len(map_.Map)-1].Node, "map.map[0].node != map.map[map.map.len - 1].node")
 }
 
 // Zig: test "term51: selectionString: soft wrap across a page boundary is unwrapped"
@@ -894,7 +894,7 @@ func TestSc4_selectLine_wrapped_line_across_a_page_boundary(t *testing.T) {
 
 	r := sc4RFillFirstPage(t, s)
 	sc4Write(t, s, "aaaaabbbbbccccc\nzz")
-	expect(t, sc4RPin(t, s, 0, r-1).node != sc4RPin(t, s, 0, r).node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
+	expect(t, sc4RPin(t, s, 0, r-1).Node != sc4RPin(t, s, 0, r).Node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
 
 	sc4RExpectSel(t, s, sc4Line(s, sc4RPin(t, s, 3, r)), 0, r-1, 4, r)
 	sc4RExpectSel(t, s, sc4Line(s, sc4RPin(t, s, 3, r-1)), 0, r-1, 4, r)
@@ -939,7 +939,7 @@ func TestSc4_selectLine_semantic_boundary_splits_a_single_row_into_three(t *test
 	// With the boundary disabled the whole row is one line.
 	for x := 0; x < 6; x++ {
 		opts := screenSelectLineDefault(sc4RPin(t, s, SizeCellCountInt(x), 0))
-		opts.semantic_prompt_boundary = false
+		opts.SemanticPromptBoundary = false
 		sc4RExpectSel(t, s, s.SelectLine(opts), 0, 0, 5, 0)
 	}
 }
@@ -1066,7 +1066,7 @@ func TestSc4_selectAll_spans_multiple_pages(t *testing.T) {
 	sc4Write(t, s, "\nlast\n\n")
 
 	sel := zigUnwrap(t, s.SelectAll())
-	expect(t, sel.Start().node != sel.End().node, "sel.start().node != sel.end().node")
+	expect(t, sel.Start().Node != sel.End().Node, "sel.start().node != sel.end().node")
 	sc4RExpectSel(t, s, Some(sel), 3, 0, 3, r)
 }
 
@@ -1469,7 +1469,7 @@ func TestSc4_selectWord_word_wrapped_across_a_page_boundary(t *testing.T) {
 
 	r := sc4RFillFirstPage(t, s)
 	sc4Write(t, s, "aaaaabbbbbccccc ddd")
-	expect(t, sc4RPin(t, s, 0, r-1).node != sc4RPin(t, s, 0, r).node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
+	expect(t, sc4RPin(t, s, 0, r-1).Node != sc4RPin(t, s, 0, r).Node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
 	b := sc4R_boundary
 
 	sc4RExpectSel(t, s, s.SelectWord(sc4RPin(t, s, 3, r-1), b), 0, r-1, 4, r)
@@ -1655,7 +1655,7 @@ func TestSc4_selectOutput_output_spans_a_page_boundary(t *testing.T) {
 
 	sel := s.SelectOutput(sc4RPin(t, s, 0, r+1))
 	sc4RExpectSel(t, s, sel, 0, r, 2, r+1)
-	expect(t, zigUnwrap(t, sel).Start().node != sc4RPin(t, s, 0, r-1).node, "sel.?.start().node != term51RPin(&s, 0, r - 1).node")
+	expect(t, zigUnwrap(t, sel).Start().Node != sc4RPin(t, s, 0, r-1).Node, "sel.?.start().node != term51RPin(&s, 0, r - 1).node")
 }
 
 // Zig: test "term51: promptClickMove: cursor must be on input content"
@@ -1663,7 +1663,7 @@ func TestSc4_promptClickMove_cursor_must_be_on_input_content(t *testing.T) {
 	testStdCapacity(t)
 	s := sc4Init(t, 20, 5, 0)
 	defer s.Deinit()
-	s.semantic_prompt.click = sc4Click(OSCParsersSemanticPromptClickLine)
+	s.SemanticPrompt.Click = sc4Click(OSCParsersSemanticPromptClickLine)
 	sc4RWritePrompt(t, s, "> ", "hello")
 
 	// Cursor on an input cell and in input mode.
@@ -1673,12 +1673,12 @@ func TestSc4_promptClickMove_cursor_must_be_on_input_content(t *testing.T) {
 	// Cursor cell is input even though the cursor itself is not in input
 	// mode: still moves.
 	s.CursorSetSemanticContent(sc4Output())
-	expect(t, s.cursor.page_cell.semantic_content == PageCellSemanticContentInput, "s.cursor.page_cell.semantic_content == .input")
+	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentInput, "s.cursor.page_cell.semantic_content == .input")
 	expectEqual(t, sc4RMove(0, 2), s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
 	// Cursor in neither input mode nor on an input cell: no movement.
 	s.CursorAbsolute(10, 0)
-	expect(t, s.cursor.page_cell.semantic_content == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
+	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
 	// Cursor in input mode but on a non-input cell: moves left over the
@@ -1689,7 +1689,7 @@ func TestSc4_promptClickMove_cursor_must_be_on_input_content(t *testing.T) {
 	// Cursor in prompt mode on a prompt cell: no movement.
 	s.CursorSetSemanticContent(sc4Prompt(OSCParsersSemanticPromptPromptKindInitial))
 	s.CursorAbsolute(0, 0)
-	expect(t, s.cursor.page_cell.semantic_content == PageCellSemanticContentPrompt, "s.cursor.page_cell.semantic_content == .prompt")
+	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentPrompt, "s.cursor.page_cell.semantic_content == .prompt")
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
 	// Cursor on an output cell with output mode: no movement.
@@ -1707,10 +1707,10 @@ func TestSc4_promptClickMove_click_mode_selects_the_strategy(t *testing.T) {
 	s.CursorAbsolute(2, 0)
 
 	// The default is disabled.
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, s.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, s.SemanticPrompt.Click)
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 
-	s.semantic_prompt.click = ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickClickEvents}
+	s.SemanticPrompt.Click = ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickClickEvents}
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 	expectEqual(t, ScreenPromptClickMoveZero, s.PromptClickMove(sc4RPin(t, s, 0, 0)))
 
@@ -1722,7 +1722,7 @@ func TestSc4_promptClickMove_click_mode_selects_the_strategy(t *testing.T) {
 		sc4Click(OSCParsersSemanticPromptClickSmartVertical),
 	}
 	for _, mode := range modes {
-		s.semantic_prompt.click = mode
+		s.SemanticPrompt.Click = mode
 		s.CursorAbsolute(2, 0)
 		expectEqual(t, sc4RMove(0, 2), s.PromptClickMove(sc4RPin(t, s, 4, 0)))
 		s.CursorAbsolute(6, 0)
@@ -1735,7 +1735,7 @@ func TestSc4_promptClickMove_click_on_the_cursor_cell_is_no_movement(t *testing.
 	testStdCapacity(t)
 	s := sc4Init(t, 20, 5, 0)
 	defer s.Deinit()
-	s.semantic_prompt.click = sc4Click(OSCParsersSemanticPromptClickLine)
+	s.SemanticPrompt.Click = sc4Click(OSCParsersSemanticPromptClickLine)
 	sc4RWritePrompt(t, s, "> ", "hello")
 
 	s.CursorAbsolute(4, 0)
@@ -1789,8 +1789,8 @@ func TestSc4_promptClickLine_cursor_on_the_blank_cell_after_the_input(t *testing
 	sc4RWritePrompt(t, s, "> ", "hello")
 
 	// The cursor is naturally after the input.
-	expectEqual(t, SizeCellCountInt(7), s.cursor.x)
-	expect(t, s.cursor.page_cell.semantic_content == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
+	expectEqual(t, SizeCellCountInt(7), s.Cursor.X)
+	expect(t, s.Cursor.PageCell.semantic_content == PageCellSemanticContentOutput, "s.cursor.page_cell.semantic_content == .output")
 
 	// To the right there is nothing: no +1 because the cursor cell is
 	// not an input cell.
@@ -2015,7 +2015,7 @@ func TestSc4_promptClickLine_input_wrapped_across_a_page_boundary(t *testing.T) 
 
 	r := sc4RFillFirstPage(t, s)
 	sc4RWritePrompt(t, s, "> ", "abcdefghijkl")
-	expect(t, sc4RPin(t, s, 0, r-1).node != sc4RPin(t, s, 0, r).node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
+	expect(t, sc4RPin(t, s, 0, r-1).Node != sc4RPin(t, s, 0, r).Node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
 
 	// Rows: "> abcdefgh" (page 0) / "ijkl" (page 1).
 	sc4RCursorTo(t, s, 2, r-1)
@@ -2128,7 +2128,7 @@ func TestSc4_LineIterator_next_soft_wrapped_line_content(t *testing.T) {
 	expected := []string{"abcdefgh", "ij"}
 	for _, e := range expected {
 		opts := screenSelectionStringDefault(zigUnwrap(t, it.Next()))
-		opts.trim = true
+		opts.Trim = true
 		text, err := s.SelectionString(opts)
 		zigTry(t, err)
 		expectEqualStrings(t, e, string(text))
@@ -2181,7 +2181,7 @@ func TestSc4_LineIterator_next_walks_scrollback_history_and_pages(t *testing.T) 
 	// The wrapped line starts in page 0 and ends in page 1.
 	sel := zigUnwrap(t, it.Next())
 	sc4RExpectSel(t, s, Some(sel), 0, r-1, 9, r)
-	expect(t, sel.Start().node != sel.End().node, "sel.start().node != sel.end().node")
+	expect(t, sel.Start().Node != sel.End().Node, "sel.start().node != sel.end().node")
 	sc4RExpectSel(t, s, it.Next(), 0, r+1, 9, r+1)
 	// Active area has 3 rows: the screen's last row is r + 1.
 	expect(t, !it.Next().Valid, "it.next() == null")
@@ -2193,7 +2193,7 @@ func TestSc4_dumpString_wrapped_rows_are_joined_only_when_unwrapping(t *testing.
 	s := sc4Init(t, 5, 3, 0)
 	defer s.Deinit()
 	sc4Write(t, s, "1ABCD2EFGH\nx")
-	tl := s.pages.GetTopLeft(PointTagScreen)
+	tl := s.Pages.GetTopLeft(PointTagScreen)
 
 	joined := sc4RDump(t, s, tl, None[PageListPin](), true)
 	expectEqualStrings(t, "1ABCD2EFGH\nx", string(joined))
@@ -2213,7 +2213,7 @@ func TestSc4_dumpString_empty_screen_and_single_cell(t *testing.T) {
 	testStdCapacity(t)
 	s := sc4Init(t, 5, 3, 0)
 	defer s.Deinit()
-	tl := s.pages.GetTopLeft(PointTagScreen)
+	tl := s.Pages.GetTopLeft(PointTagScreen)
 
 	empty := sc4RDump(t, s, tl, None[PageListPin](), true)
 	expectEqualStrings(t, "", string(empty))
@@ -2233,7 +2233,7 @@ func TestSc4_dumpString_blank_rows_and_trailing_spaces_are_kept_as_written(t *te
 	s := sc4Init(t, 5, 5, 0)
 	defer s.Deinit()
 	sc4Write(t, s, "\n\nab  \ncd")
-	tl := s.pages.GetTopLeft(PointTagScreen)
+	tl := s.Pages.GetTopLeft(PointTagScreen)
 
 	// Leading blank rows give newlines, trailing spaces are written cells
 	// and kept (no trimming), trailing never-written rows give nothing.
@@ -2282,7 +2282,7 @@ func TestSc4_dumpString_wide_characters_and_graphemes(t *testing.T) {
 	s := sc4Init(t, 6, 3, 0)
 	defer s.Deinit()
 	sc4Write(t, s, "a世b\néx")
-	tl := s.pages.GetTopLeft(PointTagScreen)
+	tl := s.Pages.GetTopLeft(PointTagScreen)
 
 	out := sc4RDump(t, s, tl, None[PageListPin](), false)
 	expectEqualStrings(t, "a世b\néx", string(out))
@@ -2296,7 +2296,7 @@ func TestSc4_dumpString_history_and_multiple_pages(t *testing.T) {
 		defer s.Deinit()
 		sc4Write(t, s, "a\nb\nc\nd")
 
-		all := sc4RDump(t, s, s.pages.GetTopLeft(PointTagScreen), None[PageListPin](), true)
+		all := sc4RDump(t, s, s.Pages.GetTopLeft(PointTagScreen), None[PageListPin](), true)
 		expectEqualStrings(t, "a\nb\nc\nd", string(all))
 
 		tail := sc4RDump(t, s, sc4RPin(t, s, 0, 1), None[PageListPin](), true)
@@ -2307,13 +2307,13 @@ func TestSc4_dumpString_history_and_multiple_pages(t *testing.T) {
 		defer s.Deinit()
 		r := sc4RFillFirstPage(t, s)
 		sc4Write(t, s, "abc\ndef")
-		expect(t, sc4RPin(t, s, 0, r-1).node != sc4RPin(t, s, 0, r).node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
+		expect(t, sc4RPin(t, s, 0, r-1).Node != sc4RPin(t, s, 0, r).Node, "term51RPin(&s, 0, r - 1).node != term51RPin(&s, 0, r).node")
 
 		out := sc4RDump(t, s, sc4RPin(t, s, 0, r-1), None[PageListPin](), true)
 		expectEqualStrings(t, "abc\ndef", string(out))
 
 		// Leading blank rows of the first page are emitted as newlines.
-		lead := sc4RDump(t, s, s.pages.GetTopLeft(PointTagScreen), None[PageListPin](), true)
+		lead := sc4RDump(t, s, s.Pages.GetTopLeft(PointTagScreen), None[PageListPin](), true)
 		expectEqual(t, int(r-1), strings.Count(string(lead), "\n")-1)
 		expect(t, bytes.HasSuffix(lead, []uint8("abc\ndef")), "std.mem.endsWith(u8, lead, \"abc\\ndef\")")
 	}()
@@ -2328,12 +2328,12 @@ func TestSc4_dumpString_writer_failure_is_propagated(t *testing.T) {
 
 	var buf [2]uint8
 	w := oscWriter{buffer: buf[:]}
-	sc4ExpectError(t, ErrWriteFailed, s.dumpString(&w, screenDumpStringOptionsDefault(s.pages.GetTopLeft(PointTagScreen))))
+	sc4ExpectError(t, ErrWriteFailed, s.dumpString(&w, screenDumpStringOptionsDefault(s.Pages.GetTopLeft(PointTagScreen))))
 
 	// A big enough fixed buffer succeeds and is exact.
 	var big [64]uint8
 	w2 := oscWriter{buffer: big[:]}
-	zigTry(t, s.dumpString(&w2, screenDumpStringOptionsDefault(s.pages.GetTopLeft(PointTagScreen))))
+	zigTry(t, s.dumpString(&w2, screenDumpStringOptionsDefault(s.Pages.GetTopLeft(PointTagScreen))))
 	expectEqualStrings(t, "hello world", string(w2.buffer[:w2.end]))
 }
 
@@ -2367,7 +2367,7 @@ func TestSc4_dumpStringAlloc_point_tags_select_the_region_and_wrap_visually(t *t
 	}
 	// Only the tag matters, not the coordinates.
 	{
-		out, err := s.DumpStringAlloc(Point{Tag: PointTagActive, Active: PointCoordinate{x: 2, y: 1}})
+		out, err := s.DumpStringAlloc(Point{Tag: PointTagActive, Active: PointCoordinate{X: 2, Y: 1}})
 		zigTry(t, err)
 		expectEqualStrings(t, "h\ni", string(out))
 	}
@@ -2432,7 +2432,7 @@ func TestSc4_dumpStringAllocUnwrapped_soft_wrapped_rows_are_joined(t *testing.T)
 		expectEqualStrings(t, "h\ni", string(out))
 	}
 	{
-		out, err := s.DumpStringAllocUnwrapped(Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: 1, y: 1}})
+		out, err := s.DumpStringAllocUnwrapped(Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: 1, Y: 1}})
 		zigTry(t, err)
 		expectEqualStrings(t, "h\ni", string(out))
 	}
@@ -2465,31 +2465,31 @@ func TestSc4_testWriteString_narrow_cells_cursor_advance_and_pending_wrap(t *tes
 
 	// Empty string is a no-op.
 	sc4Write(t, s, "")
-	expectEqual(t, SizeCellCountInt(0), s.cursor.x)
-	expect(t, !s.cursor.pending_wrap, "!s.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(0), s.Cursor.X)
+	expect(t, !s.Cursor.PendingWrap, "!s.cursor.pending_wrap")
 
 	sc4Write(t, s, "abcd")
-	expectEqual(t, SizeCellCountInt(4), s.cursor.x)
-	expect(t, !s.cursor.pending_wrap, "!s.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(4), s.Cursor.X)
+	expect(t, !s.Cursor.PendingWrap, "!s.cursor.pending_wrap")
 
 	// Filling the row sets pending wrap but does not wrap yet.
 	sc4Write(t, s, "e")
-	expectEqual(t, SizeCellCountInt(4), s.cursor.x)
-	expectEqual(t, SizeCellCountInt(0), s.cursor.y)
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(4), s.Cursor.X)
+	expectEqual(t, SizeCellCountInt(0), s.Cursor.Y)
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().row.wrap, "!term51RPin(&s, 0, 0).rowAndCell().row.wrap")
 	for x, c := range []uint8("abcde") {
 		cell := sc4RPin(t, s, SizeCellCountInt(x), 0).RowAndCell().cell
 		expectEqual(t, uint32(c), cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
-		expectEqual(t, StyleDefaultId, cell.style_id)
+		expectEqual(t, StyleDefaultID, cell.style_id)
 	}
 
 	// The next character wraps.
 	sc4Write(t, s, "f")
-	expectEqual(t, SizeCellCountInt(1), s.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), s.cursor.y)
-	expect(t, !s.cursor.pending_wrap, "!s.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
+	expect(t, !s.Cursor.PendingWrap, "!s.cursor.pending_wrap")
 	expect(t, sc4RPin(t, s, 0, 0).RowAndCell().row.wrap, "term51RPin(&s, 0, 0).rowAndCell().row.wrap")
 	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().row.wrap_continuation, "!term51RPin(&s, 0, 0).rowAndCell().row.wrap_continuation")
 	expect(t, sc4RPin(t, s, 0, 1).RowAndCell().row.wrap_continuation, "term51RPin(&s, 0, 1).rowAndCell().row.wrap_continuation")
@@ -2511,7 +2511,7 @@ func TestSc4_testWriteString_invalid_UTF_8_is_rejected_before_writing(t *testing
 	sc4ExpectError(t, ErrInvalidUtf8, s.TestWriteString([]uint8("\xc0\x80")))
 
 	// The whole string is validated first, so nothing was written.
-	expectEqual(t, SizeCellCountInt(0), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(0), s.Cursor.X)
 	out, err := s.DumpStringAlloc(sc4Tag(PointTagScreen))
 	zigTry(t, err)
 	expectEqualStrings(t, "", string(out))
@@ -2525,21 +2525,21 @@ func TestSc4_testWriteString_newline_moves_down_resets_wrap_and_scrolls_at_the_b
 
 	sc4Write(t, s, "abc\n")
 	// The explicit newline resets pending wrap and does not set wrap.
-	expect(t, !s.cursor.pending_wrap, "!s.cursor.pending_wrap")
-	expectEqual(t, SizeCellCountInt(0), s.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), s.cursor.y)
+	expect(t, !s.Cursor.PendingWrap, "!s.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(0), s.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
 	expect(t, !sc4RPin(t, s, 0, 0).RowAndCell().row.wrap, "!term51RPin(&s, 0, 0).rowAndCell().row.wrap")
 
 	sc4Write(t, s, "de\n")
 	// Scrolled: with no scrollback the first row is gone.
-	expectEqual(t, SizeCellCountInt(1), s.cursor.y)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
 	out, err := s.DumpStringAlloc(sc4Tag(PointTagScreen))
 	zigTry(t, err)
 	expectEqualStrings(t, "de", string(out))
 
 	// A newline with a column offset goes back to column zero.
 	sc4Write(t, s, "xy\nz")
-	expectEqual(t, SizeCellCountInt(1), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.X)
 }
 
 // Zig: test "term51: testWriteString: carriage return and nul are plain cells"
@@ -2550,13 +2550,13 @@ func TestSc4_testWriteString_carriage_return_and_nul_are_plain_cells(t *testing.
 
 	// Only '\n' is special. A '\r' is printed into a cell.
 	sc4Write(t, s, "a\rb")
-	expectEqual(t, SizeCellCountInt(3), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(3), s.Cursor.X)
 	expectEqual(t, uint32('\r'), sc4RPin(t, s, 1, 0).RowAndCell().cell.content.codepoint)
 	expectEqual(t, uint32('b'), sc4RPin(t, s, 2, 0).RowAndCell().cell.content.codepoint)
 
 	// NUL advances the cursor but leaves a cell without text.
 	sc4Write(t, s, "\x00")
-	expectEqual(t, SizeCellCountInt(4), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(4), s.Cursor.X)
 	expect(t, !sc4RPin(t, s, 3, 0).RowAndCell().cell.HasText(), "!term51RPin(&s, 3, 0).rowAndCell().cell.hasText()")
 }
 
@@ -2568,7 +2568,7 @@ func TestSc4_testWriteString_codepoints_up_to_0xFF_always_take_one_cell(t *testi
 
 	// U+00E9, U+00FF, U+00AD (soft hyphen), U+0085 and U+00A0.
 	sc4Write(t, s, "éÿ­\u0085 ")
-	expectEqual(t, SizeCellCountInt(5), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(5), s.Cursor.X)
 	expected := []uint32{0xe9, 0xff, 0xad, 0x85, 0xa0}
 	for x, cp := range expected {
 		cell := sc4RPin(t, s, SizeCellCountInt(x), 0).RowAndCell().cell
@@ -2578,7 +2578,7 @@ func TestSc4_testWriteString_codepoints_up_to_0xFF_always_take_one_cell(t *testi
 
 	// U+0100 is the first codepoint looked up in the width table.
 	sc4Write(t, s, "Ā")
-	expectEqual(t, SizeCellCountInt(6), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(6), s.Cursor.X)
 	expectEqual(t, PageCellWideNarrow, sc4RPin(t, s, 5, 0).RowAndCell().cell.wide)
 }
 
@@ -2589,7 +2589,7 @@ func TestSc4_testWriteString_wide_characters_write_a_head_and_a_tail(t *testing.
 	defer s.Deinit()
 
 	sc4Write(t, s, "a世")
-	expectEqual(t, SizeCellCountInt(3), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(3), s.Cursor.X)
 	{
 		head := sc4RPin(t, s, 1, 0).RowAndCell().cell
 		tail := sc4RPin(t, s, 2, 0).RowAndCell().cell
@@ -2604,8 +2604,8 @@ func TestSc4_testWriteString_wide_characters_write_a_head_and_a_tail(t *testing.
 	expectEqual(t, PageCellWideWide, sc4RPin(t, s, 3, 0).RowAndCell().cell.wide)
 	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s, 4, 0).RowAndCell().cell.wide)
 	// The tail was in the last column, so the cursor waits to wrap.
-	expectEqual(t, SizeCellCountInt(4), s.cursor.x)
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(4), s.Cursor.X)
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 }
 
 // Zig: test "term51: testWriteString: wide character at the last column leaves a spacer head"
@@ -2624,8 +2624,8 @@ func TestSc4_testWriteString_wide_character_at_the_last_column_leaves_a_spacer_h
 	expect(t, sc4RPin(t, s, 0, 1).RowAndCell().row.wrap_continuation, "term51RPin(&s, 0, 1).rowAndCell().row.wrap_continuation")
 	expectEqual(t, PageCellWideWide, sc4RPin(t, s, 0, 1).RowAndCell().cell.wide)
 	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s, 1, 1).RowAndCell().cell.wide)
-	expectEqual(t, SizeCellCountInt(2), s.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), s.cursor.y)
+	expectEqual(t, SizeCellCountInt(2), s.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
 
 	// A wide character that exactly fits at the end of a row does not wrap.
 	s2 := sc4Init(t, 4, 3, 0)
@@ -2633,7 +2633,7 @@ func TestSc4_testWriteString_wide_character_at_the_last_column_leaves_a_spacer_h
 	sc4Write(t, s2, "ab世")
 	expectEqual(t, PageCellWideWide, sc4RPin(t, s2, 2, 0).RowAndCell().cell.wide)
 	expectEqual(t, PageCellWideSpacerTail, sc4RPin(t, s2, 3, 0).RowAndCell().cell.wide)
-	expect(t, s2.cursor.pending_wrap, "s2.cursor.pending_wrap")
+	expect(t, s2.Cursor.PendingWrap, "s2.cursor.pending_wrap")
 	expect(t, !sc4RPin(t, s2, 0, 0).RowAndCell().row.wrap, "!term51RPin(&s2, 0, 0).rowAndCell().row.wrap")
 
 	// A wide character when the cursor is pending-wrap at the end.
@@ -2650,7 +2650,7 @@ func TestSc4_testWriteString_zero_width_codepoints_become_graphemes(t *testing.T
 
 	sc4Write(t, s, "é̂")
 	// The cursor does not advance for zero width codepoints.
-	expectEqual(t, SizeCellCountInt(1), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.X)
 	{
 		pin := sc4RPin(t, s, 0, 0)
 		cell := pin.RowAndCell().cell
@@ -2662,7 +2662,7 @@ func TestSc4_testWriteString_zero_width_codepoints_become_graphemes(t *testing.T
 	// After a wide character the grapheme attaches to the wide head, not
 	// to its spacer tail.
 	sc4Write(t, s, "世́")
-	expectEqual(t, SizeCellCountInt(3), s.cursor.x)
+	expectEqual(t, SizeCellCountInt(3), s.Cursor.X)
 	{
 		pin := sc4RPin(t, s, 1, 0)
 		head := pin.RowAndCell().cell
@@ -2684,7 +2684,7 @@ func TestSc4_testWriteString_zero_width_codepoint_at_pending_wrap_attaches_to_th
 	defer s.Deinit()
 
 	sc4Write(t, s, "abc")
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 	sc4Write(t, s, "́")
 
 	b := sc4RPin(t, s, 1, 0)
@@ -2701,9 +2701,9 @@ func TestSc4_testWriteString_cells_take_the_cursor_style_and_protection(t *testi
 	defer s.Deinit()
 
 	zigTry(t, s.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
-	s.cursor.protected = true
-	id := s.cursor.style_id
-	expect(t, id != StyleDefaultId, "id != style.default_id")
+	s.Cursor.Protected = true
+	id := s.Cursor.StyleID
+	expect(t, id != StyleDefaultID, "id != style.default_id")
 
 	sc4Write(t, s, "a")
 	{
@@ -2713,7 +2713,7 @@ func TestSc4_testWriteString_cells_take_the_cursor_style_and_protection(t *testi
 		expect(t, rac.row.styled, "rac.row.styled")
 	}
 	{
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		// The cursor plus one cell.
 		expectEqual(t, SizeCellCountInt(2), page.styles.RefCount(id))
 	}
@@ -2726,14 +2726,14 @@ func TestSc4_testWriteString_cells_take_the_cursor_style_and_protection(t *testi
 		expectEqual(t, id, head.style_id)
 		expect(t, head.protected, "head.protected")
 		// The tail cell is protected but carries no style id itself.
-		expectEqual(t, StyleDefaultId, tail.style_id)
+		expectEqual(t, StyleDefaultID, tail.style_id)
 		expect(t, tail.protected, "tail.protected")
-		page := &s.cursor.page_pin.node.data
+		page := &s.Cursor.PagePin.Node.data
 		expectEqual(t, SizeCellCountInt(4), page.styles.RefCount(id))
 	}
 
 	// Unstyled cells do not mark the row styled.
-	s.cursor.protected = false
+	s.Cursor.Protected = false
 	zigTry(t, s.SetAttribute(SGRAttribute{Tag: SGRAttributeTagResetBold}))
 	sc4Write(t, s, "\nz")
 	expect(t, !sc4RPin(t, s, 0, 1).RowAndCell().row.styled, "!term51RPin(&s, 0, 1).rowAndCell().row.styled")
@@ -2768,9 +2768,9 @@ func TestSc4_testWriteString_cells_take_the_cursor_hyperlink(t *testing.T) {
 	s2 := sc4Init(t, 3, 3, 0)
 	defer s2.Deinit()
 	zigTry(t, s2.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
-	s2.cursor.page_pin.node.data.PauseIntegrityChecks(true)
+	s2.Cursor.PagePin.Node.data.PauseIntegrityChecks(true)
 	sc4Write(t, s2, "ab世")
-	s2.cursor.page_pin.node.data.PauseIntegrityChecks(false)
+	s2.Cursor.PagePin.Node.data.PauseIntegrityChecks(false)
 	expectEqual(t, PageCellWideSpacerHead, sc4RPin(t, s2, 2, 0).RowAndCell().cell.wide)
 	expect(t, sc4RPin(t, s2, 2, 0).RowAndCell().cell.hyperlink, "term51RPin(&s2, 2, 0).rowAndCell().cell.hyperlink")
 	expect(t, sc4RPin(t, s2, 0, 1).RowAndCell().cell.hyperlink, "term51RPin(&s2, 0, 1).rowAndCell().cell.hyperlink")
@@ -2812,28 +2812,28 @@ func TestSc4_testWriteString_newline_semantic_prompt_handling(t *testing.T) {
 	sc4Write(t, s, "a\nb\n")
 	expect(t, sc4RPin(t, s, 0, 1).RowAndCell().row.semantic_prompt == PageRowSemanticPromptNone, "term51RPin(&s, 0, 1).rowAndCell().row.semantic_prompt == .none")
 	expect(t, sc4RPin(t, s, 0, 2).RowAndCell().row.semantic_prompt == PageRowSemanticPromptNone, "term51RPin(&s, 0, 2).rowAndCell().row.semantic_prompt == .none")
-	expect(t, s.cursor.semantic_content == PageCellSemanticContentOutput, "s.cursor.semantic_content == .output")
+	expect(t, s.Cursor.SemanticContent == PageCellSemanticContentOutput, "s.cursor.semantic_content == .output")
 
 	// Input without clear-eol: the next row becomes a prompt continuation
 	// and the content stays input.
 	s.CursorSetSemanticContent(sc4Input(ScreenCursorSetSemanticContentInputClearExplicit))
 	sc4Write(t, s, "c\n")
 	expect(t, sc4RPin(t, s, 0, 3).RowAndCell().row.semantic_prompt == PageRowSemanticPromptPromptContinuation, "term51RPin(&s, 0, 3).rowAndCell().row.semantic_prompt == .prompt_continuation")
-	expect(t, s.cursor.semantic_content == PageCellSemanticContentInput, "s.cursor.semantic_content == .input")
+	expect(t, s.Cursor.SemanticContent == PageCellSemanticContentInput, "s.cursor.semantic_content == .input")
 
 	// Prompt: same.
 	s.CursorSetSemanticContent(sc4Prompt(OSCParsersSemanticPromptPromptKindInitial))
 	sc4Write(t, s, "d\n")
 	expect(t, sc4RPin(t, s, 0, 4).RowAndCell().row.semantic_prompt == PageRowSemanticPromptPromptContinuation, "term51RPin(&s, 0, 4).rowAndCell().row.semantic_prompt == .prompt_continuation")
-	expect(t, s.cursor.semantic_content == PageCellSemanticContentPrompt, "s.cursor.semantic_content == .prompt")
+	expect(t, s.Cursor.SemanticContent == PageCellSemanticContentPrompt, "s.cursor.semantic_content == .prompt")
 
 	// Input with clear-eol: the cursor reverts to output and the row is
 	// left unmarked.
 	s.CursorSetSemanticContent(sc4Input(ScreenCursorSetSemanticContentInputClearEol))
 	sc4Write(t, s, "e\n")
 	expect(t, sc4RPin(t, s, 0, 5).RowAndCell().row.semantic_prompt == PageRowSemanticPromptNone, "term51RPin(&s, 0, 5).rowAndCell().row.semantic_prompt == .none")
-	expect(t, s.cursor.semantic_content == PageCellSemanticContentOutput, "s.cursor.semantic_content == .output")
-	expect(t, !s.cursor.semantic_content_clear_eol, "!s.cursor.semantic_content_clear_eol")
+	expect(t, s.Cursor.SemanticContent == PageCellSemanticContentOutput, "s.cursor.semantic_content == .output")
+	expect(t, !s.Cursor.SemanticContentClearEol, "!s.cursor.semantic_content_clear_eol")
 }
 
 // Zig: test "term51: testWriteString: soft wrap semantic prompt handling"
@@ -2869,7 +2869,7 @@ func TestSc4_testWriteString_soft_wrap_scrolls_at_the_bottom(t *testing.T) {
 	expectEqualStrings(t, "def\nghi", string(out))
 	expect(t, sc4RPin(t, s, 0, 0).RowAndCell().row.wrap, "term51RPin(&s, 0, 0).rowAndCell().row.wrap")
 	expect(t, sc4RPin(t, s, 0, 1).RowAndCell().row.wrap_continuation, "term51RPin(&s, 0, 1).rowAndCell().row.wrap_continuation")
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 }
 
 // Go-only: panic test: Screen.testWriteString: pending wrap with the cursor not in the last column
@@ -2878,7 +2878,7 @@ func TestSc4_panic_testWriteString_pending_wrap_not_in_last_column(t *testing.T)
 	// No Deinit: the screen is left in the state the panic stopped it in.
 	testStdCapacity(t)
 	s := sc4Init(t, 5, 3, 0)
-	s.cursor.pending_wrap = true
+	s.Cursor.PendingWrap = true
 	sc4ExpectPanic(t, func() { _ = s.TestWriteString([]uint8("a")) })
 }
 

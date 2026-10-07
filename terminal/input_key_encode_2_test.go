@@ -172,12 +172,12 @@ func ke2Row(k InputKeyKey) (ke2KeyRow, bool) {
 // ke2Mods is term51ABMods.
 func ke2Mods(bits uint8) InputKeyMods {
 	return InputKeyMods{
-		shift:     (bits & 1) != 0,
-		ctrl:      (bits & 2) != 0,
-		alt:       (bits & 4) != 0,
-		super:     (bits & 8) != 0,
-		caps_lock: (bits & 16) != 0,
-		num_lock:  (bits & 32) != 0,
+		Shift:    (bits & 1) != 0,
+		Ctrl:     (bits & 2) != 0,
+		Alt:      (bits & 4) != 0,
+		Super:    (bits & 8) != 0,
+		CapsLock: (bits & 16) != 0,
+		NumLock:  (bits & 32) != 0,
 	}
 }
 
@@ -208,17 +208,17 @@ func ke2KittyValue(bits uint8) uint16 {
 
 // The term51AB option constants.
 
-var ke2Dis = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true}}
-var ke2Events = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{report_events: true}}
-var ke2AltsOnly = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{report_alternates: true}}
-var ke2AllOnly = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{report_all: true}}
-var ke2AssocOnly = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{report_associated: true}}
-var ke2DisAll = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_all: true}}
-var ke2DisEvents = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_events: true}}
-var ke2EventsAll = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_events: true, report_all: true}}
-var ke2Alts = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_alternates: true, report_all: true}}
-var ke2Assoc = InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{disambiguate: true, report_associated: true, report_all: true}}
-var ke2Full = InputKeyEncodeOptions{kitty_flags: KittyKeyFlagsTrue}
+var ke2Dis = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{Disambiguate: true}}
+var ke2Events = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{ReportEvents: true}}
+var ke2AltsOnly = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{ReportAlternates: true}}
+var ke2AllOnly = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{ReportAll: true}}
+var ke2AssocOnly = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{ReportAssociated: true}}
+var ke2DisAll = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAll: true}}
+var ke2DisEvents = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{Disambiguate: true, ReportEvents: true}}
+var ke2EventsAll = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{Disambiguate: true, ReportEvents: true, ReportAll: true}}
+var ke2Alts = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAlternates: true, ReportAll: true}}
+var ke2Assoc = InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{Disambiguate: true, ReportAssociated: true, ReportAll: true}}
+var ke2Full = InputKeyEncodeOptions{KittyFlags: KittyKeyFlagsTrue}
 
 // ke2Rows is term51ABRows: expected report-all encoding (no mods) of every key in the Kitty table.
 var ke2Rows = []ke2KeyRow{
@@ -310,7 +310,7 @@ func TestKe2_legacy_hu_layout_ctrl_sends_proper_codepoint(t *testing.T) {
 	testPlatform(t, "linux")
 	var buf [128]uint8
 	writer := oscWriterFixed(buf[:])
-	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBracketLeft, mods: InputKeyMods{ctrl: true}, utf8: []uint8("ő"), unshifted_codepoint: 337}, InputKeyEncodeOptions{}))
+	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBracketLeft, Mods: InputKeyMods{Ctrl: true}, UTF8: []uint8("ő"), UnshiftedCodepoint: 337}, InputKeyEncodeOptions{}))
 	actual := writer.buffered()
 	expectEqualStrings(t, "[337;5u", string(actual[1:]))
 }
@@ -322,10 +322,10 @@ func TestKe2_legacy_super_only_on_macOS_with_text(t *testing.T) {
 	var buf [128]uint8
 	writer := oscWriterFixed(buf[:])
 	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyB,
-		utf8:   []uint8("b"),
-		mods:   InputKeyMods{super: true},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyB,
+		UTF8:   []uint8("b"),
+		Mods:   InputKeyMods{Super: true},
 	}, InputKeyEncodeOptions{}))
 	expectEqualStrings(t, "", string(writer.buffered()))
 }
@@ -337,10 +337,10 @@ func TestKe2_legacy_super_and_other_mods_on_macOS_with_text(t *testing.T) {
 	var buf [128]uint8
 	writer := oscWriterFixed(buf[:])
 	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{
-		action: InputKeyActionPress,
-		key:    InputKeyKeyKeyB,
-		utf8:   []uint8("B"),
-		mods:   InputKeyMods{super: true, shift: true},
+		Action: InputKeyActionPress,
+		Key:    InputKeyKeyKeyB,
+		UTF8:   []uint8("B"),
+		Mods:   InputKeyMods{Super: true, Shift: true},
 	}, InputKeyEncodeOptions{}))
 	expectEqualStrings(t, "", string(writer.buffered()))
 }
@@ -351,10 +351,10 @@ func TestKe2_legacy_backspace_with_DEL_utf8(t *testing.T) {
 	var buf [128]uint8
 	writer := oscWriterFixed(buf[:])
 	zigTry(t, inputKeyEncodeLegacy(&writer, InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyBackspace,
-		utf8:                []uint8{0x7F},
-		unshifted_codepoint: 0x08,
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyBackspace,
+		UTF8:               []uint8{0x7F},
+		UnshiftedCodepoint: 0x08,
 	}, InputKeyEncodeOptions{}))
 	expectEqualStrings(t, "\x7F", string(writer.buffered()))
 }
@@ -362,21 +362,21 @@ func TestKe2_legacy_backspace_with_DEL_utf8(t *testing.T) {
 // Zig: test "ctrlseq: normal ctrl c"
 func TestKe2_ctrlseq_normal_ctrl_c(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{ctrl: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{Ctrl: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: normal ctrl c, right control"
 func TestKe2_ctrlseq_normal_ctrl_c_right_control(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{ctrl: true, sides: InputKeyModsModsSide{ctrl: InputKeyModsModSideRight}})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{Ctrl: true, Sides: InputKeyModsModsSide{Ctrl: InputKeyModsModSideRight}})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: alt should be allowed"
 func TestKe2_ctrlseq_alt_should_be_allowed(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{alt: true, ctrl: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("c"), 'c', InputKeyMods{Alt: true, Ctrl: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
@@ -389,49 +389,49 @@ func TestKe2_ctrlseq_no_ctrl_does_nothing(t *testing.T) {
 // Zig: test "ctrlseq: shifted non-character"
 func TestKe2_ctrlseq_shifted_non_character(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("_"), '-', InputKeyMods{ctrl: true, shift: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("_"), '-', InputKeyMods{Ctrl: true, Shift: true})
 	expectEqual(t, uint8(0x1F), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: caps ascii letter"
 func TestKe2_ctrlseq_caps_ascii_letter(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{ctrl: true, caps_lock: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{Ctrl: true, CapsLock: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: shift does not generate ctrl seq"
 func TestKe2_ctrlseq_shift_does_not_generate_ctrl_seq(t *testing.T) {
 	testPlatform(t, "linux")
-	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{shift: true}).Valid, "ctrlSeq(.unidentified, \"C\", 'c', .{ .shift = true }) == null")
-	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{shift: true, ctrl: true}).Valid, "ctrlSeq(.unidentified, \"C\", 'c', .{ .shift = true, .ctrl = true }) == null")
+	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{Shift: true}).Valid, "ctrlSeq(.unidentified, \"C\", 'c', .{ .shift = true }) == null")
+	expect(t, !inputKeyEncodeCtrlSeq(InputKeyKeyUnidentified, []uint8("C"), 'c', InputKeyMods{Shift: true, Ctrl: true}).Valid, "ctrlSeq(.unidentified, \"C\", 'c', .{ .shift = true, .ctrl = true }) == null")
 }
 
 // Zig: test "ctrlseq: russian ctrl c"
 func TestKe2_ctrlseq_russian_ctrl_c(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{ctrl: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{Ctrl: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: russian shifted ctrl c"
 func TestKe2_ctrlseq_russian_shifted_ctrl_c(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{ctrl: true, shift: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{Ctrl: true, Shift: true})
 	expect(t, !seq.Valid, "seq == null")
 }
 
 // Zig: test "ctrlseq: russian alt ctrl c"
 func TestKe2_ctrlseq_russian_alt_ctrl_c(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{ctrl: true, alt: true})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 0x0441, InputKeyMods{Ctrl: true, Alt: true})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
 // Zig: test "ctrlseq: right ctrl c"
 func TestKe2_ctrlseq_right_ctrl_c(t *testing.T) {
 	testPlatform(t, "linux")
-	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 'c', InputKeyMods{ctrl: true, sides: InputKeyModsModsSide{ctrl: InputKeyModsModSideRight}})
+	seq := inputKeyEncodeCtrlSeq(InputKeyKeyKeyC, []uint8("с"), 'c', InputKeyMods{Ctrl: true, Sides: InputKeyModsModsSide{Ctrl: InputKeyModsModSideRight}})
 	expectEqual(t, uint8(0x03), zigUnwrap(t, seq))
 }
 
@@ -443,26 +443,26 @@ func TestKe2_term51_Options_fromTerminal_terminal_defaults(t *testing.T) {
 
 	o := InputKeyEncodeOptionsFromTerminal(term)
 	// Modes 1036 and 1035 default to on, the others to off.
-	expect(t, o.alt_esc_prefix, "o.alt_esc_prefix")
-	expect(t, o.ignore_keypad_with_numlock, "o.ignore_keypad_with_numlock")
-	expect(t, !o.cursor_key_application, "!o.cursor_key_application")
-	expect(t, !o.keypad_key_application, "!o.keypad_key_application")
-	expect(t, !o.modify_other_keys_state_2, "!o.modify_other_keys_state_2")
-	expectEqual(t, uint8(0), o.kitty_flags.Int())
-	expectEqual(t, InputConfigOptionAsAltFalse, o.macos_option_as_alt)
+	expect(t, o.AltEscPrefix, "o.alt_esc_prefix")
+	expect(t, o.IgnoreKeypadWithNumlock, "o.ignore_keypad_with_numlock")
+	expect(t, !o.CursorKeyApplication, "!o.cursor_key_application")
+	expect(t, !o.KeypadKeyApplication, "!o.keypad_key_application")
+	expect(t, !o.ModifyOtherKeysState2, "!o.modify_other_keys_state_2")
+	expectEqual(t, uint8(0), o.KittyFlags.Int())
+	expectEqual(t, InputConfigOptionAsAltFalse, o.MacosOptionAsAlt)
 }
 
 // Zig: test "term51: Options.fromTerminal: Options.default values"
 func TestKe2_term51_Options_fromTerminal_Options_default_values(t *testing.T) {
 	testPlatform(t, "linux")
 	d := InputKeyEncodeOptionsDefault
-	expect(t, !d.cursor_key_application, "!d.cursor_key_application")
-	expect(t, !d.keypad_key_application, "!d.keypad_key_application")
-	expect(t, !d.ignore_keypad_with_numlock, "!d.ignore_keypad_with_numlock")
-	expect(t, !d.alt_esc_prefix, "!d.alt_esc_prefix")
-	expect(t, !d.modify_other_keys_state_2, "!d.modify_other_keys_state_2")
-	expectEqual(t, uint8(0), d.kitty_flags.Int())
-	expectEqual(t, InputConfigOptionAsAltFalse, d.macos_option_as_alt)
+	expect(t, !d.CursorKeyApplication, "!d.cursor_key_application")
+	expect(t, !d.KeypadKeyApplication, "!d.keypad_key_application")
+	expect(t, !d.IgnoreKeypadWithNumlock, "!d.ignore_keypad_with_numlock")
+	expect(t, !d.AltEscPrefix, "!d.alt_esc_prefix")
+	expect(t, !d.ModifyOtherKeysState2, "!d.modify_other_keys_state_2")
+	expectEqual(t, uint8(0), d.KittyFlags.Int())
+	expectEqual(t, InputConfigOptionAsAltFalse, d.MacosOptionAsAlt)
 
 	// The struct field defaults match Options.default.
 	e := InputKeyEncodeOptions{}
@@ -475,58 +475,58 @@ func TestKe2_term51_Options_fromTerminal_each_mode_maps_to_its_own_field(t *test
 	term := ke2Terminal(t)
 	defer term.Deinit()
 	// cursor_keys -> cursor_key_application only
-	term.modes.Set(ModesModeCursorKeys, true)
+	term.Modes.Set(ModesModeCursorKeys, true)
 	o := InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, o.cursor_key_application, "o.cursor_key_application")
-	expect(t, !o.keypad_key_application, "!o.keypad_key_application")
-	expect(t, o.alt_esc_prefix, "o.alt_esc_prefix")
-	expect(t, o.ignore_keypad_with_numlock, "o.ignore_keypad_with_numlock")
-	expect(t, !o.modify_other_keys_state_2, "!o.modify_other_keys_state_2")
-	term.modes.Set(ModesModeCursorKeys, false)
+	expect(t, o.CursorKeyApplication, "o.cursor_key_application")
+	expect(t, !o.KeypadKeyApplication, "!o.keypad_key_application")
+	expect(t, o.AltEscPrefix, "o.alt_esc_prefix")
+	expect(t, o.IgnoreKeypadWithNumlock, "o.ignore_keypad_with_numlock")
+	expect(t, !o.ModifyOtherKeysState2, "!o.modify_other_keys_state_2")
+	term.Modes.Set(ModesModeCursorKeys, false)
 	// keypad_keys -> keypad_key_application only
-	term.modes.Set(ModesModeKeypadKeys, true)
+	term.Modes.Set(ModesModeKeypadKeys, true)
 	o = InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, !o.cursor_key_application, "!o.cursor_key_application")
-	expect(t, o.keypad_key_application, "o.keypad_key_application")
-	expect(t, o.alt_esc_prefix, "o.alt_esc_prefix")
-	expect(t, o.ignore_keypad_with_numlock, "o.ignore_keypad_with_numlock")
-	term.modes.Set(ModesModeKeypadKeys, false)
+	expect(t, !o.CursorKeyApplication, "!o.cursor_key_application")
+	expect(t, o.KeypadKeyApplication, "o.keypad_key_application")
+	expect(t, o.AltEscPrefix, "o.alt_esc_prefix")
+	expect(t, o.IgnoreKeypadWithNumlock, "o.ignore_keypad_with_numlock")
+	term.Modes.Set(ModesModeKeypadKeys, false)
 	// ignore_keypad_with_numlock (off)
-	term.modes.Set(ModesModeIgnoreKeypadWithNumlock, false)
+	term.Modes.Set(ModesModeIgnoreKeypadWithNumlock, false)
 	o = InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, !o.ignore_keypad_with_numlock, "!o.ignore_keypad_with_numlock")
-	expect(t, o.alt_esc_prefix, "o.alt_esc_prefix")
-	expect(t, !o.cursor_key_application, "!o.cursor_key_application")
-	expect(t, !o.keypad_key_application, "!o.keypad_key_application")
-	term.modes.Set(ModesModeIgnoreKeypadWithNumlock, true)
+	expect(t, !o.IgnoreKeypadWithNumlock, "!o.ignore_keypad_with_numlock")
+	expect(t, o.AltEscPrefix, "o.alt_esc_prefix")
+	expect(t, !o.CursorKeyApplication, "!o.cursor_key_application")
+	expect(t, !o.KeypadKeyApplication, "!o.keypad_key_application")
+	term.Modes.Set(ModesModeIgnoreKeypadWithNumlock, true)
 	// alt_esc_prefix (off)
-	term.modes.Set(ModesModeAltEscPrefix, false)
+	term.Modes.Set(ModesModeAltEscPrefix, false)
 	o = InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, !o.alt_esc_prefix, "!o.alt_esc_prefix")
-	expect(t, o.ignore_keypad_with_numlock, "o.ignore_keypad_with_numlock")
-	term.modes.Set(ModesModeAltEscPrefix, true)
+	expect(t, !o.AltEscPrefix, "!o.alt_esc_prefix")
+	expect(t, o.IgnoreKeypadWithNumlock, "o.ignore_keypad_with_numlock")
+	term.Modes.Set(ModesModeAltEscPrefix, true)
 	// modifyOtherKeys state 2 comes from the terminal flags, not a mode
-	term.flags.modify_other_keys_2 = true
+	term.Flags.ModifyOtherKeys2 = true
 	o = InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, o.modify_other_keys_state_2, "o.modify_other_keys_state_2")
-	expect(t, !o.cursor_key_application, "!o.cursor_key_application")
-	expect(t, !o.keypad_key_application, "!o.keypad_key_application")
-	term.flags.modify_other_keys_2 = false
+	expect(t, o.ModifyOtherKeysState2, "o.modify_other_keys_state_2")
+	expect(t, !o.CursorKeyApplication, "!o.cursor_key_application")
+	expect(t, !o.KeypadKeyApplication, "!o.keypad_key_application")
+	term.Flags.ModifyOtherKeys2 = false
 	o = InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, !o.modify_other_keys_state_2, "!o.modify_other_keys_state_2")
+	expect(t, !o.ModifyOtherKeysState2, "!o.modify_other_keys_state_2")
 	// All together
-	term.modes.Set(ModesModeCursorKeys, true)
-	term.modes.Set(ModesModeKeypadKeys, true)
-	term.modes.Set(ModesModeIgnoreKeypadWithNumlock, false)
-	term.modes.Set(ModesModeAltEscPrefix, false)
-	term.flags.modify_other_keys_2 = true
+	term.Modes.Set(ModesModeCursorKeys, true)
+	term.Modes.Set(ModesModeKeypadKeys, true)
+	term.Modes.Set(ModesModeIgnoreKeypadWithNumlock, false)
+	term.Modes.Set(ModesModeAltEscPrefix, false)
+	term.Flags.ModifyOtherKeys2 = true
 	o = InputKeyEncodeOptionsFromTerminal(term)
-	expect(t, o.cursor_key_application, "o.cursor_key_application")
-	expect(t, o.keypad_key_application, "o.keypad_key_application")
-	expect(t, !o.ignore_keypad_with_numlock, "!o.ignore_keypad_with_numlock")
-	expect(t, !o.alt_esc_prefix, "!o.alt_esc_prefix")
-	expect(t, o.modify_other_keys_state_2, "o.modify_other_keys_state_2")
-	expectEqual(t, InputConfigOptionAsAltFalse, o.macos_option_as_alt)
+	expect(t, o.CursorKeyApplication, "o.cursor_key_application")
+	expect(t, o.KeypadKeyApplication, "o.keypad_key_application")
+	expect(t, !o.IgnoreKeypadWithNumlock, "!o.ignore_keypad_with_numlock")
+	expect(t, !o.AltEscPrefix, "!o.alt_esc_prefix")
+	expect(t, o.ModifyOtherKeysState2, "o.modify_other_keys_state_2")
+	expectEqual(t, InputConfigOptionAsAltFalse, o.MacosOptionAsAlt)
 }
 
 // Zig: test "term51: Options.fromTerminal: kitty flags follow the active screen stack"
@@ -537,46 +537,46 @@ func TestKe2_term51_Options_fromTerminal_kitty_flags_follow_the_active_screen_st
 
 	// Each flag alone.
 	flags := []KittyKeyFlags{
-		{disambiguate: true},
-		{report_events: true},
-		{report_alternates: true},
-		{report_all: true},
-		{report_associated: true},
+		{Disambiguate: true},
+		{ReportEvents: true},
+		{ReportAlternates: true},
+		{ReportAll: true},
+		{ReportAssociated: true},
 	}
 	for i, f := range flags {
-		term.screens.active.kitty_keyboard.Set(KittyKeySetModeSet, f)
+		term.Screens.Active.KittyKeyboard.Set(KittyKeySetModeSet, f)
 		o := InputKeyEncodeOptionsFromTerminal(term)
-		expectEqual(t, f, o.kitty_flags)
-		expectEqual(t, uint8(1)<<i, o.kitty_flags.Int())
+		expectEqual(t, f, o.KittyFlags)
+		expectEqual(t, uint8(1)<<i, o.KittyFlags.Int())
 	}
 
 	// All flags.
-	term.screens.active.kitty_keyboard.Set(KittyKeySetModeSet, KittyKeyFlagsTrue)
-	expectEqual(t, uint8(0b11111), InputKeyEncodeOptionsFromTerminal(term).kitty_flags.Int())
+	term.Screens.Active.KittyKeyboard.Set(KittyKeySetModeSet, KittyKeyFlagsTrue)
+	expectEqual(t, uint8(0b11111), InputKeyEncodeOptionsFromTerminal(term).KittyFlags.Int())
 
 	// Push/pop changes the current value.
-	term.screens.active.kitty_keyboard.Push(KittyKeyFlags{report_all: true})
+	term.Screens.Active.KittyKeyboard.Push(KittyKeyFlags{ReportAll: true})
 	expectEqual(t,
 		uint8(0b01000),
-		InputKeyEncodeOptionsFromTerminal(term).kitty_flags.Int(),
+		InputKeyEncodeOptionsFromTerminal(term).KittyFlags.Int(),
 	)
-	term.screens.active.kitty_keyboard.Pop(1)
-	expectEqual(t, uint8(0b11111), InputKeyEncodeOptionsFromTerminal(term).kitty_flags.Int())
+	term.Screens.Active.KittyKeyboard.Pop(1)
+	expectEqual(t, uint8(0b11111), InputKeyEncodeOptionsFromTerminal(term).KittyFlags.Int())
 
 	// The alternate screen has its own stack.
 	_, err := term.SwitchScreen(ScreenSetKeyAlternate)
 	zigTry(t, err)
-	expectEqual(t, uint8(0), InputKeyEncodeOptionsFromTerminal(term).kitty_flags.Int())
-	term.screens.active.kitty_keyboard.Set(KittyKeySetModeSet, KittyKeyFlags{report_events: true})
-	expectEqual(t, uint8(0b10), InputKeyEncodeOptionsFromTerminal(term).kitty_flags.Int())
+	expectEqual(t, uint8(0), InputKeyEncodeOptionsFromTerminal(term).KittyFlags.Int())
+	term.Screens.Active.KittyKeyboard.Set(KittyKeySetModeSet, KittyKeyFlags{ReportEvents: true})
+	expectEqual(t, uint8(0b10), InputKeyEncodeOptionsFromTerminal(term).KittyFlags.Int())
 	_, err = term.SwitchScreen(ScreenSetKeyPrimary)
 	zigTry(t, err)
-	expectEqual(t, uint8(0b11111), InputKeyEncodeOptionsFromTerminal(term).kitty_flags.Int())
+	expectEqual(t, uint8(0b11111), InputKeyEncodeOptionsFromTerminal(term).KittyFlags.Int())
 
 	// The option feeds straight into the encoder.
 	var buf [32]uint8
 	w := oscWriterFixed(buf[:])
-	zigTry(t, inputKeyEncodeEncode(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, InputKeyEncodeOptionsFromTerminal(term)))
+	zigTry(t, inputKeyEncodeEncode(&w, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, InputKeyEncodeOptionsFromTerminal(term)))
 	expectEqualStrings(t, "\x1b[27u", string(w.buffered()))
 }
 
@@ -585,14 +585,14 @@ func TestKe2_term51_CsiUMods_fromInput_every_shift_ctrl_alt_combination(t *testi
 	testPlatform(t, "linux")
 	for bits := uint8(0); ; bits++ {
 		mods := InputKeyMods{
-			shift: (bits & 1) != 0,
-			alt:   (bits & 2) != 0,
-			ctrl:  (bits & 4) != 0,
+			Shift: (bits & 1) != 0,
+			Alt:   (bits & 2) != 0,
+			Ctrl:  (bits & 4) != 0,
 		}
 		c := inputKeyEncodeCsiUModsFromInput(mods)
-		expectEqual(t, mods.shift, c.shift)
-		expectEqual(t, mods.alt, c.alt)
-		expectEqual(t, mods.ctrl, c.ctrl)
+		expectEqual(t, mods.Shift, c.shift)
+		expectEqual(t, mods.Alt, c.alt)
+		expectEqual(t, mods.Ctrl, c.ctrl)
 		// The bit layout of CsiUMods is shift=1, alt=2, ctrl=4.
 		expectEqual(t, bits, c.Int())
 		if bits == 7 {
@@ -605,10 +605,10 @@ func TestKe2_term51_CsiUMods_fromInput_every_shift_ctrl_alt_combination(t *testi
 func TestKe2_term51_CsiUMods_fromInput_ignores_super_locks_and_sides(t *testing.T) {
 	testPlatform(t, "linux")
 	c := inputKeyEncodeCsiUModsFromInput(InputKeyMods{
-		super:     true,
-		caps_lock: true,
-		num_lock:  true,
-		sides:     InputKeyModsModsSide{shift: InputKeyModsModSideRight, ctrl: InputKeyModsModSideRight, alt: InputKeyModsModSideRight, super: InputKeyModsModSideRight},
+		Super:    true,
+		CapsLock: true,
+		NumLock:  true,
+		Sides:    InputKeyModsModsSide{Shift: InputKeyModsModSideRight, Ctrl: InputKeyModsModSideRight, Alt: InputKeyModsModSideRight, Super: InputKeyModsModSideRight},
 	})
 	expectEqual(t, inputKeyEncodeCsiUMods{}, c)
 	expectEqual(t, uint8(0), c.Int())
@@ -616,9 +616,9 @@ func TestKe2_term51_CsiUMods_fromInput_ignores_super_locks_and_sides(t *testing.
 
 	// Sides do not alter the set bits either.
 	d := inputKeyEncodeCsiUModsFromInput(InputKeyMods{
-		shift: true,
-		ctrl:  true,
-		sides: InputKeyModsModsSide{shift: InputKeyModsModSideRight, ctrl: InputKeyModsModSideRight},
+		Shift: true,
+		Ctrl:  true,
+		Sides: InputKeyModsModsSide{Shift: InputKeyModsModSideRight, Ctrl: InputKeyModsModSideRight},
 	})
 	expectEqual(t, uint8(0b101), d.Int())
 
@@ -660,15 +660,15 @@ func TestKe2_term51_KittyMods_fromInput_each_modifier_alone(t *testing.T) {
 	none := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{})
 	expectEqual(t, uint8(0), none.Int())
 
-	expectEqual(t, uint8(1), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{shift: true}).Int())
-	expectEqual(t, uint8(2), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{alt: true}).Int())
+	expectEqual(t, uint8(1), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{Shift: true}).Int())
+	expectEqual(t, uint8(2), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{Alt: true}).Int())
 	// Note: input Mods has ctrl before alt, but Kitty has alt before ctrl.
-	expectEqual(t, uint8(4), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{ctrl: true}).Int())
-	expectEqual(t, uint8(8), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{super: true}).Int())
-	expectEqual(t, uint8(64), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{caps_lock: true}).Int())
-	expectEqual(t, uint8(128), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{num_lock: true}).Int())
+	expectEqual(t, uint8(4), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{Ctrl: true}).Int())
+	expectEqual(t, uint8(8), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{Super: true}).Int())
+	expectEqual(t, uint8(64), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{CapsLock: true}).Int())
+	expectEqual(t, uint8(128), inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{NumLock: true}).Int())
 
-	s := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{shift: true})
+	s := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, InputKeyMods{Shift: true})
 	expect(t, s.shift && !s.alt && !s.ctrl && !s.super, "s.shift and !s.alt and !s.ctrl and !s.super")
 	expect(t, !s.hyper && !s.meta && !s.caps_lock && !s.num_lock, "!s.hyper and !s.meta and !s.caps_lock and !s.num_lock")
 }
@@ -688,7 +688,7 @@ func TestKe2_term51_KittyMods_fromInput_all_64_combinations_hyper_and_meta_never
 // Zig: test "term51: KittyMods.fromInput: ignores action, key, sides and padding"
 func TestKe2_term51_KittyMods_fromInput_ignores_action_key_sides_and_padding(t *testing.T) {
 	testPlatform(t, "linux")
-	mods := InputKeyMods{ctrl: true, shift: true}
+	mods := InputKeyMods{Ctrl: true, Shift: true}
 	base := inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, mods)
 	expectEqual(t, uint8(5), base.Int())
 
@@ -700,7 +700,7 @@ func TestKe2_term51_KittyMods_fromInput_ignores_action_key_sides_and_padding(t *
 
 	// Sides do not matter.
 	sided := mods
-	sided.sides = InputKeyModsModsSide{shift: InputKeyModsModSideRight, ctrl: InputKeyModsModSideRight, alt: InputKeyModsModSideRight, super: InputKeyModsModSideRight}
+	sided.Sides = InputKeyModsModsSide{Shift: InputKeyModsModSideRight, Ctrl: InputKeyModsModSideRight, Alt: InputKeyModsModSideRight, Super: InputKeyModsModSideRight}
 	expectEqual(t, base, inputKeyEncodeKittyModsFromInput(InputKeyActionPress, InputKeyKeyKeyA, sided))
 
 	// Padding bits are ignored.
@@ -976,24 +976,24 @@ func TestKe2_term51_kitty_disabled_flags_fall_back_to_legacy(t *testing.T) {
 	testPlatform(t, "linux")
 	none := InputKeyEncodeOptions{}
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts: none, want: "\x1b"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEscape}, opts: none, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyEscape}, opts: none, want: "\x1b"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: none, want: "\x1b[A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: InputKeyEncodeOptions{cursor_key_application: true}, want: "\x1bOA"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: none, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{ctrl: true}, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: none, want: "\x01"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, opts: none, want: "\x1b"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEscape}, opts: none, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyEscape}, opts: none, want: "\x1b"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp}, opts: none, want: "\x1b[A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp}, opts: InputKeyEncodeOptions{CursorKeyApplication: true}, want: "\x1bOA"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: none, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Mods: InputKeyMods{Ctrl: true}, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: none, want: "\x01"},
 		// Legacy with a control character as the text of ctrl+a falls to CSI u.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{ctrl: true}, utf8: []uint8("\x01"), unshifted_codepoint: 'a'}, opts: none, want: "\x1b[1;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true, utf8: []uint8("a")}, opts: none, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF1}, opts: none, want: "\x1bOP"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Mods: InputKeyMods{Ctrl: true}, UTF8: []uint8("\x01"), UnshiftedCodepoint: 'a'}, opts: none, want: "\x1b[1;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true, UTF8: []uint8("a")}, opts: none, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyF1}, opts: none, want: "\x1bOP"},
 	})
 }
 
 // Zig: test "term51: kitty: release events need report_events"
 func TestKe2_term51_kitty_release_events_need_report_events(t *testing.T) {
 	testPlatform(t, "linux")
-	a_rel := InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}
+	a_rel := InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}
 	// Without report_events nothing is sent, whatever else is set.
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: a_rel, opts: ke2Dis, want: ""},
@@ -1002,19 +1002,19 @@ func TestKe2_term51_kitty_release_events_need_report_events(t *testing.T) {
 		{ev: a_rel, opts: ke2Alts, want: ""},
 		{ev: a_rel, opts: ke2Assoc, want: ""},
 		{ev: a_rel, opts: ke2AltsOnly, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEscape}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyArrowUp}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyShiftLeft}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEscape}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyArrowUp}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyShiftLeft}, opts: ke2DisAll, want: ""},
 		// With report_events they are encoded, always with an explicit event.
 		{ev: a_rel, opts: ke2Events, want: "\x1b[97;1:3u"},
 		{ev: a_rel, opts: ke2DisEvents, want: "\x1b[97;1:3u"},
 		{ev: a_rel, opts: ke2EventsAll, want: "\x1b[97;1:3u"},
 		{ev: a_rel, opts: ke2Full, want: "\x1b[97;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyArrowUp}, opts: ke2Events, want: "\x1b[1;1:3A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyDelete}, opts: ke2Events, want: "\x1b[3;1:3~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyArrowUp, mods: InputKeyMods{shift: true}}, opts: ke2Events, want: "\x1b[1;2:3A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyArrowUp}, opts: ke2Events, want: "\x1b[1;1:3A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyDelete}, opts: ke2Events, want: "\x1b[3;1:3~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyArrowUp, Mods: InputKeyMods{Shift: true}}, opts: ke2Events, want: "\x1b[1;2:3A"},
 	})
 }
 
@@ -1022,19 +1022,19 @@ func TestKe2_term51_kitty_release_events_need_report_events(t *testing.T) {
 func TestKe2_term51_kitty_release_of_enter_backspace_and_tab_needs_report_all(t *testing.T) {
 	testPlatform(t, "linux")
 	for _, k := range []InputKeyKey{InputKeyKeyEnter, InputKeyKeyBackspace, InputKeyKeyTab} {
-		ev := InputKeyKeyEvent{action: InputKeyActionRelease, key: k}
+		ev := InputKeyKeyEvent{Action: InputKeyActionRelease, Key: k}
 		ke2Expect(t, inputKeyEncodeKitty, "", ev, ke2Events)
 		ke2Expect(t, inputKeyEncodeKitty, "", ev, ke2DisEvents)
-		ke2Expect(t, inputKeyEncodeKitty, "", ev, InputKeyEncodeOptions{kitty_flags: KittyKeyFlags{report_events: true, report_alternates: true, report_associated: true}})
+		ke2Expect(t, inputKeyEncodeKitty, "", ev, InputKeyEncodeOptions{KittyFlags: KittyKeyFlags{ReportEvents: true, ReportAlternates: true, ReportAssociated: true}})
 	}
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter}, opts: ke2EventsAll, want: "\x1b[13;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyBackspace}, opts: ke2EventsAll, want: "\x1b[127;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyTab}, opts: ke2EventsAll, want: "\x1b[9;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter, mods: InputKeyMods{shift: true}}, opts: ke2EventsAll, want: "\x1b[13;2:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter}, opts: ke2EventsAll, want: "\x1b[13;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyBackspace}, opts: ke2EventsAll, want: "\x1b[127;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyTab}, opts: ke2EventsAll, want: "\x1b[9;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter, Mods: InputKeyMods{Shift: true}}, opts: ke2EventsAll, want: "\x1b[13;2:3u"},
 		// Other keys that merely look like them still encode.
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyNumpadEnter}, opts: ke2Events, want: "\x1b[57414;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyNumpadEnter}, opts: ke2Events, want: "\x1b[57414;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27;1:3u"},
 	})
 }
 
@@ -1043,24 +1043,24 @@ func TestKe2_term51_kitty_press_and_repeat_events(t *testing.T) {
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// report_events: press has no ":1" in the full form, repeat does.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27;1:2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{ctrl: true, shift: true}}, opts: ke2Events, want: "\x1b[27;6u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyEscape, mods: InputKeyMods{ctrl: true, shift: true}}, opts: ke2Events, want: "\x1b[27;6:2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyEscape}, opts: ke2Events, want: "\x1b[27;1:2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{Ctrl: true, Shift: true}}, opts: ke2Events, want: "\x1b[27;6u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyEscape, Mods: InputKeyMods{Ctrl: true, Shift: true}}, opts: ke2Events, want: "\x1b[27;6:2u"},
 		// The special form always carries the event.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: ke2Events, want: "\x1b[1;1:1A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyArrowUp}, opts: ke2Events, want: "\x1b[1;1:2A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDelete}, opts: ke2Events, want: "\x1b[3~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyDelete}, opts: ke2Events, want: "\x1b[3;1:2~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp}, opts: ke2Events, want: "\x1b[1;1:1A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyArrowUp}, opts: ke2Events, want: "\x1b[1;1:2A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyDelete}, opts: ke2Events, want: "\x1b[3~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyDelete}, opts: ke2Events, want: "\x1b[3;1:2~"},
 		// Without report_events repeat looks like press.
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyEscape}, opts: ke2Dis, want: "\x1b[27u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyArrowUp}, opts: ke2Dis, want: "\x1b[A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyArrowUp, mods: InputKeyMods{shift: true}}, opts: ke2Dis, want: "\x1b[1;2A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyEscape}, opts: ke2Dis, want: "\x1b[27u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyArrowUp}, opts: ke2Dis, want: "\x1b[A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyArrowUp, Mods: InputKeyMods{Shift: true}}, opts: ke2Dis, want: "\x1b[1;2A"},
 		// Plain text is unaffected by the action (press and repeat).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Events, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Events, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2EventsAll, want: "\x1b[97;1:2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2EventsAll, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Events, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Events, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2EventsAll, want: "\x1b[97;1:2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2EventsAll, want: "\x1b[97u"},
 	})
 }
 
@@ -1068,10 +1068,10 @@ func TestKe2_term51_kitty_press_and_repeat_events(t *testing.T) {
 func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_report_all(t *testing.T) {
 	testPlatform(t, "linux")
 	for _, r := range ke2Rows {
-		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2DisAll)
-		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2AllOnly)
+		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2AllOnly)
 		// The unshifted codepoint is ignored for table keys.
-		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k, unshifted_codepoint: 'x'}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k, UnshiftedCodepoint: 'x'}, ke2DisAll)
 	}
 	expectEqual(t, 81, len(ke2Rows))
 }
@@ -1095,8 +1095,8 @@ func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_disambiguate_only(t 
 				want = r.seq
 			}
 		}
-		ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2Dis)
-		ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k, unshifted_codepoint: 'x'}, ke2Dis)
+		ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2Dis)
+		ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k, UnshiftedCodepoint: 'x'}, ke2Dis)
 	}
 }
 
@@ -1113,9 +1113,9 @@ func TestKe2_term51_kitty_every_key_of_the_Kitty_table_with_ctrl(t *testing.T) {
 		}
 		// Modifier keys are only reported with report_all.
 		if !r.modifier {
-			ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k, mods: InputKeyMods{ctrl: true}}, ke2Dis)
+			ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k, Mods: InputKeyMods{Ctrl: true}}, ke2Dis)
 		}
-		ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k, mods: InputKeyMods{ctrl: true}}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, want, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k, Mods: InputKeyMods{Ctrl: true}}, ke2DisAll)
 	}
 }
 
@@ -1127,13 +1127,13 @@ func TestKe2_term51_kitty_keys_outside_the_table_use_the_unshifted_codepoint(t *
 			continue
 		}
 		// No unshifted codepoint, no text: nothing to send.
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: k}, ke2DisAll)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: k}, ke2Dis)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: k}, ke2Full)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: k}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: k}, ke2Dis)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: k}, ke2Full)
 		// With an unshifted codepoint it is the key number.
-		ke2Expect(t, inputKeyEncodeKitty, "\x1b[120u", InputKeyKeyEvent{action: InputKeyActionPress, key: k, unshifted_codepoint: 'x'}, ke2DisAll)
-		ke2Expect(t, inputKeyEncodeKitty, "\x1b[120u", InputKeyKeyEvent{action: InputKeyActionPress, key: k, unshifted_codepoint: 'x'}, ke2Dis)
-		ke2Expect(t, inputKeyEncodeKitty, "\x1b[120;5u", InputKeyKeyEvent{action: InputKeyActionPress, key: k, unshifted_codepoint: 'x', mods: InputKeyMods{ctrl: true}}, ke2Dis)
+		ke2Expect(t, inputKeyEncodeKitty, "\x1b[120u", InputKeyKeyEvent{Action: InputKeyActionPress, Key: k, UnshiftedCodepoint: 'x'}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, "\x1b[120u", InputKeyKeyEvent{Action: InputKeyActionPress, Key: k, UnshiftedCodepoint: 'x'}, ke2Dis)
+		ke2Expect(t, inputKeyEncodeKitty, "\x1b[120;5u", InputKeyKeyEvent{Action: InputKeyActionPress, Key: k, UnshiftedCodepoint: 'x', Mods: InputKeyMods{Ctrl: true}}, ke2Dis)
 	}
 }
 
@@ -1141,15 +1141,15 @@ func TestKe2_term51_kitty_keys_outside_the_table_use_the_unshifted_codepoint(t *
 func TestKe2_term51_kitty_unshifted_codepoint_boundaries(t *testing.T) {
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 1}, opts: ke2DisAll, want: "\x1b[1u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 0x10FFFF}, opts: ke2DisAll, want: "\x1b[1114111u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 1}, opts: ke2DisAll, want: "\x1b[1u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 0x10FFFF}, opts: ke2DisAll, want: "\x1b[1114111u"},
 		// One past the last Unicode scalar: encoded as is.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 0x110000}, opts: ke2DisAll, want: "\x1b[1114112u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 0x1FFFFF}, opts: ke2DisAll, want: "\x1b[2097151u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 0x110000}, opts: ke2DisAll, want: "\x1b[1114112u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 0x1FFFFF}, opts: ke2DisAll, want: "\x1b[2097151u"},
 		// A table key with a shadowing unshifted codepoint still uses the table.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, unshifted_codepoint: 'x'}, opts: ke2DisAll, want: "\x1b[13u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, unshifted_codepoint: 0x1FFFFF}, opts: ke2DisAll, want: "\x1b[27u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UnshiftedCodepoint: 'x'}, opts: ke2DisAll, want: "\x1b[13u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, UnshiftedCodepoint: 0x1FFFFF}, opts: ke2DisAll, want: "\x1b[27u"},
 	})
 }
 
@@ -1158,30 +1158,30 @@ func TestKe2_term51_kitty_composing_only_passes_modifier_keys_with_report_all(t 
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// Modifier key while composing: needs report_all.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, composing: true}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, composing: true}, opts: ke2DisAll, want: "\x1b[57441u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, composing: true, mods: InputKeyMods{shift: true}}, opts: ke2DisAll, want: "\x1b[57441;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyCapsLock, composing: true, mods: InputKeyMods{caps_lock: true}}, opts: ke2DisAll, want: "\x1b[57358;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumLock, composing: true}, opts: ke2DisAll, want: "\x1b[57360u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyControlRight, composing: true}, opts: ke2AllOnly, want: "\x1b[57448u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, Composing: true}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, Composing: true}, opts: ke2DisAll, want: "\x1b[57441u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, Composing: true, Mods: InputKeyMods{Shift: true}}, opts: ke2DisAll, want: "\x1b[57441;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyCapsLock, Composing: true, Mods: InputKeyMods{CapsLock: true}}, opts: ke2DisAll, want: "\x1b[57358;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumLock, Composing: true}, opts: ke2DisAll, want: "\x1b[57360u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyControlRight, Composing: true}, opts: ke2AllOnly, want: "\x1b[57448u"},
 		// Preedit text on a modifier key is only sent with report_associated.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, composing: true, utf8: []uint8("x")}, opts: ke2DisAll, want: "\x1b[57441u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, composing: true, utf8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[57441;;120u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, Composing: true, UTF8: []uint8("x")}, opts: ke2DisAll, want: "\x1b[57441u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, Composing: true, UTF8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[57441;;120u"},
 		// Everything else is swallowed.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true, unshifted_codepoint: 'a'}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true, utf8: []uint8("あ")}, opts: ke2Full, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, composing: true}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, composing: true}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, composing: true, utf8: []uint8("x")}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, composing: true}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, composing: true, utf8: []uint8("x")}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, composing: true, utf8: []uint8("x")}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true, UnshiftedCodepoint: 'a'}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true, UTF8: []uint8("あ")}, opts: ke2Full, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Composing: true}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp, Composing: true}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Composing: true, UTF8: []uint8("x")}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Composing: true}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, Composing: true, UTF8: []uint8("x")}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyUnidentified, Composing: true, UTF8: []uint8("x")}, opts: ke2DisAll, want: ""},
 		// The release check precedes composing.
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyShiftLeft, composing: true}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyShiftLeft, composing: true}, opts: ke2EventsAll, want: "\x1b[57441;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyShiftLeft, Composing: true}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyShiftLeft, Composing: true}, opts: ke2EventsAll, want: "\x1b[57441;1:3u"},
 	})
 }
 
@@ -1190,47 +1190,47 @@ func TestKe2_term51_kitty_enter_and_backspace_with_utf8_text(t *testing.T) {
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// Enter with committed text sends the text (IME confirmation).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("ab")}, opts: ke2Dis, want: "ab"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("あ")}, opts: ke2Dis, want: "あ"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true}}, opts: ke2Dis, want: "x"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\x01\x02")}, opts: ke2Dis, want: "\x01\x02"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\x1b[")}, opts: ke2Dis, want: "\x1b["},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("ab")}, opts: ke2Dis, want: "ab"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("あ")}, opts: ke2Dis, want: "あ"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("x"), Mods: InputKeyMods{Ctrl: true}}, opts: ke2Dis, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\x01\x02")}, opts: ke2Dis, want: "\x01\x02"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\x1b[")}, opts: ke2Dis, want: "\x1b["},
 		// A single byte >= 0x80 is not a control character.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\x80")}, opts: ke2Dis, want: "\x80"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\x80")}, opts: ke2Dis, want: "\x80"},
 		// This happens even for report_all and for release.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("x")}, opts: ke2DisAll, want: "x"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("x")}, opts: ke2Assoc, want: "x"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter, utf8: []uint8("x")}, opts: ke2EventsAll, want: "x"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyEnter, utf8: []uint8("x")}, opts: ke2EventsAll, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("x")}, opts: ke2DisAll, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("x")}, opts: ke2Assoc, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter, UTF8: []uint8("x")}, opts: ke2EventsAll, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyEnter, UTF8: []uint8("x")}, opts: ke2EventsAll, want: "x"},
 		// A single control character is ignored as text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\r")}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\n")}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\x1b")}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\x7f")}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\x1f")}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\r")}, opts: ke2DisAll, want: "\x1b[13u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("\r")}, opts: ke2Assoc, want: "\x1b[13u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEnter, utf8: []uint8("\r")}, opts: ke2EventsAll, want: "\x1b[13;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\r")}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\n")}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\x1b")}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\x7f")}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\x1f")}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\r")}, opts: ke2DisAll, want: "\x1b[13u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("\r")}, opts: ke2Assoc, want: "\x1b[13u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEnter, UTF8: []uint8("\r")}, opts: ke2EventsAll, want: "\x1b[13;1:3u"},
 		// Backspace with text sends nothing (preedit editing).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("ab")}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("あ")}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("x")}, opts: ke2DisAll, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true}}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x01\x02")}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x80")}, opts: ke2Dis, want: ""},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyBackspace, utf8: []uint8("x")}, opts: ke2EventsAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("ab")}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("あ")}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("x")}, opts: ke2DisAll, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("x"), Mods: InputKeyMods{Ctrl: true}}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("\x01\x02")}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("\x80")}, opts: ke2Dis, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyBackspace, UTF8: []uint8("x")}, opts: ke2EventsAll, want: ""},
 		// ... unless the text is one control character.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x08")}, opts: ke2Dis, want: "\x7f"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x7f")}, opts: ke2Dis, want: "\x7f"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x7f")}, opts: ke2DisAll, want: "\x1b[127u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, utf8: []uint8("\x7f")}, opts: ke2Assoc, want: "\x1b[127u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("\x08")}, opts: ke2Dis, want: "\x7f"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("\x7f")}, opts: ke2Dis, want: "\x7f"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("\x7f")}, opts: ke2DisAll, want: "\x1b[127u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, UTF8: []uint8("\x7f")}, opts: ke2Assoc, want: "\x1b[127u"},
 		// Tab is not special-cased for text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, utf8: []uint8("x")}, opts: ke2Dis, want: "\t"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, utf8: []uint8("x")}, opts: ke2DisAll, want: "\x1b[9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, utf8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[9;;120u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, UTF8: []uint8("x")}, opts: ke2Dis, want: "\t"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, UTF8: []uint8("x")}, opts: ke2DisAll, want: "\x1b[9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, UTF8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[9;;120u"},
 		// Numpad enter is not special-cased either.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpadEnter, utf8: []uint8("x")}, opts: ke2Dis, want: "x"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpadEnter, utf8: []uint8("\r")}, opts: ke2Dis, want: "\x1b[57414u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpadEnter, UTF8: []uint8("x")}, opts: ke2Dis, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpadEnter, UTF8: []uint8("\r")}, opts: ke2Dis, want: "\x1b[57414u"},
 	})
 }
 
@@ -1238,63 +1238,63 @@ func TestKe2_term51_kitty_enter_and_backspace_with_utf8_text(t *testing.T) {
 func TestKe2_term51_kitty_enter_tab_and_backspace_in_legacy_form_need_empty_binding_mods(t *testing.T) {
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab}, opts: ke2Dis, want: "\t"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace}, opts: ke2Dis, want: "\x7f"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab}, opts: ke2Dis, want: "\t"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace}, opts: ke2Dis, want: "\x7f"},
 		// Locks and sides are not binding mods.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{caps_lock: true}}, opts: ke2Dis, want: "\r"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, mods: InputKeyMods{num_lock: true}}, opts: ke2Dis, want: "\t"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, mods: InputKeyMods{sides: InputKeyModsModsSide{shift: InputKeyModsModSideRight, alt: InputKeyModsModSideRight}}}, opts: ke2Dis, want: "\x7f"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{CapsLock: true}}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, Mods: InputKeyMods{NumLock: true}}, opts: ke2Dis, want: "\t"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, Mods: InputKeyMods{Sides: InputKeyModsModsSide{Shift: InputKeyModsModSideRight, Alt: InputKeyModsModSideRight}}}, opts: ke2Dis, want: "\x7f"},
 		// Any real modifier switches to CSI u, with all modifiers listed.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{shift: true}}, opts: ke2Dis, want: "\x1b[13;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{ctrl: true}}, opts: ke2Dis, want: "\x1b[13;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, mods: InputKeyMods{shift: true}}, opts: ke2Dis, want: "\x1b[9;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, mods: InputKeyMods{alt: true}}, opts: ke2Dis, want: "\x1b[9;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, mods: InputKeyMods{alt: true}}, opts: ke2Dis, want: "\x1b[127;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, mods: InputKeyMods{super: true}}, opts: ke2Dis, want: "\x1b[127;9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{shift: true, caps_lock: true}}, opts: ke2Dis, want: "\x1b[13;66u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Shift: true}}, opts: ke2Dis, want: "\x1b[13;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Ctrl: true}}, opts: ke2Dis, want: "\x1b[13;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, Mods: InputKeyMods{Shift: true}}, opts: ke2Dis, want: "\x1b[9;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, Mods: InputKeyMods{Alt: true}}, opts: ke2Dis, want: "\x1b[9;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, Mods: InputKeyMods{Alt: true}}, opts: ke2Dis, want: "\x1b[127;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, Mods: InputKeyMods{Super: true}}, opts: ke2Dis, want: "\x1b[127;9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Shift: true, CapsLock: true}}, opts: ke2Dis, want: "\x1b[13;66u"},
 		// The consumed mods are only honoured when there is text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}}, opts: ke2Dis, want: "\x1b[13;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, utf8: []uint8("\r")}, opts: ke2Dis, want: "\r"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Shift: true}, ConsumedMods: InputKeyMods{Shift: true}}, opts: ke2Dis, want: "\x1b[13;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Shift: true}, ConsumedMods: InputKeyMods{Shift: true}, UTF8: []uint8("\r")}, opts: ke2Dis, want: "\r"},
 		// report_all always uses CSI u.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter}, opts: ke2DisAll, want: "\x1b[13u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab}, opts: ke2AllOnly, want: "\x1b[9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace}, opts: ke2AllOnly, want: "\x1b[127u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter}, opts: ke2DisAll, want: "\x1b[13u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab}, opts: ke2AllOnly, want: "\x1b[9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace}, opts: ke2AllOnly, want: "\x1b[127u"},
 	})
 }
 
 // Zig: test "term51: kitty: plain text is sent directly"
 func TestKe2_term51_kitty_plain_text_is_sent_directly(t *testing.T) {
 	testPlatform(t, "linux")
-	a := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}
+	a := InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		{ev: a, opts: ke2Dis, want: "a"},
 		{ev: a, opts: ke2Events, want: "a"},
 		{ev: a, opts: ke2AltsOnly, want: "a"},
 		{ev: a, opts: ke2AssocOnly, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("abcd"), unshifted_codepoint: 'a'}, opts: ke2Dis, want: "abcd"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("é")}, opts: ke2Dis, want: "é"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("あ")}, opts: ke2Dis, want: "あ"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("😀")}, opts: ke2Dis, want: "😀"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\xC2\x80")}, opts: ke2Dis, want: "\xC2\x80"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeySpace, utf8: []uint8(" "), unshifted_codepoint: ' '}, opts: ke2Dis, want: " "},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Dis, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("abcd"), UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "abcd"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("é")}, opts: ke2Dis, want: "é"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("あ")}, opts: ke2Dis, want: "あ"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("😀")}, opts: ke2Dis, want: "😀"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\xC2\x80")}, opts: ke2Dis, want: "\xC2\x80"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeySpace, UTF8: []uint8(" "), UnshiftedCodepoint: ' '}, opts: ke2Dis, want: " "},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "a"},
 		// Non-binding mods do not prevent plain text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{caps_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{num_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{sides: InputKeyModsModsSide{alt: InputKeyModsModSideRight}}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{CapsLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{NumLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Sides: InputKeyModsModsSide{Alt: InputKeyModsModSideRight}}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "a"},
 		// Shift consumed to produce the text: still plain text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\xC3\xA5"), mods: InputKeyMods{alt: true}, consumed_mods: InputKeyMods{alt: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\xC3\xA5"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, ConsumedMods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\xC3\xA5"), Mods: InputKeyMods{Alt: true}, ConsumedMods: InputKeyMods{Alt: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\xC3\xA5"},
 		// Shift not consumed: CSI u.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;2u"},
 		// Mods other than shift always make CSI u (the all-mods value is used).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{alt: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{super: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\x01"), mods: InputKeyMods{ctrl: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{ctrl: true, caps_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;69u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Alt: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Super: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\x01"), Mods: InputKeyMods{Ctrl: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Ctrl: true, CapsLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;69u"},
 		// Consumed mods are ignored without text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, mods: InputKeyMods{ctrl: true}, consumed_mods: InputKeyMods{ctrl: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Mods: InputKeyMods{Ctrl: true}, ConsumedMods: InputKeyMods{Ctrl: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;5u"},
 		// With report_all plain text is encoded as CSI u instead.
 		{ev: a, opts: ke2DisAll, want: "\x1b[97u"},
 		{ev: a, opts: ke2AllOnly, want: "\x1b[97u"},
@@ -1304,7 +1304,7 @@ func TestKe2_term51_kitty_plain_text_is_sent_directly(t *testing.T) {
 // Zig: test "term51: kitty: control characters and invalid utf8 are not plain text"
 func TestKe2_term51_kitty_control_characters_and_invalid_utf8_are_not_plain_text(t *testing.T) {
 	testPlatform(t, "linux")
-	k_a := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 'a'}
+	k_a := InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 'a'}
 	texts := []string{
 		"\x00", "\x01", "\x1b", "\x1f", "\x7f", "a\x01", "\x01a", "ab\x7f",
 		// invalid UTF-8
@@ -1312,26 +1312,26 @@ func TestKe2_term51_kitty_control_characters_and_invalid_utf8_are_not_plain_text
 	}
 	for _, text := range texts {
 		ev := k_a
-		ev.utf8 = []uint8(text)
+		ev.UTF8 = []uint8(text)
 		ke2Expect(t, inputKeyEncodeKitty, "\x1b[97u", ev, ke2Dis)
 	}
 	// First printable at 0x20 and DEL boundary.
 	ev := k_a
-	ev.utf8 = []uint8(" ")
+	ev.UTF8 = []uint8(" ")
 	ke2Expect(t, inputKeyEncodeKitty, " ", ev, ke2Dis)
-	ev.utf8 = []uint8("\x7e")
+	ev.UTF8 = []uint8("\x7e")
 	ke2Expect(t, inputKeyEncodeKitty, "\x7e", ev, ke2Dis)
-	ev.utf8 = []uint8("\x7f")
+	ev.UTF8 = []uint8("\x7f")
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97u", ev, ke2Dis)
-	ev.utf8 = []uint8("\x1f")
+	ev.UTF8 = []uint8("\x1f")
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97u", ev, ke2Dis)
 	// With report_associated a control char or invalid text just disappears.
-	ev.utf8 = []uint8("\x01")
+	ev.UTF8 = []uint8("\x01")
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97u", ev, ke2Assoc)
-	ev.utf8 = []uint8("\xff")
+	ev.UTF8 = []uint8("\xff")
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97u", ev, ke2Assoc)
 	// Mixed controls are dropped from the associated text.
-	ev.utf8 = []uint8("a\x01b")
+	ev.UTF8 = []uint8("a\x01b")
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97;;97:98u", ev, ke2Assoc)
 }
 
@@ -1340,23 +1340,23 @@ func TestKe2_term51_kitty_no_table_entry_and_no_unshifted_codepoint_passes_text_
 	testPlatform(t, "linux")
 	opts_list := []InputKeyEncodeOptions{ke2Dis, ke2DisAll, ke2Assoc, ke2Full, ke2Alts}
 	for _, o := range opts_list {
-		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x")}, o)
-		ke2Expect(t, inputKeyEncodeKitty, "ab", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ab")}, o)
-		ke2Expect(t, inputKeyEncodeKitty, "あ", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, utf8: []uint8("あ")}, o)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA}, o)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("x")}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "ab", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ab")}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "あ", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyUnidentified, UTF8: []uint8("あ")}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyUnidentified}, o)
 		// Modifiers do not change it.
-		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true}}, o)
-		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{shift: true, alt: true}}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("x"), Mods: InputKeyMods{Ctrl: true}}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true, Alt: true}}, o)
 		// Control characters and even invalid UTF-8 are written verbatim.
-		ke2Expect(t, inputKeyEncodeKitty, "\x01", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\x01"), mods: InputKeyMods{ctrl: true}}, o)
-		ke2Expect(t, inputKeyEncodeKitty, "\xff", InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\xff")}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "\x01", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\x01"), Mods: InputKeyMods{Ctrl: true}}, o)
+		ke2Expect(t, inputKeyEncodeKitty, "\xff", InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\xff")}, o)
 	}
 	// Even for a release event (a text-bearing release of a key without an
 	// unshifted codepoint writes its text).
-	ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("x")}, ke2EventsAll)
-	ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("x")}, ke2Full)
-	ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyA, utf8: []uint8("x")}, ke2Full)
+	ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyKeyA, UTF8: []uint8("x")}, ke2EventsAll)
+	ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyKeyA, UTF8: []uint8("x")}, ke2Full)
+	ke2Expect(t, inputKeyEncodeKitty, "x", InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyA, UTF8: []uint8("x")}, ke2Full)
 }
 
 // Zig: test "term51: kitty: modifier keys need report_all"
@@ -1366,30 +1366,30 @@ func TestKe2_term51_kitty_modifier_keys_need_report_all(t *testing.T) {
 		if !r.modifier {
 			continue
 		}
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2Dis)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2Events)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2DisEvents)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2AltsOnly)
-		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2AssocOnly)
-		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2AllOnly)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2Dis)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2Events)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2DisEvents)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2AltsOnly)
+		ke2Expect(t, inputKeyEncodeKitty, "", InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2AssocOnly)
+		ke2Expect(t, inputKeyEncodeKitty, r.seq, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2AllOnly)
 	}
 	// Modifiers on the modifier key itself.
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, mods: InputKeyMods{shift: true}}, opts: ke2DisAll, want: "\x1b[57441;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftRight, mods: InputKeyMods{shift: true, sides: InputKeyModsModsSide{shift: InputKeyModsModSideRight}}}, opts: ke2DisAll, want: "\x1b[57447;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyControlLeft, mods: InputKeyMods{ctrl: true}}, opts: ke2DisAll, want: "\x1b[57442;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyAltLeft, mods: InputKeyMods{alt: true}}, opts: ke2DisAll, want: "\x1b[57443;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyMetaLeft, mods: InputKeyMods{super: true}}, opts: ke2DisAll, want: "\x1b[57444;9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyMetaRight, mods: InputKeyMods{super: true}}, opts: ke2DisAll, want: "\x1b[57450;9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyCapsLock, mods: InputKeyMods{caps_lock: true}}, opts: ke2DisAll, want: "\x1b[57358;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumLock, mods: InputKeyMods{num_lock: true}}, opts: ke2DisAll, want: "\x1b[57360;129u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyShiftLeft, mods: InputKeyMods{shift: true}}, opts: ke2EventsAll, want: "\x1b[57441;2:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyShiftLeft}, opts: ke2EventsAll, want: "\x1b[57441;1:2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, Mods: InputKeyMods{Shift: true}}, opts: ke2DisAll, want: "\x1b[57441;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftRight, Mods: InputKeyMods{Shift: true, Sides: InputKeyModsModsSide{Shift: InputKeyModsModSideRight}}}, opts: ke2DisAll, want: "\x1b[57447;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyControlLeft, Mods: InputKeyMods{Ctrl: true}}, opts: ke2DisAll, want: "\x1b[57442;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyAltLeft, Mods: InputKeyMods{Alt: true}}, opts: ke2DisAll, want: "\x1b[57443;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyMetaLeft, Mods: InputKeyMods{Super: true}}, opts: ke2DisAll, want: "\x1b[57444;9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyMetaRight, Mods: InputKeyMods{Super: true}}, opts: ke2DisAll, want: "\x1b[57450;9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyCapsLock, Mods: InputKeyMods{CapsLock: true}}, opts: ke2DisAll, want: "\x1b[57358;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumLock, Mods: InputKeyMods{NumLock: true}}, opts: ke2DisAll, want: "\x1b[57360;129u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyShiftLeft, Mods: InputKeyMods{Shift: true}}, opts: ke2EventsAll, want: "\x1b[57441;2:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyShiftLeft}, opts: ke2EventsAll, want: "\x1b[57441;1:2u"},
 		// Without report_all a release of a modifier key is dropped too.
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyShiftLeft}, opts: ke2DisEvents, want: ""},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyShiftLeft}, opts: ke2DisEvents, want: ""},
 		// A modifier key with text and no report_all falls to plain text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, utf8: []uint8("x")}, opts: ke2Dis, want: "x"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft, utf8: []uint8("x")}, opts: ke2DisAll, want: "\x1b[57441u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, UTF8: []uint8("x")}, opts: ke2Dis, want: "x"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft, UTF8: []uint8("x")}, opts: ke2DisAll, want: "\x1b[57441u"},
 	})
 }
 
@@ -1407,8 +1407,8 @@ func TestKe2_term51_kitty_modifier_combinations_with_report_all(t *testing.T) {
 		} else {
 			esc = fmt.Sprintf("\x1b[27;%du", m)
 		}
-		ke2Expect(t, inputKeyEncodeKitty, esc, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: mods}, ke2DisAll)
-		ke2Expect(t, inputKeyEncodeKitty, esc, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: mods}, ke2AllOnly)
+		ke2Expect(t, inputKeyEncodeKitty, esc, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: mods}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, esc, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: mods}, ke2AllOnly)
 
 		// All of the modifier bits flow through unchanged for the other forms.
 		var arrow string
@@ -1417,26 +1417,26 @@ func TestKe2_term51_kitty_modifier_combinations_with_report_all(t *testing.T) {
 		} else {
 			arrow = fmt.Sprintf("\x1b[1;%dA", m)
 		}
-		ke2Expect(t, inputKeyEncodeKitty, arrow, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, mods: mods}, ke2DisAll)
+		ke2Expect(t, inputKeyEncodeKitty, arrow, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp, Mods: mods}, ke2DisAll)
 
 		// Left/right sides are never reported.
 		sided := mods
-		sided.sides = InputKeyModsModsSide{shift: InputKeyModsModSideRight, ctrl: InputKeyModsModSideRight, alt: InputKeyModsModSideRight, super: InputKeyModsModSideRight}
-		ke2Expect(t, inputKeyEncodeKitty, esc, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: sided}, ke2DisAll)
+		sided.Sides = InputKeyModsModsSide{Shift: InputKeyModsModSideRight, Ctrl: InputKeyModsModSideRight, Alt: InputKeyModsModSideRight, Super: InputKeyModsModSideRight}
+		ke2Expect(t, inputKeyEncodeKitty, esc, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: sided}, ke2DisAll)
 	}
 
 	// Spot checks with literal values.
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{shift: true}}, opts: ke2DisAll, want: "\x1b[27;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{alt: true}}, opts: ke2DisAll, want: "\x1b[27;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{ctrl: true}}, opts: ke2DisAll, want: "\x1b[27;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{super: true}}, opts: ke2DisAll, want: "\x1b[27;9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{caps_lock: true}}, opts: ke2DisAll, want: "\x1b[27;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{num_lock: true}}, opts: ke2DisAll, want: "\x1b[27;129u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyMods{shift: true, ctrl: true, alt: true, super: true, caps_lock: true, num_lock: true}}, opts: ke2DisAll, want: "\x1b[27;208u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{Shift: true}}, opts: ke2DisAll, want: "\x1b[27;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{Alt: true}}, opts: ke2DisAll, want: "\x1b[27;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{Ctrl: true}}, opts: ke2DisAll, want: "\x1b[27;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{Super: true}}, opts: ke2DisAll, want: "\x1b[27;9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{CapsLock: true}}, opts: ke2DisAll, want: "\x1b[27;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{NumLock: true}}, opts: ke2DisAll, want: "\x1b[27;129u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyMods{Shift: true, Ctrl: true, Alt: true, Super: true, CapsLock: true, NumLock: true}}, opts: ke2DisAll, want: "\x1b[27;208u"},
 		// Padding bits do not leak.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, mods: InputKeyModsModsFromInt(0xFFFF)}, opts: ke2DisAll, want: "\x1b[27;208u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, mods: InputKeyModsModsFromInt(0xFFFF)}, opts: ke2DisAll, want: "\x1b[1;208A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, Mods: InputKeyModsModsFromInt(0xFFFF)}, opts: ke2DisAll, want: "\x1b[27;208u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp, Mods: InputKeyModsModsFromInt(0xFFFF)}, opts: ke2DisAll, want: "\x1b[1;208A"},
 	})
 }
 
@@ -1454,18 +1454,18 @@ func TestKe2_term51_kitty_consumed_mods_only_affect_the_plain_text_decisions(t *
 			ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 				// The CSI u modifier value always uses all mods, never subtracting
 				// the consumed ones.
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2DisAll, want: "\x1b[97;2u"},
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, ConsumedMods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2DisAll, want: "\x1b[97;2u"},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, ConsumedMods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
 				// Consuming a mod the event does not have changes nothing.
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), consumed_mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "a"},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), ConsumedMods: InputKeyMods{Ctrl: true, Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "a"},
 				// Consumed ctrl+shift: both removed so plain text goes out.
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "x"},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("x"), Mods: InputKeyMods{Ctrl: true, Shift: true}, ConsumedMods: InputKeyMods{Ctrl: true, Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "x"},
 				// Consuming only one of two still leaves a binding mod.
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x"), mods: InputKeyMods{ctrl: true, shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;6u"},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("x"), Mods: InputKeyMods{Ctrl: true, Shift: true}, ConsumedMods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Dis, want: "\x1b[97;6u"},
 				// Consumed mods do not matter without text.
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{ctrl: true}, consumed_mods: InputKeyMods{ctrl: true}}, opts: ke2Dis, want: "\x1b[13;5u"},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Ctrl: true}, ConsumedMods: InputKeyMods{Ctrl: true}}, opts: ke2Dis, want: "\x1b[13;5u"},
 				// Consumed mods do not change the associated text rule (alt prevents).
-				{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyW, utf8: []uint8("\xE2\x88\x91"), mods: InputKeyMods{alt: true}, consumed_mods: InputKeyMods{alt: true}, unshifted_codepoint: 'w'}, opts: ke2Assoc, want: altWant},
+				{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyW, UTF8: []uint8("\xE2\x88\x91"), Mods: InputKeyMods{Alt: true}, ConsumedMods: InputKeyMods{Alt: true}, UnshiftedCodepoint: 'w'}, opts: ke2Assoc, want: altWant},
 			})
 		})
 	}
@@ -1482,21 +1482,21 @@ func TestKe2_term51_kitty_report_events_special_form_for_the_table_with_report_a
 		} else {
 			press = fmt.Sprintf("\x1b[1;1:1%c", last)
 		}
-		ke2Expect(t, inputKeyEncodeKitty, press, InputKeyKeyEvent{action: InputKeyActionPress, key: r.k}, ke2EventsAll)
+		ke2Expect(t, inputKeyEncodeKitty, press, InputKeyKeyEvent{Action: InputKeyActionPress, Key: r.k}, ke2EventsAll)
 		var repeat string
 		if last == 'u' || last == '~' {
 			repeat = fmt.Sprintf("%s;1:2%c", r.seq[0:len(r.seq)-1], last)
 		} else {
 			repeat = fmt.Sprintf("\x1b[1;1:2%c", last)
 		}
-		ke2Expect(t, inputKeyEncodeKitty, repeat, InputKeyKeyEvent{action: InputKeyActionRepeat, key: r.k}, ke2EventsAll)
+		ke2Expect(t, inputKeyEncodeKitty, repeat, InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: r.k}, ke2EventsAll)
 		var release string
 		if last == 'u' || last == '~' {
 			release = fmt.Sprintf("%s;1:3%c", r.seq[0:len(r.seq)-1], last)
 		} else {
 			release = fmt.Sprintf("\x1b[1;1:3%c", last)
 		}
-		ke2Expect(t, inputKeyEncodeKitty, release, InputKeyKeyEvent{action: InputKeyActionRelease, key: r.k}, ke2EventsAll)
+		ke2Expect(t, inputKeyEncodeKitty, release, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: r.k}, ke2EventsAll)
 	}
 }
 
@@ -1505,55 +1505,55 @@ func TestKe2_term51_kitty_alternate_keys(t *testing.T) {
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// No alternates when nothing differs.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
 		// Shifted alternate needs shift and a differing first codepoint.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97:65;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{caps_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97:65;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{CapsLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97;65u"},
 		// A consumed shift is still reported as shift.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, consumed_mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97:65;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, ConsumedMods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97:65;2u"},
 		// Base layout key: a Cyrillic layout on the physical 'a' key.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ф"), unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092::97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("Ф"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092:1060:97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ф"), UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092::97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("Ф"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092:1060:97;2u"},
 		// The base key is skipped when the text equals it.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
 		// Base key vs a different physical key.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97::98u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyB, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97:65:98;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyB, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97::98u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyB, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97:65:98;2u"},
 		// More than one codepoint of text: no base key; shifted still reported.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("фф"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ФФ"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092:1060;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ФФ"), unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ab"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("фф"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ФФ"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092:1060;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ФФ"), UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ab"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97;2u"},
 		// No text: only the base layout key.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092::97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 1092, mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[1092::97;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092::97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 1092, Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[1092::97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 'a'}, opts: ke2Alts, want: "\x1b[97u"},
 		// Keys without a codepoint have no base key.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyUnidentified, unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF13, utf8: []uint8("x")}, opts: ke2Alts, want: "\x1b[57376u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF13, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[57376:120;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF13}, opts: ke2Alts, want: "\x1b[57376u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyUnidentified, UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyF13, UTF8: []uint8("x")}, opts: ke2Alts, want: "\x1b[57376u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyF13, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[57376:120;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyF13}, opts: ke2Alts, want: "\x1b[57376u"},
 		// Keypad keys: the table code differs from the key's codepoint.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpad1}, opts: ke2Alts, want: "\x1b[57400::49u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpad1, utf8: []uint8("1")}, opts: ke2Alts, want: "\x1b[57400u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpadDecimal}, opts: ke2Alts, want: "\x1b[57409::46u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpadMultiply}, opts: ke2Alts, want: "\x1b[57411::42u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpadEnter}, opts: ke2Alts, want: "\x1b[57414u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpad1}, opts: ke2Alts, want: "\x1b[57400::49u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpad1, UTF8: []uint8("1")}, opts: ke2Alts, want: "\x1b[57400u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpadDecimal}, opts: ke2Alts, want: "\x1b[57409::46u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpadMultiply}, opts: ke2Alts, want: "\x1b[57411::42u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpadEnter}, opts: ke2Alts, want: "\x1b[57414u"},
 		// Space.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeySpace, utf8: []uint8(" "), unshifted_codepoint: ' '}, opts: ke2Alts, want: "\x1b[32u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeySpace, utf8: []uint8(" "), mods: InputKeyMods{shift: true}, unshifted_codepoint: ' '}, opts: ke2Alts, want: "\x1b[32;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeySpace, UTF8: []uint8(" "), UnshiftedCodepoint: ' '}, opts: ke2Alts, want: "\x1b[32u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeySpace, UTF8: []uint8(" "), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: ' '}, opts: ke2Alts, want: "\x1b[32;2u"},
 		// Invalid text: no alternates at all.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\xff"), unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\xED\xA0\x80"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 1092}, opts: ke2Alts, want: "\x1b[1092;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\xff"), UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\xED\xA0\x80"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 1092}, opts: ke2Alts, want: "\x1b[1092;2u"},
 		// Not enabled: nothing.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("Ф"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 1092}, opts: ke2DisAll, want: "\x1b[1092;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 1092}, opts: ke2DisAll, want: "\x1b[1092u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("Ф"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 1092}, opts: ke2DisAll, want: "\x1b[1092;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 1092}, opts: ke2DisAll, want: "\x1b[1092u"},
 		// Alone (no report_all) with no text and with plain text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 1092}, opts: ke2AltsOnly, want: "\x1b[1092::97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ф"), unshifted_codepoint: 1092}, opts: ke2AltsOnly, want: "ф"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("Ф"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 1092}, opts: ke2AltsOnly, want: "\x1b[1092:1060:97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 1092}, opts: ke2AltsOnly, want: "\x1b[1092::97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ф"), UnshiftedCodepoint: 1092}, opts: ke2AltsOnly, want: "ф"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("Ф"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 1092}, opts: ke2AltsOnly, want: "\x1b[1092:1060:97;2u"},
 	})
 }
 
@@ -1562,21 +1562,21 @@ func TestKe2_term51_kitty_alternate_keys_are_skipped_for_control_key_codes(t *te
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
 		// Table keys whose code is a control (<0x20 or 0x7f): never alternates.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[27;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[9;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace, mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[127;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[13;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF3, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[13;2~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyInsert, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[2;2~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, utf8: []uint8("x"), mods: InputKeyMods{shift: true}}, opts: ke2Alts, want: "\x1b[1;2A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[27;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[9;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace, Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[127;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[13;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyF3, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[13;2~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyInsert, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[2;2~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp, UTF8: []uint8("x"), Mods: InputKeyMods{Shift: true}}, opts: ke2Alts, want: "\x1b[1;2A"},
 		// Unshifted codepoints around the control boundary.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 0x1F}, opts: ke2Alts, want: "\x1b[31;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 0x20}, opts: ke2Alts, want: "\x1b[32:65:97;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 0x7E}, opts: ke2Alts, want: "\x1b[126:65:97;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 0x7F}, opts: ke2Alts, want: "\x1b[127;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 0x80}, opts: ke2Alts, want: "\x1b[128:65:97;2u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 0x01}, opts: ke2Alts, want: "\x1b[1u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 0x20}, opts: ke2Alts, want: "\x1b[32::97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 0x1F}, opts: ke2Alts, want: "\x1b[31;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 0x20}, opts: ke2Alts, want: "\x1b[32:65:97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 0x7E}, opts: ke2Alts, want: "\x1b[126:65:97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 0x7F}, opts: ke2Alts, want: "\x1b[127;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 0x80}, opts: ke2Alts, want: "\x1b[128:65:97;2u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 0x01}, opts: ke2Alts, want: "\x1b[1u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 0x20}, opts: ke2Alts, want: "\x1b[32::97u"},
 	})
 }
 
@@ -1584,44 +1584,44 @@ func TestKe2_term51_kitty_alternate_keys_are_skipped_for_control_key_codes(t *te
 func TestKe2_term51_kitty_associated_text(t *testing.T) {
 	testPlatform(t, "linux")
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{caps_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;65;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{num_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;129;97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true, caps_lock: true, num_lock: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;194;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;2;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{CapsLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;65;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{NumLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;129;97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true, CapsLock: true, NumLock: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;194;65u"},
 		// Multiple codepoints, multi-byte and a control char among them.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ab"), unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97:98u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("ф"), unshifted_codepoint: 1092}, opts: ke2Assoc, want: "\x1b[1092;;1092u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a\x01b"), unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97:98u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("\x01"), unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ab"), UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97:98u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("ф"), UnshiftedCodepoint: 1092}, opts: ke2Assoc, want: "\x1b[1092;;1092u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a\x01b"), UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;;97:98u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("\x01"), UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97u"},
 		// Text-preventing modifiers: alt (on this platform, see below), ctrl, super.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{ctrl: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;5u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{super: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;9u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;6u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Ctrl: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Super: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;9u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Ctrl: true, Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Assoc, want: "\x1b[97;6u"},
 		// Without report_associated no text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2DisAll, want: "\x1b[97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2DisAll, want: "\x1b[97u"},
 		// report_associated alone behaves like plain text without modifiers.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2AssocOnly, want: "a"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2AssocOnly, want: "\x1b[97;2;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), mods: InputKeyMods{ctrl: true}, unshifted_codepoint: 'a'}, opts: ke2AssocOnly, want: "\x1b[97;5u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2AssocOnly, want: "a"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2AssocOnly, want: "\x1b[97;2;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), Mods: InputKeyMods{Ctrl: true}, UnshiftedCodepoint: 'a'}, opts: ke2AssocOnly, want: "\x1b[97;5u"},
 		// Events: press omits ":1", repeat includes text, release drops text.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Full, want: "\x1b[97;;97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Full, want: "\x1b[97;1:2;97u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Full, want: "\x1b[97;1:3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Full, want: "\x1b[97:65;2;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Full, want: "\x1b[97:65;2:2;65u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyKeyA, utf8: []uint8("A"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, opts: ke2Full, want: "\x1b[97:65;2:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Full, want: "\x1b[97;;97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Full, want: "\x1b[97;1:2;97u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Full, want: "\x1b[97;1:3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Full, want: "\x1b[97:65;2;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Full, want: "\x1b[97:65;2:2;65u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, opts: ke2Full, want: "\x1b[97:65;2:3u"},
 		// Special keys ignore the text, the '~' keys carry it.
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, utf8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp, utf8: []uint8("x")}, opts: ke2Full, want: "\x1b[1;1:1A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDelete, utf8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[3;;120~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyDelete, utf8: []uint8("x")}, opts: ke2Full, want: "\x1b[3;1:3~"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, utf8: []uint8("\x1b")}, opts: ke2Assoc, want: "\x1b[27u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape, utf8: []uint8("\x1b")}, opts: ke2Dis, want: "\x1b[27u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyF13, utf8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[57376;;120u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp, UTF8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp, UTF8: []uint8("x")}, opts: ke2Full, want: "\x1b[1;1:1A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyDelete, UTF8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[3;;120~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyDelete, UTF8: []uint8("x")}, opts: ke2Full, want: "\x1b[3;1:3~"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, UTF8: []uint8("\x1b")}, opts: ke2Assoc, want: "\x1b[27u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape, UTF8: []uint8("\x1b")}, opts: ke2Dis, want: "\x1b[27u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyF13, UTF8: []uint8("x")}, opts: ke2Assoc, want: "\x1b[57376;;120u"},
 		// Modifier keys during composing carry preedit text (see composing test).
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpad1, utf8: []uint8("1")}, opts: ke2Full, want: "\x1b[57400;;49u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpad1, UTF8: []uint8("1")}, opts: ke2Full, want: "\x1b[57400;;49u"},
 	})
 }
 
@@ -1632,20 +1632,20 @@ func TestKe2_term51_kitty_macos_option_as_alt_and_associated_text_with_alt(t *te
 		t.Run(goos, func(t *testing.T) {
 			testPlatform(t, goos)
 			for _, oa := range []InputConfigOptionAsAlt{InputConfigOptionAsAltFalse, InputConfigOptionAsAltTrue, InputConfigOptionAsAltLeft, InputConfigOptionAsAltRight} {
-				for _, sides := range []InputKeyModsModsSide{{}, {alt: InputKeyModsModSideRight}} {
+				for _, sides := range []InputKeyModsModsSide{{}, {Alt: InputKeyModsModSideRight}} {
 					opts := InputKeyEncodeOptions{
-						kitty_flags:         KittyKeyFlags{disambiguate: true, report_all: true, report_associated: true},
-						macos_option_as_alt: oa,
+						KittyFlags:       KittyKeyFlags{Disambiguate: true, ReportAll: true, ReportAssociated: true},
+						MacosOptionAsAlt: oa,
 					}
 					ev := InputKeyKeyEvent{
-						action:              InputKeyActionPress,
-						key:                 InputKeyKeyKeyW,
-						mods:                InputKeyMods{alt: true, sides: sides},
-						utf8:                []uint8("∑"),
-						unshifted_codepoint: 119,
+						Action:             InputKeyActionPress,
+						Key:                InputKeyKeyKeyW,
+						Mods:               InputKeyMods{Alt: true, Sides: sides},
+						UTF8:               []uint8("∑"),
+						UnshiftedCodepoint: 119,
 					}
 					var want string
-					if ke2AltPrevents(oa, sides.alt) {
+					if ke2AltPrevents(oa, sides.Alt) {
 						want = "\x1b[119;3u"
 					} else {
 						want = "\x1b[119;3;8721u"
@@ -1655,28 +1655,28 @@ func TestKe2_term51_kitty_macos_option_as_alt_and_associated_text_with_alt(t *te
 
 					// Other text-preventing modifiers are never affected.
 					ev2 := ev
-					ev2.mods.alt = false
-					ev2.mods.ctrl = true
+					ev2.Mods.Alt = false
+					ev2.Mods.Ctrl = true
 					ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;5u", ev2, opts)
-					ev2.mods.ctrl = false
-					ev2.mods.super = true
+					ev2.Mods.Ctrl = false
+					ev2.Mods.Super = true
 					ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;9u", ev2, opts)
 					// Without alt the text is always reported.
-					ev2.mods = InputKeyMods{shift: true, sides: sides}
+					ev2.Mods = InputKeyMods{Shift: true, Sides: sides}
 					ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;2;8721u", ev2, opts)
 				}
 			}
 			// On non-macOS builds every value behaves the same (alt prevents text).
 			if goos != "darwin" {
 				ke2Expect(t, inputKeyEncodeKitty, "\x1b[119;3u", InputKeyKeyEvent{
-					action:              InputKeyActionPress,
-					key:                 InputKeyKeyKeyW,
-					mods:                InputKeyMods{alt: true},
-					utf8:                []uint8("∑"),
-					unshifted_codepoint: 119,
+					Action:             InputKeyActionPress,
+					Key:                InputKeyKeyKeyW,
+					Mods:               InputKeyMods{Alt: true},
+					UTF8:               []uint8("∑"),
+					UnshiftedCodepoint: 119,
 				}, InputKeyEncodeOptions{
-					kitty_flags:         KittyKeyFlags{disambiguate: true, report_all: true, report_associated: true},
-					macos_option_as_alt: InputConfigOptionAsAltFalse,
+					KittyFlags:       KittyKeyFlags{Disambiguate: true, ReportAll: true, ReportAssociated: true},
+					MacosOptionAsAlt: InputConfigOptionAsAltFalse,
 				})
 			}
 		})
@@ -1688,17 +1688,17 @@ func TestKe2_term51_kitty_option_flags_other_than_kitty_flags_are_ignored(t *tes
 	testPlatform(t, "linux")
 	base := ke2DisAll
 	o := base
-	o.cursor_key_application = true
-	o.keypad_key_application = true
-	o.ignore_keypad_with_numlock = true
-	o.alt_esc_prefix = true
-	o.modify_other_keys_state_2 = true
+	o.CursorKeyApplication = true
+	o.KeypadKeyApplication = true
+	o.IgnoreKeypadWithNumlock = true
+	o.AltEscPrefix = true
+	o.ModifyOtherKeysState2 = true
 	ke2RunCases(t, inputKeyEncodeKitty, []ke2Case{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: o, want: "\x1b[A"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyNumpad1, utf8: []uint8("1")}, opts: o, want: "\x1b[57400u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyC, utf8: []uint8("c"), mods: InputKeyMods{alt: true}, unshifted_codepoint: 'c'}, opts: o, want: "\x1b[99;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyDigit8, utf8: []uint8("8"), mods: InputKeyMods{alt: true}, unshifted_codepoint: '8'}, opts: o, want: "\x1b[56;3u"},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyH, utf8: []uint8("H"), mods: InputKeyMods{ctrl: true, shift: true}, unshifted_codepoint: 'h'}, opts: o, want: "\x1b[104;6u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp}, opts: o, want: "\x1b[A"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyNumpad1, UTF8: []uint8("1")}, opts: o, want: "\x1b[57400u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyC, UTF8: []uint8("c"), Mods: InputKeyMods{Alt: true}, UnshiftedCodepoint: 'c'}, opts: o, want: "\x1b[99;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyDigit8, UTF8: []uint8("8"), Mods: InputKeyMods{Alt: true}, UnshiftedCodepoint: '8'}, opts: o, want: "\x1b[56;3u"},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyH, UTF8: []uint8("H"), Mods: InputKeyMods{Ctrl: true, Shift: true}, UnshiftedCodepoint: 'h'}, opts: o, want: "\x1b[104;6u"},
 	})
 }
 
@@ -1707,21 +1707,21 @@ func TestKe2_term51_kitty_sides_and_padding_bits_never_change_the_output(t *test
 	testPlatform(t, "linux")
 	var sides_all InputKeyModsModsSide
 	sides_all = InputKeyModsModsSideFromInt(0xF)
-	ev := InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("A"), unshifted_codepoint: 'a', mods: InputKeyMods{shift: true, ctrl: true}}
+	ev := InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("A"), UnshiftedCodepoint: 'a', Mods: InputKeyMods{Shift: true, Ctrl: true}}
 	ev2 := ev
-	ev2.mods.sides = sides_all
-	ev2.consumed_mods.sides = sides_all
+	ev2.Mods.Sides = sides_all
+	ev2.ConsumedMods.Sides = sides_all
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97:65;6u", ev, ke2Alts)
 	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97:65;6u", ev2, ke2Alts)
 	// Consumed side bits do not cancel the real modifiers, since binding
 	// strips sides: only the consumed shift/ctrl bits matter.
 	ke2Expect(t, inputKeyEncodeKitty, "A", InputKeyKeyEvent{
-		action:              InputKeyActionPress,
-		key:                 InputKeyKeyKeyA,
-		utf8:                []uint8("A"),
-		unshifted_codepoint: 'a',
-		mods:                InputKeyMods{shift: true, sides: sides_all},
-		consumed_mods:       InputKeyMods{shift: true},
+		Action:             InputKeyActionPress,
+		Key:                InputKeyKeyKeyA,
+		UTF8:               []uint8("A"),
+		UnshiftedCodepoint: 'a',
+		Mods:               InputKeyMods{Shift: true, Sides: sides_all},
+		ConsumedMods:       InputKeyMods{Shift: true},
 	}, ke2Dis)
 }
 
@@ -1734,17 +1734,17 @@ func TestKe2_term51_kitty_write_errors_with_a_too_small_buffer(t *testing.T) {
 		ev   InputKeyKeyEvent
 		opts InputKeyEncodeOptions
 	}{
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyTab}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyBackspace}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEnter, utf8: []uint8("xy")}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a")}, opts: ke2AltsOnly},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("x")}, opts: ke2DisAll},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyArrowUp}, opts: ke2Dis},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, utf8: []uint8("a"), unshifted_codepoint: 'a'}, opts: ke2Assoc},
-		{ev: InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts: InputKeyEncodeOptions{}},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyTab}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyBackspace}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEnter, UTF8: []uint8("xy")}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a")}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a")}, opts: ke2AltsOnly},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("x")}, opts: ke2DisAll},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyArrowUp}, opts: ke2Dis},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, UTF8: []uint8("a"), UnshiftedCodepoint: 'a'}, opts: ke2Assoc},
+		{ev: InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, opts: InputKeyEncodeOptions{}},
 	}
 	for _, c := range cases {
 		w := oscWriterFixed(empty[:])
@@ -1752,15 +1752,15 @@ func TestKe2_term51_kitty_write_errors_with_a_too_small_buffer(t *testing.T) {
 	}
 	// And no error (and no output) for events that emit nothing.
 	w := oscWriterFixed(empty[:])
-	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyShiftLeft}, ke2Dis))
-	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA, composing: true}, ke2DisAll))
-	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEscape}, ke2Dis))
-	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyKeyA}, ke2DisAll))
-	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{action: InputKeyActionRelease, key: InputKeyKeyEscape}, InputKeyEncodeOptions{}))
+	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyShiftLeft}, ke2Dis))
+	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA, Composing: true}, ke2DisAll))
+	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEscape}, ke2Dis))
+	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyKeyA}, ke2DisAll))
+	zigTry(t, inputKeyEncodeKitty(&w, InputKeyKeyEvent{Action: InputKeyActionRelease, Key: InputKeyKeyEscape}, InputKeyEncodeOptions{}))
 	expectEqual(t, 0, len(w.buffered()))
 
 	// Cut off at each position of a long sequence.
-	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97:65;2:2;65:66u", InputKeyKeyEvent{action: InputKeyActionRepeat, key: InputKeyKeyKeyB, utf8: []uint8("AB"), mods: InputKeyMods{shift: true}, unshifted_codepoint: 'a'}, ke2Full)
+	ke2Expect(t, inputKeyEncodeKitty, "\x1b[97:65;2:2;65:66u", InputKeyKeyEvent{Action: InputKeyActionRepeat, Key: InputKeyKeyKeyB, UTF8: []uint8("AB"), Mods: InputKeyMods{Shift: true}, UnshiftedCodepoint: 'a'}, ke2Full)
 }
 
 // Zig: test "term51: encode: disabled kitty flags use legacy, any flag uses kitty"
@@ -1768,20 +1768,20 @@ func TestKe2_term51_encode_disabled_kitty_flags_use_legacy_any_flag_uses_kitty(t
 	testPlatform(t, "linux")
 	for bits := uint8(0); bits < 32; bits++ {
 		flags := KittyKeyFlagsFromInt(bits)
-		opts := InputKeyEncodeOptions{kitty_flags: flags}
+		opts := InputKeyEncodeOptions{KittyFlags: flags}
 		esc_want := "\x1b[27u"
 		if bits == 0 {
 			esc_want = "\x1b"
 		}
-		ke2Expect(t, inputKeyEncodeEncode, esc_want, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, opts)
+		ke2Expect(t, inputKeyEncodeEncode, esc_want, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, opts)
 
 		// ctrl+a: C0 byte in legacy, CSI u in kitty.
 		ctrl_a := InputKeyKeyEvent{
-			action:              InputKeyActionPress,
-			key:                 InputKeyKeyKeyA,
-			mods:                InputKeyMods{ctrl: true},
-			utf8:                []uint8("a"),
-			unshifted_codepoint: 'a',
+			Action:             InputKeyActionPress,
+			Key:                InputKeyKeyKeyA,
+			Mods:               InputKeyMods{Ctrl: true},
+			UTF8:               []uint8("a"),
+			UnshiftedCodepoint: 'a',
 		}
 		ca_want := "\x1b[97;5u"
 		if bits == 0 {

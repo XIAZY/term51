@@ -40,11 +40,11 @@ func OSCParsersKittyColorParse(parser *OSCParser, terminator_ch Optional[uint8])
 		Tag: OSCCommandKeyKittyColorProtocol,
 		KittyColorProtocol: KittyColorOSC{
 			// Zig: .empty.
-			list:       nil,
-			terminator: OSCTerminatorInit(terminator_ch),
+			List:       nil,
+			Terminator: OSCTerminatorInit(terminator_ch),
 		},
 	}
-	list := &parser.command.KittyColorProtocol.list
+	list := &parser.command.KittyColorProtocol.List
 	data := writer.buffered()
 	kv_it := oscParsersKittyColorSplitScalar(data, ';')
 	for {
@@ -99,8 +99,8 @@ func OSCParsersKittyColorParse(parser *OSCParser, terminator_ch Optional[uint8])
 			*list = append(*list, KittyColorOSCRequest{
 				Tag: KittyColorOSCRequestSet,
 				Set: KittyColorOSCRequestSetPayload{
-					key:   key,
-					color: color,
+					Key:   key,
+					Color: color,
 				},
 			})
 		}

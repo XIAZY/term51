@@ -91,9 +91,9 @@ func TestOSCParsersContextSignal_OSC_3008_basic_start_command(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
-	expectEqualStrings(t, "abc123", string(cmd.ContextSignal.id))
-	expectEqualStrings(t, "", string(cmd.ContextSignal.metadata))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
+	expectEqualStrings(t, "abc123", string(cmd.ContextSignal.ID))
+	expectEqualStrings(t, "", string(cmd.ContextSignal.Metadata))
 }
 
 // Zig: test "OSC 3008: basic end command"
@@ -106,9 +106,9 @@ func TestOSCParsersContextSignal_OSC_3008_basic_end_command(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionEnd, "cmd.context_signal.action == .end")
-	expectEqualStrings(t, "abc123", string(cmd.ContextSignal.id))
-	expectEqualStrings(t, "", string(cmd.ContextSignal.metadata))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionEnd, "cmd.context_signal.action == .end")
+	expectEqualStrings(t, "abc123", string(cmd.ContextSignal.ID))
+	expectEqualStrings(t, "", string(cmd.ContextSignal.Metadata))
 }
 
 // Zig: test "OSC 3008: start with metadata fields"
@@ -121,8 +121,8 @@ func TestOSCParsersContextSignal_OSC_3008_start_with_metadata_fields(t *testing.
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
-	expectEqualStrings(t, "bed86fab93af4328bbed0a1224af6d40", string(cmd.ContextSignal.id))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
+	expectEqualStrings(t, "bed86fab93af4328bbed0a1224af6d40", string(cmd.ContextSignal.ID))
 
 	// Read individual fields
 	expect(t, zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldType).Type) == OSCParsersContextSignalContextTypeContainer, "cmd.context_signal.readOption(.type).? == .container")
@@ -160,8 +160,8 @@ func TestOSCParsersContextSignal_OSC_3008_end_with_exit_metadata(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionEnd, "cmd.context_signal.action == .end")
-	expectEqualStrings(t, "myctx", string(cmd.ContextSignal.id))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionEnd, "cmd.context_signal.action == .end")
+	expectEqualStrings(t, "myctx", string(cmd.ContextSignal.ID))
 	expect(t, zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldExit).Exit) == OSCParsersContextSignalExitStatusSuccess, "cmd.context_signal.readOption(.exit).? == .success")
 	expectEqual(t, uint64(0), zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldStatus).Status))
 }
@@ -244,7 +244,7 @@ func TestOSCParsersContextSignal_OSC_3008_max_length_context_ID(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expectEqualStrings(t, id, string(cmd.ContextSignal.id))
+	expectEqualStrings(t, id, string(cmd.ContextSignal.ID))
 }
 
 // Zig: test "OSC 3008: over-length context ID"
@@ -305,8 +305,8 @@ func TestOSCParsersContextSignal_OSC_3008_spec_example_container_start(t *testin
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
-	expectEqualStrings(t, "bed86fab93af4328bbed0a1224af6d40", string(cmd.ContextSignal.id))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
+	expectEqualStrings(t, "bed86fab93af4328bbed0a1224af6d40", string(cmd.ContextSignal.ID))
 	expect(t, zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldType).Type) == OSCParsersContextSignalContextTypeContainer, "cmd.context_signal.readOption(.type).? == .container")
 	expectEqualStrings(t, "lennart", string(zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldUser).User)))
 	expectEqualStrings(t, "zeta", string(zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldHostname).Hostname)))
@@ -326,8 +326,8 @@ func TestOSCParsersContextSignal_OSC_3008_spec_example_context_end(t *testing.T)
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionEnd, "cmd.context_signal.action == .end")
-	expectEqualStrings(t, "bed86fab93af4328bbed0a1224af6d40", string(cmd.ContextSignal.id))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionEnd, "cmd.context_signal.action == .end")
+	expectEqualStrings(t, "bed86fab93af4328bbed0a1224af6d40", string(cmd.ContextSignal.ID))
 }
 
 // Zig: test "OSC 3008: cwd and cmdline fields"
@@ -354,8 +354,8 @@ func TestOSCParsersContextSignal_OSC_3008_start_command_with_no_fields(t *testin
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-	expect(t, cmd.ContextSignal.action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
-	expectEqualStrings(t, "simpleid", string(cmd.ContextSignal.id))
+	expect(t, cmd.ContextSignal.Action == OSCParsersContextSignalCommandActionStart, "cmd.context_signal.action == .start")
+	expectEqualStrings(t, "simpleid", string(cmd.ContextSignal.ID))
 	expect(t, !cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldType).Type.Valid, "cmd.context_signal.readOption(.type) == null")
 	expect(t, !cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldUser).User.Valid, "cmd.context_signal.readOption(.user) == null")
 	expect(t, !cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldExit).Exit.Valid, "cmd.context_signal.readOption(.exit) == null")
@@ -567,16 +567,16 @@ func TestOSCParsersContextSignal_term51_ExitStatus_parse_names_are_exact_and_cas
 // Zig: test "term51: Command.readOption: reads from the metadata"
 func TestOSCParsersContextSignal_term51_Command_readOption_reads_from_the_metadata(t *testing.T) {
 	cmd := OSCParsersContextSignalCommand{
-		action:   OSCParsersContextSignalCommandActionEnd,
-		id:       []uint8("x"),
-		metadata: []uint8("exit=crash;status=139;signal=SIGSEGV"),
+		Action:   OSCParsersContextSignalCommandActionEnd,
+		ID:       []uint8("x"),
+		Metadata: []uint8("exit=crash;status=139;signal=SIGSEGV"),
 	}
 	expectEqual(t, Some(OSCParsersContextSignalExitStatusCrash), cmd.ReadOption(OSCParsersContextSignalFieldExit).Exit)
 	expectEqual(t, Some(uint64(139)), cmd.ReadOption(OSCParsersContextSignalFieldStatus).Status)
 	expectEqualStrings(t, "SIGSEGV", string(zigUnwrap(t, cmd.ReadOption(OSCParsersContextSignalFieldSignal).Signal)))
 	expect(t, !cmd.ReadOption(OSCParsersContextSignalFieldUser).User.Valid, "cmd.readOption(.user) == null")
 
-	empty := OSCParsersContextSignalCommand{action: OSCParsersContextSignalCommandActionStart, id: []uint8("x"), metadata: []uint8("")}
+	empty := OSCParsersContextSignalCommand{Action: OSCParsersContextSignalCommandActionStart, ID: []uint8("x"), Metadata: []uint8("")}
 	expect(t, !empty.ReadOption(OSCParsersContextSignalFieldType).Type.Valid, "empty.readOption(.type) == null")
 	expect(t, !empty.ReadOption(OSCParsersContextSignalFieldPid).Pid.Valid, "empty.readOption(.pid) == null")
 	expect(t, !empty.ReadOption(OSCParsersContextSignalFieldCwd).Cwd.Valid, "empty.readOption(.cwd) == null")
@@ -640,9 +640,9 @@ func TestOSCParsersContextSignal_term51_parse_action_id_and_metadata(t *testing.
 			oscA_term51Feed(&p, c.input)
 			cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, term))
 			expect(t, cmd.Tag == OSCCommandKeyContextSignal, "cmd == .context_signal")
-			expectEqual(t, c.action, cmd.ContextSignal.action)
-			expectEqualStrings(t, c.id, string(cmd.ContextSignal.id))
-			expectEqualSlices(t, []uint8(c.metadata), cmd.ContextSignal.metadata)
+			expectEqual(t, c.action, cmd.ContextSignal.Action)
+			expectEqualStrings(t, c.id, string(cmd.ContextSignal.ID))
+			expectEqualSlices(t, []uint8(c.metadata), cmd.ContextSignal.Metadata)
 		}
 	}
 }
@@ -655,7 +655,7 @@ func TestOSCParsersContextSignal_term51_parse_id_length_limits(t *testing.T) {
 			p := OSCParserInit(nil)
 			oscA_term51Feed(&p, "3008;end="+id+suffix)
 			cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
-			expectEqualStrings(t, id, string(cmd.ContextSignal.id))
+			expectEqualStrings(t, id, string(cmd.ContextSignal.ID))
 		}
 	}
 	for _, n := range []int{65, 100} {
@@ -676,7 +676,7 @@ func TestOSCParsersContextSignal_term51_parse_id_byte_range(t *testing.T) {
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "3008;start="+id)
 		cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
-		expectEqualStrings(t, id, string(cmd.ContextSignal.id))
+		expectEqualStrings(t, id, string(cmd.ContextSignal.ID))
 	}
 	for _, id := range []string{"\x1f", "\x7f", "\x00", "a\x1fb", "a\x7f", "\x80", "\xc3\xa9", "\xff"} {
 		p := OSCParserInit(nil)
@@ -703,8 +703,8 @@ func TestOSCParsersContextSignal_term51_parse_buffer_limit(t *testing.T) {
 		oscA_term51Feed(&p, "3008;"+prefix+value)
 		expect(t, p.state == OSCParserState3008, "p.state == .@\"3008\"")
 		cmd := *oscA_unwrapPtr(t, OSCParsersContextSignalParse(&p, None[uint8]()))
-		expectEqualStrings(t, "a", string(cmd.ContextSignal.id))
-		expectEqual(t, OSCParserMAX_BUF-len("start=a;"), len(cmd.ContextSignal.metadata))
+		expectEqualStrings(t, "a", string(cmd.ContextSignal.ID))
+		expectEqual(t, OSCParserMAX_BUF-len("start=a;"), len(cmd.ContextSignal.Metadata))
 		expectEqualStrings(t, value, string(zigUnwrap(t, cmd.ContextSignal.ReadOption(OSCParsersContextSignalFieldCwd).Cwd)))
 	}
 	{

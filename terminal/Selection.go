@@ -70,14 +70,14 @@ package terminal
 // Selection is the file-level struct of Selection.zig.
 type Selection struct {
 	// The bounds of the selection.
-	bounds SelectionBounds
+	Bounds SelectionBounds
 
 	// Whether or not this selection refers to a rectangle, rather than whole
 	// lines of a buffer. In this mode, start and end refer to the top left and
 	// bottom right of the rectangle, or vice versa if the selection is backwards.
 	//
 	// Zig default: false.
-	rectangle bool
+	Rectangle bool
 }
 
 // SelectionBounds is Selection.Bounds.
@@ -106,15 +106,15 @@ type SelectionBounds struct {
 // SelectionBoundsUntracked is NOT a named Zig declaration: it is the
 // anonymous struct that is the payload of Selection.Bounds.untracked.
 type SelectionBoundsUntracked struct {
-	start PageListPin
-	end   PageListPin
+	Start PageListPin
+	End   PageListPin
 }
 
 // SelectionBoundsTracked is NOT a named Zig declaration: it is the
 // anonymous struct that is the payload of Selection.Bounds.tracked.
 type SelectionBoundsTracked struct {
-	start *PageListPin
-	end   *PageListPin
+	Start *PageListPin
+	End   *PageListPin
 }
 
 // SelectionBoundsTag is the tag of Selection.Bounds, values numbered from
@@ -145,11 +145,11 @@ var selectionBoundsTagNames = [...]string{
 // The result is an untracked selection.
 func SelectionInit(start_pin PageListPin, end_pin PageListPin, rect bool) Selection {
 	return Selection{
-		bounds: SelectionBounds{Tag: SelectionBoundsTagUntracked, Untracked: SelectionBoundsUntracked{
-			start: start_pin,
-			end:   end_pin,
+		Bounds: SelectionBounds{Tag: SelectionBoundsTagUntracked, Untracked: SelectionBoundsUntracked{
+			Start: start_pin,
+			End:   end_pin,
 		}},
-		rectangle: rect,
+		Rectangle: rect,
 	}
 }
 
@@ -159,11 +159,11 @@ func SelectionInit(start_pin PageListPin, end_pin PageListPin, rect bool) Select
 // the pins of a tracked selection in the screen's page list; it does
 // nothing for an untracked one.
 func (self Selection) Deinit(s *Screen) {
-	switch self.bounds.Tag {
+	switch self.Bounds.Tag {
 	case SelectionBoundsTagTracked:
-		v := self.bounds.Tracked
-		s.pages.UntrackPin(v.start)
-		s.pages.UntrackPin(v.end)
+		v := self.Bounds.Tracked
+		s.Pages.UntrackPin(v.Start)
+		s.Pages.UntrackPin(v.End)
 
 	case SelectionBoundsTagUntracked:
 
@@ -178,7 +178,7 @@ func (self Selection) Deinit(s *Screen) {
 func (self Selection) Eql(other Selection) bool {
 	return self.Start().Eql(other.Start()) &&
 		self.End().Eql(other.End()) &&
-		self.rectangle == other.rectangle
+		self.Rectangle == other.Rectangle
 }
 
 // StartPtr is Selection.startPtr.
@@ -187,13 +187,13 @@ func (self Selection) Eql(other Selection) bool {
 //
 // Zig: pub fn startPtr(self: *Selection) *Pin.
 func (self *Selection) StartPtr() *PageListPin {
-	switch self.bounds.Tag {
+	switch self.Bounds.Tag {
 	case SelectionBoundsTagUntracked:
-		v := &self.bounds.Untracked
-		return &v.start
+		v := &self.Bounds.Untracked
+		return &v.Start
 	case SelectionBoundsTagTracked:
-		v := self.bounds.Tracked
-		return v.start
+		v := self.Bounds.Tracked
+		return v.Start
 	default:
 		panic("unreachable")
 	}
@@ -205,13 +205,13 @@ func (self *Selection) StartPtr() *PageListPin {
 //
 // Zig: pub fn endPtr(self: *Selection) *Pin.
 func (self *Selection) EndPtr() *PageListPin {
-	switch self.bounds.Tag {
+	switch self.Bounds.Tag {
 	case SelectionBoundsTagUntracked:
-		v := &self.bounds.Untracked
-		return &v.end
+		v := &self.Bounds.Untracked
+		return &v.End
 	case SelectionBoundsTagTracked:
-		v := self.bounds.Tracked
-		return v.end
+		v := self.Bounds.Tracked
+		return v.End
 	default:
 		panic("unreachable")
 	}
@@ -219,13 +219,13 @@ func (self *Selection) EndPtr() *PageListPin {
 
 // Start is Selection.start.
 func (self Selection) Start() PageListPin {
-	switch self.bounds.Tag {
+	switch self.Bounds.Tag {
 	case SelectionBoundsTagUntracked:
-		v := self.bounds.Untracked
-		return v.start
+		v := self.Bounds.Untracked
+		return v.Start
 	case SelectionBoundsTagTracked:
-		v := self.bounds.Tracked
-		return *v.start
+		v := self.Bounds.Tracked
+		return *v.Start
 	default:
 		panic("unreachable")
 	}
@@ -233,13 +233,13 @@ func (self Selection) Start() PageListPin {
 
 // End is Selection.end.
 func (self Selection) End() PageListPin {
-	switch self.bounds.Tag {
+	switch self.Bounds.Tag {
 	case SelectionBoundsTagUntracked:
-		v := self.bounds.Untracked
-		return v.end
+		v := self.Bounds.Untracked
+		return v.End
 	case SelectionBoundsTagTracked:
-		v := self.bounds.Tracked
-		return *v.end
+		v := self.Bounds.Tracked
+		return *v.End
 	default:
 		panic("unreachable")
 	}
@@ -251,7 +251,7 @@ func (self Selection) End() PageListPin {
 //
 // Zig: self is *const Selection.
 func (self *Selection) Tracked() bool {
-	switch self.bounds.Tag {
+	switch self.Bounds.Tag {
 	case SelectionBoundsTagUntracked:
 		return false
 	case SelectionBoundsTagTracked:
@@ -272,19 +272,19 @@ func (self *Selection) Track(s *Screen) (_ Selection, err error) {
 	assert(!self.Tracked())
 
 	// Track our pins
-	start_pin := self.bounds.Untracked.start
-	end_pin := self.bounds.Untracked.end
-	tracked_start, err := s.pages.TrackPin(start_pin)
+	start_pin := self.Bounds.Untracked.Start
+	end_pin := self.Bounds.Untracked.End
+	tracked_start, err := s.Pages.TrackPin(start_pin)
 	if err != nil {
 		return Selection{}, err
 	}
 	defer func() {
 		// errdefer
 		if err != nil {
-			s.pages.UntrackPin(tracked_start)
+			s.Pages.UntrackPin(tracked_start)
 		}
 	}()
-	tracked_end, err := s.pages.TrackPin(end_pin)
+	tracked_end, err := s.Pages.TrackPin(end_pin)
 	if err != nil {
 		return Selection{}, err
 	}
@@ -292,11 +292,11 @@ func (self *Selection) Track(s *Screen) (_ Selection, err error) {
 	// fail, so it never runs.
 
 	return Selection{
-		bounds: SelectionBounds{Tag: SelectionBoundsTagTracked, Tracked: SelectionBoundsTracked{
-			start: tracked_start,
-			end:   tracked_end,
+		Bounds: SelectionBounds{Tag: SelectionBoundsTagTracked, Tracked: SelectionBoundsTracked{
+			Start: tracked_start,
+			End:   tracked_end,
 		}},
-		rectangle: self.rectangle,
+		Rectangle: self.Rectangle,
 	}, nil
 }
 
@@ -314,12 +314,12 @@ func (self Selection) TopLeft(s *Screen) PageListPin {
 	case SelectionOrderMirroredForward:
 		// Zig: pin: { ... break :pin p; }
 		p := self.Start()
-		p.x = self.End().x
+		p.X = self.End().X
 		return p
 	case SelectionOrderMirroredReverse:
 		// Zig: pin: { ... break :pin p; }
 		p := self.End()
-		p.x = self.Start().x
+		p.X = self.Start().X
 		return p
 	default:
 		panic("unreachable")
@@ -340,12 +340,12 @@ func (self Selection) BottomRight(s *Screen) PageListPin {
 	case SelectionOrderMirroredForward:
 		// Zig: pin: { ... break :pin p; }
 		p := self.End()
-		p.x = self.Start().x
+		p.X = self.Start().X
 		return p
 	case SelectionOrderMirroredReverse:
 		// Zig: pin: { ... break :pin p; }
 		p := self.Start()
-		p.x = self.End().x
+		p.X = self.End().X
 		return p
 	default:
 		panic("unreachable")
@@ -392,29 +392,29 @@ var selectionOrderNames = [...]string{
 //
 // Zig: pub fn order(self: Selection, s: *const Screen) Order.
 func (self Selection) Order(s *Screen) SelectionOrder {
-	start_pt_ := s.pages.PointFromPin(PointTagScreen, self.Start())
+	start_pt_ := s.Pages.PointFromPin(PointTagScreen, self.Start())
 	assert(start_pt_.Valid) // .?
 	start_pt := start_pt_.Value.Screen
-	end_pt_ := s.pages.PointFromPin(PointTagScreen, self.End())
+	end_pt_ := s.Pages.PointFromPin(PointTagScreen, self.End())
 	assert(end_pt_.Valid) // .?
 	end_pt := end_pt_.Value.Screen
 
-	if self.rectangle {
+	if self.Rectangle {
 		// Reverse (also handles single-column)
-		if start_pt.y > end_pt.y && start_pt.x >= end_pt.x {
+		if start_pt.Y > end_pt.Y && start_pt.X >= end_pt.X {
 			return SelectionOrderReverse
 		}
-		if start_pt.y >= end_pt.y && start_pt.x > end_pt.x {
+		if start_pt.Y >= end_pt.Y && start_pt.X > end_pt.X {
 			return SelectionOrderReverse
 		}
 
 		// Mirror, bottom-left to top-right
-		if start_pt.y > end_pt.y && start_pt.x < end_pt.x {
+		if start_pt.Y > end_pt.Y && start_pt.X < end_pt.X {
 			return SelectionOrderMirroredReverse
 		}
 
 		// Mirror, top-right to bottom-left
-		if start_pt.y < end_pt.y && start_pt.x > end_pt.x {
+		if start_pt.Y < end_pt.Y && start_pt.X > end_pt.X {
 			return SelectionOrderMirroredForward
 		}
 
@@ -422,13 +422,13 @@ func (self Selection) Order(s *Screen) SelectionOrder {
 		return SelectionOrderForward
 	}
 
-	if start_pt.y < end_pt.y {
+	if start_pt.Y < end_pt.Y {
 		return SelectionOrderForward
 	}
-	if start_pt.y > end_pt.y {
+	if start_pt.Y > end_pt.Y {
 		return SelectionOrderReverse
 	}
-	if start_pt.x <= end_pt.x {
+	if start_pt.X <= end_pt.X {
 		return SelectionOrderForward
 	}
 	return SelectionOrderReverse
@@ -449,7 +449,7 @@ func (self Selection) Ordered(s *Screen, desired SelectionOrder) Selection {
 		return SelectionInit(
 			self.Start(),
 			self.End(),
-			self.rectangle,
+			self.Rectangle,
 		)
 	}
 
@@ -457,11 +457,11 @@ func (self Selection) Ordered(s *Screen, desired SelectionOrder) Selection {
 	br := self.BottomRight(s)
 	switch desired {
 	case SelectionOrderForward:
-		return SelectionInit(tl, br, self.rectangle)
+		return SelectionInit(tl, br, self.Rectangle)
 	case SelectionOrderReverse:
-		return SelectionInit(br, tl, self.rectangle)
+		return SelectionInit(br, tl, self.Rectangle)
 	default:
-		return SelectionInit(tl, br, self.rectangle)
+		return SelectionInit(tl, br, self.Rectangle)
 	}
 }
 
@@ -480,41 +480,41 @@ func (self Selection) Contains(s *Screen, pin PageListPin) bool {
 
 	// This is definitely not very efficient. Low-hanging fruit to
 	// improve this.
-	tl_ := s.pages.PointFromPin(PointTagScreen, tl_pin)
+	tl_ := s.Pages.PointFromPin(PointTagScreen, tl_pin)
 	assert(tl_.Valid) // .?
 	tl := tl_.Value.Screen
-	br_ := s.pages.PointFromPin(PointTagScreen, br_pin)
+	br_ := s.Pages.PointFromPin(PointTagScreen, br_pin)
 	assert(br_.Valid) // .?
 	br := br_.Value.Screen
-	p_ := s.pages.PointFromPin(PointTagScreen, pin)
+	p_ := s.Pages.PointFromPin(PointTagScreen, pin)
 	assert(p_.Valid) // .?
 	p := p_.Value.Screen
 
 	// If we're in rectangle select, we can short-circuit with an easy check
 	// here
-	if self.rectangle {
-		return p.y >= tl.y && p.y <= br.y && p.x >= tl.x && p.x <= br.x
+	if self.Rectangle {
+		return p.Y >= tl.Y && p.Y <= br.Y && p.X >= tl.X && p.X <= br.X
 	}
 
 	// If tl/br are same line
-	if tl.y == br.y {
-		return p.y == tl.y &&
-			p.x >= tl.x &&
-			p.x <= br.x
+	if tl.Y == br.Y {
+		return p.Y == tl.Y &&
+			p.X >= tl.X &&
+			p.X <= br.X
 	}
 
 	// If on top line, just has to be left of X
-	if p.y == tl.y {
-		return p.x >= tl.x
+	if p.Y == tl.Y {
+		return p.X >= tl.X
 	}
 
 	// If on bottom line, just has to be right of X
-	if p.y == br.y {
-		return p.x <= br.x
+	if p.Y == br.Y {
+		return p.X <= br.X
 	}
 
 	// If between the top/bottom, always good.
-	return p.y > tl.y && p.y < br.y
+	return p.Y > tl.Y && p.Y < br.Y
 }
 
 // ContainedRow is Selection.containedRow.
@@ -535,13 +535,13 @@ func (self Selection) ContainedRow(s *Screen, pin PageListPin) Optional[Selectio
 	// This is definitely not very efficient. Low-hanging fruit to
 	// improve this. Callers should prefer containedRowCached if they
 	// can swing it.
-	tl_ := s.pages.PointFromPin(PointTagScreen, tl_pin)
+	tl_ := s.Pages.PointFromPin(PointTagScreen, tl_pin)
 	assert(tl_.Valid) // .?
 	tl := tl_.Value.Screen
-	br_ := s.pages.PointFromPin(PointTagScreen, br_pin)
+	br_ := s.Pages.PointFromPin(PointTagScreen, br_pin)
 	assert(br_.Valid) // .?
 	br := br_.Value.Screen
-	p_ := s.pages.PointFromPin(PointTagScreen, pin)
+	p_ := s.Pages.PointFromPin(PointTagScreen, pin)
 	assert(p_.Valid) // .?
 	p := p_.Value.Screen
 
@@ -572,19 +572,19 @@ func (self Selection) ContainedRowCached(
 	br PointCoordinate,
 	p PointCoordinate,
 ) Optional[Selection] {
-	if p.y < tl.y || p.y > br.y {
+	if p.Y < tl.Y || p.Y > br.Y {
 		return None[Selection]()
 	}
 
 	// Rectangle case: we can return early as the x range will always be the
 	// same. We've already validated that the row is in the selection.
-	if self.rectangle {
+	if self.Rectangle {
 		// Zig: start: { var copy: Pin = pin; copy.x = tl.x; break :start copy; }
 		start := pin
-		start.x = tl.x
+		start.X = tl.X
 		// Zig: end: { var copy: Pin = pin; copy.x = br.x; break :end copy; }
 		end := pin
-		end.x = br.x
+		end.X = br.X
 		return Some(SelectionInit(
 			start,
 			end,
@@ -592,17 +592,17 @@ func (self Selection) ContainedRowCached(
 		))
 	}
 
-	if p.y == tl.y {
+	if p.Y == tl.Y {
 		// If the selection is JUST this line, return it as-is.
-		if p.y == br.y {
+		if p.Y == br.Y {
 			return Some(SelectionInit(tl_pin, br_pin, false))
 		}
 
 		// Selection top-left line matches only.
 		// Zig: end: { var copy: Pin = pin; copy.x = s.pages.cols - 1; break :end copy; }
 		end := pin
-		assert(s.pages.cols > 0) // Zig: `cols - 1` traps on u16 underflow.
-		end.x = s.pages.cols - 1
+		assert(s.Pages.cols > 0) // Zig: `cols - 1` traps on u16 underflow.
+		end.X = s.Pages.cols - 1
 		return Some(SelectionInit(
 			tl_pin,
 			end,
@@ -613,11 +613,11 @@ func (self Selection) ContainedRowCached(
 	// Row is our bottom selection, so we return the selection from the
 	// beginning of the line to the br. We know our selection is more than
 	// one line (due to conditionals above)
-	if p.y == br.y {
-		assert(p.y != tl.y)
+	if p.Y == br.Y {
+		assert(p.Y != tl.Y)
 		// Zig: start: { var copy: Pin = pin; copy.x = 0; break :start copy; }
 		start := pin
-		start.x = 0
+		start.X = 0
 		return Some(SelectionInit(
 			start,
 			br_pin,
@@ -628,11 +628,11 @@ func (self Selection) ContainedRowCached(
 	// Row is somewhere between our selection lines so we return the full line.
 	// Zig: start: { var copy: Pin = pin; copy.x = 0; break :start copy; }
 	start := pin
-	start.x = 0
+	start.X = 0
 	// Zig: end: { var copy: Pin = pin; copy.x = s.pages.cols - 1; break :end copy; }
 	end := pin
-	assert(s.pages.cols > 0) // Zig: `cols - 1` traps on u16 underflow.
-	end.x = s.pages.cols - 1
+	assert(s.Pages.cols > 0) // Zig: `cols - 1` traps on u16 underflow.
+	end.X = s.Pages.cols - 1
 	return Some(SelectionInit(
 		start,
 		end,
@@ -711,7 +711,7 @@ func (self *Selection) Adjust(s *Screen, adjustment SelectionAdjustment) {
 			}
 			next := next_.Value
 			rac := next.RowAndCell()
-			cells := next.node.data.GetCells(rac.row)
+			cells := next.Node.data.GetCells(rac.row)
 			if PageCellHasTextAny(cells) {
 				*end_pin = next
 				break
@@ -754,29 +754,29 @@ func (self *Selection) Adjust(s *Screen, adjustment SelectionAdjustment) {
 		}
 
 	case SelectionAdjustmentPageUp:
-		if new_end := end_pin.Up(uint(s.pages.rows)); new_end.Valid {
+		if new_end := end_pin.Up(uint(s.Pages.rows)); new_end.Valid {
 			*end_pin = new_end.Value
 		} else {
 			self.Adjust(s, SelectionAdjustmentHome)
 		}
 
 	case SelectionAdjustmentPageDown:
-		if new_end := end_pin.Down(uint(s.pages.rows)); new_end.Valid {
+		if new_end := end_pin.Down(uint(s.Pages.rows)); new_end.Valid {
 			*end_pin = new_end.Value
 		} else {
 			self.Adjust(s, SelectionAdjustmentEnd)
 		}
 
 	case SelectionAdjustmentHome:
-		home := s.pages.Pin(Point{Tag: PointTagScreen, Screen: PointCoordinate{
-			x: 0,
-			y: 0,
+		home := s.Pages.Pin(Point{Tag: PointTagScreen, Screen: PointCoordinate{
+			X: 0,
+			Y: 0,
 		}})
 		assert(home.Valid) // .?
 		*end_pin = home.Value
 
 	case SelectionAdjustmentEnd:
-		it := s.pages.RowIterator(
+		it := s.Pages.RowIterator(
 			PageListDirectionLeftUp,
 			Point{Tag: PointTagScreen, Screen: PointCoordinate{}},
 			None[Point](),
@@ -788,22 +788,22 @@ func (self *Selection) Adjust(s *Screen, adjustment SelectionAdjustment) {
 			}
 			next := next_.Value
 			rac := next.RowAndCell()
-			cells := next.node.data.GetCells(rac.row)
+			cells := next.Node.data.GetCells(rac.row)
 			if PageCellHasTextAny(cells) {
 				*end_pin = next
 				// Zig: @intCast(cells.len - 1); cells is not empty here
 				// (hasTextAny found a cell with text).
-				end_pin.x = SizeCellCountInt(len(cells) - 1)
+				end_pin.X = SizeCellCountInt(len(cells) - 1)
 				break
 			}
 		}
 
 	case SelectionAdjustmentBeginningOfLine:
-		end_pin.x = 0
+		end_pin.X = 0
 
 	case SelectionAdjustmentEndOfLine:
-		assert(end_pin.node.data.size.cols > 0) // Zig: `cols - 1` traps on u16 underflow.
-		end_pin.x = end_pin.node.data.size.cols - 1
+		assert(end_pin.Node.data.size.cols > 0) // Zig: `cols - 1` traps on u16 underflow.
+		end_pin.X = end_pin.Node.data.size.cols - 1
 
 	default:
 		panic("unreachable")

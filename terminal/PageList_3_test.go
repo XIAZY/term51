@@ -61,22 +61,22 @@ func pl3ExpectPanic(t *testing.T, f func()) {
 
 // pl3Screen is the Zig literal `.{ .screen = .{ .x = x, .y = y } }`.
 func pl3Screen(x int, y int) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // pl3Active is the Zig literal `.{ .active = .{ .x = x, .y = y } }`.
 func pl3Active(x int, y int) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // pl3History is the Zig literal `.{ .history = .{ .x = x, .y = y } }`.
 func pl3History(x int, y int) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // pl3Viewport is the Zig literal `.{ .viewport = .{ .x = x, .y = y } }`.
 func pl3Viewport(x int, y int) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // pl3Init is `try init(alloc, cols, rows, max_size)`. The list is returned by
@@ -133,7 +133,7 @@ func pl3Codepoint(cp uint32) PageCell {
 
 // pl3Bold is the style `.{ .flags = .{ .bold = true } }`.
 func pl3Bold() Style {
-	return Style{flags: styleFlags{bold: true}}
+	return Style{Flags: StyleFlags{Bold: true}}
 }
 
 // pl3SetCell is term51JSetCell: writes a codepoint into the cell the pin
@@ -146,7 +146,7 @@ func pl3SetCell(p PageListPin, cp uint32) {
 // pl3Cp is term51JCp: reads the codepoint at the point (0 for an empty cell).
 func pl3Cp(t *testing.T, s *PageList, pt Point) uint32 {
 	t.Helper()
-	return zigUnwrap(t, s.GetCell(pt)).cell.content.codepoint
+	return zigUnwrap(t, s.GetCell(pt)).Cell.content.codepoint
 }
 
 // pl3MarkRows is term51JMarkRows: marks every screen row of the list with a
@@ -308,7 +308,7 @@ func TestPl3_term51_reset_tracked_pins_move_to_the_top_left_and_become_garbage(t
 	a := pl3Track(t, s, pl3Pin(t, s, pl3Screen(7, 3)))
 	b := pl3Track(t, s, pl3Pin(t, s, pl3Screen(499, 273)))
 	c := pl3Track(t, s, pl3Pin(t, s, pl3Screen(0, 100)))
-	c.garbage = true
+	c.Garbage = true
 	defer s.UntrackPin(a)
 	defer s.UntrackPin(b)
 	defer s.UntrackPin(c)
@@ -323,10 +323,10 @@ func TestPl3_term51_reset_tracked_pins_move_to_the_top_left_and_become_garbage(t
 
 	first := s.pages.first
 	for _, p := range []*PageListPin{a, b, c} {
-		expect(t, p.node == first, "p.node == first")
-		expectEqual(t, SizeCellCountInt(0), p.x)
-		expectEqual(t, SizeCellCountInt(0), p.y)
-		expect(t, p.garbage, "p.garbage")
+		expect(t, p.Node == first, "p.node == first")
+		expectEqual(t, SizeCellCountInt(0), p.X)
+		expectEqual(t, SizeCellCountInt(0), p.Y)
+		expect(t, p.Garbage, "p.garbage")
 	}
 
 	// Still tracked, count unchanged.
@@ -335,10 +335,10 @@ func TestPl3_term51_reset_tracked_pins_move_to_the_top_left_and_become_garbage(t
 	// The viewport pin is moved too but is never garbage, and the
 	// viewport returns to the active area.
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
-	expect(t, s.viewport_pin.node == first, "s.viewport_pin.node == first")
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.x)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
-	expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
+	expect(t, s.viewport_pin.Node == first, "s.viewport_pin.node == first")
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.X)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
+	expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
 
 	// Pin objects stay at the same address and valid for the new list.
 	pl3Verify(t, s)
@@ -474,7 +474,7 @@ func TestPl3_term51_clone_full_clone_copies_fields(t *testing.T) {
 	pl3GrowRows(t, s, 30)
 	pl3MarkRows(t, s)
 
-	c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+	c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 	defer c.Deinit()
 
 	pl3ExpectPages(t, c, []uint{54})
@@ -503,10 +503,10 @@ func TestPl3_term51_clone_full_clone_copies_fields(t *testing.T) {
 	expectEqual(t, uint(1), c.CountTrackedPins())
 	expect(t, c.TrackedPins()[0] == c.viewport_pin, "c.trackedPins()[0] == c.viewport_pin")
 	expect(t, c.viewport_pin != s.viewport_pin, "c.viewport_pin != s.viewport_pin")
-	expect(t, c.viewport_pin.node == cp, "c.viewport_pin.node == cp")
-	expectEqual(t, SizeCellCountInt(0), c.viewport_pin.y)
-	expectEqual(t, SizeCellCountInt(0), c.viewport_pin.x)
-	expect(t, !c.viewport_pin.garbage, "!c.viewport_pin.garbage")
+	expect(t, c.viewport_pin.Node == cp, "c.viewport_pin.node == cp")
+	expectEqual(t, SizeCellCountInt(0), c.viewport_pin.Y)
+	expectEqual(t, SizeCellCountInt(0), c.viewport_pin.X)
+	expect(t, !c.viewport_pin.Garbage, "!c.viewport_pin.garbage")
 
 	// All contents copied.
 	for y := 0; y < 54; y++ {
@@ -533,7 +533,7 @@ func TestPl3_term51_clone_does_not_copy_the_pause_counter_or_pins_of_the_source(
 	s.PauseIntegrityChecks(true)
 	defer s.PauseIntegrityChecks(false)
 
-	c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+	c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 	defer c.Deinit()
 	expectEqual(t, uint64(0), c.pause_integrity_checks)
 	expectEqual(t, uint(1), c.CountTrackedPins())
@@ -549,7 +549,7 @@ func TestPl3_term51_clone_viewport_of_the_source_is_ignored(t *testing.T) {
 
 	s.viewport = pl3ViewportTop
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 		defer c.Deinit()
 		expect(t, c.viewport.Tag == PageListViewportActive, "c.viewport == .active")
 		expectEqual(t, None[uint](), c.viewport_pin_row_offset)
@@ -559,12 +559,12 @@ func TestPl3_term51_clone_viewport_of_the_source_is_ignored(t *testing.T) {
 	*s.viewport_pin = pl3Pin(t, s, pl3Screen(0, 5))
 	s.viewport_pin_row_offset = Some[uint](5)
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 		defer c.Deinit()
 		expect(t, c.viewport.Tag == PageListViewportActive, "c.viewport == .active")
 		expectEqual(t, None[uint](), c.viewport_pin_row_offset)
-		expect(t, c.viewport_pin.node == c.pages.first, "c.viewport_pin.node == c.pages.first.?")
-		expectEqual(t, SizeCellCountInt(0), c.viewport_pin.y)
+		expect(t, c.viewport_pin.Node == c.pages.first, "c.viewport_pin.node == c.pages.first.?")
+		expectEqual(t, SizeCellCountInt(0), c.viewport_pin.Y)
 	}
 
 	// The source is unchanged.
@@ -605,8 +605,8 @@ func TestPl3_term51_clone_top_and_bottom_bounds_are_inclusive_rows(t *testing.T)
 			bot = Some(pl3Screen(0, int(case_.bot.Value)))
 		}
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, int(case_.top)),
-			bot: bot,
+			Top: pl3Screen(0, int(case_.top)),
+			Bot: bot,
 		})
 		defer c.Deinit()
 		expectEqual(t, case_.rows, c.total_rows)
@@ -639,13 +639,13 @@ func TestPl3_term51_clone_x_coordinates_of_the_bounds_are_ignored(t *testing.T) 
 	pl3MarkRows(t, s)
 
 	a := pl3Clone(t, s, PageListClone{
-		top: pl3Screen(0, 10),
-		bot: Some(pl3Screen(0, 40)),
+		Top: pl3Screen(0, 10),
+		Bot: Some(pl3Screen(0, 40)),
 	})
 	defer a.Deinit()
 	b := pl3Clone(t, s, PageListClone{
-		top: pl3Screen(79, 10),
-		bot: Some(pl3Screen(5, 40)),
+		Top: pl3Screen(79, 10),
+		Bot: Some(pl3Screen(5, 40)),
 	})
 	defer b.Deinit()
 
@@ -665,13 +665,13 @@ func TestPl3_term51_clone_top_point_tags(t *testing.T) {
 
 	// active: y offsets into the active area, to the end of the screen.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Active(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Active(0, 0)})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
 		expectEqual(t, uint32(0x100+30), pl3Cp(t, c, pl3Screen(0, 0)))
 	}
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Active(0, 5)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Active(0, 5)})
 		defer c.Deinit()
 		// 19 rows are copied, padded to the 24 row active area.
 		expectEqual(t, uint(24), c.total_rows)
@@ -681,7 +681,7 @@ func TestPl3_term51_clone_top_point_tags(t *testing.T) {
 		expectEqual(t, uint32(0), pl3Cp(t, c, pl3Screen(0, 23)))
 	}
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Active(0, 23)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Active(0, 23)})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
 		expectEqual(t, uint32(0x100+53), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -691,8 +691,8 @@ func TestPl3_term51_clone_top_point_tags(t *testing.T) {
 	// active with an explicit bottom.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Active(0, 2),
-			bot: Some(pl3Active(0, 22)),
+			Top: pl3Active(0, 2),
+			Bot: Some(pl3Active(0, 22)),
 		})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
@@ -703,7 +703,7 @@ func TestPl3_term51_clone_top_point_tags(t *testing.T) {
 
 	// history: everything above the active area, 30 rows.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3History(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3History(0, 0)})
 		defer c.Deinit()
 		expectEqual(t, uint(30), c.total_rows)
 		expectEqual(t, uint32(0x100), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -712,8 +712,8 @@ func TestPl3_term51_clone_top_point_tags(t *testing.T) {
 	// history with a bottom smaller than the active area gets padded.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3History(0, 1),
-			bot: Some(pl3History(0, 4)),
+			Top: pl3History(0, 1),
+			Bot: Some(pl3History(0, 4)),
 		})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
@@ -733,7 +733,7 @@ func TestPl3_term51_clone_viewport_tags_follow_the_viewport(t *testing.T) {
 
 	// Active viewport: the active area (to the bottom of the viewport).
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Viewport(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Viewport(0, 0)})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
 		expectEqual(t, uint32(0x100+30), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -743,8 +743,8 @@ func TestPl3_term51_clone_viewport_tags_follow_the_viewport(t *testing.T) {
 	s.viewport = pl3ViewportTop
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Viewport(0, 0),
-			bot: Some(pl3Viewport(0, 23)),
+			Top: pl3Viewport(0, 0),
+			Bot: Some(pl3Viewport(0, 23)),
 		})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
@@ -754,7 +754,7 @@ func TestPl3_term51_clone_viewport_tags_follow_the_viewport(t *testing.T) {
 
 	// Top viewport without an explicit bottom: the viewport's 24 rows.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Viewport(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Viewport(0, 0)})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
 		expectEqual(t, uint32(0x100+23), pl3Cp(t, c, pl3Screen(0, 23)))
@@ -766,7 +766,7 @@ func TestPl3_term51_clone_viewport_tags_follow_the_viewport(t *testing.T) {
 	s.viewport_pin_row_offset = Some[uint](7)
 	{
 		// The default bottom is the bottom of the viewport (rows 7..30).
-		c := pl3Clone(t, s, PageListClone{top: pl3Viewport(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Viewport(0, 0)})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
 		expectEqual(t, uint32(0x100+7), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -775,8 +775,8 @@ func TestPl3_term51_clone_viewport_tags_follow_the_viewport(t *testing.T) {
 	{
 		// 23 rows (8..30) padded to 24.
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Viewport(0, 1),
-			bot: Some(pl3Viewport(0, 23)),
+			Top: pl3Viewport(0, 1),
+			Bot: Some(pl3Viewport(0, 23)),
 		})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
@@ -799,7 +799,7 @@ func TestPl3_term51_clone_multiple_pages_with_trimmed_ends(t *testing.T) {
 
 	// Full clone keeps the page structure and serials 0..2.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{93, 93, 14})
 		expectEqual(t, uint64(3), c.page_serial)
@@ -816,8 +816,8 @@ func TestPl3_term51_clone_multiple_pages_with_trimmed_ends(t *testing.T) {
 	// Trimmed on both ends across a page boundary: rows 60..130.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 60),
-			bot: Some(pl3Screen(0, 130)),
+			Top: pl3Screen(0, 60),
+			Bot: Some(pl3Screen(0, 130)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{33, 38})
@@ -833,8 +833,8 @@ func TestPl3_term51_clone_multiple_pages_with_trimmed_ends(t *testing.T) {
 	// Exactly one full page in the middle.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 93),
-			bot: Some(pl3Screen(0, 185)),
+			Top: pl3Screen(0, 93),
+			Bot: Some(pl3Screen(0, 185)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{93})
@@ -844,8 +844,8 @@ func TestPl3_term51_clone_multiple_pages_with_trimmed_ends(t *testing.T) {
 	// Last row of a page and first row of the next.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 92),
-			bot: Some(pl3Screen(0, 93)),
+			Top: pl3Screen(0, 92),
+			Bot: Some(pl3Screen(0, 93)),
 		})
 		defer c.Deinit()
 		// 2 rows, padded to 50. The two rows come from 2 pages, so
@@ -873,8 +873,8 @@ func TestPl3_term51_clone_padding_below_the_active_area_size(t *testing.T) {
 	// 23 rows copied + 1 padding row; 24 rows copied + 0.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 0),
-			bot: Some(pl3Screen(0, 22)),
+			Top: pl3Screen(0, 0),
+			Bot: Some(pl3Screen(0, 22)),
 		})
 		defer c.Deinit()
 		expectEqual(t, uint(24), c.total_rows)
@@ -884,8 +884,8 @@ func TestPl3_term51_clone_padding_below_the_active_area_size(t *testing.T) {
 	}
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 0),
-			bot: Some(pl3Screen(0, 23)),
+			Top: pl3Screen(0, 0),
+			Bot: Some(pl3Screen(0, 23)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{24})
@@ -895,8 +895,8 @@ func TestPl3_term51_clone_padding_below_the_active_area_size(t *testing.T) {
 	// A single row is padded with 23 blank rows.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 40),
-			bot: Some(pl3Screen(0, 40)),
+			Top: pl3Screen(0, 40),
+			Bot: Some(pl3Screen(0, 40)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{24})
@@ -906,7 +906,7 @@ func TestPl3_term51_clone_padding_below_the_active_area_size(t *testing.T) {
 			expectEqual(t, uint32(0), pl3Cp(t, c, pl3Screen(0, y)))
 		}
 		// The active area of the clone is the whole clone.
-		expectEqual(t, PageListPin{node: c.pages.first, y: 0, x: 0}, c.GetTopLeft(PointTagActive))
+		expectEqual(t, PageListPin{Node: c.pages.first, Y: 0, X: 0}, c.GetTopLeft(PointTagActive))
 		// Serial reflects only the one cloned page.
 		expectEqual(t, uint64(1), c.page_serial)
 	}
@@ -937,8 +937,8 @@ func TestPl3_term51_clone_padded_rows_are_blank(t *testing.T) {
 	page.styles.Release(style_id)
 
 	c := pl3Clone(t, s, PageListClone{
-		top: pl3Screen(0, 0),
-		bot: Some(pl3Screen(0, 2)),
+		Top: pl3Screen(0, 0),
+		Bot: Some(pl3Screen(0, 2)),
 	})
 	defer c.Deinit()
 	expectEqual(t, uint(24), c.total_rows)
@@ -964,8 +964,8 @@ func TestPl3_term51_clone_padding_allocates_a_page_when_the_last_page_is_full(t 
 	// A full page of 93 rows: 7 rows of padding require a new page.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 0),
-			bot: Some(pl3Screen(0, 92)),
+			Top: pl3Screen(0, 0),
+			Bot: Some(pl3Screen(0, 92)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{93, 7})
@@ -982,8 +982,8 @@ func TestPl3_term51_clone_padding_allocates_a_page_when_the_last_page_is_full(t 
 	// A partial last page absorbs the padding and then spills.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 90),
-			bot: Some(pl3Screen(0, 95)),
+			Top: pl3Screen(0, 90),
+			Bot: Some(pl3Screen(0, 95)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{3, 93, 4})
@@ -996,7 +996,7 @@ func TestPl3_term51_clone_padding_allocates_a_page_when_the_last_page_is_full(t 
 
 	// Only the last page (7 rows) padded to 100 rows.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 93)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 93)})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{93, 7})
 		expectEqual(t, uint32(0x100+93), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -1014,8 +1014,8 @@ func TestPl3_term51_clone_one_row_per_page_pads_with_new_pages(t *testing.T) {
 	pl3MarkRows(t, s)
 
 	c := pl3Clone(t, s, PageListClone{
-		top: pl3Screen(0, 5),
-		bot: Some(pl3Screen(0, 10)),
+		Top: pl3Screen(0, 5),
+		Bot: Some(pl3Screen(0, 10)),
 	})
 	defer c.Deinit()
 	expectEqual(t, uint(24), c.TotalPages())
@@ -1037,7 +1037,7 @@ func TestPl3_term51_clone_smallest_list(t *testing.T) {
 	defer s.Deinit()
 	pl3SetCell(pl3Pin(t, s, pl3Active(0, 0)), 'k')
 
-	c := pl3Clone(t, s, PageListClone{top: pl3Active(0, 0), bot: Some(pl3Active(0, 0))})
+	c := pl3Clone(t, s, PageListClone{Top: pl3Active(0, 0), Bot: Some(pl3Active(0, 0))})
 	defer c.Deinit()
 	pl3ExpectPages(t, c, []uint{1})
 	expectEqual(t, uint32('k'), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -1056,7 +1056,7 @@ func TestPl3_term51_clone_many_rows_in_a_single_page(t *testing.T) {
 
 	// Full clone.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{2000})
 		expectEqual(t, uint32(0x100+1999), pl3Cp(t, c, pl3Screen(0, 1999)))
@@ -1065,7 +1065,7 @@ func TestPl3_term51_clone_many_rows_in_a_single_page(t *testing.T) {
 
 	// Half is cloned and the rest padded back to the active height.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 1000)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 1000)})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{2000})
 		expectEqual(t, uint32(0x100+1000), pl3Cp(t, c, pl3Screen(0, 0)))
@@ -1084,7 +1084,7 @@ func TestPl3_term51_clone_page_level_dirty_flag_is_copied(t *testing.T) {
 	s.ClearDirty()
 	s.pages.first.data.dirty = true
 
-	c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+	c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 	defer c.Deinit()
 	expect(t, c.pages.first.data.dirty, "c.pages.first.?.data.dirty")
 	expect(t, !c.pages.last.data.dirty, "!c.pages.last.?.data.dirty")
@@ -1097,7 +1097,7 @@ func TestPl3_term51_clone_page_level_dirty_flag_is_copied(t *testing.T) {
 	// Row-level dirty flags copied individually.
 	s.ClearDirty()
 	s.markDirty(pl3Screen(0, 97))
-	c2 := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+	c2 := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 	defer c2.Deinit()
 	expect(t, !c2.IsDirty(pl3Screen(0, 96)), "!c2.isDirty(.{ .screen = .{ .y = 96 } })")
 	expect(t, c2.IsDirty(pl3Screen(0, 97)), "c2.isDirty(.{ .screen = .{ .y = 97 } })")
@@ -1115,7 +1115,7 @@ func TestPl3_term51_clone_page_size_columns_follow_the_source_page(t *testing.T)
 	s.pages.first.data.size.cols = 40
 	defer func() { s.pages.first.data.size.cols = 80 }()
 
-	c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+	c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 	defer c.Deinit()
 	expectEqual(t, SizeCellCountInt(80), c.cols)
 	expectEqual(t, SizeCellCountInt(40), c.pages.first.data.size.cols)
@@ -1134,7 +1134,7 @@ func TestPl3_term51_clone_non_standard_pages(t *testing.T) {
 
 	// Full clone.
 	{
-		c := pl3Clone(t, s, PageListClone{top: pl3Screen(0, 0)})
+		c := pl3Clone(t, s, PageListClone{Top: pl3Screen(0, 0)})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{3})
 		expectEqual(t, uint64(80838656), c.page_size)
@@ -1147,8 +1147,8 @@ func TestPl3_term51_clone_non_standard_pages(t *testing.T) {
 	// Partial clone padded within the capacity of the non-standard page.
 	{
 		c := pl3Clone(t, s, PageListClone{
-			top: pl3Screen(0, 1),
-			bot: Some(pl3Screen(0, 1)),
+			Top: pl3Screen(0, 1),
+			Bot: Some(pl3Screen(0, 1)),
 		})
 		defer c.Deinit()
 		pl3ExpectPages(t, c, []uint{3})
@@ -1167,9 +1167,9 @@ func TestPl3_term51_clone_tracked_pins_are_only_kept_when_a_remap_is_given(t *te
 	defer s.UntrackPin(p)
 
 	// The default options have no remap and no bottom.
-	opts := PageListClone{top: pl3Screen(0, 0), bot: None[Point](), tracked_pins: nil}
-	expect(t, !opts.bot.Valid, "opts.bot == null")
-	expect(t, opts.tracked_pins == nil, "opts.tracked_pins == null")
+	opts := PageListClone{Top: pl3Screen(0, 0), Bot: None[Point](), TrackedPins: nil}
+	expect(t, !opts.Bot.Valid, "opts.bot == null")
+	expect(t, opts.TrackedPins == nil, "opts.tracked_pins == null")
 
 	c := pl3Clone(t, s, opts)
 	defer c.Deinit()
@@ -1188,7 +1188,7 @@ func TestPl3_term51_clone_remaps_tracked_pins_into_the_cloned_area(t *testing.T)
 	b := pl3Track(t, s, pl3Pin(t, s, pl3Screen(79, 20)))
 	dup := pl3Track(t, s, pl3Pin(t, s, pl3Screen(4, 10)))
 	garbage := pl3Track(t, s, pl3Pin(t, s, pl3Screen(1, 12)))
-	garbage.garbage = true
+	garbage.Garbage = true
 	defer s.UntrackPin(a)
 	defer s.UntrackPin(b)
 	defer s.UntrackPin(dup)
@@ -1196,9 +1196,9 @@ func TestPl3_term51_clone_remaps_tracked_pins_into_the_cloned_area(t *testing.T)
 
 	remap := PageListCloneTrackedPinsRemap{}
 	c := pl3Clone(t, s, PageListClone{
-		top:          pl3Screen(0, 10),
-		bot:          None[Point](),
-		tracked_pins: &remap,
+		Top:         pl3Screen(0, 10),
+		Bot:         None[Point](),
+		TrackedPins: &remap,
 	})
 	defer c.Deinit()
 
@@ -1222,7 +1222,7 @@ func TestPl3_term51_clone_remaps_tracked_pins_into_the_cloned_area(t *testing.T)
 	expect(t, na != ndup, "na != ndup")
 	expect(t, na != c.viewport_pin, "na != c.viewport_pin")
 	for _, np := range []*PageListPin{na, nb, ndup, ng} {
-		expect(t, np.node == c.pages.first, "np.node == c.pages.first.?")
+		expect(t, np.Node == c.pages.first, "np.node == c.pages.first.?")
 		found := false
 		for _, tp := range c.TrackedPins() {
 			if tp == np {
@@ -1234,25 +1234,25 @@ func TestPl3_term51_clone_remaps_tracked_pins_into_the_cloned_area(t *testing.T)
 	}
 
 	// y is offset by the chunk start, x and garbage are copied.
-	expectEqual(t, SizeCellCountInt(0), na.y)
-	expectEqual(t, SizeCellCountInt(4), na.x)
-	expectEqual(t, SizeCellCountInt(0), ndup.y)
-	expectEqual(t, SizeCellCountInt(10), nb.y)
-	expectEqual(t, SizeCellCountInt(79), nb.x)
-	expectEqual(t, SizeCellCountInt(2), ng.y)
-	expect(t, !na.garbage, "!na.garbage")
-	expect(t, ng.garbage, "ng.garbage")
+	expectEqual(t, SizeCellCountInt(0), na.Y)
+	expectEqual(t, SizeCellCountInt(4), na.X)
+	expectEqual(t, SizeCellCountInt(0), ndup.Y)
+	expectEqual(t, SizeCellCountInt(10), nb.Y)
+	expectEqual(t, SizeCellCountInt(79), nb.X)
+	expectEqual(t, SizeCellCountInt(2), ng.Y)
+	expect(t, !na.Garbage, "!na.garbage")
+	expect(t, ng.Garbage, "ng.garbage")
 	expectEqualPoint(t, pl3Screen(79, 10), zigUnwrap(t, c.PointFromPin(PointTagScreen, *nb)))
 
 	// The clone's own viewport pin stays at the top-left.
-	expect(t, c.viewport_pin.node == c.pages.first, "c.viewport_pin.node == c.pages.first.?")
-	expectEqual(t, SizeCellCountInt(0), c.viewport_pin.y)
-	expect(t, !c.viewport_pin.garbage, "!c.viewport_pin.garbage")
+	expect(t, c.viewport_pin.Node == c.pages.first, "c.viewport_pin.node == c.pages.first.?")
+	expectEqual(t, SizeCellCountInt(0), c.viewport_pin.Y)
+	expect(t, !c.viewport_pin.Garbage, "!c.viewport_pin.garbage")
 
 	// The source's pins are unchanged.
-	expectEqual(t, SizeCellCountInt(10), a.y)
-	expectEqual(t, SizeCellCountInt(20), b.y)
-	expect(t, garbage.garbage, "garbage.garbage")
+	expectEqual(t, SizeCellCountInt(10), a.Y)
+	expectEqual(t, SizeCellCountInt(20), b.Y)
+	expect(t, garbage.Garbage, "garbage.garbage")
 }
 
 // Zig: test "term51: clone: remap includes the source viewport pin when in range"
@@ -1270,9 +1270,9 @@ func TestPl3_term51_clone_remap_includes_the_source_viewport_pin_when_in_range(t
 
 	remap := PageListCloneTrackedPinsRemap{}
 	c := pl3Clone(t, s, PageListClone{
-		top:          pl3Screen(0, 7),
-		bot:          None[Point](),
-		tracked_pins: &remap,
+		Top:         pl3Screen(0, 7),
+		Bot:         None[Point](),
+		TrackedPins: &remap,
 	})
 	defer c.Deinit()
 
@@ -1280,8 +1280,8 @@ func TestPl3_term51_clone_remap_includes_the_source_viewport_pin_when_in_range(t
 	np := remap[s.viewport_pin]
 	expect(t, np != nil, "remap.get(s.viewport_pin) != null")
 	expect(t, np != c.viewport_pin, "np != c.viewport_pin")
-	expectEqual(t, SizeCellCountInt(0), np.y)
-	expectEqual(t, SizeCellCountInt(3), np.x)
+	expectEqual(t, SizeCellCountInt(0), np.Y)
+	expectEqual(t, SizeCellCountInt(3), np.X)
 	// The clone has the new pin plus its own viewport pin.
 	expectEqual(t, uint(2), c.CountTrackedPins())
 	expect(t, c.viewport.Tag == PageListViewportActive, "c.viewport == .active")
@@ -1309,9 +1309,9 @@ func TestPl3_term51_clone_remap_boundaries_and_multiple_pages(t *testing.T) {
 
 	remap := PageListCloneTrackedPinsRemap{}
 	c := pl3Clone(t, s, PageListClone{
-		top:          pl3Screen(100, 60),
-		bot:          Some(pl3Screen(100, 130)),
-		tracked_pins: &remap,
+		Top:         pl3Screen(100, 60),
+		Bot:         Some(pl3Screen(100, 130)),
+		TrackedPins: &remap,
 	})
 	defer c.Deinit()
 	pl3ExpectPages(t, c, []uint{33, 38})
@@ -1337,9 +1337,9 @@ func TestPl3_term51_clone_remap_boundaries_and_multiple_pages(t *testing.T) {
 	} {
 		np := remap[pins[e.idx]]
 		expect(t, np != nil, "remap.get(pins[e.idx]) != null")
-		expect(t, np.node == e.node, "np.node == e.node")
-		expectEqual(t, e.y, np.y)
-		expectEqual(t, SizeCellCountInt(9), np.x)
+		expect(t, np.Node == e.node, "np.node == e.node")
+		expectEqual(t, e.y, np.Y)
+		expectEqual(t, SizeCellCountInt(9), np.X)
 		expect(t, c.PinIsValid(*np), "c.pinIsValid(np.*)")
 	}
 	pl3Verify(t, c)
@@ -1357,15 +1357,15 @@ func TestPl3_term51_clone_remap_with_padded_clone_keeps_pins_valid(t *testing.T)
 
 	remap := PageListCloneTrackedPinsRemap{}
 	c := pl3Clone(t, s, PageListClone{
-		top:          pl3Screen(0, 49),
-		bot:          Some(pl3Screen(0, 52)),
-		tracked_pins: &remap,
+		Top:         pl3Screen(0, 49),
+		Bot:         Some(pl3Screen(0, 52)),
+		TrackedPins: &remap,
 	})
 	defer c.Deinit()
 	expectEqual(t, uint(24), c.total_rows)
 	np := remap[p]
 	expect(t, np != nil, "remap.get(p) != null")
-	expectEqual(t, SizeCellCountInt(1), np.y)
+	expectEqual(t, SizeCellCountInt(1), np.Y)
 	expect(t, c.PinIsValid(*np), "c.pinIsValid(np.*)")
 	pl3Verify(t, c)
 }
@@ -1379,9 +1379,9 @@ func TestPl3_term51_clone_remap_with_no_pins_in_range_is_empty(t *testing.T) {
 
 	remap := PageListCloneTrackedPinsRemap{}
 	c := pl3Clone(t, s, PageListClone{
-		top:          pl3Screen(0, 20),
-		bot:          None[Point](),
-		tracked_pins: &remap,
+		Top:         pl3Screen(0, 20),
+		Bot:         None[Point](),
+		TrackedPins: &remap,
 	})
 	defer c.Deinit()
 	// The viewport pin (screen y=0) is outside; only the clone's own pin.
@@ -1398,13 +1398,13 @@ func TestPl3_term51_clone_clone_of_a_clone(t *testing.T) {
 	pl3MarkRows(t, s)
 
 	c1 := pl3Clone(t, s, PageListClone{
-		top: pl3Screen(0, 40),
-		bot: Some(pl3Screen(0, 150)),
+		Top: pl3Screen(0, 40),
+		Bot: Some(pl3Screen(0, 150)),
 	})
 	defer c1.Deinit()
 	c2 := pl3Clone(t, c1, PageListClone{
-		top: pl3Screen(0, 10),
-		bot: Some(pl3Screen(0, 100)),
+		Top: pl3Screen(0, 10),
+		Bot: Some(pl3Screen(0, 100)),
 	})
 	defer c2.Deinit()
 
@@ -1505,7 +1505,7 @@ func pl3KLoad(t *testing.T, s *PageList, text string) {
 		row.wrap = wrap
 		row.wrap_continuation = cont
 		row.semantic_prompt = sp
-		cells := p.node.data.GetCells(row)
+		cells := p.Node.data.GetCells(row)
 		for x := 0; x < len(body); x++ {
 			ch := body[x]
 			switch ch {
@@ -1581,7 +1581,7 @@ func pl3KDump(t *testing.T, s *PageList) string {
 		}
 		first = false
 		row := p.RowAndCell().row
-		cells := p.node.data.GetCells(row)
+		cells := p.Node.data.GetCells(row)
 		if len(cells) != int(s.cols) {
 			t.Fatalf("TestUnexpectedResult: row has %d cells, want %d", len(cells), s.cols)
 		}
@@ -1630,8 +1630,8 @@ func pl3KExpect(t *testing.T, s *PageList, expected string) {
 func pl3KExpectPin(t *testing.T, s *PageList, p PageListPin, x int, y int) {
 	t.Helper()
 	pt := zigUnwrap(t, s.PointFromPin(PointTagScreen, p))
-	expectEqual(t, uint(x), uint(pt.Screen.x))
-	expectEqual(t, uint(y), uint(pt.Screen.y))
+	expectEqual(t, uint(x), uint(pt.Screen.X))
+	expectEqual(t, uint(y), uint(pt.Screen.Y))
 }
 
 // pl3KCell is term51KCell.
@@ -1716,8 +1716,8 @@ func (self *pl3KReflow) step(t *testing.T) bool {
 	}
 	row := next.Value
 	zigTry(t, self.rc.reflowRow(self.list, row))
-	if row.y == row.node.data.size.rows-1 {
-		self.list.destroyNode(row.node)
+	if row.Y == row.Node.data.size.rows-1 {
+		self.list.destroyNode(row.Node)
 	}
 	return true
 }
@@ -1773,7 +1773,7 @@ func pl3KSpacerHead() PageCell {
 
 // pl3KStyleCell is the Zig literal `.{ .content_tag = .codepoint, .content =
 // .{ .codepoint = cp }, .style_id = id }`.
-func pl3KStyleCell(cp uint32, id StyleId) PageCell {
+func pl3KStyleCell(cp uint32, id StyleID) PageCell {
 	c := pl3Codepoint(cp)
 	c.style_id = id
 	return c
@@ -1790,10 +1790,10 @@ func pl3KRowCell(page *Page, y int, x int) *PageCell {
 func pl3KFillStyles(page *Page) uint {
 	var n uint = 0
 	for x := 0; x < int(page.size.cols); x++ {
-		id, err := page.styles.Add(Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: uint8(x),
-			g: uint8(x >> 8),
-			b: 1,
+		id, err := page.styles.Add(Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: uint8(x),
+			G: uint8(x >> 8),
+			B: 1,
 		}}})
 		if err != nil {
 			break
@@ -1817,8 +1817,8 @@ func pl3KFillLinks(t *testing.T, page *Page) uint {
 	var n uint = 0
 	for x := 0; x < int(page.size.cols); x++ {
 		id, err := page.InsertHyperlink(Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: SizeOffsetInt(x)},
-			uri: []uint8("u"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: SizeOffsetInt(x)},
+			URI: []uint8("u"),
 		})
 		if err != nil {
 			break
@@ -1834,8 +1834,8 @@ func pl3KFillLinks(t *testing.T, page *Page) uint {
 // pl3Link is the Zig literal `.{ .id = .{ .implicit = n }, .uri = uri }`.
 func pl3Link(n SizeOffsetInt, uri string) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: n},
-		uri: []uint8(uri),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: n},
+		URI: []uint8(uri),
 	}
 }
 
@@ -1859,7 +1859,7 @@ func TestPl3_term51_resize_reflow_false_truncates_without_reflow_and_resets_the_
 	pl3KLoad(t, s, "|abcd>\n<ef..|\n|g...|")
 	s.viewport_pin_row_offset = Some[uint](7)
 
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(2), reflow: false})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(2), Reflow: false})
 	expectEqual(t, SizeCellCountInt(2), s.cols)
 	expectEqual(t, SizeCellCountInt(3), s.rows)
 	expectEqual(t, None[uint](), s.viewport_pin_row_offset)
@@ -1875,13 +1875,13 @@ func TestPl3_term51_resize_equal_cols_with_reflow_only_changes_rows(t *testing.T
 	pl3KLoad(t, s, "|abcd>\n<ef..|\n|....|\n|....|")
 
 	// Shrinking rows trims the two trailing blank rows instead of making history.
-	pl3Resize(t, s, PageListResize{rows: pl3Dim(2), reflow: true})
+	pl3Resize(t, s, PageListResize{Rows: pl3Dim(2), Reflow: true})
 	expectEqual(t, SizeCellCountInt(4), s.cols)
 	expectEqual(t, SizeCellCountInt(2), s.rows)
 	pl3KExpect(t, s, "|abcd>\n<ef..|")
 
 	// Same columns but explicit: no reflow happens.
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(4), rows: pl3Dim(3), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(4), Rows: pl3Dim(3), Reflow: true})
 	pl3KExpect(t, s, "|abcd>\n<ef..|\n|....|")
 }
 
@@ -1892,16 +1892,16 @@ func TestPl3_term51_resize_layout_min_max_size_follows_the_requested_dimensions(
 	defer s.Deinit()
 
 	// Without reflow (resizeWithoutReflow computes it).
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(3000), rows: pl3Dim(40), reflow: false})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(3000), Rows: pl3Dim(40), Reflow: false})
 	expectEqual(t, pageListMinMaxSize(3000, 40), s.min_max_size)
 	// With reflow and the same number of columns (rows only).
-	pl3Resize(t, s, PageListResize{rows: pl3Dim(5), reflow: true})
+	pl3Resize(t, s, PageListResize{Rows: pl3Dim(5), Reflow: true})
 	expectEqual(t, pageListMinMaxSize(3000, 5), s.min_max_size)
 	// With reflow and other columns.
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(20), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(20), Reflow: true})
 	expectEqual(t, pageListMinMaxSize(20, 5), s.min_max_size)
 	// No change at all.
-	pl3Resize(t, s, PageListResize{reflow: true})
+	pl3Resize(t, s, PageListResize{Reflow: true})
 	expectEqual(t, pageListMinMaxSize(20, 5), s.min_max_size)
 }
 
@@ -1913,7 +1913,7 @@ func TestPl3_term51_resize_layout_reflow_recomputes_min_max_size_from_the_new_di
 	old := s.min_max_size
 	*s.pages.first.data.GetRowAndCell(0, 0).cell = pl3Codepoint('a')
 
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(3000), rows: pl3Dim(40), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(3000), Rows: pl3Dim(40), Reflow: true})
 	expectEqual(t, SizeCellCountInt(3000), s.cols)
 	expectEqual(t, SizeCellCountInt(40), s.rows)
 	expectEqual(t, uint(40), s.totalRows())
@@ -1931,7 +1931,7 @@ func TestPl3_term51_resize_growing_cols_reflows_before_growing_rows(t *testing.T
 
 	// Cols first: the reflow leaves 1 row which grow() pads back to 4 rows
 	// (the old row count) and then rows shrink to 2 trimming the blanks.
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(8), rows: pl3Dim(2), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(8), Rows: pl3Dim(2), Reflow: true})
 	expectEqual(t, SizeCellCountInt(8), s.cols)
 	expectEqual(t, SizeCellCountInt(2), s.rows)
 	pl3KExpect(t, s, "|abcdef..|\n|........|")
@@ -1946,7 +1946,7 @@ func TestPl3_term51_resize_shrinking_cols_changes_rows_before_reflowing(t *testi
 
 	// Rows first (trimming the 2 blank rows), then the reflow to 2 cols makes
 	// 3 rows of which the first one is history.
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(2), rows: pl3Dim(2), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(2), Rows: pl3Dim(2), Reflow: true})
 	expectEqual(t, SizeCellCountInt(2), s.cols)
 	expectEqual(t, SizeCellCountInt(2), s.rows)
 	pl3KExpect(t, s, "|ab>\n<cd>\n<ef|")
@@ -1960,7 +1960,7 @@ func TestPl3_term51_resize_single_column_and_single_row(t *testing.T) {
 	defer s.Deinit()
 	pl3KLoad(t, s, "|abcd|\n|e...|\n|....|")
 
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(1), rows: pl3Dim(1), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(1), Rows: pl3Dim(1), Reflow: true})
 	expectEqual(t, SizeCellCountInt(1), s.cols)
 	expectEqual(t, SizeCellCountInt(1), s.rows)
 	pl3KExpect(t, s, "|a>\n<b>\n<c>\n<d|\n|e|")
@@ -1975,7 +1975,7 @@ func TestPl3_term51_resize_cursor_option_is_passed_to_resizeCols(t *testing.T) {
 	pl3GrowRows(t, s, 2)
 	pl3KLoad(t, s, "|ab..|\n|cd..|\n|....|\n|....|\n|....|")
 
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(2), reflow: true, cursor: pl3CursorAt(0, 0)})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(2), Reflow: true, Cursor: pl3CursorAt(0, 0)})
 	// The active area does not pull the history down: 2 rows were added.
 	pl3KExpect(t, s, "|ab|\n|cd|\n|..|\n|..|\n|..|")
 	pl3KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 2)
@@ -1994,7 +1994,7 @@ func TestPl3_term51_resize_pinned_viewport_that_becomes_active_after_reflow_is_m
 
 	// 12 rows unwrap to 6, the active area starts at 2 and the pin that was
 	// on row 6 is now on row 3.
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(4), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(4), Reflow: true})
 	expectEqual(t, uint(6), s.totalRows())
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	pl3KExpect(t, s, "|aaaa|\n|aaaa|\n|aaaa|\n|aaaa|\n|aaaa|\n|aaaa|")
@@ -2011,7 +2011,7 @@ func TestPl3_term51_resize_pinned_viewport_stays_pinned_when_still_in_history_af
 	s.Scroll(pl3ScrollPin(pl3Pin(t, s, pl3Screen(0, 2))))
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(4), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(4), Reflow: true})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	pl3KExpectPin(t, s, *s.viewport_pin, 0, 1)
 	expectEqual(t, uint(6), s.totalRows())
@@ -2027,11 +2027,11 @@ func TestPl3_term51_resize_top_and_active_viewports_are_unchanged_by_a_reflow(t 
 
 	s.Scroll(PageListScroll{Tag: PageListScrollTop})
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(4), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(4), Reflow: true})
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
-	pl3Resize(t, s, PageListResize{cols: pl3Dim(2), reflow: true})
+	pl3Resize(t, s, PageListResize{Cols: pl3Dim(2), Reflow: true})
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	expectEqual(t, uint(12), s.totalRows())
 }
@@ -2047,7 +2047,7 @@ func TestPl3_term51_resize_growing_rows_makes_a_pinned_viewport_active_when_it_n
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 
 	// Pin row 7 plus 6 rows is beyond the 12 total rows.
-	pl3Resize(t, s, PageListResize{rows: pl3Dim(6), reflow: true})
+	pl3Resize(t, s, PageListResize{Rows: pl3Dim(6), Reflow: true})
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 	expectEqual(t, uint(12), s.totalRows())
 }
@@ -2060,7 +2060,7 @@ func TestPl3_term51_resize_pinned_viewport_survives_a_cursor_guided_row_growth_w
 	pl3GrowRows(t, s, 8)
 
 	s.Scroll(pl3ScrollPin(pl3Pin(t, s, pl3Screen(0, 1))))
-	pl3Resize(t, s, PageListResize{rows: pl3Dim(6), reflow: false, cursor: pl3CursorAt(0, 0)})
+	pl3Resize(t, s, PageListResize{Rows: pl3Dim(6), Reflow: false, Cursor: pl3CursorAt(0, 0)})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	pl3KExpectPin(t, s, *s.viewport_pin, 0, 1)
 	expectEqual(t, uint(14), s.totalRows())
@@ -2078,7 +2078,7 @@ func TestPl3_term51_resize_invalidates_the_cached_viewport_row_offset(t *testing
 	_ = s.Scrollbar()
 	expectEqual(t, Some[uint](2), s.viewport_pin_row_offset)
 
-	pl3Resize(t, s, PageListResize{rows: pl3Dim(2), reflow: true})
+	pl3Resize(t, s, PageListResize{Rows: pl3Dim(2), Reflow: true})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, None[uint](), s.viewport_pin_row_offset)
 	// The two trailing blank rows were trimmed.
@@ -2325,7 +2325,7 @@ func TestPl3_term51_resizeCols_layout_pruning_while_padding_for_the_cursor_drops
 	expectEqual(t, uint(47), s.total_rows)
 	expectEqual(t, 2, len(pl3KRowsPerPage(s)))
 	expectEqualSlices(t, []uint{46, 1}, pl3KRowsPerPage(s))
-	expect(t, first_pin.garbage, "first_pin.garbage")
+	expect(t, first_pin.Garbage, "first_pin.garbage")
 	pl3KExpectPin(t, s, *first_pin, 0, 0)
 	expectEqual(t, uint32('a'+(46%26)), pl3KCell(t, s, 0, 0).content.codepoint)
 	pl3KExpectPin(t, s, s.GetTopLeft(PointTagActive), 0, 43)
@@ -2746,7 +2746,7 @@ func TestPl3_term51_ReflowCursor_countTrailingEmptyCells_spacers_and_colors_are_
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
 	pl3KSetCell(&rc, 3, PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 3}})
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
-	pl3KSetCell(&rc, 3, PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}}})
+	pl3KSetCell(&rc, 3, PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}})
 	expectEqual(t, uint(0), rc.countTrailingEmptyCells())
 	// A blank cell that carries a style id but no text is empty.
 	pl3KSetCell(&rc, 3, PageCell{style_id: 5})
@@ -2814,9 +2814,9 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_moves_the_row_and_its_pins
 		d.row.styled = true
 	}
 
-	pin_row1 := pl3Track(t, s, PageListPin{node: node, x: 1, y: 1})
+	pin_row1 := pl3Track(t, s, PageListPin{Node: node, X: 1, Y: 1})
 	defer s.UntrackPin(pin_row1)
-	pin_row0 := pl3Track(t, s, PageListPin{node: node, x: 1, y: 0})
+	pin_row0 := pl3Track(t, s, PageListPin{Node: node, X: 1, Y: 0})
 	defer s.UntrackPin(pin_row0)
 
 	rc := pageListReflowCursorInit(node)
@@ -2850,7 +2850,7 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_moves_the_row_and_its_pins
 		expectEqualSlices(t, []uint32{0x301}, zigUnwrap(t, new_page.LookupGrapheme(c)))
 		d := new_page.GetRowAndCell(1, 0).cell
 		expectEqual(t, uint32('d'), d.content.codepoint)
-		expect(t, new_page.styles.Get(d.style_id).flags.bold, "new_page.styles.get(new_page.memory, d.style_id).flags.bold")
+		expect(t, new_page.styles.Get(d.style_id).Flags.Bold, "new_page.styles.get(new_page.memory, d.style_id).flags.bold")
 	}
 
 	// The old row is cleared, including its managed memory.
@@ -2870,11 +2870,11 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_moves_the_row_and_its_pins
 	expectEqual(t, uint32('a'), page.GetRowAndCell(0, 0).cell.content.codepoint)
 
 	// The pin in the moved row follows, the other one stays.
-	expect(t, rc.node == pin_row1.node, "rc.node == pin_row1.node")
-	expectEqual(t, SizeCellCountInt(0), pin_row1.y)
-	expectEqual(t, SizeCellCountInt(1), pin_row1.x)
-	expect(t, node == pin_row0.node, "node == pin_row0.node")
-	expectEqual(t, SizeCellCountInt(0), pin_row0.y)
+	expect(t, rc.node == pin_row1.Node, "rc.node == pin_row1.node")
+	expectEqual(t, SizeCellCountInt(0), pin_row1.Y)
+	expectEqual(t, SizeCellCountInt(1), pin_row1.X)
+	expect(t, node == pin_row0.Node, "node == pin_row0.node")
+	expectEqual(t, SizeCellCountInt(0), pin_row0.Y)
 	s.AssertIntegrity()
 }
 
@@ -2885,7 +2885,7 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_a_page_with_a_single_row_i
 	defer s.Deinit()
 	node := pl3KAddNode(t, s, pl3Cap(4, 3), 1)
 	*node.data.GetRowAndCell(1, 0).cell = PageCellInit('x')
-	tpin := pl3Track(t, s, PageListPin{node: node, x: 1, y: 0})
+	tpin := pl3Track(t, s, PageListPin{Node: node, X: 1, Y: 0})
 	defer s.UntrackPin(tpin)
 	expectEqual(t, uint(2), s.TotalPages())
 
@@ -2899,7 +2899,7 @@ func TestPl3_term51_ReflowCursor_moveLastRowToNewPage_a_page_with_a_single_row_i
 	expectEqual(t, uint(2), s.totalRows())
 	expectEqual(t, SizeCellCountInt(0), rc.y)
 	expectEqual(t, SizeCellCountInt(1), rc.x)
-	expect(t, rc.node == tpin.node, "rc.node == tpin.node")
+	expect(t, rc.node == tpin.Node, "rc.node == tpin.node")
 	expectEqual(t, uint32('x'), rc.page.GetRowAndCell(1, 0).cell.content.codepoint)
 	s.AssertIntegrity()
 }
@@ -2931,7 +2931,7 @@ func TestPl3_term51_ReflowCursor_increaseCapacity_replaces_the_node_keeping_posi
 	node := pl3KAddNode(t, s, pl3Cap(4, 3), 2)
 	*node.data.GetRowAndCell(0, 0).cell = PageCellInit('a')
 	*node.data.GetRowAndCell(2, 1).cell = PageCellInit('b')
-	tpin := pl3Track(t, s, PageListPin{node: node, x: 2, y: 1})
+	tpin := pl3Track(t, s, PageListPin{Node: node, X: 2, Y: 1})
 	defer s.UntrackPin(tpin)
 
 	rc := pageListReflowCursorInit(node)
@@ -2951,7 +2951,7 @@ func TestPl3_term51_ReflowCursor_increaseCapacity_replaces_the_node_keeping_posi
 	expectEqual(t, uint(0), rc.new_rows)
 	expect(t, !rc.pending_wrap, "!rc.pending_wrap")
 	expectEqual(t, uint32('b'), rc.page_cell.content.codepoint)
-	expect(t, rc.node == tpin.node, "rc.node == tpin.node")
+	expect(t, rc.node == tpin.Node, "rc.node == tpin.node")
 	expectEqual(t, uint(2), s.TotalPages())
 	expect(t, rc.node == s.pages.last, "rc.node == s.pages.last.?")
 	if pageSlowRuntimeSafety {
@@ -3160,7 +3160,7 @@ func TestPl3_term51_ReflowCursor_writeCell_background_color_cells_are_copied_wit
 
 	rgb := PageCell{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}},
+		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
 	}
 	r, err = rc.writeCell(s, &rgb, src_page)
 	zigTry(t, err)
@@ -3291,8 +3291,8 @@ func TestPl3_term51_ReflowCursor_writeCell_hyperlinks_are_copied_with_their_stri
 	id1, err := src_page.InsertHyperlink(pl3Link(7, "https://a.example"))
 	zigTry(t, err)
 	id2, err := src_page.InsertHyperlink(Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("my-id")},
-		uri: []uint8("https://b.example"),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("my-id")},
+		URI: []uint8("https://b.example"),
 	})
 	zigTry(t, err)
 	c1 := src_page.GetRowAndCell(0, 0)
@@ -3430,7 +3430,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_are_copied_and_shared(t *testi
 	src_page := &s.pages.first.data
 	bold, err := src_page.styles.Add(pl3Bold())
 	zigTry(t, err)
-	ital, err := src_page.styles.Add(Style{flags: styleFlags{italic: true}})
+	ital, err := src_page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	zigTry(t, err)
 	sc := [3]PageCell{
 		pl3KStyleCell('a', bold),
@@ -3443,7 +3443,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_are_copied_and_shared(t *testi
 	// first source style.
 	node := pl3KAddNode(t, s, pl3Cap(4, 2), 1)
 	page := &node.data
-	other, err := page.styles.Add(Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}})
+	other, err := page.styles.Add(Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}})
 	zigTry(t, err)
 	expectEqual(t, bold, other)
 	*page.GetRowAndCell(3, 0).cell = pl3KStyleCell('o', other)
@@ -3462,8 +3462,8 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_are_copied_and_shared(t *testi
 	// The wanted id was taken so the style got another id.
 	expect(t, d0.style_id != other, "d0.style_id != other")
 	expect(t, d0.style_id != 0, "d0.style_id != 0")
-	expect(t, page.styles.Get(d0.style_id).flags.bold, "page.styles.get(page.memory, d0.style_id).flags.bold")
-	expect(t, page.styles.Get(d1.style_id).flags.italic, "page.styles.get(page.memory, d1.style_id).flags.italic")
+	expect(t, page.styles.Get(d0.style_id).Flags.Bold, "page.styles.get(page.memory, d0.style_id).flags.bold")
+	expect(t, page.styles.Get(d1.style_id).Flags.Italic, "page.styles.get(page.memory, d1.style_id).flags.italic")
 	expectEqual(t, d0.style_id, d2.style_id)
 	expectEqual(t, uint16(2), page.styles.RefCount(d0.style_id))
 	expectEqual(t, uint16(1), page.styles.RefCount(d1.style_id))
@@ -3478,7 +3478,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_get_fresh_ids_in_an_empty_dest
 	src_page := &s.pages.first.data
 	bold, err := src_page.styles.Add(pl3Bold())
 	zigTry(t, err)
-	ital, err := src_page.styles.Add(Style{flags: styleFlags{italic: true}})
+	ital, err := src_page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	zigTry(t, err)
 	cell := pl3KStyleCell('b', ital)
 	expect(t, bold != ital, "bold != ital")
@@ -3505,7 +3505,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_reuse_their_id_when_its_slot_i
 	src_page := &s.pages.first.data
 	bold, err := src_page.styles.Add(pl3Bold())
 	zigTry(t, err)
-	ital, err := src_page.styles.Add(Style{flags: styleFlags{italic: true}})
+	ital, err := src_page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	zigTry(t, err)
 	cell := pl3KStyleCell('b', ital)
 
@@ -3513,9 +3513,9 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_reuse_their_id_when_its_slot_i
 	// last is alive (so nothing is trimmed from the end).
 	node := pl3KAddNode(t, s, pl3Cap(4, 2), 1)
 	page := &node.data
-	dead, err := page.styles.Add(Style{flags: styleFlags{underline: SGRAttributeUnderlineSingle}})
+	dead, err := page.styles.Add(Style{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}})
 	zigTry(t, err)
-	alive, err := page.styles.Add(Style{flags: styleFlags{faint: true}})
+	alive, err := page.styles.Add(Style{Flags: StyleFlags{Faint: true}})
 	zigTry(t, err)
 	page.styles.Release(dead)
 	*page.GetRowAndCell(3, 0).cell = pl3KStyleCell('o', alive)
@@ -3532,7 +3532,7 @@ func TestPl3_term51_ReflowCursor_writeCell_styles_reuse_their_id_when_its_slot_i
 	_, err = rc.writeCell(s, &bcell, src_page)
 	zigTry(t, err)
 	expectEqual(t, bold, pl3KDstCell(&rc, 0).style_id)
-	expect(t, page.styles.Get(bold).flags.bold, "page.styles.get(page.memory, bold).flags.bold")
+	expect(t, page.styles.Get(bold).Flags.Bold, "page.styles.get(page.memory, bold).flags.bold")
 	// ital (2) is alive with another style, so it gets the next id (3).
 	r, err := rc.writeCell(s, &cell, src_page)
 	zigTry(t, err)
@@ -3562,7 +3562,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_full_style_set_increases_the_style_
 	page := &node.data
 	n := pl3KFillStyles(page)
 	expect(t, n > 0 && n < 200, "n > 0 and n < 200")
-	_, err = page.styles.Add(Style{flags: styleFlags{italic: true}})
+	_, err = page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	pl3ExpectError(t, ErrOutOfMemory, err)
 
 	rc := pageListReflowCursorInit(node)
@@ -3575,7 +3575,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_full_style_set_increases_the_style_
 	expectEqual(t, SizeCellCountInt(4), rc.x)
 	dst := rc.page.GetRowAndCell(3, 1)
 	expect(t, dst.row.styled, "dst.row.styled")
-	expect(t, rc.page.styles.Get(dst.cell.style_id).flags.bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
+	expect(t, rc.page.styles.Get(dst.cell.style_id).Flags.Bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
 	expectEqual(t, n+1, rc.page.styles.living)
 	s.AssertIntegrity()
 }
@@ -3602,7 +3602,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_style_set_that_needs_a_rehash_is_re
 		page.styles.Release(rac.cell.style_id)
 		rac.cell.style_id = 0
 	}
-	_, err = page.styles.Add(Style{flags: styleFlags{italic: true}})
+	_, err = page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	pl3ExpectError(t, ErrNeedsRehash, err)
 
 	rc := pageListReflowCursorInit(node)
@@ -3615,7 +3615,7 @@ func TestPl3_term51_ReflowCursor_writeCell_a_style_set_that_needs_a_rehash_is_re
 	expectEqual(t, SizeStyleCountInt(128), rc.page.capacity.styles)
 	expectEqual(t, uint(3), rc.page.styles.living)
 	dst := rc.page.GetRowAndCell(3, 1)
-	expect(t, rc.page.styles.Get(dst.cell.style_id).flags.bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
+	expect(t, rc.page.styles.Get(dst.cell.style_id).Flags.Bold, "rc.page.styles.get(rc.page.memory, dst.cell.style_id).flags.bold")
 	s.AssertIntegrity()
 }
 
@@ -3718,10 +3718,10 @@ func TestPl3_term51_ReflowCursor_writeCell_out_of_space_is_reported_when_the_cap
 	page := &node.data
 	var n uint = 0
 	for x := 0; x < int(page.size.cols); x++ {
-		id, err := page.styles.Add(Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: uint8(x),
-			g: uint8(x >> 8),
-			b: 1,
+		id, err := page.styles.Add(Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: uint8(x),
+			G: uint8(x >> 8),
+			B: 1,
 		}}})
 		if err != nil {
 			break
@@ -4136,7 +4136,7 @@ func TestPl3_panic_resize_cols_is_zero(t *testing.T) {
 	testStdCapacity(t)
 	s := pl3Init(t, 4, 3, None[uint64]())
 	pl3ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{cols: pl3Dim(0), reflow: true})
+		_ = s.Resize(PageListResize{Cols: pl3Dim(0), Reflow: true})
 	})
 }
 
@@ -4145,7 +4145,7 @@ func TestPl3_panic_resize_rows_is_zero(t *testing.T) {
 	testStdCapacity(t)
 	s := pl3Init(t, 4, 3, None[uint64]())
 	pl3ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{rows: pl3Dim(0), reflow: true})
+		_ = s.Resize(PageListResize{Rows: pl3Dim(0), Reflow: true})
 	})
 }
 
@@ -4265,7 +4265,7 @@ func TestPl3_panic_clone_top_point_outside_the_list(t *testing.T) {
 	s := pl3Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
 	pl3ExpectPanic(t, func() {
-		_, _ = s.Clone(PageListClone{top: pl3Screen(0, 1000)})
+		_, _ = s.Clone(PageListClone{Top: pl3Screen(0, 1000)})
 	})
 }
 
@@ -4275,7 +4275,7 @@ func TestPl3_panic_clone_bottom_point_outside_the_list(t *testing.T) {
 	s := pl3Init(t, 80, 24, None[uint64]())
 	defer s.Deinit()
 	pl3ExpectPanic(t, func() {
-		_, _ = s.Clone(PageListClone{top: pl3Screen(0, 0), bot: Some(pl3Screen(0, 1000))})
+		_, _ = s.Clone(PageListClone{Top: pl3Screen(0, 0), Bot: Some(pl3Screen(0, 1000))})
 	})
 }
 
@@ -4286,6 +4286,6 @@ func TestPl3_panic_clone_top_point_below_the_bottom_point(t *testing.T) {
 	defer s.Deinit()
 	pl3GrowRows(t, s, 30)
 	pl3ExpectPanic(t, func() {
-		_, _ = s.Clone(PageListClone{top: pl3Screen(0, 10), bot: Some(pl3Screen(0, 5))})
+		_, _ = s.Clone(PageListClone{Top: pl3Screen(0, 10), Bot: Some(pl3Screen(0, 5))})
 	})
 }

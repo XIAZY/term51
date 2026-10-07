@@ -26,8 +26,8 @@ func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-	expect(t, cmd.ClipboardContents.kind == 's', "cmd.clipboard_contents.kind == 's'")
-	expectEqualStrings(t, "?", string(cmd.ClipboardContents.data))
+	expect(t, cmd.ClipboardContents.Kind == 's', "cmd.clipboard_contents.kind == 's'")
+	expectEqualStrings(t, "?", string(cmd.ClipboardContents.Data))
 }
 
 // Zig: test "OSC 52: get/set clipboard (optional parameter)"
@@ -41,8 +41,8 @@ func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard_optional_paramete
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-	expect(t, cmd.ClipboardContents.kind == 'c', "cmd.clipboard_contents.kind == 'c'")
-	expectEqualStrings(t, "?", string(cmd.ClipboardContents.data))
+	expect(t, cmd.ClipboardContents.Kind == 'c', "cmd.clipboard_contents.kind == 'c'")
+	expectEqualStrings(t, "?", string(cmd.ClipboardContents.Data))
 }
 
 // Zig: test "OSC 52: get/set clipboard with allocator"
@@ -57,8 +57,8 @@ func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard_with_allocator(t 
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-	expect(t, cmd.ClipboardContents.kind == 's', "cmd.clipboard_contents.kind == 's'")
-	expectEqualStrings(t, "?", string(cmd.ClipboardContents.data))
+	expect(t, cmd.ClipboardContents.Kind == 's', "cmd.clipboard_contents.kind == 's'")
+	expectEqualStrings(t, "?", string(cmd.ClipboardContents.Data))
 }
 
 // Zig: test "OSC 52: clear clipboard"
@@ -73,8 +73,8 @@ func TestOSCParsersClipboardOperation_OSC_52_clear_clipboard(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-	expect(t, cmd.ClipboardContents.kind == 'c', "cmd.clipboard_contents.kind == 'c'")
-	expectEqualStrings(t, "", string(cmd.ClipboardContents.data))
+	expect(t, cmd.ClipboardContents.Kind == 'c', "cmd.clipboard_contents.kind == 'c'")
+	expectEqualStrings(t, "", string(cmd.ClipboardContents.Data))
 }
 
 // Zig: test "term51: parse: kind and data"
@@ -84,9 +84,9 @@ func TestOSCParsersClipboardOperation_term51_parse_kind_and_data(t *testing.T) {
 		oscA_term51Feed(&p, "52;p;aGVsbG8=")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-		expectEqual(t, uint8('p'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, "aGVsbG8=", string(cmd.ClipboardContents.data))
-		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ClipboardContents.data, 8))
+		expectEqual(t, uint8('p'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, "aGVsbG8=", string(cmd.ClipboardContents.Data))
+		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ClipboardContents.Data, 8))
 	}
 }
 
@@ -113,23 +113,23 @@ func TestOSCParsersClipboardOperation_term51_parse_empty_kind_defaults_to_c(t *t
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "52;;")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
-		expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, "", string(cmd.ClipboardContents.data))
+		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, "", string(cmd.ClipboardContents.Data))
 	}
 	{
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "52;;YQ==")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
-		expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, "YQ==", string(cmd.ClipboardContents.data))
+		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, "YQ==", string(cmd.ClipboardContents.Data))
 	}
 	{
 		// Only the first semicolon is consumed.
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "52;;;x")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
-		expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, ";x", string(cmd.ClipboardContents.data))
+		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, ";x", string(cmd.ClipboardContents.Data))
 	}
 }
 
@@ -157,8 +157,8 @@ func TestOSCParsersClipboardOperation_term51_parse_any_single_byte_is_accepted_a
 		oscA_term51Feed(&p, "52;"+kind+";?")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-		expectEqual(t, kind[0], cmd.ClipboardContents.kind)
-		expectEqualStrings(t, "?", string(cmd.ClipboardContents.data))
+		expectEqual(t, kind[0], cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, "?", string(cmd.ClipboardContents.Data))
 	}
 }
 
@@ -167,8 +167,8 @@ func TestOSCParsersClipboardOperation_term51_parse_data_is_not_validated_and_kee
 	p := OSCParserInit(nil)
 	oscA_term51Feed(&p, "52;c;not base64!;x\x01\xff")
 	cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
-	expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-	expectEqualSlices(t, []uint8("not base64!;x\x01\xff"), cmd.ClipboardContents.data)
+	expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+	expectEqualSlices(t, []uint8("not base64!;x\x01\xff"), cmd.ClipboardContents.Data)
 }
 
 // Zig: test "term51: parse: buffer limit without allocator"
@@ -180,8 +180,8 @@ func TestOSCParsersClipboardOperation_term51_parse_buffer_limit_without_allocato
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "52;c;"+data)
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
-		expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, data, string(cmd.ClipboardContents.data))
+		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, data, string(cmd.ClipboardContents.Data))
 	}
 	{
 		data := strings.Repeat("A", OSCParserMAX_BUF-2)
@@ -201,7 +201,7 @@ func TestOSCParsersClipboardOperation_term51_parse_no_buffer_limit_with_allocato
 		defer p.Deinit()
 		oscA_term51Feed(&p, "52;s;"+data)
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
-		expectEqual(t, uint8('s'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, data, string(cmd.ClipboardContents.data))
+		expectEqual(t, uint8('s'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, data, string(cmd.ClipboardContents.Data))
 	}
 }

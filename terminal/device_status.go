@@ -48,8 +48,8 @@ func deviceStatusRequestInit() []deviceStatusRequestField {
 		fields[i] = deviceStatusRequestField{
 			name: entry.name,
 			value: DeviceStatusTag{
-				value:    uint16(entry.value),
-				question: entry.question,
+				Value:    uint16(entry.value),
+				Question: entry.question,
 			}.Int(),
 		}
 	}
@@ -77,9 +77,9 @@ func (self DeviceStatusRequest) String() string {
 // conversion Zig writes as @bitCast.
 type DeviceStatusTag struct {
 	// Zig: u15.
-	value uint16
+	Value uint16
 	// Zig: default false.
-	question bool
+	Question bool
 }
 
 // DeviceStatusTagBacking is device_status.Tag.Backing: the backing integer
@@ -92,12 +92,12 @@ type DeviceStatusTagBacking = uint16
 // `value` is a u15 in Zig, so it cannot exceed 0x7FFF; the Go field is a
 // uint16, and a larger value is asserted against instead of being dropped.
 func (self DeviceStatusTag) Int() DeviceStatusTagBacking {
-	assert(self.value <= 0x7FFF)
+	assert(self.Value <= 0x7FFF)
 	var question DeviceStatusTagBacking = 0
-	if self.question {
+	if self.Question {
 		question = 1
 	}
-	return self.value | question<<15
+	return self.Value | question<<15
 }
 
 // DeviceStatusTagFromInt stands for Zig's `@bitCast` from the backing
@@ -105,8 +105,8 @@ func (self DeviceStatusTag) Int() DeviceStatusTagBacking {
 // Every u16 is a valid Tag.
 func DeviceStatusTagFromInt(v DeviceStatusTagBacking) DeviceStatusTag {
 	return DeviceStatusTag{
-		value:    v & 0x7FFF,
-		question: v>>15 != 0,
+		Value:    v & 0x7FFF,
+		Question: v>>15 != 0,
 	}
 }
 
@@ -116,7 +116,7 @@ func DeviceStatusTagFromInt(v DeviceStatusTagBacking) DeviceStatusTag {
 func DeviceStatusReqFromInt(v uint16, question bool) Optional[DeviceStatusRequest] {
 	for _, entry := range deviceStatusEntries {
 		if entry.value == int(v) && entry.question == question {
-			tag := DeviceStatusTag{question: question, value: uint16(entry.value)}
+			tag := DeviceStatusTag{Question: question, Value: uint16(entry.value)}
 			int_ := tag.Int()
 			return Some(DeviceStatusRequest(int_))
 		}

@@ -60,7 +60,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid.Valid, "cmd.semantic_prompt.readOption(.aid) == null")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl.Valid, "cmd.semantic_prompt.readOption(.cl) == null")
 }
@@ -84,7 +84,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_options(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 }
 
@@ -100,7 +100,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr kurwa", oscB_sp_written(&w))
@@ -135,7 +135,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_4(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr kurwa", oscB_sp_written(&w))
@@ -153,7 +153,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_5(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr kurwa", oscB_sp_written(&w))
@@ -171,7 +171,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_6(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -188,7 +188,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_7(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -205,7 +205,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_8(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -222,7 +222,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_9(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "", oscB_sp_written(&w))
@@ -240,7 +240,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr kurwa", oscB_sp_written(&w))
@@ -258,7 +258,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr kurwa", oscB_sp_written(&w))
@@ -276,7 +276,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr;kurwa", oscB_sp_written(&w))
@@ -294,7 +294,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -311,7 +311,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -328,7 +328,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	zigTry(t, cmd.SemanticPrompt.writeCommandLine(&w.writer))
 	expectEqualStrings(t, "echo bobr kurwa ", oscB_sp_written(&w))
@@ -346,7 +346,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -363,7 +363,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndInputStartOutput, "cmd.semantic_prompt.action == .end_input_start_output")
 
 	expectEqual(t, error(ErrDecodeError), cmd.SemanticPrompt.writeCommandLine(&w.writer))
 }
@@ -377,7 +377,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLine, "cmd.semantic_prompt.action == .fresh_line")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLine, "cmd.semantic_prompt.action == .fresh_line")
 }
 
 // Zig: test "OSC 133: fresh_line extra contents"
@@ -412,7 +412,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid.Valid, "cmd.semantic_prompt.readOption(.aid) == null")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl.Valid, "cmd.semantic_prompt.readOption(.cl) == null")
 }
@@ -426,7 +426,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_aid(t *test
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expectEqualStrings(t, "14", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 }
 
@@ -439,7 +439,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_in_aid(t *t
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expectEqualStrings(t, "a=b", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 }
 
@@ -452,7 +452,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_cl_line(t *
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl == Some(OSCParsersSemanticPromptClickLine), "cmd.semantic_prompt.readOption(.cl) == .line")
 }
 
@@ -465,7 +465,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_cl_m(t *tes
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl == Some(OSCParsersSemanticPromptClickMultiple), "cmd.semantic_prompt.readOption(.cl) == .multiple")
 }
 
@@ -478,7 +478,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_invalid_cl(
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl.Valid, "cmd.semantic_prompt.readOption(.cl) == null")
 }
 
@@ -491,7 +491,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_trailing(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 }
 
 // Zig: test "OSC 133: fresh_line_new_prompt with bare key"
@@ -503,7 +503,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_bare_key(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid.Valid, "cmd.semantic_prompt.readOption(.aid) == null")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl.Valid, "cmd.semantic_prompt.readOption(.cl) == null")
 }
@@ -517,7 +517,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_multiple_op
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl == Some(OSCParsersSemanticPromptClickLine), "cmd.semantic_prompt.readOption(.cl) == .line")
 }
@@ -531,7 +531,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_default_redraw(t
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionRedraw).Redraw.Valid, "cmd.semantic_prompt.readOption(.redraw) == null")
 }
 
@@ -544,7 +544,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_redraw_0(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionRedraw).Redraw) == OSCParsersSemanticPromptRedrawFalse, "cmd.semantic_prompt.readOption(.redraw).? == .false")
 }
 
@@ -557,7 +557,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_redraw_1(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionRedraw).Redraw) == OSCParsersSemanticPromptRedrawTrue, "cmd.semantic_prompt.readOption(.redraw).? == .true")
 }
 
@@ -570,7 +570,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_invalid_red
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cmd.semantic_prompt.action == .fresh_line_new_prompt")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionRedraw).Redraw.Valid, "cmd.semantic_prompt.readOption(.redraw) == null")
 }
 
@@ -583,7 +583,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind.Valid, "cmd.semantic_prompt.readOption(.prompt_kind) == null")
 }
 
@@ -596,7 +596,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_i(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind == Some(OSCParsersSemanticPromptPromptKindInitial), "cmd.semantic_prompt.readOption(.prompt_kind) == .initial")
 }
 
@@ -609,7 +609,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_r(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind == Some(OSCParsersSemanticPromptPromptKindRight), "cmd.semantic_prompt.readOption(.prompt_kind) == .right")
 }
 
@@ -622,7 +622,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_c(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind == Some(OSCParsersSemanticPromptPromptKindContinuation), "cmd.semantic_prompt.readOption(.prompt_kind) == .continuation")
 }
 
@@ -635,7 +635,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_s(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind == Some(OSCParsersSemanticPromptPromptKindSecondary), "cmd.semantic_prompt.readOption(.prompt_kind) == .secondary")
 }
 
@@ -648,7 +648,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_invalid_k(t *testing
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionPromptStart, "cmd.semantic_prompt.action == .prompt_start")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind.Valid, "cmd.semantic_prompt.readOption(.prompt_kind) == null")
 }
 
@@ -671,7 +671,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid.Valid, "cmd.semantic_prompt.readOption(.aid) == null")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl.Valid, "cmd.semantic_prompt.readOption(.cl) == null")
 }
@@ -685,7 +685,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_aid(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 }
 
@@ -698,7 +698,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_cl_line(t *testing.T)
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl == Some(OSCParsersSemanticPromptClickLine), "cmd.semantic_prompt.readOption(.cl) == .line")
 }
 
@@ -711,7 +711,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_multiple_options(t *t
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionNewCommand, "cmd.semantic_prompt.action == .new_command")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 	expect(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionCl).Cl == Some(OSCParsersSemanticPromptClickLine), "cmd.semantic_prompt.readOption(.cl) == .line")
 }
@@ -735,7 +735,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndPromptStartInput, "cmd.semantic_prompt.action == .end_prompt_start_input")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndPromptStartInput, "cmd.semantic_prompt.action == .end_prompt_start_input")
 }
 
 // Zig: test "OSC 133: end_prompt_start_input extra contents"
@@ -757,7 +757,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_with_options(t 
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndPromptStartInput, "cmd.semantic_prompt.action == .end_prompt_start_input")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndPromptStartInput, "cmd.semantic_prompt.action == .end_prompt_start_input")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 }
 
@@ -770,7 +770,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol(t
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "cmd.semantic_prompt.action == .end_prompt_start_input_terminate_eol")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "cmd.semantic_prompt.action == .end_prompt_start_input_terminate_eol")
 }
 
 // Zig: test "OSC 133: end_prompt_start_input_terminate_eol extra contents"
@@ -792,7 +792,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol_w
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "cmd.semantic_prompt.action == .end_prompt_start_input_terminate_eol")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol, "cmd.semantic_prompt.action == .end_prompt_start_input_terminate_eol")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 }
 
@@ -805,7 +805,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_command(t *testing.T) {
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndCommand, "cmd.semantic_prompt.action == .end_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndCommand, "cmd.semantic_prompt.action == .end_command")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode.Valid, "cmd.semantic_prompt.readOption(.exit_code) == null")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid.Valid, "cmd.semantic_prompt.readOption(.aid) == null")
 	expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionErr).Err.Valid, "cmd.semantic_prompt.readOption(.err) == null")
@@ -830,7 +830,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_command_with_exit_code_0(t *testin
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndCommand, "cmd.semantic_prompt.action == .end_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndCommand, "cmd.semantic_prompt.action == .end_command")
 	expect(t, zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode) == 0, "cmd.semantic_prompt.readOption(.exit_code) == 0")
 }
 
@@ -843,7 +843,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_command_with_exit_code_and_aid(t *
 	}
 	cmd := oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-	expect(t, cmd.SemanticPrompt.action == OSCParsersSemanticPromptCommandActionEndCommand, "cmd.semantic_prompt.action == .end_command")
+	expect(t, cmd.SemanticPrompt.Action == OSCParsersSemanticPromptCommandActionEndCommand, "cmd.semantic_prompt.action == .end_command")
 	expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 	expect(t, zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode) == 12, "cmd.semantic_prompt.readOption(.exit_code) == 12")
 }
@@ -1170,8 +1170,8 @@ func TestOSCParsersSemanticPrompt_term51_Command_init_no_options(t *testing.T) {
 	for i := 0; i < oscParsersSemanticPromptCommandActionCount; i++ {
 		action := OSCParsersSemanticPromptCommandAction(i)
 		cmd := OSCParsersSemanticPromptCommandInit(action)
-		expectEqual(t, action, cmd.action)
-		expectEqual(t, 0, len(cmd.options_unvalidated))
+		expectEqual(t, action, cmd.Action)
+		expectEqual(t, 0, len(cmd.OptionsUnvalidated))
 	}
 	expectEqual(t, 8, oscParsersSemanticPromptCommandActionCount)
 }
@@ -1179,8 +1179,8 @@ func TestOSCParsersSemanticPrompt_term51_Command_init_no_options(t *testing.T) {
 // Zig: test "term51: Command.readOption: reads from the unvalidated options"
 func TestOSCParsersSemanticPrompt_term51_Command_readOption_reads_from_the_unvalidated_options(t *testing.T) {
 	cmd := OSCParsersSemanticPromptCommand{
-		action:              OSCParsersSemanticPromptCommandActionEndCommand,
-		options_unvalidated: []uint8("3;aid=x;err=E"),
+		Action:             OSCParsersSemanticPromptCommandActionEndCommand,
+		OptionsUnvalidated: []uint8("3;aid=x;err=E"),
 	}
 	expectEqual(t, Some(int32(3)), cmd.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode)
 	expectEqualStrings(t, "x", string(zigUnwrap(t, cmd.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
@@ -1199,8 +1199,8 @@ func TestOSCParsersSemanticPrompt_term51_Command_writeCommandLine_cmdline_takes_
 		var w oscWriterAllocating
 		// Zig-only: defer w.deinit();
 		cmd := OSCParsersSemanticPromptCommand{
-			action:              OSCParsersSemanticPromptCommandActionEndInputStartOutput,
-			options_unvalidated: []uint8("cmdline_url=from%20url;cmdline=from cmdline"),
+			Action:             OSCParsersSemanticPromptCommandActionEndInputStartOutput,
+			OptionsUnvalidated: []uint8("cmdline_url=from%20url;cmdline=from cmdline"),
 		}
 		zigTry(t, cmd.writeCommandLine(&w.writer))
 		expectEqualStrings(t, "from cmdline", oscB_sp_written(&w))
@@ -1209,8 +1209,8 @@ func TestOSCParsersSemanticPrompt_term51_Command_writeCommandLine_cmdline_takes_
 		var w oscWriterAllocating
 		// Zig-only: defer w.deinit();
 		cmd := OSCParsersSemanticPromptCommand{
-			action:              OSCParsersSemanticPromptCommandActionEndInputStartOutput,
-			options_unvalidated: []uint8("aid=1;cmdline_url=from%20url"),
+			Action:             OSCParsersSemanticPromptCommandActionEndInputStartOutput,
+			OptionsUnvalidated: []uint8("aid=1;cmdline_url=from%20url"),
 		}
 		zigTry(t, cmd.writeCommandLine(&w.writer))
 		expectEqualStrings(t, "from url", oscB_sp_written(&w))
@@ -1264,24 +1264,24 @@ func TestOSCParsersSemanticPrompt_term51_parse_every_command_letter(t *testing.T
 				oscB_sp_term51Feed(&p, "133;"+c.letter)
 				cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, term))
 				expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-				expectEqual(t, c.action, cmd.SemanticPrompt.action)
-				expectEqualStrings(t, "", string(cmd.SemanticPrompt.options_unvalidated))
+				expectEqual(t, c.action, cmd.SemanticPrompt.Action)
+				expectEqualStrings(t, "", string(cmd.SemanticPrompt.OptionsUnvalidated))
 			}
 			// The letter and a separator with nothing after it.
 			{
 				p := OSCParserInit(nil)
 				oscB_sp_term51Feed(&p, "133;"+c.letter+";")
 				cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, term))
-				expectEqual(t, c.action, cmd.SemanticPrompt.action)
-				expectEqualStrings(t, "", string(cmd.SemanticPrompt.options_unvalidated))
+				expectEqual(t, c.action, cmd.SemanticPrompt.Action)
+				expectEqualStrings(t, "", string(cmd.SemanticPrompt.OptionsUnvalidated))
 			}
 			// Options are everything after the separator, unparsed.
 			{
 				p := OSCParserInit(nil)
 				oscB_sp_term51Feed(&p, "133;"+c.letter+";aid=1;;junk\x00\x01\xff;")
 				cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, term))
-				expectEqual(t, c.action, cmd.SemanticPrompt.action)
-				expectEqualSlices(t, []uint8("aid=1;;junk\x00\x01\xff;"), cmd.SemanticPrompt.options_unvalidated)
+				expectEqual(t, c.action, cmd.SemanticPrompt.Action)
+				expectEqualSlices(t, []uint8("aid=1;;junk\x00\x01\xff;"), cmd.SemanticPrompt.OptionsUnvalidated)
 				expectEqualStrings(t, "1", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 			}
 		}
@@ -1302,8 +1302,8 @@ func TestOSCParsersSemanticPrompt_term51_parse_L_takes_no_options_at_all(t *test
 		oscB_sp_term51Feed(&p, "133;L")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
-		expectEqual(t, OSCParsersSemanticPromptCommandActionFreshLine, cmd.SemanticPrompt.action)
-		expectEqualStrings(t, "", string(cmd.SemanticPrompt.options_unvalidated))
+		expectEqual(t, OSCParsersSemanticPromptCommandActionFreshLine, cmd.SemanticPrompt.Action)
+		expectEqualStrings(t, "", string(cmd.SemanticPrompt.OptionsUnvalidated))
 	}
 	// Unlike the other letters, not even a bare separator is allowed.
 	for _, input := range []string{"133;L;", "133;L;aid=1", "133;Lx", "133;LL"} {
@@ -1368,7 +1368,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_exit_code_position(t *testing.T) 
 		p := OSCParserInit(nil)
 		oscB_sp_term51Feed(&p, "133;A;5")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
-		expectEqual(t, OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, cmd.SemanticPrompt.action)
+		expectEqual(t, OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, cmd.SemanticPrompt.Action)
 		expectEqual(t, Some(int32(5)), cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode)
 	}
 }
@@ -1383,7 +1383,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_buffer_limit(t *testing.T) {
 		oscB_sp_term51Feed(&p, "133;"+prefix+value)
 		expect(t, p.state == OSCParserState133, "p.state == .@\"133\"")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
-		expectEqual(t, OSCParserMAX_BUF-2, len(cmd.SemanticPrompt.options_unvalidated))
+		expectEqual(t, OSCParserMAX_BUF-2, len(cmd.SemanticPrompt.OptionsUnvalidated))
 		expectEqualStrings(t, value, string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 	}
 	{

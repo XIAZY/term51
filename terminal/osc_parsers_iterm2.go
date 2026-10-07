@@ -244,8 +244,8 @@ func OSCParsersIterm2Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 		parser.command = OSCCommand{
 			Tag: OSCCommandKeyClipboardContents,
 			ClipboardContents: OSCCommandClipboardContentsPayload{
-				kind: 'c',
-				data: value,
+				Kind: 'c',
+				Data: value,
 			},
 		}
 		return &parser.command
@@ -263,7 +263,7 @@ func OSCParsersIterm2Parse(parser *OSCParser, _ Optional[uint8]) *OSCCommand {
 		parser.command = OSCCommand{
 			Tag: OSCCommandKeyReportPwd,
 			ReportPwd: OSCCommandReportPwdPayload{
-				value: value,
+				Value: value,
 			},
 		}
 		return &parser.command

@@ -29,20 +29,20 @@ func TestSaActive_simple_search(t *testing.T) {
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -61,20 +61,20 @@ func TestSaActive_clear_screen_and_search(t *testing.T) {
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 
 	zigTry(t, s.NextSlice([]uint8("\x1b[2J"))) // Clear screen
 	zigTry(t, s.NextSlice([]uint8("\x1b[H")))  // Move cursor home
 	zigTry(t, s.NextSlice([]uint8("Buzz\r\nFizz\r\nBuzz")))
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -115,9 +115,9 @@ func TestSaActive_term51_ActiveSearch_init_empty_needle_is_accepted(t *testing.T
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
 	saWrite(t, term, "Fizz")
-	node, err := search.Update(&term.screens.active.pages)
+	node, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
-	expect(t, node == term.screens.active.pages.pages.first, "node == t.screens.active.pages.pages.first.?")
+	expect(t, node == term.Screens.Active.Pages.pages.first, "node == t.screens.active.pages.pages.first.?")
 	expectEqual(t, uint(1), search.window.meta.Len())
 }
 
@@ -135,7 +135,7 @@ func TestSaActive_term51_ActiveSearch_deinit_frees_a_populated_and_an_unpopulate
 	saWrite(t, term, "Fizz\r\nBuzz\r\nFizz")
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	// Leave one match unconsumed.
 	// Zig-only: The leak checker verifies the frees.
@@ -149,12 +149,12 @@ func TestSaActive_term51_ActiveSearch_update_single_page_returns_that_page_and_f
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
 	saWrite(t, term, "Fizz\r\nBuzz\r\nFizz\r\nBang")
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	node, err := search.Update(&term.screens.active.pages)
+	node, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, node == p, "node == p")
 	expectEqual(t, uint(1), search.window.meta.Len())
@@ -176,10 +176,10 @@ func TestSaActive_term51_ActiveSearch_update_returns_a_non_null_node_even_when_t
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	node, err := search.Update(&term.screens.active.pages)
+	node, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, node != nil, "node != null")
-	expect(t, node == term.screens.active.pages.pages.first, "node.? == t.screens.active.pages.pages.first.?")
+	expect(t, node == term.Screens.Active.Pages.pages.first, "node.? == t.screens.active.pages.pages.first.?")
 }
 
 // Zig: test "term51: ActiveSearch.update: empty terminal has a window of one page and no matches"
@@ -190,7 +190,7 @@ func TestSaActive_term51_ActiveSearch_update_empty_terminal_has_a_window_of_one_
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expectEqual(t, uint(1), search.window.meta.Len())
 	expectEqual(t, uint(1), search.window.data.Len())
@@ -202,14 +202,14 @@ func TestSaActive_term51_ActiveSearch_update_needle_in_the_first_cell_and_in_the
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Ab")
 	saWrite(t, term, "\x1b[10;9HAb")
 
 	search, err := SearchActiveInit([]uint8("ab"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 1, []saChunk{{node: p, start: 0, end: 1}})
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 8, 9, []saChunk{{node: p, start: 9, end: 10}})
@@ -221,14 +221,14 @@ func TestSaActive_term51_ActiveSearch_update_one_character_needle_at_the_first_a
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "x")
 	saWrite(t, term, "\x1b[10;10Hx")
 
 	search, err := SearchActiveInit([]uint8("X"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 0, []saChunk{{node: p, start: 0, end: 1}})
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 9, 9, []saChunk{{node: p, start: 9, end: 10}})
@@ -241,7 +241,7 @@ func TestSaActive_term51_ActiveSearch_update_one_character_needle_at_the_first_a
 	expect(t, !search.Next().Valid, "search.next() == null")
 
 	// Updating again refills the window.
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expectEqual(t, uint(1), search.window.meta.Len())
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 0, []saChunk{{node: p, start: 0, end: 1}})
@@ -252,13 +252,13 @@ func TestSaActive_term51_ActiveSearch_update_matching_is_ASCII_case_insensitive_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "aAaA\r\nfIZZ")
 
 	search, err := SearchActiveInit([]uint8("aa"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 1, []saChunk{{node: p, start: 0, end: 1}})
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 1, 2, []saChunk{{node: p, start: 0, end: 1}})
@@ -268,7 +268,7 @@ func TestSaActive_term51_ActiveSearch_update_matching_is_ASCII_case_insensitive_
 	search2, err := SearchActiveInit([]uint8("FIzz"))
 	zigTry(t, err)
 	defer search2.Deinit()
-	_, err = search2.Update(&term.screens.active.pages)
+	_, err = search2.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search2.Next()), 0, 3, []saChunk{{node: p, start: 1, end: 2}})
 	expect(t, !search2.Next().Valid, "search2.next() == null")
@@ -284,14 +284,14 @@ func TestSaActive_term51_ActiveSearch_update_needle_longer_than_the_screen_text_
 	longer, err := SearchActiveInit([]uint8("FizzBuzzBangFizzBuzz"))
 	zigTry(t, err)
 	defer longer.Deinit()
-	_, err = longer.Update(&term.screens.active.pages)
+	_, err = longer.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, !longer.Next().Valid, "longer.next() == null")
 
 	absent, err := SearchActiveInit([]uint8("Buzz"))
 	zigTry(t, err)
 	defer absent.Deinit()
-	_, err = absent.Update(&term.screens.active.pages)
+	_, err = absent.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, !absent.Next().Valid, "absent.next() == null")
 }
@@ -301,14 +301,14 @@ func TestSaActive_term51_ActiveSearch_update_soft_wrapped_match_is_one_chunk_spa
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	// "abcdefgFiz" wraps to "z" on row 1; the second "Fiz" + "z" is split by a newline.
 	saWrite(t, term, "abcdefgFizz\r\nabcdefgFiz\r\nz")
 
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 7, 0, []saChunk{{node: p, start: 0, end: 2}})
 	expect(t, !search.Next().Valid, "search.next() == null")
@@ -319,13 +319,13 @@ func TestSaActive_term51_ActiveSearch_update_byte_offsets_map_to_cells_for_wide_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "\xe6\x97\xa5Fizz")
 
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	// The wide character occupies x=0 and x=1.
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 2, 5, []saChunk{{node: p, start: 0, end: 1}})
@@ -337,18 +337,18 @@ func TestSaActive_term51_ActiveSearch_update_clears_the_previous_window_instead_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Fizz")
 
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	length := search.window.data.Len()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expectEqual(t, uint(1), search.window.meta.Len())
 	expectEqual(t, length, search.window.data.Len())
@@ -361,19 +361,19 @@ func TestSaActive_term51_ActiveSearch_update_update_after_partial_or_full_consum
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Fizz\r\nBuzz\r\nFizz")
 
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 3, []saChunk{{node: p, start: 0, end: 1}})
 	expect(t, search.window.data_offset != 0, "search.window.data_offset != 0")
 
 	// Partially consumed: update restarts.
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expectEqual(t, uint(0), search.window.data_offset)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 3, []saChunk{{node: p, start: 0, end: 1}})
@@ -381,7 +381,7 @@ func TestSaActive_term51_ActiveSearch_update_update_after_partial_or_full_consum
 	expect(t, !search.Next().Valid, "search.next() == null")
 
 	// Fully consumed: update restarts.
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 3, []saChunk{{node: p, start: 0, end: 1}})
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 3, []saChunk{{node: p, start: 2, end: 3}})
@@ -393,13 +393,13 @@ func TestSaActive_term51_ActiveSearch_update_results_are_a_snapshot_until_the_ne
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Fizz\r\nBuzz")
 
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 
 	// Change the terminal without updating: the window still has the old copy.
@@ -408,14 +408,14 @@ func TestSaActive_term51_ActiveSearch_update_results_are_a_snapshot_until_the_ne
 	expect(t, !search.Next().Valid, "search.next() == null")
 
 	// After update the new contents are searched.
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 3, []saChunk{{node: p, start: 1, end: 2}})
 	expect(t, !search.Next().Valid, "search.next() == null")
 
 	// Clearing and re-searching finds nothing.
 	saWrite(t, term, "\x1b[2J\x1b[H")
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -425,7 +425,7 @@ func TestSaActive_term51_ActiveSearch_update_history_rows_in_the_same_page_are_s
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz")
 	saNewlines(t, term, 14)
 	saWrite(t, term, "Fizz")
@@ -443,12 +443,12 @@ func TestSaActive_term51_ActiveSearch_update_history_rows_in_the_same_page_are_s
 	// The first match is in history, i.e. outside of the active area.
 	h1 := zigUnwrap(t, search.Next())
 	saExpectHighlight(t, h1, 0, 3, []saChunk{{node: p, start: 0, end: 1}})
-	expect(t, !pages.PointFromPin(PointTagActive, h1.Untracked().start).Valid, "pages.pointFromPin(.active, h1.untracked().start) == null")
-	expectEqual(t, PointCoordinate{x: 0, y: 0}, saScreen(t, term, h1.Untracked().start))
+	expect(t, !pages.PointFromPin(PointTagActive, h1.Untracked().Start).Valid, "pages.pointFromPin(.active, h1.untracked().start) == null")
+	expectEqual(t, PointCoordinate{X: 0, Y: 0}, saScreen(t, term, h1.Untracked().Start))
 
 	h2 := zigUnwrap(t, search.Next())
 	saExpectHighlight(t, h2, 0, 3, []saChunk{{node: p, start: 14, end: 15}})
-	expectEqualPoint(t, saActivePoint(0, 9), zigUnwrap(t, pages.PointFromPin(PointTagActive, h2.Untracked().start)))
+	expectEqualPoint(t, saActivePoint(0, 9), zigUnwrap(t, pages.PointFromPin(PointTagActive, h2.Untracked().Start)))
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
 
@@ -457,7 +457,7 @@ func TestSaActive_term51_ActiveSearch_update_active_area_across_two_pages_append
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 
 	// Line 0 (history), line cap-9 (first active row, page one), line cap
@@ -502,7 +502,7 @@ func TestSaActive_term51_ActiveSearch_update_a_match_split_across_two_pages_insi
 	// two is never contiguous in the window.
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saNewlines(t, term, cap_-1)
 	saWrite(t, term, "xxxxxxxxTest")
@@ -548,7 +548,7 @@ func TestSaActive_term51_ActiveSearch_update_active_area_inside_the_last_page_do
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saWrite(t, term, "Fizz")
 	saNewlines(t, term, cap_+9)
@@ -576,7 +576,7 @@ func TestSaActive_term51_ActiveSearch_update_active_area_inside_the_last_page_ad
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saWrite(t, term, "Fizz")
 	saNewlines(t, term, cap_-1)
@@ -603,7 +603,7 @@ func TestSaActive_term51_ActiveSearch_update_active_area_inside_the_last_page_ad
 	// The overlap page is searched entirely, including its history rows.
 	h := zigUnwrap(t, search.Next())
 	saExpectHighlight(t, h, 0, 3, []saChunk{{node: p1, start: 0, end: 1}})
-	expect(t, !pages.PointFromPin(PointTagActive, h.Untracked().start).Valid, "pages.pointFromPin(.active, h.untracked().start) == null")
+	expect(t, !pages.PointFromPin(PointTagActive, h.Untracked().Start).Valid, "pages.pointFromPin(.active, h.untracked().start) == null")
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
 
@@ -612,7 +612,7 @@ func TestSaActive_term51_ActiveSearch_update_overlap_loop_skips_empty_wrapped_pa
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saWrite(t, term, "Fizz")
 	saNewlines(t, term, 2*cap_+9)
@@ -661,7 +661,7 @@ func TestSaActive_term51_ActiveSearch_update_overlap_loop_compares_the_bytes_of_
 	// although together they hold more than 3 bytes.
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 3*cap_+10, []saMark{
 		{y: 0, text: "z"},
@@ -718,7 +718,7 @@ func TestSaActive_term51_ActiveSearch_update_active_area_across_three_pages_appe
 	var cols SizeCellCountInt = 100
 	for {
 		probe := saTerminal(t, cols, 300)
-		enough := probe.screens.active.pages.TotalPages() >= 3
+		enough := probe.Screens.Active.Pages.TotalPages() >= 3
 		probe.Deinit()
 		if enough {
 			break
@@ -728,7 +728,7 @@ func TestSaActive_term51_ActiveSearch_update_active_area_across_three_pages_appe
 	}
 	term := saTerminal(t, cols, 300)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	expect(t, pages.TotalPages() >= 3, "pages.totalPages() >= 3")
 	expectEqual(t, uint(300), pages.total_rows)
 	saWrite(t, term, "\x1b[1;1HFizz\x1b[300;1HFizz")
@@ -767,9 +767,9 @@ func TestSaActive_term51_ActiveSearch_next_null_before_any_update_and_after_the_
 
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Fizz")
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	h := zigUnwrap(t, search.Next())
 	saExpectHighlight(t, h, 0, 3, []saChunk{{node: p, start: 0, end: 1}})
@@ -783,12 +783,12 @@ func TestSaActive_term51_ActiveSearch_next_highlight_can_be_cloned_and_survives_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Fizz\r\nFizz")
 	search, err := SearchActiveInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	_, err = search.Update(&term.screens.active.pages)
+	_, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	h1 := zigUnwrap(t, search.Next())
 	first, err := h1.Clone()
@@ -804,7 +804,7 @@ func TestSaActive_panic_ActiveSearch_update_a_wrapped_overlap_candidate_page_wit
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saWrite(t, term, "Fizz")
 	saNewlines(t, term, cap_-1)

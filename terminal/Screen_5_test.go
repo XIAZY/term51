@@ -76,10 +76,10 @@ const scaBig uint64 = 100 * 1024 * 1024
 func scaInit(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Screen {
 	t.Helper()
 	s, err := ScreenInit(ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            max_scrollback,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          max_scrollback,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	})
 	zigTry(t, err)
 	return &s
@@ -94,9 +94,9 @@ func scaWrite(t *testing.T, s *Screen, text string) {
 // scaPin is term51AAPin: an (untracked) pin at the active point (x, y).
 func scaPin(t *testing.T, s *Screen, x uint, y uint) PageListPin {
 	t.Helper()
-	return zigUnwrap(t, s.pages.Pin(Point{
+	return zigUnwrap(t, s.Pages.Pin(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)},
+		Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)},
 	}))
 }
 
@@ -128,19 +128,19 @@ func scaCp(t *testing.T, s *Screen, x uint, y uint) uint32 {
 }
 
 // scaStyleRefs is term51AAStyleRefs.
-func scaStyleRefs(page *Page, id StyleId) uint {
+func scaStyleRefs(page *Page, id StyleID) uint {
 	return uint(page.styles.RefCount(id))
 }
 
 // scaLinkRefs is term51AALinkRefs.
-func scaLinkRefs(page *Page, id HyperlinkId) uint {
+func scaLinkRefs(page *Page, id HyperlinkID) uint {
 	return uint(page.hyperlink_set.RefCount(id))
 }
 
 // scaNodeCount is term51AANodeCount.
 func scaNodeCount(s *Screen) uint {
 	var n uint
-	for node := s.pages.pages.first; node != nil; node = node.next {
+	for node := s.Pages.pages.first; node != nil; node = node.next {
 		n++
 	}
 	return n
@@ -163,8 +163,8 @@ func scaBoundaries(t *testing.T, s *Screen) [60]bool {
 	t.Helper()
 	var adj [60]bool
 	var count uint
-	for y := uint(1); y < uint(s.pages.rows); y++ {
-		if scaPin(t, s, 0, y).node != scaPin(t, s, 0, y-1).node {
+	for y := uint(1); y < uint(s.Pages.rows); y++ {
+		if scaPin(t, s, 0, y).Node != scaPin(t, s, 0, y-1).Node {
 			adj[y] = true
 			adj[y-1] = true
 			count++
@@ -197,37 +197,37 @@ func scaApplyMode(t *testing.T, s *Screen, mode scaMode) {
 // of each in its current page.
 func scaExpectMode(t *testing.T, s *Screen, mode scaMode) {
 	t.Helper()
-	page := &s.cursor.page_pin.node.data
+	page := &s.Cursor.PagePin.Node.data
 	has_style := mode == scaModeStyle || mode == scaModeBoth
 	if has_style {
-		expect(t, s.cursor.style.flags.bold, "s.cursor.style.flags.bold")
-		expect(t, s.cursor.style_id != StyleDefaultId, "s.cursor.style_id != style.default_id")
-		expect(t, page.styles.Get(s.cursor.style_id).flags.bold, "page.styles.get(page.memory, s.cursor.style_id).flags.bold")
-		expectEqual[uint](t, 1, scaStyleRefs(page, s.cursor.style_id))
+		expect(t, s.Cursor.Style.Flags.Bold, "s.cursor.style.flags.bold")
+		expect(t, s.Cursor.StyleID != StyleDefaultID, "s.cursor.style_id != style.default_id")
+		expect(t, page.styles.Get(s.Cursor.StyleID).Flags.Bold, "page.styles.get(page.memory, s.cursor.style_id).flags.bold")
+		expectEqual[uint](t, 1, scaStyleRefs(page, s.Cursor.StyleID))
 	} else {
-		expectEqual[StyleId](t, StyleDefaultId, s.cursor.style_id)
-		expect(t, !s.cursor.style.flags.bold, "!s.cursor.style.flags.bold")
+		expectEqual[StyleID](t, StyleDefaultID, s.Cursor.StyleID)
+		expect(t, !s.Cursor.Style.Flags.Bold, "!s.cursor.style.flags.bold")
 	}
 
 	has_link := mode == scaModeLinkExplicit || mode == scaModeLinkImplicit || mode == scaModeBoth
 	if has_link {
-		expect(t, s.cursor.hyperlink != nil, "s.cursor.hyperlink != null")
-		expect(t, s.cursor.hyperlink_id != 0, "s.cursor.hyperlink_id != 0")
-		expectEqual[uint](t, 1, scaLinkRefs(page, s.cursor.hyperlink_id))
-		link := s.cursor.hyperlink
-		expectEqualStrings(t, "https://example.com/", string(link.uri))
-		switch link.id.Tag {
+		expect(t, s.Cursor.Hyperlink != nil, "s.cursor.hyperlink != null")
+		expect(t, s.Cursor.HyperlinkID != 0, "s.cursor.hyperlink_id != 0")
+		expectEqual[uint](t, 1, scaLinkRefs(page, s.Cursor.HyperlinkID))
+		link := s.Cursor.Hyperlink
+		expectEqualStrings(t, "https://example.com/", string(link.URI))
+		switch link.ID.Tag {
 		case HyperlinkHyperlinkIdExplicit:
 			expect(t, mode != scaModeLinkImplicit, "mode != .link_implicit")
-			expectEqualStrings(t, "ID", string(link.id.Explicit))
+			expectEqualStrings(t, "ID", string(link.ID.Explicit))
 		case HyperlinkHyperlinkIdImplicit:
 			expect(t, mode == scaModeLinkImplicit, "mode == .link_implicit")
 		}
-		entry := page.hyperlink_set.Get(s.cursor.hyperlink_id)
+		entry := page.hyperlink_set.Get(s.Cursor.HyperlinkID)
 		expectEqualStrings(t, "https://example.com/", string(entry.uri))
 	} else {
-		expect(t, s.cursor.hyperlink == nil, "s.cursor.hyperlink == null")
-		expectEqual[HyperlinkId](t, 0, s.cursor.hyperlink_id)
+		expect(t, s.Cursor.Hyperlink == nil, "s.cursor.hyperlink == null")
+		expectEqual[HyperlinkID](t, 0, s.Cursor.HyperlinkID)
 	}
 }
 
@@ -237,14 +237,14 @@ func scaExpectReleased(
 	t *testing.T,
 	s *Screen,
 	old_node *PageListNode,
-	old_style_id StyleId,
-	old_link_id HyperlinkId,
+	old_style_id StyleID,
+	old_link_id HyperlinkID,
 ) {
 	t.Helper()
-	if s.cursor.page_pin.node == old_node {
+	if s.Cursor.PagePin.Node == old_node {
 		return
 	}
-	if old_style_id != StyleDefaultId {
+	if old_style_id != StyleDefaultID {
 		expectEqual[uint](t, 0, scaStyleRefs(&old_node.data, old_style_id))
 	}
 	if old_link_id != 0 {
@@ -256,13 +256,13 @@ func scaExpectReleased(
 // cache (x, y, row, cell) agrees with the pin.
 func scaExpectConsistent(t *testing.T, s *Screen) {
 	t.Helper()
-	rac := s.cursor.page_pin.RowAndCell()
-	expect(t, s.cursor.page_row == rac.row, "s.cursor.page_row == rac.row")
-	expect(t, s.cursor.page_cell == rac.cell, "s.cursor.page_cell == rac.cell")
-	pt := zigUnwrap(t, s.pages.PointFromPin(PointTagActive, *s.cursor.page_pin))
-	expectEqual[uint](t, uint(s.cursor.x), uint(pt.Active.x))
-	expectEqual[uint](t, uint(s.cursor.y), uint(pt.Active.y))
-	expectEqual[SizeCellCountInt](t, s.cursor.x, s.cursor.page_pin.x)
+	rac := s.Cursor.PagePin.RowAndCell()
+	expect(t, s.Cursor.PageRow == rac.row, "s.cursor.page_row == rac.row")
+	expect(t, s.Cursor.PageCell == rac.cell, "s.cursor.page_cell == rac.cell")
+	pt := zigUnwrap(t, s.Pages.PointFromPin(PointTagActive, *s.Cursor.PagePin))
+	expectEqual[uint](t, uint(s.Cursor.X), uint(pt.Active.X))
+	expectEqual[uint](t, uint(s.Cursor.Y), uint(pt.Active.Y))
+	expectEqual[SizeCellCountInt](t, s.Cursor.X, s.Cursor.PagePin.X)
 }
 
 // scaExpectDirty is term51AAExpectDirty: expect that exactly the active rows
@@ -270,11 +270,11 @@ func scaExpectConsistent(t *testing.T, s *Screen) {
 // flagged dirty.
 func scaExpectDirty(t *testing.T, s *Screen, a Optional[uint], b Optional[uint]) {
 	t.Helper()
-	for y := uint(0); y < uint(s.pages.rows); y++ {
+	for y := uint(0); y < uint(s.Pages.rows); y++ {
 		want := (a.Valid && a.Value == y) || (b.Valid && b.Value == y)
 		expectEqual[bool](t, want, scaRow(t, s, y).dirty)
 	}
-	for node := s.pages.pages.first; node != nil; node = node.next {
+	for node := s.Pages.pages.first; node != nil; node = node.next {
 		expect(t, !node.data.dirty, "!node.data.dirty")
 	}
 }
@@ -290,7 +290,7 @@ func scaUpCase(
 	t.Helper()
 	s := scaMultiPage(t, max_scrollback)
 	defer s.Deinit()
-	rows := uint(s.pages.rows)
+	rows := uint(s.Pages.rows)
 	adj := scaBoundaries(t, s)
 	scaApplyMode(t, s, mode)
 
@@ -303,19 +303,19 @@ func scaUpCase(
 
 			x := SizeCellCountInt((y*337 + n*71) % 2000)
 			s.CursorAbsolute(x, SizeCellCountInt(y))
-			s.cursor.pending_wrap = pending
-			s.pages.ClearDirty()
-			old_node := s.cursor.page_pin.node
-			old_style_id := s.cursor.style_id
-			old_link_id := s.cursor.hyperlink_id
+			s.Cursor.PendingWrap = pending
+			s.Pages.ClearDirty()
+			old_node := s.Cursor.PagePin.Node
+			old_style_id := s.Cursor.StyleID
+			old_link_id := s.Cursor.HyperlinkID
 
 			s.CursorUp(SizeCellCountInt(n))
 
-			expectEqual[SizeCellCountInt](t, x, s.cursor.x)
-			expectEqual[SizeCellCountInt](t, SizeCellCountInt(y-n), s.cursor.y)
-			expectEqual[bool](t, pending, s.cursor.pending_wrap)
+			expectEqual[SizeCellCountInt](t, x, s.Cursor.X)
+			expectEqual[SizeCellCountInt](t, SizeCellCountInt(y-n), s.Cursor.Y)
+			expectEqual[bool](t, pending, s.Cursor.PendingWrap)
 			scaExpectConsistent(t, s)
-			expect(t, s.cursor.page_pin.node == scaPin(t, s, uint(x), y-n).node,
+			expect(t, s.Cursor.PagePin.Node == scaPin(t, s, uint(x), y-n).Node,
 				"s.cursor.page_pin.node == term51AAPin(&s, x, y - n).node")
 			scaExpectReleased(t, s, old_node, old_style_id, old_link_id)
 			scaExpectMode(t, s, mode)
@@ -382,33 +382,33 @@ func TestSca_cursorUp_count_zero_one_and_the_largest_count_on_a_small_screen(t *
 				s := scaInit(t, 4, 5, sb)
 				defer s.Deinit()
 				scaApplyMode(t, s, scaModeBoth)
-				node := s.cursor.page_pin.node
-				style_id := s.cursor.style_id
-				link_id := s.cursor.hyperlink_id
+				node := s.Cursor.PagePin.Node
+				style_id := s.Cursor.StyleID
+				link_id := s.Cursor.HyperlinkID
 
 				// From the last row: the largest count is the cursor row (4).
 				s.CursorAbsolute(3, 4)
-				s.cursor.pending_wrap = pending
-				s.pages.ClearDirty()
+				s.Cursor.PendingWrap = pending
+				s.Pages.ClearDirty()
 				s.CursorUp(0)
-				expectEqual[SizeCellCountInt](t, 4, s.cursor.y)
+				expectEqual[SizeCellCountInt](t, 4, s.Cursor.Y)
 				scaExpectDirty(t, s, None[uint](), None[uint]())
 				s.CursorUp(1)
-				expectEqual[SizeCellCountInt](t, 3, s.cursor.y)
+				expectEqual[SizeCellCountInt](t, 3, s.Cursor.Y)
 				scaExpectDirty(t, s, Some[uint](3), Some[uint](4))
 				s.CursorUp(3)
-				expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
-				expectEqual[SizeCellCountInt](t, 3, s.cursor.x)
-				expectEqual[bool](t, pending, s.cursor.pending_wrap)
+				expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
+				expectEqual[SizeCellCountInt](t, 3, s.Cursor.X)
+				expectEqual[bool](t, pending, s.Cursor.PendingWrap)
 				scaExpectConsistent(t, s)
-				expect(t, s.cursor.page_pin.node == node, "s.cursor.page_pin.node == node")
-				expectEqual[StyleId](t, style_id, s.cursor.style_id)
-				expectEqual[HyperlinkId](t, link_id, s.cursor.hyperlink_id)
+				expect(t, s.Cursor.PagePin.Node == node, "s.cursor.page_pin.node == node")
+				expectEqual[StyleID](t, style_id, s.Cursor.StyleID)
+				expectEqual[HyperlinkID](t, link_id, s.Cursor.HyperlinkID)
 				scaExpectMode(t, s, scaModeBoth)
 
 				// At the top row only zero is possible.
 				s.CursorUp(0)
-				expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
+				expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
 				scaExpectConsistent(t, s)
 			}()
 		}
@@ -421,10 +421,10 @@ func TestSca_cursorUp_one_row_screen_only_accepts_zero(t *testing.T) {
 	s := scaInit(t, 1, 1, 0)
 	defer s.Deinit()
 	scaApplyMode(t, s, scaModeBoth)
-	s.cursor.pending_wrap = true
+	s.Cursor.PendingWrap = true
 	s.CursorUp(0)
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.y)
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.Y)
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 	scaExpectConsistent(t, s)
 	scaExpectMode(t, s, scaModeBoth)
 }
@@ -436,27 +436,27 @@ func scaDownCase(t *testing.T, max_scrollback uint64, mode scaMode, pending bool
 	t.Helper()
 	s := scaMultiPage(t, max_scrollback)
 	defer s.Deinit()
-	rows := uint(s.pages.rows)
+	rows := uint(s.Pages.rows)
 	scaApplyMode(t, s, mode)
-	total := s.pages.total_rows
+	total := s.Pages.total_rows
 
 	for y := uint(0); y < rows-1; y++ {
 		x := SizeCellCountInt((y*337 + 5) % 2000)
 		s.CursorAbsolute(x, SizeCellCountInt(y))
-		s.cursor.pending_wrap = pending
-		s.pages.ClearDirty()
-		old_node := s.cursor.page_pin.node
-		old_style_id := s.cursor.style_id
-		old_link_id := s.cursor.hyperlink_id
+		s.Cursor.PendingWrap = pending
+		s.Pages.ClearDirty()
+		old_node := s.Cursor.PagePin.Node
+		old_style_id := s.Cursor.StyleID
+		old_link_id := s.Cursor.HyperlinkID
 
 		zigTry(t, s.cursorDownOrScroll())
 
-		expectEqual[SizeCellCountInt](t, x, s.cursor.x)
-		expectEqual[SizeCellCountInt](t, SizeCellCountInt(y+1), s.cursor.y)
-		expectEqual[bool](t, pending, s.cursor.pending_wrap)
-		expectEqual[uint](t, total, s.pages.total_rows)
+		expectEqual[SizeCellCountInt](t, x, s.Cursor.X)
+		expectEqual[SizeCellCountInt](t, SizeCellCountInt(y+1), s.Cursor.Y)
+		expectEqual[bool](t, pending, s.Cursor.PendingWrap)
+		expectEqual[uint](t, total, s.Pages.total_rows)
 		scaExpectConsistent(t, s)
-		expect(t, s.cursor.page_pin.node == scaPin(t, s, uint(x), y+1).node,
+		expect(t, s.Cursor.PagePin.Node == scaPin(t, s, uint(x), y+1).Node,
 			"s.cursor.page_pin.node == term51AAPin(&s, x, y + 1).node")
 		scaExpectReleased(t, s, old_node, old_style_id, old_link_id)
 		scaExpectMode(t, s, mode)
@@ -503,7 +503,7 @@ func TestSca_cursorDownOrScroll_moving_down_keeps_pending_wrap_on_a_multi_page_s
 // column 0 of row y gets 0x100 + y.
 func scaMarkRows(t *testing.T, s *Screen) {
 	t.Helper()
-	for y := uint(0); y < uint(s.pages.rows); y++ {
+	for y := uint(0); y < uint(s.Pages.rows); y++ {
 		scaSetCp(t, s, 0, y, uint32(0x100+y))
 	}
 }
@@ -512,7 +512,7 @@ func scaMarkRows(t *testing.T, s *Screen) {
 // active row y is blank.
 func scaExpectBlankRow(t *testing.T, s *Screen, y uint) {
 	t.Helper()
-	for x := uint(0); x < uint(s.pages.cols); x++ {
+	for x := uint(0); x < uint(s.Pages.cols); x++ {
 		cell := scaCell(t, s, x, y)
 		expectEqual[uint64](t, 0, cell.bitCast())
 	}
@@ -525,24 +525,24 @@ func scaScrollCase(t *testing.T, max_scrollback uint64, mode scaMode, pending bo
 	t.Helper()
 	s := scaMultiPage(t, max_scrollback)
 	defer s.Deinit()
-	rows := uint(s.pages.rows)
+	rows := uint(s.Pages.rows)
 	scaMarkRows(t, s)
 	scaApplyMode(t, s, mode)
 	x := SizeCellCountInt(1234)
 	s.CursorAbsolute(x, SizeCellCountInt(rows-1))
-	s.cursor.pending_wrap = pending
-	total := s.pages.total_rows
-	first_active := scaPin(t, s, 0, 0).node
-	s.pages.ClearDirty()
-	old_node := s.cursor.page_pin.node
-	old_style_id := s.cursor.style_id
-	old_link_id := s.cursor.hyperlink_id
+	s.Cursor.PendingWrap = pending
+	total := s.Pages.total_rows
+	first_active := scaPin(t, s, 0, 0).Node
+	s.Pages.ClearDirty()
+	old_node := s.Cursor.PagePin.Node
+	old_style_id := s.Cursor.StyleID
+	old_link_id := s.Cursor.HyperlinkID
 
 	zigTry(t, s.cursorDownOrScroll())
 
-	expectEqual[SizeCellCountInt](t, x, s.cursor.x)
-	expectEqual[SizeCellCountInt](t, SizeCellCountInt(rows-1), s.cursor.y)
-	expectEqual[bool](t, pending, s.cursor.pending_wrap)
+	expectEqual[SizeCellCountInt](t, x, s.Cursor.X)
+	expectEqual[SizeCellCountInt](t, SizeCellCountInt(rows-1), s.Cursor.Y)
+	expectEqual[bool](t, pending, s.Cursor.PendingWrap)
 	scaExpectConsistent(t, s)
 	scaExpectReleased(t, s, old_node, old_style_id, old_link_id)
 	scaExpectMode(t, s, mode)
@@ -555,15 +555,15 @@ func scaScrollCase(t *testing.T, max_scrollback uint64, mode scaMode, pending bo
 		// The rows were shifted inside the existing pages: nothing grew, the
 		// cursor stays on its page and every page from the first active row
 		// down is flagged dirty.
-		expectEqual[uint](t, total, s.pages.total_rows)
-		expect(t, s.cursor.page_pin.node == old_node, "s.cursor.page_pin.node == old_node")
+		expectEqual[uint](t, total, s.Pages.total_rows)
+		expect(t, s.Cursor.PagePin.Node == old_node, "s.cursor.page_pin.node == old_node")
 		for node := first_active; node != nil; node = node.next {
 			expect(t, node.data.dirty, "node.data.dirty")
 		}
 	} else {
 		// The old first row is now history.
-		expectEqual[uint](t, total+1, s.pages.total_rows)
-		hist := zigUnwrap(t, s.pages.Pin(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 0, y: 0}}))
+		expectEqual[uint](t, total+1, s.Pages.total_rows)
+		hist := zigUnwrap(t, s.Pages.Pin(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 0, Y: 0}}))
 		expectEqual[uint32](t, 0x100, hist.RowAndCell().cell.Codepoint())
 		// The old cursor row (now one up) and the new one are dirty.
 		expect(t, scaRow(t, s, rows-2).dirty, "term51AARow(&s, rows - 2).dirty")
@@ -608,28 +608,28 @@ func TestSca_cursorDownOrScroll_scrolling_until_a_new_page_is_created_moves_styl
 		func() {
 			s := scaMultiPage(t, scaBig)
 			defer s.Deinit()
-			rows := uint(s.pages.rows)
+			rows := uint(s.Pages.rows)
 			scaApplyMode(t, s, mode)
 			s.CursorAbsolute(77, SizeCellCountInt(rows-1))
 			nodes := scaNodeCount(s)
-			limit := uint(s.pages.pages.last.data.capacity.rows) + 2
+			limit := uint(s.Pages.pages.last.data.capacity.rows) + 2
 
 			changed := false
 			for i := uint(0); i < limit; i++ {
-				old_node := s.cursor.page_pin.node
-				old_style_id := s.cursor.style_id
-				old_link_id := s.cursor.hyperlink_id
-				total := s.pages.total_rows
+				old_node := s.Cursor.PagePin.Node
+				old_style_id := s.Cursor.StyleID
+				old_link_id := s.Cursor.HyperlinkID
+				total := s.Pages.total_rows
 				zigTry(t, s.cursorDownOrScroll())
-				expectEqual[uint](t, total+1, s.pages.total_rows)
-				expectEqual[SizeCellCountInt](t, 77, s.cursor.x)
-				expectEqual[SizeCellCountInt](t, SizeCellCountInt(rows-1), s.cursor.y)
+				expectEqual[uint](t, total+1, s.Pages.total_rows)
+				expectEqual[SizeCellCountInt](t, 77, s.Cursor.X)
+				expectEqual[SizeCellCountInt](t, SizeCellCountInt(rows-1), s.Cursor.Y)
 				scaExpectConsistent(t, s)
 				scaExpectReleased(t, s, old_node, old_style_id, old_link_id)
 				scaExpectMode(t, s, mode)
-				expect(t, s.cursor.page_pin.node == s.pages.pages.last,
+				expect(t, s.Cursor.PagePin.Node == s.Pages.pages.last,
 					"s.cursor.page_pin.node == s.pages.pages.last.?")
-				if s.cursor.page_pin.node != old_node {
+				if s.Cursor.PagePin.Node != old_node {
 					changed = true
 					break
 				}
@@ -653,16 +653,16 @@ func TestSca_cursorDownOrScroll_screens_of_one_two_and_three_rows(t *testing.T) 
 					defer s.Deinit()
 					scaApplyMode(t, s, scaModeBoth)
 					scaMarkRows(t, s)
-					s.cursor.pending_wrap = pending
+					s.Cursor.PendingWrap = pending
 					model := [3]uint32{0x100, 0x101, 0x102}
 					var y SizeCellCountInt = 0
 
 					for i := SizeCellCountInt(0); i < rows+3; i++ {
-						total := s.pages.total_rows
+						total := s.Pages.total_rows
 						zigTry(t, s.cursorDownOrScroll())
 						if y+1 < rows {
 							y += 1
-							expectEqual[uint](t, total, s.pages.total_rows)
+							expectEqual[uint](t, total, s.Pages.total_rows)
 						} else {
 							for j := SizeCellCountInt(0); j < rows-1; j++ {
 								model[j] = model[j+1]
@@ -674,10 +674,10 @@ func TestSca_cursorDownOrScroll_screens_of_one_two_and_three_rows(t *testing.T) 
 							} else {
 								grown = 1
 							}
-							expectEqual[uint](t, total+grown, s.pages.total_rows)
+							expectEqual[uint](t, total+grown, s.Pages.total_rows)
 						}
-						expectEqual[SizeCellCountInt](t, y, s.cursor.y)
-						expectEqual[bool](t, pending, s.cursor.pending_wrap)
+						expectEqual[SizeCellCountInt](t, y, s.Cursor.Y)
+						expectEqual[bool](t, pending, s.Cursor.PendingWrap)
 						for yy := uint(0); yy < uint(rows); yy++ {
 							expectEqual[uint32](t, model[yy], scaCp(t, s, 0, yy))
 						}
@@ -700,22 +700,22 @@ func TestSca_cursorDownOrScroll_references_of_cells_in_the_scrolled_out_row(t *t
 			defer s.Deinit()
 			scaApplyMode(t, s, scaModeBoth)
 			scaWrite(t, s, "ab")
-			page := &s.cursor.page_pin.node.data
-			style_id := s.cursor.style_id
-			link_id := s.cursor.hyperlink_id
+			page := &s.Cursor.PagePin.Node.data
+			style_id := s.Cursor.StyleID
+			link_id := s.Cursor.HyperlinkID
 			expectEqual[uint](t, 3, scaStyleRefs(page, style_id))
 			expectEqual[uint](t, 3, scaLinkRefs(page, link_id))
 
 			// Moving down from the first row changes nothing.
 			zigTry(t, s.cursorDownOrScroll())
-			expectEqual[SizeCellCountInt](t, 1, s.cursor.y)
+			expectEqual[SizeCellCountInt](t, 1, s.Cursor.Y)
 			expectEqual[uint](t, 3, scaStyleRefs(page, style_id))
 
 			// Scrolling: the row with "ab" is dropped without scrollback and
 			// kept as history with it.
 			zigTry(t, s.cursorDownOrScroll())
-			expectEqual[StyleId](t, style_id, s.cursor.style_id)
-			expectEqual[HyperlinkId](t, link_id, s.cursor.hyperlink_id)
+			expectEqual[StyleID](t, style_id, s.Cursor.StyleID)
+			expectEqual[HyperlinkID](t, link_id, s.Cursor.HyperlinkID)
 			var want uint
 			if sb == 0 {
 				want = 1
@@ -745,7 +745,7 @@ func TestSca_cursorDownOrScroll_a_background_color_fills_only_the_row_that_scrol
 					} else {
 						zigTry(t, s.SetAttribute(SGRAttribute{
 							Tag:           SGRAttributeTagDirectColorBg,
-							DirectColorBg: ColorRGB{r: 1, g: 2, b: 3},
+							DirectColorBg: ColorRGB{R: 1, G: 2, B: 3},
 						}))
 					}
 					scaMarkRows(t, s)
@@ -756,14 +756,14 @@ func TestSca_cursorDownOrScroll_a_background_color_fills_only_the_row_that_scrol
 						for x := uint(1); x < 5; x++ {
 							expectEqual[PageCellContentTag](t,
 								PageCellContentTagCodepoint,
-								scaCell(t, s, x, uint(s.cursor.y)).content_tag,
+								scaCell(t, s, x, uint(s.Cursor.Y)).content_tag,
 							)
 						}
 					}
 
 					s.CursorAbsolute(3, rows-1)
 					zigTry(t, s.cursorDownOrScroll())
-					expectEqual[SizeCellCountInt](t, 3, s.cursor.x)
+					expectEqual[SizeCellCountInt](t, 3, s.Cursor.X)
 					for x := uint(0); x < 5; x++ {
 						cell := scaCell(t, s, x, uint(rows-1))
 						if palette {
@@ -771,9 +771,9 @@ func TestSca_cursorDownOrScroll_a_background_color_fills_only_the_row_that_scrol
 							expectEqual[uint8](t, 9, cell.content.color_palette)
 						} else {
 							expectEqual[PageCellContentTag](t, PageCellContentTagBgColorRgb, cell.content_tag)
-							expectEqual[uint8](t, 1, cell.content.color_rgb.r)
-							expectEqual[uint8](t, 2, cell.content.color_rgb.g)
-							expectEqual[uint8](t, 3, cell.content.color_rgb.b)
+							expectEqual[uint8](t, 1, cell.content.color_rgb.R)
+							expectEqual[uint8](t, 2, cell.content.color_rgb.G)
+							expectEqual[uint8](t, 3, cell.content.color_rgb.B)
 						}
 					}
 					// The rows above hold shifted marks, not the fill.
@@ -792,30 +792,30 @@ func scaHorizontalCase(t *testing.T, max_scrollback uint64, mode scaMode, pendin
 	t.Helper()
 	s := scaMultiPage(t, max_scrollback)
 	defer s.Deinit()
-	rows := uint(s.pages.rows)
+	rows := uint(s.Pages.rows)
 	scaApplyMode(t, s, mode)
 
 	for y := uint(0); y < rows; y++ {
 		s.CursorAbsolute(1000, SizeCellCountInt(y))
-		s.cursor.pending_wrap = pending
-		s.pages.ClearDirty()
-		node := s.cursor.page_pin.node
-		row := s.cursor.page_row
-		style_id := s.cursor.style_id
-		link_id := s.cursor.hyperlink_id
+		s.Cursor.PendingWrap = pending
+		s.Pages.ClearDirty()
+		node := s.Cursor.PagePin.Node
+		row := s.Cursor.PageRow
+		style_id := s.Cursor.StyleID
+		link_id := s.Cursor.HyperlinkID
 
 		for _, x := range []SizeCellCountInt{0, 1, 1, 1000, 1998, 1999, 1999, 0, 2} {
 			s.CursorHorizontalAbsolute(x)
-			expectEqual[SizeCellCountInt](t, x, s.cursor.x)
-			expectEqual[SizeCellCountInt](t, x, s.cursor.page_pin.x)
-			expectEqual[SizeCellCountInt](t, SizeCellCountInt(y), s.cursor.y)
-			expect(t, s.cursor.page_cell == scaCell(t, s, uint(x), y),
+			expectEqual[SizeCellCountInt](t, x, s.Cursor.X)
+			expectEqual[SizeCellCountInt](t, x, s.Cursor.PagePin.X)
+			expectEqual[SizeCellCountInt](t, SizeCellCountInt(y), s.Cursor.Y)
+			expect(t, s.Cursor.PageCell == scaCell(t, s, uint(x), y),
 				"s.cursor.page_cell == term51AACell(&s, x, y)")
-			expect(t, s.cursor.page_row == row, "s.cursor.page_row == row")
-			expect(t, s.cursor.page_pin.node == node, "s.cursor.page_pin.node == node")
-			expectEqual[bool](t, pending, s.cursor.pending_wrap)
-			expectEqual[StyleId](t, style_id, s.cursor.style_id)
-			expectEqual[HyperlinkId](t, link_id, s.cursor.hyperlink_id)
+			expect(t, s.Cursor.PageRow == row, "s.cursor.page_row == row")
+			expect(t, s.Cursor.PagePin.Node == node, "s.cursor.page_pin.node == node")
+			expectEqual[bool](t, pending, s.Cursor.PendingWrap)
+			expectEqual[StyleID](t, style_id, s.Cursor.StyleID)
+			expectEqual[HyperlinkID](t, link_id, s.Cursor.HyperlinkID)
 			scaExpectConsistent(t, s)
 			scaExpectMode(t, s, mode)
 		}
@@ -854,19 +854,19 @@ func TestSca_cursorHorizontalAbsolute_every_column_pair_with_and_without_pending
 				defer s.Deinit()
 				s.CursorAbsolute(0, 2)
 				scaApplyMode(t, s, mode)
-				s.cursor.pending_wrap = pending
-				s.pages.ClearDirty()
+				s.Cursor.PendingWrap = pending
+				s.Pages.ClearDirty()
 				for from := uint(0); from < 10; from++ {
 					for to := uint(0); to < 10; to++ {
 						s.CursorHorizontalAbsolute(SizeCellCountInt(from))
-						expectEqual[SizeCellCountInt](t, SizeCellCountInt(from), s.cursor.x)
+						expectEqual[SizeCellCountInt](t, SizeCellCountInt(from), s.Cursor.X)
 						s.CursorHorizontalAbsolute(SizeCellCountInt(to))
-						expectEqual[SizeCellCountInt](t, SizeCellCountInt(to), s.cursor.x)
-						expectEqual[SizeCellCountInt](t, SizeCellCountInt(to), s.cursor.page_pin.x)
-						expectEqual[SizeCellCountInt](t, 2, s.cursor.y)
-						expect(t, s.cursor.page_cell == scaCell(t, s, to, 2),
+						expectEqual[SizeCellCountInt](t, SizeCellCountInt(to), s.Cursor.X)
+						expectEqual[SizeCellCountInt](t, SizeCellCountInt(to), s.Cursor.PagePin.X)
+						expectEqual[SizeCellCountInt](t, 2, s.Cursor.Y)
+						expect(t, s.Cursor.PageCell == scaCell(t, s, to, 2),
 							"s.cursor.page_cell == term51AACell(&s, to, 2)")
-						expectEqual[bool](t, pending, s.cursor.pending_wrap)
+						expectEqual[bool](t, pending, s.Cursor.PendingWrap)
 					}
 				}
 				scaExpectConsistent(t, s)
@@ -883,10 +883,10 @@ func TestSca_cursorHorizontalAbsolute_one_and_two_column_screens(t *testing.T) {
 	func() {
 		s := scaInit(t, 1, 1, 0)
 		defer s.Deinit()
-		s.cursor.pending_wrap = true
+		s.Cursor.PendingWrap = true
 		s.CursorHorizontalAbsolute(0)
-		expectEqual[SizeCellCountInt](t, 0, s.cursor.x)
-		expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+		expectEqual[SizeCellCountInt](t, 0, s.Cursor.X)
+		expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 		scaExpectConsistent(t, s)
 	}()
 	func() {
@@ -894,11 +894,11 @@ func TestSca_cursorHorizontalAbsolute_one_and_two_column_screens(t *testing.T) {
 		defer s.Deinit()
 		s.CursorAbsolute(0, 1)
 		s.CursorHorizontalAbsolute(1)
-		expectEqual[SizeCellCountInt](t, 1, s.cursor.x)
-		expect(t, s.cursor.page_cell == scaCell(t, s, 1, 1), "s.cursor.page_cell == term51AACell(&s, 1, 1)")
+		expectEqual[SizeCellCountInt](t, 1, s.Cursor.X)
+		expect(t, s.Cursor.PageCell == scaCell(t, s, 1, 1), "s.cursor.page_cell == term51AACell(&s, 1, 1)")
 		s.CursorHorizontalAbsolute(0)
-		expectEqual[SizeCellCountInt](t, 0, s.cursor.x)
-		expect(t, s.cursor.page_cell == scaCell(t, s, 0, 1), "s.cursor.page_cell == term51AACell(&s, 0, 1)")
+		expectEqual[SizeCellCountInt](t, 0, s.Cursor.X)
+		expect(t, s.Cursor.PageCell == scaCell(t, s, 0, 1), "s.cursor.page_cell == term51AACell(&s, 0, 1)")
 		scaExpectConsistent(t, s)
 	}()
 }
@@ -909,7 +909,7 @@ func TestSca_cursorHorizontalAbsolute_leaves_row_flags_and_cell_contents_alone(t
 	s := scaInit(t, 10, 3, 0)
 	defer s.Deinit()
 	scaWrite(t, s, "abcdefghij")
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 	s.CursorAbsolute(4, 0)
 	scaRow(t, s, 0).wrap = true
 	scaRow(t, s, 1).wrap_continuation = true
@@ -928,7 +928,7 @@ func TestSca_cursorHorizontalAbsolute_leaves_row_flags_and_cell_contents_alone(t
 			expectEqual[uint64](t, cells[cx], scaCell(t, s, cx, 0).bitCast())
 		}
 	}
-	expectEqual[uint32](t, 'e', s.cursor.page_cell.Codepoint())
+	expectEqual[uint32](t, 'e', s.Cursor.PageCell.Codepoint())
 }
 
 // scaLeftCase is term51AALeftCase.
@@ -936,7 +936,7 @@ func scaLeftCase(t *testing.T, max_scrollback uint64, mode scaMode, pending bool
 	t.Helper()
 	s := scaMultiPage(t, max_scrollback)
 	defer s.Deinit()
-	rows := uint(s.pages.rows)
+	rows := uint(s.Pages.rows)
 	scaApplyMode(t, s, mode)
 
 	type Step struct{ n, x SizeCellCountInt }
@@ -952,25 +952,25 @@ func scaLeftCase(t *testing.T, max_scrollback uint64, mode scaMode, pending bool
 
 	for y := uint(0); y < rows; y++ {
 		s.CursorAbsolute(1999, SizeCellCountInt(y))
-		s.cursor.pending_wrap = pending
-		s.pages.ClearDirty()
-		node := s.cursor.page_pin.node
-		row := s.cursor.page_row
-		style_id := s.cursor.style_id
-		link_id := s.cursor.hyperlink_id
+		s.Cursor.PendingWrap = pending
+		s.Pages.ClearDirty()
+		node := s.Cursor.PagePin.Node
+		row := s.Cursor.PageRow
+		style_id := s.Cursor.StyleID
+		link_id := s.Cursor.HyperlinkID
 
 		for _, st := range steps {
 			s.CursorLeft(st.n)
-			expectEqual[SizeCellCountInt](t, st.x, s.cursor.x)
-			expectEqual[SizeCellCountInt](t, st.x, s.cursor.page_pin.x)
-			expectEqual[SizeCellCountInt](t, SizeCellCountInt(y), s.cursor.y)
-			expect(t, s.cursor.page_cell == scaCell(t, s, uint(st.x), y),
+			expectEqual[SizeCellCountInt](t, st.x, s.Cursor.X)
+			expectEqual[SizeCellCountInt](t, st.x, s.Cursor.PagePin.X)
+			expectEqual[SizeCellCountInt](t, SizeCellCountInt(y), s.Cursor.Y)
+			expect(t, s.Cursor.PageCell == scaCell(t, s, uint(st.x), y),
 				"s.cursor.page_cell == term51AACell(&s, st.x, y)")
-			expect(t, s.cursor.page_row == row, "s.cursor.page_row == row")
-			expect(t, s.cursor.page_pin.node == node, "s.cursor.page_pin.node == node")
-			expectEqual[bool](t, pending, s.cursor.pending_wrap)
-			expectEqual[StyleId](t, style_id, s.cursor.style_id)
-			expectEqual[HyperlinkId](t, link_id, s.cursor.hyperlink_id)
+			expect(t, s.Cursor.PageRow == row, "s.cursor.page_row == row")
+			expect(t, s.Cursor.PagePin.Node == node, "s.cursor.page_pin.node == node")
+			expectEqual[bool](t, pending, s.Cursor.PendingWrap)
+			expectEqual[StyleID](t, style_id, s.Cursor.StyleID)
+			expectEqual[HyperlinkID](t, link_id, s.Cursor.HyperlinkID)
 			scaExpectConsistent(t, s)
 			scaExpectMode(t, s, mode)
 		}
@@ -1005,16 +1005,16 @@ func TestSca_cursorLeft_every_start_column_and_distance_without_pending_wrap(t *
 	s := scaInit(t, 7, 2, 0)
 	defer s.Deinit()
 	s.CursorAbsolute(0, 1)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 	for x := uint(0); x < 7; x++ {
 		for n := uint(0); n < x+1; n++ {
 			s.CursorHorizontalAbsolute(SizeCellCountInt(x))
 			s.CursorLeft(SizeCellCountInt(n))
-			expectEqual[SizeCellCountInt](t, SizeCellCountInt(x-n), s.cursor.x)
-			expectEqual[SizeCellCountInt](t, SizeCellCountInt(x-n), s.cursor.page_pin.x)
-			expect(t, s.cursor.page_cell == scaCell(t, s, x-n, 1),
+			expectEqual[SizeCellCountInt](t, SizeCellCountInt(x-n), s.Cursor.X)
+			expectEqual[SizeCellCountInt](t, SizeCellCountInt(x-n), s.Cursor.PagePin.X)
+			expect(t, s.Cursor.PageCell == scaCell(t, s, x-n, 1),
 				"s.cursor.page_cell == term51AACell(&s, x - n, 1)")
-			expect(t, !s.cursor.pending_wrap, "!s.cursor.pending_wrap")
+			expect(t, !s.Cursor.PendingWrap, "!s.cursor.pending_wrap")
 			scaExpectConsistent(t, s)
 		}
 	}
@@ -1027,10 +1027,10 @@ func TestSca_cursorLeft_one_column_screen(t *testing.T) {
 	s := scaInit(t, 1, 3, 0)
 	defer s.Deinit()
 	s.CursorAbsolute(0, 2)
-	s.cursor.pending_wrap = true
+	s.Cursor.PendingWrap = true
 	s.CursorLeft(0)
-	expectEqual[SizeCellCountInt](t, 0, s.cursor.x)
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
+	expectEqual[SizeCellCountInt](t, 0, s.Cursor.X)
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
 	scaExpectConsistent(t, s)
 }
 
@@ -1046,14 +1046,14 @@ func TestSca_cursorCellRight_every_start_column_and_distance_on_small_screens(t 
 			}
 			for x := uint(0); x < uint(cols); x++ {
 				s.CursorAbsolute(SizeCellCountInt(x), 1)
-				s.pages.ClearDirty()
-				before := s.cursor
+				s.Pages.ClearDirty()
+				before := s.Cursor
 				for n := uint(0); n < uint(cols)-x; n++ {
 					cell := s.CursorCellRight(SizeCellCountInt(n))
 					expect(t, cell == scaCell(t, s, x+n, 1), "cell == term51AACell(&s, x + n, 1)")
 					expectEqual[uint32](t, uint32('a'+x+n), cell.Codepoint())
 				}
-				expect(t, before == s.cursor, "std.meta.eql(before, s.cursor)")
+				expect(t, before == s.Cursor, "std.meta.eql(before, s.cursor)")
 				scaExpectDirty(t, s, None[uint](), None[uint]())
 			}
 		}()
@@ -1072,14 +1072,14 @@ func TestSca_cursorCellLeft_every_start_column_and_distance_on_small_screens(t *
 			}
 			for x := uint(0); x < uint(cols); x++ {
 				s.CursorAbsolute(SizeCellCountInt(x), 1)
-				s.pages.ClearDirty()
-				before := s.cursor
+				s.Pages.ClearDirty()
+				before := s.Cursor
 				for n := uint(0); n < x+1; n++ {
 					cell := s.CursorCellLeft(SizeCellCountInt(n))
 					expect(t, cell == scaCell(t, s, x-n, 1), "cell == term51AACell(&s, x - n, 1)")
 					expectEqual[uint32](t, uint32('a'+x-n), cell.Codepoint())
 				}
-				expect(t, before == s.cursor, "std.meta.eql(before, s.cursor)")
+				expect(t, before == s.Cursor, "std.meta.eql(before, s.cursor)")
 				scaExpectDirty(t, s, None[uint](), None[uint]())
 			}
 		}()
@@ -1092,13 +1092,13 @@ func TestSca_cursorCellRight_every_row_of_a_multi_page_screen_with_pending_wrap_
 	s := scaMultiPage(t, 0)
 	defer s.Deinit()
 	scaApplyMode(t, s, scaModeBoth)
-	for y := uint(0); y < uint(s.pages.rows); y++ {
+	for y := uint(0); y < uint(s.Pages.rows); y++ {
 		scaSetCp(t, s, 1999, y, uint32(0x200+y))
 		for _, x := range []SizeCellCountInt{0, 1, 1000, 1998, 1999} {
 			s.CursorAbsolute(x, SizeCellCountInt(y))
-			s.cursor.pending_wrap = true
-			s.pages.ClearDirty()
-			before := s.cursor
+			s.Cursor.PendingWrap = true
+			s.Pages.ClearDirty()
+			before := s.Cursor
 			for _, n := range []uint{0, 1, 1999 - uint(x)} {
 				if uint(x)+n >= 2000 {
 					continue
@@ -1107,7 +1107,7 @@ func TestSca_cursorCellRight_every_row_of_a_multi_page_screen_with_pending_wrap_
 					"s.cursorCellRight(n) == term51AACell(&s, x + n, y)")
 			}
 			expectEqual[uint32](t, uint32(0x200+y), s.CursorCellRight(1999-x).Codepoint())
-			expect(t, before == s.cursor, "std.meta.eql(before, s.cursor)")
+			expect(t, before == s.Cursor, "std.meta.eql(before, s.cursor)")
 			scaExpectDirty(t, s, None[uint](), None[uint]())
 		}
 	}
@@ -1120,13 +1120,13 @@ func TestSca_cursorCellLeft_every_row_of_a_multi_page_screen_with_pending_wrap_a
 	s := scaMultiPage(t, 0)
 	defer s.Deinit()
 	scaApplyMode(t, s, scaModeBoth)
-	for y := uint(0); y < uint(s.pages.rows); y++ {
+	for y := uint(0); y < uint(s.Pages.rows); y++ {
 		scaSetCp(t, s, 0, y, uint32(0x200+y))
 		for _, x := range []SizeCellCountInt{0, 1, 1000, 1998, 1999} {
 			s.CursorAbsolute(x, SizeCellCountInt(y))
-			s.cursor.pending_wrap = true
-			s.pages.ClearDirty()
-			before := s.cursor
+			s.Cursor.PendingWrap = true
+			s.Pages.ClearDirty()
+			before := s.Cursor
 			for _, n := range []uint{0, 1, uint(x)} {
 				if n > uint(x) {
 					continue
@@ -1135,7 +1135,7 @@ func TestSca_cursorCellLeft_every_row_of_a_multi_page_screen_with_pending_wrap_a
 					"s.cursorCellLeft(n) == term51AACell(&s, x - n, y)")
 			}
 			expectEqual[uint32](t, uint32(0x200+y), s.CursorCellLeft(x).Codepoint())
-			expect(t, before == s.cursor, "std.meta.eql(before, s.cursor)")
+			expect(t, before == s.Cursor, "std.meta.eql(before, s.cursor)")
 			scaExpectDirty(t, s, None[uint](), None[uint]())
 		}
 	}
@@ -1150,8 +1150,8 @@ func TestSca_cursorCellRight_layout_pointer_distance_is_n_cells(t *testing.T) {
 	s.CursorAbsolute(2, 0)
 	// Go: the distance in bytes (n * @sizeOf(Cell)) is a distance in the
 	// page's cells slice.
-	page := &s.cursor.page_pin.node.data
-	base := page.cellIndex(s.cursor.page_cell)
+	page := &s.Cursor.PagePin.Node.data
+	base := page.cellIndex(s.Cursor.PageCell)
 	for n := uint(0); n < 8; n++ {
 		expectEqual[uint](t, base+n, page.cellIndex(s.CursorCellRight(SizeCellCountInt(n))))
 	}
@@ -1165,8 +1165,8 @@ func TestSca_cursorCellLeft_layout_pointer_distance_is_n_cells(t *testing.T) {
 	s.CursorAbsolute(7, 0)
 	// Go: the distance in bytes (n * @sizeOf(Cell)) is a distance in the
 	// page's cells slice.
-	page := &s.cursor.page_pin.node.data
-	base := page.cellIndex(s.cursor.page_cell)
+	page := &s.Cursor.PagePin.Node.data
+	base := page.cellIndex(s.Cursor.PageCell)
 	for n := uint(0); n < 8; n++ {
 		expectEqual[uint](t, base-n, page.cellIndex(s.CursorCellLeft(SizeCellCountInt(n))))
 	}
@@ -1178,22 +1178,22 @@ func TestSca_cursorMarkDirty_every_row_of_a_multi_page_screen_marks_the_row_and_
 	s := scaMultiPage(t, 0)
 	defer s.Deinit()
 	scaApplyMode(t, s, scaModeBoth)
-	for y := uint(0); y < uint(s.pages.rows); y++ {
+	for y := uint(0); y < uint(s.Pages.rows); y++ {
 		s.CursorAbsolute(SizeCellCountInt((y*31)%2000), SizeCellCountInt(y))
-		s.cursor.pending_wrap = (y%2 == 0)
-		s.pages.ClearDirty()
-		row_bits := s.cursor.page_row.bitCast()
-		before := s.cursor
+		s.Cursor.PendingWrap = (y%2 == 0)
+		s.Pages.ClearDirty()
+		row_bits := s.Cursor.PageRow.bitCast()
+		before := s.Cursor
 
 		s.CursorMarkDirty()
 		scaExpectDirty(t, s, Some(y), None[uint]())
 		// Only the dirty bit changed in the row.
-		expect_row := *s.cursor.page_row
+		expect_row := *s.Cursor.PageRow
 		expect_row.dirty = false
 		was_row := pageRowFromBits(row_bits)
 		was_row.dirty = false
 		expectEqual[uint64](t, was_row.bitCast(), expect_row.bitCast())
-		expect(t, before == s.cursor, "std.meta.eql(before, s.cursor)")
+		expect(t, before == s.Cursor, "std.meta.eql(before, s.cursor)")
 
 		// Marking again changes nothing.
 		s.CursorMarkDirty()
@@ -1208,7 +1208,7 @@ func TestSca_cursorMarkDirty_keeps_rows_that_were_already_dirty(t *testing.T) {
 	s := scaInit(t, 5, 6, 0)
 	defer s.Deinit()
 	s.CursorAbsolute(0, 3)
-	s.pages.ClearDirty()
+	s.Pages.ClearDirty()
 	scaRow(t, s, 1).dirty = true
 	scaRow(t, s, 4).dirty = true
 
@@ -1232,14 +1232,14 @@ func TestSca_viewportIsBottom_every_viewport_kind_set_directly(t *testing.T) {
 	testStdCapacity(t)
 	s := scaInit(t, 5, 3, 1000)
 	defer s.Deinit()
-	expect(t, s.pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
+	expect(t, s.Pages.viewport.Tag == PageListViewportActive, "s.pages.viewport == .active")
 	expect(t, s.ViewportIsBottom(), "s.viewportIsBottom()")
 
-	s.pages.viewport = PageListViewport{Tag: PageListViewportTop}
+	s.Pages.viewport = PageListViewport{Tag: PageListViewportTop}
 	expect(t, !s.ViewportIsBottom(), "!s.viewportIsBottom()")
-	s.pages.viewport = PageListViewport{Tag: PageListViewportPin}
+	s.Pages.viewport = PageListViewport{Tag: PageListViewportPin}
 	expect(t, !s.ViewportIsBottom(), "!s.viewportIsBottom()")
-	s.pages.viewport = PageListViewport{Tag: PageListViewportActive}
+	s.Pages.viewport = PageListViewport{Tag: PageListViewportActive}
 	expect(t, s.ViewportIsBottom(), "s.viewportIsBottom()")
 }
 
@@ -1277,8 +1277,8 @@ func TestSca_viewportIsBottom_reset_returns_to_the_bottom(t *testing.T) {
 // scaExplicit is the Zig literal `.{ .uri = uri, .id = .{ .explicit = id } }`.
 func scaExplicit(uri string, id string) Hyperlink {
 	return Hyperlink{
-		uri: []uint8(uri),
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8(id)},
+		URI: []uint8(uri),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8(id)},
 	}
 }
 
@@ -1287,26 +1287,26 @@ func TestSca_startHyperlinkOnce_an_equal_link_reuses_the_page_entry_and_counts_r
 	testStdCapacity(t)
 	s := scaInit(t, 10, 3, 0)
 	defer s.Deinit()
-	page := &s.cursor.page_pin.node.data
+	page := &s.Cursor.PagePin.Node.data
 
 	zigTry(t, s.startHyperlinkOnce(scaExplicit("https://a/", "a")))
-	id := s.cursor.hyperlink_id
+	id := s.Cursor.HyperlinkID
 	scaWrite(t, s, "xy")
 	expectEqual[uint](t, 3, scaLinkRefs(page, id))
 
 	// The cursor's own reference is released first, then re-added: the cells
 	// keep theirs and the set still holds a single entry.
 	zigTry(t, s.startHyperlinkOnce(scaExplicit("https://a/", "a")))
-	expectEqual[HyperlinkId](t, id, s.cursor.hyperlink_id)
+	expectEqual[HyperlinkID](t, id, s.Cursor.HyperlinkID)
 	expectEqual[uint](t, 3, scaLinkRefs(page, id))
 	expectEqual[uint](t, 1, page.hyperlink_set.Count())
 
 	// A different link takes another id, the cells keep the first.
 	zigTry(t, s.startHyperlinkOnce(scaExplicit("https://a/", "b")))
-	expect(t, s.cursor.hyperlink_id != id, "s.cursor.hyperlink_id != id")
+	expect(t, s.Cursor.HyperlinkID != id, "s.cursor.hyperlink_id != id")
 	expectEqual[uint](t, 2, scaLinkRefs(page, id))
 	expectEqual[uint](t, 2, page.hyperlink_set.Count())
-	expectEqualStrings(t, "b", string(s.cursor.hyperlink.id.Explicit))
+	expectEqualStrings(t, "b", string(s.Cursor.Hyperlink.ID.Explicit))
 	s.AssertIntegrity()
 }
 
@@ -1316,23 +1316,23 @@ func TestSca_startHyperlinkOnce_the_link_goes_into_the_cursor_s_page_only(t *tes
 	s := scaMultiPage(t, 0)
 	defer s.Deinit()
 	s.CursorAbsolute(3, 59)
-	node := s.cursor.page_pin.node
-	expect(t, node != s.pages.pages.first, "node != s.pages.pages.first.?")
+	node := s.Cursor.PagePin.Node
+	expect(t, node != s.Pages.pages.first, "node != s.pages.pages.first.?")
 
 	zigTry(t, s.startHyperlinkOnce(Hyperlink{
-		uri: []uint8("https://a/"),
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 5},
+		URI: []uint8("https://a/"),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 5},
 	}))
-	expectEqual[uint](t, 1, scaLinkRefs(&node.data, s.cursor.hyperlink_id))
+	expectEqual[uint](t, 1, scaLinkRefs(&node.data, s.Cursor.HyperlinkID))
 	expectEqual[uint](t, 1, node.data.hyperlink_set.Count())
-	for n := s.pages.pages.first; n != nil; n = n.next {
+	for n := s.Pages.pages.first; n != nil; n = n.next {
 		if n != node {
 			expectEqual[uint](t, 0, n.data.hyperlink_set.Count())
 		}
 	}
-	expectEqual[SizeOffsetInt](t, 5, s.cursor.hyperlink.id.Implicit)
+	expectEqual[SizeOffsetInt](t, 5, s.Cursor.Hyperlink.ID.Implicit)
 	// The implicit counter of the cursor is not used or advanced.
-	expectEqual[SizeOffsetInt](t, 0, s.cursor.hyperlink_implicit_id)
+	expectEqual[SizeOffsetInt](t, 0, s.Cursor.HyperlinkImplicitID)
 }
 
 // Zig: test "term51: startHyperlinkOnce: the strings are copied"
@@ -1343,17 +1343,17 @@ func TestSca_startHyperlinkOnce_the_strings_are_copied(t *testing.T) {
 	uri := []uint8("https://a/")
 	id := []uint8("id")
 	zigTry(t, s.startHyperlinkOnce(Hyperlink{
-		uri: uri,
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: id},
+		URI: uri,
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: id},
 	}))
 	uri[0] = 'X'
 	id[0] = 'Y'
-	link := s.cursor.hyperlink
-	expectEqualStrings(t, "https://a/", string(link.uri))
-	expectEqualStrings(t, "id", string(link.id.Explicit))
-	expect(t, &link.uri[0] != &uri[0], "link.uri.ptr != @as([*]const u8, &uri)")
-	page := &s.cursor.page_pin.node.data
-	entry := page.hyperlink_set.Get(s.cursor.hyperlink_id)
+	link := s.Cursor.Hyperlink
+	expectEqualStrings(t, "https://a/", string(link.URI))
+	expectEqualStrings(t, "id", string(link.ID.Explicit))
+	expect(t, &link.URI[0] != &uri[0], "link.uri.ptr != @as([*]const u8, &uri)")
+	page := &s.Cursor.PagePin.Node.data
+	entry := page.hyperlink_set.Get(s.Cursor.HyperlinkID)
 	expectEqualStrings(t, "https://a/", string(entry.uri))
 	expectEqualStrings(t, "id", string(entry.id.Explicit))
 }

@@ -131,7 +131,7 @@ func TestCorpusReplaySelfActionHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("%q: %v", l, err)
 				}
-				if err := h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: uint32(cp)}}); err != nil {
+				if err := h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{Cp: uint32(cp)}}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -153,11 +153,11 @@ func TestCorpusReplaySelfActionHandler(t *testing.T) {
 	var buf bytes.Buffer
 	h := &actionHandler{w: &buf}
 	h.flush()
-	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{cp: 0x41}})
+	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{Cp: 0x41}})
 	h.flush()
 	h.flush()
-	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{cp: 0x1f600}})
-	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{cp: 0x7e}})
+	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{Cp: 0x1f600}})
+	h.Vt(StreamActionKeyPrint, &StreamAction{Print: StreamActionPrint{Cp: 0x7e}})
 	h.flush()
 	if got, want := buf.String(), "@print 41\n@print 1f600,7e\n"; got != want {
 		t.Errorf("runs %q, want %q", got, want)
@@ -168,28 +168,28 @@ func TestCorpusReplaySelfActionHandler(t *testing.T) {
 // payload, for the payloads that need no enum name (the String methods of the
 // port's enums are the port's).
 func TestCorpusReplaySelfActionPayloads(t *testing.T) {
-	kfl := func(f KittyKeyFlags) StreamActionKittyKeyboardFlags { return StreamActionKittyKeyboardFlags{flags: f} }
+	kfl := func(f KittyKeyFlags) StreamActionKittyKeyboardFlags { return StreamActionKittyKeyboardFlags{Flags: f} }
 	for _, c := range []struct {
 		name  string
 		value StreamAction
 		file  string // the recorded file (below golden/) that has the block
 	}{
-		{"cursor_pos", StreamAction{CursorPos: StreamActionCursorPos{row: 1, col: 1}}, "csi/misc"},
-		{"cursor_up", StreamAction{CursorUp: StreamActionCursorMovement{value: 1}}, "parser/nextslicecapped_inputs"},
+		{"cursor_pos", StreamAction{CursorPos: StreamActionCursorPos{Row: 1, Col: 1}}, "csi/misc"},
+		{"cursor_up", StreamAction{CursorUp: StreamActionCursorMovement{Value: 1}}, "parser/nextslicecapped_inputs"},
 		{"print_repeat", StreamAction{PrintRepeat: 3}, "text/rep"},
 		{"horizontal_tab", StreamAction{HorizontalTab: 1}, "parser/state_csi_ignore"},
 		{"erase_display_below", StreamAction{EraseDisplayBelow: true}, "parser/csi_intermediates"},
-		{"top_and_bottom_margin", StreamAction{TopAndBottomMargin: StreamActionMargin{top_left: 2, bottom_right: 4}}, "esc/reset"},
+		{"top_and_bottom_margin", StreamAction{TopAndBottomMargin: StreamActionMargin{TopLeft: 2, BottomRight: 4}}, "esc/reset"},
 		{"title_push", StreamAction{TitlePush: 0}, "csi/misc"},
 		{"kitty_keyboard_set", StreamAction{KittyKeyboardSet: kfl(KittyKeyFlags{})}, "modes/kitty_keyboard"},
-		{"kitty_keyboard_set", StreamAction{KittyKeyboardSet: kfl(KittyKeyFlags{disambiguate: true, report_alternates: true})}, "fuzz/structured_short"},
+		{"kitty_keyboard_set", StreamAction{KittyKeyboardSet: kfl(KittyKeyFlags{Disambiguate: true, ReportAlternates: true})}, "fuzz/structured_short"},
 		{"kitty_keyboard_pop", StreamAction{KittyKeyboardPop: 3}, "modes/kitty_keyboard"},
-		{"start_hyperlink", StreamAction{StartHyperlink: StreamActionStartHyperlink{uri: []uint8("http://example.com"), id: Some([]uint8("a"))}}, "esc/reset"},
-		{"report_pwd", StreamAction{ReportPwd: StreamActionReportPwd{url: []uint8("file:///tmp")}}, "esc/reset"},
+		{"start_hyperlink", StreamAction{StartHyperlink: StreamActionStartHyperlink{URI: []uint8("http://example.com"), ID: Some([]uint8("a"))}}, "esc/reset"},
+		{"report_pwd", StreamAction{ReportPwd: StreamActionReportPwd{URL: []uint8("file:///tmp")}}, "esc/reset"},
 		{"dcs_hook", StreamAction{DcsHook: ParserActionDCS{Intermediates: []uint8("$"), Params: []uint16{}, Final: 113}}, "dcs/all"},
 		{"dcs_put", StreamAction{DcsPut: 109}, "dcs/all"},
-		{"window_title", StreamAction{WindowTitle: StreamActionWindowTitle{title: []uint8("hello world")}}, "osc/all"},
-		{"window_title", StreamAction{WindowTitle: StreamActionWindowTitle{title: []uint8("t\u00eftl\u00e9 \u4e2d \U0001f600")}}, "osc/all"},
+		{"window_title", StreamAction{WindowTitle: StreamActionWindowTitle{Title: []uint8("hello world")}}, "osc/all"},
+		{"window_title", StreamAction{WindowTitle: StreamActionWindowTitle{Title: []uint8("t\u00eftl\u00e9 \u4e2d \U0001f600")}}, "osc/all"},
 		{"mouse_shift_capture", StreamAction{MouseShiftCapture: false}, "csi/misc"},
 		// void: nothing but the tag line
 		{"decaln", StreamAction{}, "esc/reset"},
@@ -928,7 +928,7 @@ func searchSelfParsePoint(s string) Optional[PointCoordinate] {
 		return None[PointCoordinate]()
 	}
 	x, y, _ := strings.Cut(s, ",")
-	return Some(PointCoordinate{x: uint16(searchSelfUint(x)), y: uint32(searchSelfUint(y))})
+	return Some(PointCoordinate{X: uint16(searchSelfUint(x)), Y: uint32(searchSelfUint(y))})
 }
 
 func searchSelfParseHl(l string) (searchHlRec, bool) {
@@ -1038,7 +1038,7 @@ func TestCorpusReplaySelfSearchRecords(t *testing.T) {
 			cols: 80, rows: 24}.format(),
 			"layout primary pages=0 total_rows=0 serial_min=0 next_serial=0 viewport=active viewport_top=none active_top=none cols=80 rows=24 page_rows=- serials=-\n"},
 		{searchHlRec{label: "next", topX: 1, botX: 2}.format(), "hl next top_x=1 bot_x=2 tl=none br=none chunks=0\n"},
-		{searchHlRec{label: "match 2", topX: 3, botX: 4, tl: Some(PointCoordinate{x: 3, y: 9}), br: None[PointCoordinate](),
+		{searchHlRec{label: "match 2", topX: 3, botX: 4, tl: Some(PointCoordinate{X: 3, Y: 9}), br: None[PointCoordinate](),
 			chunks: []searchChunkRec{{page: Some(uint(1)), start: 2, end: 3, serial: 5}, {start: 0, end: 1, serial: 6}}}.format(),
 			"hl match 2 top_x=3 bot_x=4 tl=3,9 br=none chunks=2 1:2-3:5 -:0-1:6\n"},
 		{searchWinRec{dataLen: 20, dataOffset: 0, metaLen: 1, metas: []uint{5}}.format(), "win data_len=20 data_offset=0 metas=1:5\n"},

@@ -549,7 +549,7 @@ func TestOSC_term51_Parser_end_the_terminator_is_recorded_by_commands_that_reply
 		osc0_feed(&p, "4;1;?")
 		cmd := p.End(Some[uint8](0x07))
 		expect(t, cmd != nil, "p.end(0x07).?")
-		expectEqual(t, OSCTerminatorBel, cmd.ColorOperation.terminator)
+		expectEqual(t, OSCTerminatorBel, cmd.ColorOperation.Terminator)
 	}
 	{
 		p := OSCParserInit(osc0_allocator)
@@ -557,7 +557,7 @@ func TestOSC_term51_Parser_end_the_terminator_is_recorded_by_commands_that_reply
 		osc0_feed(&p, "4;1;?")
 		cmd := p.End(Some[uint8](0x1b))
 		expect(t, cmd != nil, "p.end(0x1b).?")
-		expectEqual(t, OSCTerminatorSt, cmd.ColorOperation.terminator)
+		expectEqual(t, OSCTerminatorSt, cmd.ColorOperation.Terminator)
 	}
 	{
 		p := OSCParserInit(osc0_allocator)
@@ -565,6 +565,6 @@ func TestOSC_term51_Parser_end_the_terminator_is_recorded_by_commands_that_reply
 		osc0_feed(&p, "4;1;?")
 		cmd := p.End(None[uint8]())
 		expect(t, cmd != nil, "p.end(null).?")
-		expectEqual(t, OSCTerminatorSt, cmd.ColorOperation.terminator)
+		expectEqual(t, OSCTerminatorSt, cmd.ColorOperation.Terminator)
 	}
 }

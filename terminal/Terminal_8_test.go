@@ -57,19 +57,19 @@ func tm8Fill(t *testing.T, term *Terminal, rows []string) {
 // tm8CellAt is term51UCellAt.
 func tm8CellAt(t *testing.T, term *Terminal, x uint, y uint) *PageCell {
 	t.Helper()
-	return zigUnwrap(t, term.screens.active.pages.GetCell(Point{
+	return zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)},
-	})).cell
+		Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)},
+	})).Cell
 }
 
 // tm8RowAt is term51URowAt.
 func tm8RowAt(t *testing.T, term *Terminal, y uint) *PageRow {
 	t.Helper()
-	return zigUnwrap(t, term.screens.active.pages.GetCell(Point{
+	return zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: 0, y: uint32(y)},
-	})).row
+		Active: PointCoordinate{X: 0, Y: uint32(y)},
+	})).Row
 }
 
 // tm8CellChar is term51UCellChar: one character per cell: '.' empty, the
@@ -109,13 +109,13 @@ func tm8CellChar(cell PageCell) uint8 {
 // the expected rows.
 func tm8ExpectGrid(t *testing.T, term *Terminal, expected []string) {
 	t.Helper()
-	expectEqual(t, uint(term.rows), uint(len(expected)))
+	expectEqual(t, uint(term.Rows), uint(len(expected)))
 	buf := make([]uint8, 64)
 	for y, exp := range expected {
-		for x := uint(0); x < uint(term.cols); x++ {
+		for x := uint(0); x < uint(term.Cols); x++ {
 			buf[x] = tm8CellChar(*tm8CellAt(t, term, x, uint(y)))
 		}
-		expectEqualStrings(t, exp, string(buf[:term.cols]))
+		expectEqualStrings(t, exp, string(buf[:term.Cols]))
 	}
 }
 
@@ -123,25 +123,25 @@ func tm8ExpectGrid(t *testing.T, term *Terminal, expected []string) {
 // active row: 'D' dirty, '.' clean.
 func tm8ExpectDirty(t *testing.T, term *Terminal, expected string) {
 	t.Helper()
-	expectEqual(t, uint(term.rows), uint(len(expected)))
+	expectEqual(t, uint(term.Rows), uint(len(expected)))
 	buf := make([]uint8, 64)
-	for y := uint(0); y < uint(term.rows); y++ {
+	for y := uint(0); y < uint(term.Rows); y++ {
 		if tm8RowAt(t, term, y).dirty {
 			buf[y] = 'D'
 		} else {
 			buf[y] = '.'
 		}
 	}
-	expectEqualStrings(t, expected, string(buf[:term.rows]))
+	expectEqualStrings(t, expected, string(buf[:term.Rows]))
 }
 
 // tm8ExpectWrap is term51UExpectWrap: compare the wrap (w),
 // wrap_continuation (c), both (b) or neither (.) of every active row.
 func tm8ExpectWrap(t *testing.T, term *Terminal, expected string) {
 	t.Helper()
-	expectEqual(t, uint(term.rows), uint(len(expected)))
+	expectEqual(t, uint(term.Rows), uint(len(expected)))
 	buf := make([]uint8, 64)
-	for y := uint(0); y < uint(term.rows); y++ {
+	for y := uint(0); y < uint(term.Rows); y++ {
 		row := tm8RowAt(t, term, y)
 		if row.wrap && row.wrap_continuation {
 			buf[y] = 'b'
@@ -153,7 +153,7 @@ func tm8ExpectWrap(t *testing.T, term *Terminal, expected string) {
 			buf[y] = '.'
 		}
 	}
-	expectEqualStrings(t, expected, string(buf[:term.rows]))
+	expectEqualStrings(t, expected, string(buf[:term.Rows]))
 }
 
 // tm8SetWrap is term51USetWrap: set every row to the "wrap" state given by
@@ -171,15 +171,15 @@ func tm8SetWrap(t *testing.T, term *Terminal, flags string) {
 // tm8ExpectCursor is term51UExpectCursor.
 func tm8ExpectCursor(t *testing.T, term *Terminal, x uint, y uint, pending_wrap bool) {
 	t.Helper()
-	expectEqual(t, x, uint(term.screens.active.cursor.x))
-	expectEqual(t, y, uint(term.screens.active.cursor.y))
-	expectEqual(t, pending_wrap, term.screens.active.cursor.pending_wrap)
+	expectEqual(t, x, uint(term.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(term.Screens.Active.Cursor.Y))
+	expectEqual(t, pending_wrap, term.Screens.Active.Cursor.PendingWrap)
 }
 
 // tm8Page is term51UPage: the page that holds the cursor; fine for terminals
 // that fit one page.
 func tm8Page(term *Terminal) *Page {
-	return &term.screens.active.cursor.page_pin.node.data
+	return &term.Screens.Active.Cursor.PagePin.Node.data
 }
 
 // tm8PutStr is term51UPutStr: print str starting at the 0-indexed position
@@ -202,7 +202,7 @@ func tm8PutWide(t *testing.T, term *Terminal, x uint, y uint) {
 // sequence, which is one wide cell with a grapheme.
 func tm8PutWideGrapheme(t *testing.T, term *Terminal, x uint, y uint) {
 	t.Helper()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 	term.SetCursorPos(y+1, x+1)
 	zigTry(t, term.Print(0x1F468))
 	zigTry(t, term.Print(0x200D))
@@ -267,13 +267,13 @@ func tm8FourAt(t *testing.T, x uint, y uint) *Terminal {
 	tm8Fill(t, term, tm8Alpha4)
 	term.SetCursorPos(y+1, x+1)
 	term.clearDirty()
-	term.flags.dirty.clear = false
+	term.Flags.Dirty.Clear = false
 	return term
 }
 
 // tm8HistoryRows is term51UHistoryRows: the number of rows of scrollback.
 func tm8HistoryRows(term *Terminal) uint {
-	return term.screens.active.pages.total_rows - uint(term.rows)
+	return term.Screens.Active.Pages.total_rows - uint(term.Rows)
 }
 
 // tm8ExpectHistoryRow is term51UExpectHistoryRow: the text of a history row,
@@ -281,14 +281,14 @@ func tm8HistoryRows(term *Terminal) uint {
 func tm8ExpectHistoryRow(t *testing.T, term *Terminal, y uint, expected string) {
 	t.Helper()
 	buf := make([]uint8, 64)
-	for x := uint(0); x < uint(term.cols); x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(Point{
+	for x := uint(0); x < uint(term.Cols); x++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{
 			Tag:     PointTagHistory,
-			History: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)},
+			History: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)},
 		}))
-		buf[x] = tm8CellChar(*list_cell.cell)
+		buf[x] = tm8CellChar(*list_cell.Cell)
 	}
-	expectEqualStrings(t, expected, string(buf[:term.cols]))
+	expectEqualStrings(t, expected, string(buf[:term.Cols]))
 }
 
 // tm8ScrollbackTerm is term51UScrollbackTerm: fill a three row terminal so
@@ -393,7 +393,7 @@ var (
 
 // tm8DirectBg is `.{ .direct_color_bg = .{ .r = r, .g = g, .b = b } }`.
 func tm8DirectBg(r uint8, g uint8, b uint8) SGRAttribute {
-	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: r, g: g, b: b}}
+	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: r, G: g, B: b}}
 }
 
 // tm8Bg256 is `.{ .@"256_bg" = n }`.
@@ -410,7 +410,7 @@ func tm8Unset() SGRAttribute { return SGRAttribute{Tag: SGRAttributeTagUnset} }
 // tm8StartLink is `startHyperlink("http://a.test", null)`.
 func tm8StartLink(t *testing.T, term *Terminal) {
 	t.Helper()
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 }
 
 // Zig: test "term51: eraseChars: graphemes are released"
@@ -445,7 +445,7 @@ func TestTm8_eraseChars_hyperlinks_are_released(t *testing.T) {
 
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 2, 0, "cdef")
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	page := tm8Page(term)
 	expectEqual(t, uint(4), page.HyperlinkCount())
 
@@ -691,8 +691,8 @@ func TestTm8_eraseChars_ISO_protection_stays_in_force_after_it_is_switched_off(t
 	defer term.Deinit()
 
 	tm8Protect(t, term, ANSIProtectedModeIso, 3, 5)
-	expect(t, !term.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
-	expectEqual(t, ANSIProtectedModeIso, term.screens.active.protected_mode)
+	expect(t, !term.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
+	expectEqual(t, ANSIProtectedModeIso, term.Screens.Active.ProtectedMode)
 	term.SetCursorPos(1, 1)
 	term.EraseChars(8)
 
@@ -819,7 +819,7 @@ func TestTm8_eraseLine_right_clears_pending_wrap(t *testing.T) {
 	term := tm8EightAt(t, 7, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseLine(CSIEraseLineRight, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdefg.", "ijklmnop"})
@@ -892,7 +892,7 @@ func TestTm8_eraseLine_right_takes_the_background_color_of_the_cursor_style(t *t
 	for x := uint(5); x < 8; x++ {
 		cell := *tm8CellAt(t, term, x, 0)
 		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
 	}
 }
 
@@ -919,7 +919,7 @@ func TestTm8_eraseLine_right_with_a_cursor_style_without_a_background_leaves_bla
 	term.EraseLine(CSIEraseLineRight, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdef..", "ijklmnop"})
-	expectEqual(t, StyleDefaultId, tm8CellAt(t, term, 6, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm8CellAt(t, term, 6, 0).style_id)
 }
 
 // Zig: test "term51: eraseLine: right releases styles, graphemes and hyperlinks"
@@ -932,7 +932,7 @@ func TestTm8_eraseLine_right_releases_styles_graphemes_and_hyperlinks(t *testing
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 4, 0, "efgh")
 	zigTry(t, term.SetAttribute(tm8Unset()))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 5, 0)
 	page := tm8Page(term)
 	// Printing the grapheme over column 5 replaced its styled, linked cell.
@@ -971,7 +971,7 @@ func TestTm8_eraseLine_left_from_the_middle_includes_the_cursor_cell(t *testing.
 	term := tm8EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseLine(CSIEraseLineLeft, false)
 
 	tm8ExpectGrid(t, term, []string{"....efgh", "ijklmnop"})
@@ -997,7 +997,7 @@ func TestTm8_eraseLine_left_on_the_last_column_erases_the_whole_row(t *testing.T
 	term := tm8EightAt(t, 7, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseLine(CSIEraseLineLeft, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "ijklmnop"})
@@ -1072,7 +1072,7 @@ func TestTm8_eraseLine_left_takes_the_background_color_of_the_cursor_style(t *te
 	tm8ExpectGrid(t, term, []string{"rrrdefgh", "ijklmnop"})
 	cell := *tm8CellAt(t, term, 0, 0)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
 }
 
 // Zig: test "term51: eraseLine: left takes a palette background color"
@@ -1098,7 +1098,7 @@ func TestTm8_eraseLine_left_releases_styles_graphemes_and_hyperlinks(t *testing.
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 0, 0, "abcd")
 	zigTry(t, term.SetAttribute(tm8Unset()))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 1, 0)
 	page := tm8Page(term)
 	bold := tm8CellAt(t, term, 0, 0).style_id
@@ -1128,7 +1128,7 @@ func TestTm8_eraseLine_complete_erases_the_whole_row_and_keeps_the_cursor(t *tes
 	term := tm8EightAt(t, 3, 1)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseLine(CSIEraseLineComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdefgh", "........"})
@@ -1178,7 +1178,7 @@ func TestTm8_eraseLine_complete_takes_the_background_color_of_the_cursor_style(t
 	for x := uint(0); x < 8; x++ {
 		cell := *tm8CellAt(t, term, x, 0)
 		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
 	}
 }
 
@@ -1204,7 +1204,7 @@ func TestTm8_eraseLine_complete_releases_styles_graphemes_and_hyperlinks_and_the
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 0, 0, "abcd")
 	zigTry(t, term.SetAttribute(tm8Unset()))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 6, 0)
 	page := tm8Page(term)
 	expectEqual(t, uint(1), page.styles.Count())
@@ -1337,7 +1337,7 @@ func TestTm8_eraseLine_protection_that_is_still_switched_on_respects_protected_c
 	term.EraseLine(CSIEraseLineComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"..c.....", "ijklmnop"})
-	expect(t, term.screens.active.cursor.protected, "t.screens.active.cursor.protected")
+	expect(t, term.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
 }
 
 // ---- eraseDisplay ----
@@ -1348,13 +1348,13 @@ func TestTm8_eraseDisplay_below_from_the_middle_of_a_row(t *testing.T) {
 	term := tm8FourAt(t, 3, 1)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayBelow, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdefgh", "ijk.....", "........", "........"})
 	tm8ExpectCursor(t, term, 3, 1, false)
 	tm8ExpectDirty(t, term, ".DDD")
-	expect(t, !term.flags.dirty.clear, "!t.flags.dirty.clear")
+	expect(t, !term.Flags.Dirty.Clear, "!t.flags.dirty.clear")
 }
 
 // Zig: test "term51: eraseDisplay: below from the top left erases everything"
@@ -1375,7 +1375,7 @@ func TestTm8_eraseDisplay_below_on_the_last_row_only_erases_the_rest_of_the_row(
 	term := tm8FourAt(t, 5, 3)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayBelow, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop", "qrstuvwx", "yzABC..."})
@@ -1454,7 +1454,7 @@ func TestTm8_eraseDisplay_below_takes_the_background_color_of_the_cursor_style(t
 	tm8ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop", "qrstuvrr", "rrrrrrrr"})
 	cell := *tm8CellAt(t, term, 3, 3)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
 }
 
 // Zig: test "term51: eraseDisplay: below takes a palette background color"
@@ -1479,7 +1479,7 @@ func TestTm8_eraseDisplay_below_releases_styles_graphemes_and_hyperlinks_of_the_
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 0, 2, "qrstuvwx")
 	zigTry(t, term.SetAttribute(tm8Unset()))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 1, 3)
 	page := tm8Page(term)
 	expectEqual(t, uint(1), page.styles.Count())
@@ -1506,7 +1506,7 @@ func TestTm8_eraseDisplay_below_ignores_the_margins(t *testing.T) {
 	term := tm8FourAt(t, 3, 1)
 	defer term.Deinit()
 
-	term.scrolling_region = TerminalScrollingRegion{top: 1, bottom: 2, left: 2, right: 5}
+	term.ScrollingRegion = TerminalScrollingRegion{Top: 1, Bottom: 2, Left: 2, Right: 5}
 	term.EraseDisplay(CSIEraseDisplayBelow, false)
 
 	tm8ExpectGrid(t, term, []string{"abcdefgh", "ijk.....", "........", "........"})
@@ -1518,13 +1518,13 @@ func TestTm8_eraseDisplay_above_from_the_middle_of_a_row(t *testing.T) {
 	term := tm8FourAt(t, 3, 2)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayAbove, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "....uvwx", "yzABCDEF"})
 	tm8ExpectCursor(t, term, 3, 2, false)
 	tm8ExpectDirty(t, term, "DDD.")
-	expect(t, !term.flags.dirty.clear, "!t.flags.dirty.clear")
+	expect(t, !term.Flags.Dirty.Clear, "!t.flags.dirty.clear")
 }
 
 // Zig: test "term51: eraseDisplay: above on the first row only erases the start of the row"
@@ -1533,7 +1533,7 @@ func TestTm8_eraseDisplay_above_on_the_first_row_only_erases_the_start_of_the_ro
 	term := tm8FourAt(t, 2, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayAbove, false)
 
 	tm8ExpectGrid(t, term, []string{"...defgh", "ijklmnop", "qrstuvwx", "yzABCDEF"})
@@ -1633,7 +1633,7 @@ func TestTm8_eraseDisplay_above_releases_styles_graphemes_and_hyperlinks_of_the_
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 0, 0, "abcdefgh")
 	zigTry(t, term.SetAttribute(tm8Unset()))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 1, 1)
 	page := tm8Page(term)
 
@@ -1652,7 +1652,7 @@ func TestTm8_eraseDisplay_above_ignores_the_margins(t *testing.T) {
 	term := tm8FourAt(t, 3, 2)
 	defer term.Deinit()
 
-	term.scrolling_region = TerminalScrollingRegion{top: 1, bottom: 2, left: 2, right: 5}
+	term.ScrollingRegion = TerminalScrollingRegion{Top: 1, Bottom: 2, Left: 2, Right: 5}
 	term.EraseDisplay(CSIEraseDisplayAbove, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "....uvwx", "yzABCDEF"})
@@ -1664,13 +1664,13 @@ func TestTm8_eraseDisplay_complete_erases_everything_and_keeps_the_cursor(t *tes
 	term := tm8FourAt(t, 3, 2)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "........", "........"})
 	tm8ExpectCursor(t, term, 3, 2, false)
 	tm8ExpectDirty(t, term, "DDDD")
-	expect(t, term.flags.dirty.clear, "t.flags.dirty.clear")
+	expect(t, term.Flags.Dirty.Clear, "t.flags.dirty.clear")
 	expectEqual(t, uint(0), tm8HistoryRows(term))
 }
 
@@ -1718,8 +1718,8 @@ func TestTm8_eraseDisplay_complete_takes_the_background_color_of_the_cursor_styl
 	tm8ExpectGrid(t, term, []string{"rrrrrrrr", "rrrrrrrr", "rrrrrrrr", "rrrrrrrr"})
 	cell := *tm8CellAt(t, term, 7, 3)
 	expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-	expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
-	expectEqual(t, StyleDefaultId, cell.style_id)
+	expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+	expectEqual(t, StyleDefaultID, cell.style_id)
 }
 
 // Zig: test "term51: eraseDisplay: complete takes a palette background color"
@@ -1744,7 +1744,7 @@ func TestTm8_eraseDisplay_complete_releases_styles_graphemes_and_hyperlinks(t *t
 	tm8StartLink(t, term)
 	tm8PutStr(t, term, 0, 0, "abcdefgh")
 	zigTry(t, term.SetAttribute(tm8Unset()))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	tm8PutGrapheme(t, term, 1, 3)
 	page := tm8Page(term)
 
@@ -1766,12 +1766,12 @@ func TestTm8_eraseDisplay_complete_keeps_the_cursor_style_reference(t *testing.T
 	zigTry(t, term.SetAttribute(tm8DirectBg(1, 1, 1)))
 	tm8PutStr(t, term, 0, 0, "abcdefgh")
 	page := tm8Page(term)
-	cursor_style := term.screens.active.cursor.style_id
+	cursor_style := term.Screens.Active.Cursor.StyleID
 	expectEqual(t, uint(9), uint(page.styles.RefCount(cursor_style)))
 
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
-	expectEqual(t, cursor_style, term.screens.active.cursor.style_id)
+	expectEqual(t, cursor_style, term.Screens.Active.Cursor.StyleID)
 	expectEqual(t, uint(1), uint(page.styles.RefCount(cursor_style)))
 }
 
@@ -1781,7 +1781,7 @@ func TestTm8_eraseDisplay_complete_ignores_the_margins(t *testing.T) {
 	term := tm8FourAt(t, 3, 2)
 	defer term.Deinit()
 
-	term.scrolling_region = TerminalScrollingRegion{top: 1, bottom: 2, left: 2, right: 5}
+	term.ScrollingRegion = TerminalScrollingRegion{Top: 1, Bottom: 2, Left: 2, Right: 5}
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "........", "........"})
@@ -1794,14 +1794,14 @@ func TestTm8_eraseDisplay_complete_on_the_alternate_screen_erases_without_scroll
 	defer term.Deinit()
 
 	zigTry(t, term.SwitchScreenMode(TerminalSwitchScreenMode1049, true))
-	expectEqual(t, ScreenSetKeyAlternate, term.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, term.Screens.ActiveKey)
 	tm8Fill(t, term, tm8Alpha4)
 	tm8RowAt(t, term, 3).semantic_prompt = PageRowSemanticPromptPrompt
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "........", "........"})
 	expectEqual(t, uint(0), tm8HistoryRows(term))
-	expect(t, term.flags.dirty.clear, "t.flags.dirty.clear")
+	expect(t, term.Flags.Dirty.Clear, "t.flags.dirty.clear")
 }
 
 // Zig: test "term51: eraseDisplay: complete at a prompt on the last row scrolls the screen into the history first"
@@ -1811,7 +1811,7 @@ func TestTm8_eraseDisplay_complete_at_a_prompt_on_the_last_row_scrolls_the_scree
 	defer term.Deinit()
 
 	tm8RowAt(t, term, 3).semantic_prompt = PageRowSemanticPromptPrompt
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "........", "........"})
@@ -1823,7 +1823,7 @@ func TestTm8_eraseDisplay_complete_at_a_prompt_on_the_last_row_scrolls_the_scree
 	// The cursor sticks to its row, which is now in the history, so it is
 	// reset to the top left of the active area.
 	tm8ExpectCursor(t, term, 0, 0, false)
-	expect(t, term.flags.dirty.clear, "t.flags.dirty.clear")
+	expect(t, term.Flags.Dirty.Clear, "t.flags.dirty.clear")
 }
 
 // Zig: test "term51: eraseDisplay: complete at a prompt moves the cursor up with its row"
@@ -1835,7 +1835,7 @@ func TestTm8_eraseDisplay_complete_at_a_prompt_moves_the_cursor_up_with_its_row(
 	tm8Fill(t, term, []string{"abcdefgh", "ijklmnop", "........", "........"})
 	tm8RowAt(t, term, 3).semantic_prompt = PageRowSemanticPromptPrompt
 	term.SetCursorPos(4, 4)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "........", "........"})
@@ -1936,7 +1936,7 @@ func TestTm8_eraseDisplay_scroll_complete_moves_the_screen_into_the_history(t *t
 	term := tm8FourAt(t, 3, 2)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayScrollComplete, false)
 
 	tm8ExpectGrid(t, term, []string{"........", "........", "........", "........"})
@@ -1947,7 +1947,7 @@ func TestTm8_eraseDisplay_scroll_complete_moves_the_screen_into_the_history(t *t
 	// reset to the top left of the active area.
 	tm8ExpectCursor(t, term, 0, 0, false)
 	// Unlike a complete erase it does not flag the screen as cleared.
-	expect(t, !term.flags.dirty.clear, "!t.flags.dirty.clear")
+	expect(t, !term.Flags.Dirty.Clear, "!t.flags.dirty.clear")
 }
 
 // Zig: test "term51: eraseDisplay: scroll_complete moves the cursor up with its row"
@@ -1958,7 +1958,7 @@ func TestTm8_eraseDisplay_scroll_complete_moves_the_cursor_up_with_its_row(t *te
 
 	tm8Fill(t, term, []string{"abcdefgh", "ijklmnop", "........", "........"})
 	term.SetCursorPos(4, 4)
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayScrollComplete, false)
 
 	expectEqual(t, uint(2), tm8HistoryRows(term))
@@ -1987,7 +1987,7 @@ func TestTm8_eraseDisplay_scroll_complete_on_an_empty_screen_does_nothing(t *tes
 	term := tm8Init(t, 8, 4)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayScrollComplete, false)
 
 	expectEqual(t, uint(0), tm8HistoryRows(term))
@@ -2090,7 +2090,7 @@ func TestTm8_eraseDisplay_scrollback_keeps_pending_wrap(t *testing.T) {
 	term := tm8ScrollbackTerm(t)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseDisplay(CSIEraseDisplayScrollback, false)
 
 	expectEqual(t, uint(0), tm8HistoryRows(term))

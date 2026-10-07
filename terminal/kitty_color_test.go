@@ -101,13 +101,13 @@ func TestKittyColor_term51_OSC_deinit_frees_the_request_list(t *testing.T) {
 	// dropped, and the testing allocator's leak report has no Go
 	// counterpart.
 	osc := KittyColorOSC{}
-	osc.list = append(osc.list, KittyColorOSCRequest{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindPalette, Palette: 1}})
-	osc.list = append(osc.list, KittyColorOSCRequest{Tag: KittyColorOSCRequestSet, Set: KittyColorOSCRequestSetPayload{
-		key:   KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialCursor},
-		color: ColorRGB{r: 1, g: 2, b: 3},
+	osc.List = append(osc.List, KittyColorOSCRequest{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindPalette, Palette: 1}})
+	osc.List = append(osc.List, KittyColorOSCRequest{Tag: KittyColorOSCRequestSet, Set: KittyColorOSCRequestSetPayload{
+		Key:   KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialCursor},
+		Color: ColorRGB{R: 1, G: 2, B: 3},
 	}})
-	osc.list = append(osc.list, KittyColorOSCRequest{Tag: KittyColorOSCRequestReset, Reset: KittyColorKind{Tag: KittyColorKindPalette, Palette: 255}})
-	expectEqual(t, 3, len(osc.list))
+	osc.List = append(osc.List, KittyColorOSCRequest{Tag: KittyColorOSCRequestReset, Reset: KittyColorKind{Tag: KittyColorKindPalette, Palette: 255}})
+	expectEqual(t, 3, len(osc.List))
 	// The testing allocator reports a leak if deinit does not free.
 	osc.Deinit()
 

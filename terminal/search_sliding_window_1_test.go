@@ -82,10 +82,10 @@ func sw1Init(t *testing.T, direction searchSlidingWindowDirection, needle []uint
 func sw1Screen(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Screen {
 	t.Helper()
 	s, err := ScreenInit(ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            max_scrollback,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          max_scrollback,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	})
 	zigTry(t, err)
 	return &s
@@ -107,7 +107,7 @@ func sw1Append(t *testing.T, w *SearchSlidingWindow, node *PageListNode) uint {
 
 // sw1Active is the Zig literal `point.Point{ .active = .{ .x = x, .y = y } }`.
 func sw1Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 // sw1ActivePt is `pages.pointFromPin(.active, pin).?`. (Where Zig compares
@@ -136,8 +136,8 @@ func sw1ExpectNext(
 	t.Helper()
 	h := zigUnwrap(t, w.Next())
 	sel := h.Untracked()
-	expectEqualPoint(t, sw1Active(sx, sy), sw1ActivePt(t, pages, sel.start))
-	expectEqualPoint(t, sw1Active(ex, ey), sw1ActivePt(t, pages, sel.end))
+	expectEqualPoint(t, sw1Active(sx, sy), sw1ActivePt(t, pages, sel.Start))
+	expectEqualPoint(t, sw1Active(ex, ey), sw1ActivePt(t, pages, sel.End))
 }
 
 // sw1Dirs is `.{ SlidingWindow.Direction.forward, SlidingWindow.Direction.reverse }`
@@ -226,7 +226,7 @@ func sw1AKSetWrap(node *PageListNode, wrap bool) {
 
 // sw1AKXY is term51AKXY.
 func sw1AKXY(x SizeCellCountInt, y uint32) PointCoordinate {
-	return PointCoordinate{x: x, y: y}
+	return PointCoordinate{X: x, Y: y}
 }
 
 // sw1AKExpectData is term51AKExpectData.
@@ -261,14 +261,14 @@ func sw1AKExpectHl(
 	want []sw1AKChunk,
 ) {
 	t.Helper()
-	expectEqual(t, len(want), len(h.chunks))
+	expectEqual(t, len(want), len(h.Chunks))
 	for i, c := range want {
-		expectEqual(t, c.node, h.chunks[i].node)
-		expectEqual(t, c.start, h.chunks[i].start)
-		expectEqual(t, c.end, h.chunks[i].end)
+		expectEqual(t, c.node, h.Chunks[i].Node)
+		expectEqual(t, c.start, h.Chunks[i].Start)
+		expectEqual(t, c.end, h.Chunks[i].End)
 	}
-	expectEqual(t, top_x, h.top_x)
-	expectEqual(t, bot_x, h.bot_x)
+	expectEqual(t, top_x, h.TopX)
+	expectEqual(t, bot_x, h.BotX)
 }
 
 // sw1AKMany is term51AKMany: a page list with one page per entry of `texts`.
@@ -326,13 +326,13 @@ func TestSw1_SlidingWindow_single_append(t *testing.T) {
 	sw1Write(t, s, "hello. boo! hello. boo!")
 
 	// We want to test single-page cases.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// We should be able to find two matches.
-	sw1ExpectNext(t, &s.pages, w, 7, 0, 10, 0)
-	sw1ExpectNext(t, &s.pages, w, 19, 0, 22, 0)
+	sw1ExpectNext(t, &s.Pages, w, 7, 0, 10, 0)
+	sw1ExpectNext(t, &s.Pages, w, 19, 0, 22, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -349,13 +349,13 @@ func TestSw1_SlidingWindow_single_append_case_insensitive_ASCII(t *testing.T) {
 	sw1Write(t, s, "hello. boo! hello. boo!")
 
 	// We want to test single-page cases.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// We should be able to find two matches.
-	sw1ExpectNext(t, &s.pages, w, 7, 0, 10, 0)
-	sw1ExpectNext(t, &s.pages, w, 19, 0, 22, 0)
+	sw1ExpectNext(t, &s.Pages, w, 7, 0, 10, 0)
+	sw1ExpectNext(t, &s.Pages, w, 19, 0, 22, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -372,13 +372,13 @@ func TestSw1_SlidingWindow_single_append_single_char(t *testing.T) {
 	sw1Write(t, s, "hello. boo! hello. boo!")
 
 	// We want to test single-page cases.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// We should be able to find two matches.
-	sw1ExpectNext(t, &s.pages, w, 7, 0, 7, 0)
-	sw1ExpectNext(t, &s.pages, w, 19, 0, 19, 0)
+	sw1ExpectNext(t, &s.Pages, w, 7, 0, 7, 0)
+	sw1ExpectNext(t, &s.Pages, w, 19, 0, 19, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -395,8 +395,8 @@ func TestSw1_SlidingWindow_single_append_no_match(t *testing.T) {
 	sw1Write(t, s, "hello. boo! hello. boo!")
 
 	// We want to test single-page cases.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// No matches
@@ -419,27 +419,27 @@ func TestSw1_SlidingWindow_two_pages(t *testing.T) {
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Add both pages
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 
 	// Search should find two matches
-	sw1ExpectNext(t, &s.pages, w, 76, 22, 79, 22)
-	sw1ExpectNext(t, &s.pages, w, 7, 23, 10, 23)
+	sw1ExpectNext(t, &s.Pages, w, 76, 22, 79, 22)
+	sw1ExpectNext(t, &s.Pages, w, 7, 23, 10, 23)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -456,27 +456,27 @@ func TestSw1_SlidingWindow_two_pages_single_char(t *testing.T) {
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Add both pages
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 
 	// Search should find two matches
-	sw1ExpectNext(t, &s.pages, w, 76, 22, 76, 22)
-	sw1ExpectNext(t, &s.pages, w, 7, 23, 7, 23)
+	sw1ExpectNext(t, &s.Pages, w, 76, 22, 76, 22)
+	sw1ExpectNext(t, &s.Pages, w, 7, 23, 7, 23)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -493,25 +493,25 @@ func TestSw1_SlidingWindow_two_pages_match_across_boundary(t *testing.T) {
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "hell")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "o, world!")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 
 	// Add both pages
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 
 	// Search should find a match
-	sw1ExpectNext(t, &s.pages, w, 76, 22, 7, 23)
+	sw1ExpectNext(t, &s.Pages, w, 76, 22, 7, 23)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 
@@ -531,20 +531,20 @@ func TestSw1_SlidingWindow_two_pages_no_match_across_boundary_with_newline(t *te
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "hell")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\no, world!")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 
 	// Add both pages
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 
@@ -568,20 +568,20 @@ func TestSw1_SlidingWindow_two_pages_no_match_across_boundary_with_newline_rever
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "hell")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\no, world!")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 
 	// Add both pages in reverse order
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 	_ = sw1Append(t, w, node)
 
@@ -602,21 +602,21 @@ func TestSw1_SlidingWindow_two_pages_no_match_prunes_first_page(t *testing.T) {
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Add both pages
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 
@@ -638,27 +638,27 @@ func TestSw1_SlidingWindow_two_pages_no_match_keeps_both_pages(t *testing.T) {
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Imaginary needle for search. Doesn't match!
-	needle := bytes.Repeat([]uint8{'x'}, int(uint(first_page_rows)*uint(s.pages.cols)))
+	needle := bytes.Repeat([]uint8{'x'}, int(uint(first_page_rows)*uint(s.Pages.cols)))
 
 	w := sw1Init(t, searchSlidingWindowDirectionForward, needle)
 	defer w.Deinit()
 
 	// Add both pages
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 
@@ -686,8 +686,8 @@ func TestSw1_SlidingWindow_single_append_across_circular_buffer_boundary(t *test
 	// will cause the first page to be pruned. The next time we append we'll
 	// put it in the middle of the circ buffer. We assert this so that if
 	// our implementation changes our test will fail.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, node)
 	{
@@ -711,7 +711,7 @@ func TestSw1_SlidingWindow_single_append_across_circular_buffer_boundary(t *test
 		expect(t, len(slices[0]) > 0, "slices[0].len > 0")
 		expect(t, len(slices[1]) > 0, "slices[1].len > 0")
 	}
-	sw1ExpectNext(t, &s.pages, w, 19, 0, 21, 0)
+	sw1ExpectNext(t, &s.Pages, w, 19, 0, 21, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
 
@@ -727,8 +727,8 @@ func TestSw1_SlidingWindow_single_append_match_on_boundary(t *testing.T) {
 	sw1Write(t, s, "o!XXXXXXXXXXXXXXXXXXXbo")
 
 	// We need to surgically modify the last row to be soft-wrapped
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	node.data.GetRow(uint(node.data.size.rows - 1)).wrap = true
 
 	// We are trying to break a circular buffer boundary so the way we
@@ -759,7 +759,7 @@ func TestSw1_SlidingWindow_single_append_match_on_boundary(t *testing.T) {
 		expect(t, len(slices[0]) > 0, "slices[0].len > 0")
 		expect(t, len(slices[1]) > 0, "slices[1].len > 0")
 	}
-	sw1ExpectNext(t, &s.pages, w, 21, 0, 1, 0)
+	sw1ExpectNext(t, &s.Pages, w, 21, 0, 1, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
 
@@ -775,13 +775,13 @@ func TestSw1_SlidingWindow_single_append_reversed(t *testing.T) {
 	sw1Write(t, s, "hello. boo! hello. boo!")
 
 	// We want to test single-page cases.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// We should be able to find two matches.
-	sw1ExpectNext(t, &s.pages, w, 19, 0, 22, 0)
-	sw1ExpectNext(t, &s.pages, w, 7, 0, 10, 0)
+	sw1ExpectNext(t, &s.Pages, w, 19, 0, 22, 0)
+	sw1ExpectNext(t, &s.Pages, w, 7, 0, 10, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -798,8 +798,8 @@ func TestSw1_SlidingWindow_single_append_no_match_reversed(t *testing.T) {
 	sw1Write(t, s, "hello. boo! hello. boo!")
 
 	// We want to test single-page cases.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// No matches
@@ -822,27 +822,27 @@ func TestSw1_SlidingWindow_two_pages_reversed(t *testing.T) {
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Add both pages in reverse order
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 	_ = sw1Append(t, w, node)
 
 	// Search should find two matches (in reverse order)
-	sw1ExpectNext(t, &s.pages, w, 7, 23, 10, 23)
-	sw1ExpectNext(t, &s.pages, w, 76, 22, 79, 22)
+	sw1ExpectNext(t, &s.Pages, w, 7, 23, 10, 23)
+	sw1ExpectNext(t, &s.Pages, w, 76, 22, 79, 22)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -859,25 +859,25 @@ func TestSw1_SlidingWindow_two_pages_match_across_boundary_reversed(t *testing.T
 
 	// Fill up the first page. The final bytes in the first page
 	// are "hell"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "hell")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "o, world!")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 
 	// Add both pages in reverse order
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 	_ = sw1Append(t, w, node)
 
 	// Search should find a match
-	sw1ExpectNext(t, &s.pages, w, 76, 22, 7, 23)
+	sw1ExpectNext(t, &s.Pages, w, 76, 22, 7, 23)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 
@@ -898,21 +898,21 @@ func TestSw1_SlidingWindow_two_pages_no_match_prunes_first_page_reversed(t *test
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Add both pages in reverse order
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 	_ = sw1Append(t, w, node)
 
@@ -934,27 +934,27 @@ func TestSw1_SlidingWindow_two_pages_no_match_keeps_both_pages_reversed(t *testi
 
 	// Fill up the first page. The final bytes in the first page
 	// are "boo!"
-	first_page_rows := sw1Unwrap(t, s.pages.pages.first).data.capacity.rows
+	first_page_rows := sw1Unwrap(t, s.Pages.pages.first).data.capacity.rows
 	for range first_page_rows - 1 {
 		sw1Write(t, s, "\n")
 	}
-	for range s.pages.cols - 4 {
+	for range s.Pages.cols - 4 {
 		sw1Write(t, s, "x")
 	}
 	sw1Write(t, s, "boo!")
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	sw1Write(t, s, "\n")
-	expect(t, s.pages.pages.first != s.pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
+	expect(t, s.Pages.pages.first != s.Pages.pages.last, "s.pages.pages.first != s.pages.pages.last")
 	sw1Write(t, s, "hello. boo!")
 
 	// Imaginary needle for search. Doesn't match!
-	needle := bytes.Repeat([]uint8{'x'}, int(uint(first_page_rows)*uint(s.pages.cols)))
+	needle := bytes.Repeat([]uint8{'x'}, int(uint(first_page_rows)*uint(s.Pages.cols)))
 
 	w := sw1Init(t, searchSlidingWindowDirectionReverse, needle)
 	defer w.Deinit()
 
 	// Add both pages in reverse order
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, sw1Unwrap(t, node.next))
 	_ = sw1Append(t, w, node)
 
@@ -982,8 +982,8 @@ func TestSw1_SlidingWindow_single_append_across_circular_buffer_boundary_reverse
 	// will cause the first page to be pruned. The next time we append we'll
 	// put it in the middle of the circ buffer. We assert this so that if
 	// our implementation changes our test will fail.
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 	_ = sw1Append(t, w, node)
 	{
@@ -1008,7 +1008,7 @@ func TestSw1_SlidingWindow_single_append_across_circular_buffer_boundary_reverse
 		expect(t, len(slices[0]) > 0, "slices[0].len > 0")
 		expect(t, len(slices[1]) > 0, "slices[1].len > 0")
 	}
-	sw1ExpectNext(t, &s.pages, w, 19, 0, 21, 0)
+	sw1ExpectNext(t, &s.Pages, w, 19, 0, 21, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
 
@@ -1024,8 +1024,8 @@ func TestSw1_SlidingWindow_single_append_match_on_boundary_reversed(t *testing.T
 	sw1Write(t, s, "o!XXXXXXXXXXXXXXXXXXXbo")
 
 	// We need to surgically modify the last row to be soft-wrapped
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	node.data.GetRow(uint(node.data.size.rows - 1)).wrap = true
 
 	// We are trying to break a circular buffer boundary so the way we
@@ -1057,7 +1057,7 @@ func TestSw1_SlidingWindow_single_append_match_on_boundary_reversed(t *testing.T
 		expect(t, len(slices[0]) > 0, "slices[0].len > 0")
 		expect(t, len(slices[1]) > 0, "slices[1].len > 0")
 	}
-	sw1ExpectNext(t, &s.pages, w, 21, 0, 1, 0)
+	sw1ExpectNext(t, &s.Pages, w, 21, 0, 1, 0)
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
 
@@ -1077,13 +1077,13 @@ func TestSw1_SlidingWindow_single_append_soft_wrapped(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("A\r\nxxboo!\r\nC")))
 
 	// We want to test single-page cases.
-	screen := term.screens.active
-	expect(t, screen.pages.pages.first == screen.pages.pages.last, "screen.pages.pages.first == screen.pages.pages.last")
-	node := sw1Unwrap(t, screen.pages.pages.first)
+	screen := term.Screens.Active
+	expect(t, screen.Pages.pages.first == screen.Pages.pages.last, "screen.pages.pages.first == screen.pages.pages.last")
+	node := sw1Unwrap(t, screen.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// We should be able to find two matches.
-	sw1ExpectNext(t, &screen.pages, w, 2, 1, 1, 2)
+	sw1ExpectNext(t, &screen.Pages, w, 2, 1, 1, 2)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -1104,13 +1104,13 @@ func TestSw1_SlidingWindow_single_append_reversed_soft_wrapped(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("A\r\nxxboo!\r\nC")))
 
 	// We want to test single-page cases.
-	screen := term.screens.active
-	expect(t, screen.pages.pages.first == screen.pages.pages.last, "screen.pages.pages.first == screen.pages.pages.last")
-	node := sw1Unwrap(t, screen.pages.pages.first)
+	screen := term.Screens.Active
+	expect(t, screen.Pages.pages.first == screen.Pages.pages.last, "screen.pages.pages.first == screen.pages.pages.last")
+	node := sw1Unwrap(t, screen.Pages.pages.first)
 	_ = sw1Append(t, w, node)
 
 	// We should be able to find two matches.
-	sw1ExpectNext(t, &screen.pages, w, 2, 1, 1, 2)
+	sw1ExpectNext(t, &screen.Pages, w, 2, 1, 1, 2)
 	expect(t, !w.Next().Valid, "w.next() == null")
 	expect(t, !w.Next().Valid, "w.next() == null")
 }
@@ -1131,11 +1131,11 @@ func TestSw1_SlidingWindow_append_whitespace_only_node(t *testing.T) {
 	// By setting the empty page to wrap we get a zero-byte page.
 	// This is invasive but its otherwise hard to reproduce naturally
 	// without creating a slow test.
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	last_row := node.data.GetRow(uint(node.data.size.rows - 1))
 	last_row.wrap = true
 
-	expect(t, s.pages.pages.first == s.pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
+	expect(t, s.Pages.pages.first == s.Pages.pages.last, "s.pages.pages.first == s.pages.pages.last")
 	_ = sw1Append(t, w, node)
 
 	// No matches expected
@@ -1567,7 +1567,7 @@ func TestSw1_term51_SlidingWindow_append_multi_byte_characters_map_every_byte_to
 	s := sw1Screen(t, 10, 5, 0)
 	defer s.Deinit()
 	sw1Write(t, s, "aé世\U0001F600b")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 
 	w := sw1Init(t, searchSlidingWindowDirectionForward, []uint8("b"))
 	defer w.Deinit()
@@ -1600,7 +1600,7 @@ func TestSw1_term51_SlidingWindow_append_grapheme_clusters_map_all_codepoints_to
 	s := sw1Screen(t, 10, 5, 0)
 	defer s.Deinit()
 	sw1Write(t, s, "aéb")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 
 	w := sw1Init(t, searchSlidingWindowDirectionForward, []uint8("b"))
 	defer w.Deinit()
@@ -1625,7 +1625,7 @@ func TestSw1_term51_SlidingWindow_append_wide_character_split_by_a_spacer_head(t
 	// The wide character doesn't fit in the last column: a spacer head
 	// is placed there and the row is soft-wrapped.
 	sw1Write(t, s, "abc世d")
-	node := sw1Unwrap(t, s.pages.pages.first)
+	node := sw1Unwrap(t, s.Pages.pages.first)
 	expect(t, node.data.GetRow(0).wrap, "node.data.getRow(0).wrap")
 
 	w := sw1Init(t, searchSlidingWindowDirectionForward, []uint8("b"))

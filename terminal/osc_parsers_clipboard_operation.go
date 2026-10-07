@@ -32,8 +32,8 @@ func OSCParsersClipboardOperationParse(parser *OSCParser, _ Optional[uint8]) *OS
 		parser.command = OSCCommand{
 			Tag: OSCCommandKeyClipboardContents,
 			ClipboardContents: OSCCommandClipboardContentsPayload{
-				kind: 'c',
-				data: data[1 : len(data)-1],
+				Kind: 'c',
+				Data: data[1 : len(data)-1],
 			},
 		}
 	} else {
@@ -49,8 +49,8 @@ func OSCParsersClipboardOperationParse(parser *OSCParser, _ Optional[uint8]) *OS
 		parser.command = OSCCommand{
 			Tag: OSCCommandKeyClipboardContents,
 			ClipboardContents: OSCCommandClipboardContentsPayload{
-				kind: data[0],
-				data: data[2 : len(data)-1],
+				Kind: data[0],
+				Data: data[2 : len(data)-1],
 			},
 		}
 	}

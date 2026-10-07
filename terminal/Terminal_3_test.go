@@ -63,18 +63,18 @@ func tm3Init(t *testing.T, opts TerminalOptions) Terminal {
 
 // tm3Active is the point `.{ .active = .{ .x = x, .y = y } }`.
 func tm3Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 // tm3Screen is the point `.{ .screen = .{ .x = x, .y = y } }`.
 func tm3Screen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 // tm3GetCell is `t.screens.active.pages.getCell(pt).?`.
 func tm3GetCell(t *testing.T, tm *Terminal, pt Point) PageListCell {
 	t.Helper()
-	return zigUnwrap(t, tm.screens.active.pages.GetCell(pt))
+	return zigUnwrap(t, tm.Screens.Active.Pages.GetCell(pt))
 }
 
 // tm3At is the page list cell at the given active-area position:
@@ -139,17 +139,17 @@ func tm3Attr(tag SGRAttributeTag) SGRAttribute {
 
 // tm3DirectBg is `.{ .direct_color_bg = .{ .r = r, .g = g, .b = b } }`.
 func tm3DirectBg(r uint8, g uint8, b uint8) SGRAttribute {
-	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: r, g: g, b: b}}
+	return SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: r, G: g, B: b}}
 }
 
 // tm3DirectFg is `.{ .direct_color_fg = .{ .r = r, .g = g, .b = b } }`.
 func tm3DirectFg(r uint8, g uint8, b uint8) SGRAttribute {
-	return SGRAttribute{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{r: r, g: g, b: b}}
+	return SGRAttribute{Tag: SGRAttributeTagDirectColorFg, DirectColorFg: ColorRGB{R: r, G: g, B: b}}
 }
 
 // tm3Prompt is a semantic prompt command `.{ .action = a, .options_unvalidated = opts }`.
 func tm3Prompt(action OSCParsersSemanticPromptCommandAction, opts string) OSCCommandSemanticPrompt {
-	return OSCCommandSemanticPrompt{action: action, options_unvalidated: []uint8(opts)}
+	return OSCCommandSemanticPrompt{Action: action, OptionsUnvalidated: []uint8(opts)}
 }
 
 // tm3SemanticPrompt is `try t.semanticPrompt(cmd)`.
@@ -186,7 +186,7 @@ func tm3Dirty(tm *Terminal, y uint32) bool {
 func tm3ExpectBgRGB(t *testing.T, cell *PageCell, r uint8, g uint8, b uint8) {
 	t.Helper()
 	expect(t, cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-	expectEqual(t, PageCellRGB{r: r, g: g, b: b}, cell.content.color_rgb)
+	expectEqual(t, PageCellRGB{R: r, G: g, B: b}, cell.content.color_rgb)
 }
 
 // tm3SAt is term51SAt: the page list cell at the given active-area position.
@@ -200,8 +200,8 @@ func tm3SAt(t *testing.T, tm *Terminal, x uint, y uint) PageListCell {
 func tm3SExpectCell(t *testing.T, tm *Terminal, x uint, y uint, cp uint32, wide PageCellWide) {
 	t.Helper()
 	lc := tm3SAt(t, tm, x, y)
-	expectEqual(t, cp, lc.cell.Codepoint())
-	expectEqual(t, wide, lc.cell.wide)
+	expectEqual(t, cp, lc.Cell.Codepoint())
+	expectEqual(t, wide, lc.Cell.wide)
 }
 
 // tm3SExpectGrapheme is term51SExpectGrapheme: expect the cell at (x, y) to
@@ -209,18 +209,18 @@ func tm3SExpectCell(t *testing.T, tm *Terminal, x uint, y uint, cp uint32, wide 
 func tm3SExpectGrapheme(t *testing.T, tm *Terminal, x uint, y uint, expected []uint32) {
 	t.Helper()
 	lc := tm3SAt(t, tm, x, y)
-	expect(t, lc.cell.HasGrapheme(), "lc.cell.hasGrapheme()")
-	expect(t, lc.row.grapheme, "lc.row.grapheme")
-	expectEqualSlices(t, expected, zigUnwrap(t, lc.node.data.LookupGrapheme(lc.cell)))
+	expect(t, lc.Cell.HasGrapheme(), "lc.cell.hasGrapheme()")
+	expect(t, lc.Row.grapheme, "lc.row.grapheme")
+	expectEqualSlices(t, expected, zigUnwrap(t, lc.Node.data.LookupGrapheme(lc.Cell)))
 }
 
 // tm3SExpectCursor is term51SExpectCursor: expect the cursor position and
 // pending wrap state.
 func tm3SExpectCursor(t *testing.T, tm *Terminal, x uint, y uint, pending_wrap bool) {
 	t.Helper()
-	expectEqual(t, x, uint(tm.screens.active.cursor.x))
-	expectEqual(t, y, uint(tm.screens.active.cursor.y))
-	expectEqual(t, pending_wrap, tm.screens.active.cursor.pending_wrap)
+	expectEqual(t, x, uint(tm.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(tm.Screens.Active.Cursor.Y))
+	expectEqual(t, pending_wrap, tm.Screens.Active.Cursor.PendingWrap)
 }
 
 // tm3SExpectPlain is term51SExpectPlain: expect the plain string of the
@@ -241,12 +241,12 @@ func TestTm3_Terminal_deleteChars_split_wide_character_from_end(t *testing.T) {
 	tm.DeleteChars(1)
 
 	{
-		cell := tm3GetCell(t, &tm, tm3Screen(0, 0)).cell
+		cell := tm3GetCell(t, &tm, tm3Screen(0, 0)).Cell
 		expectEqual(t, uint32(0x6A4B), cell.content.codepoint)
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		cell := tm3GetCell(t, &tm, tm3Screen(1, 0)).cell
+		cell := tm3GetCell(t, &tm, tm3Screen(1, 0)).Cell
 		expectEqual(t, uint32(0), cell.content.codepoint)
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
@@ -261,8 +261,8 @@ func TestTm3_Terminal_deleteChars_with_a_spacer_head_at_the_end(t *testing.T) {
 	tm3PrintString(t, &tm, "0123橋123")
 	{
 		list_cell := tm3GetCell(t, &tm, tm3Screen(4, 0))
-		row := list_cell.row
-		cell := list_cell.cell
+		row := list_cell.Row
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 		expect(t, row.wrap, "row.wrap")
 	}
@@ -271,7 +271,7 @@ func TestTm3_Terminal_deleteChars_with_a_spacer_head_at_the_end(t *testing.T) {
 	tm.DeleteChars(1)
 
 	{
-		cell := tm3GetCell(t, &tm, tm3Screen(3, 0)).cell
+		cell := tm3GetCell(t, &tm, tm3Screen(3, 0)).Cell
 		expectEqual(t, uint32(0), cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -283,10 +283,10 @@ func TestTm3_Terminal_deleteChars_split_wide_character_tail(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(5, 5))
 	defer tm.Deinit()
 
-	tm.SetCursorPos(1, uint(tm.cols)-1)
+	tm.SetCursorPos(1, uint(tm.Cols)-1)
 	tm3Print(t, &tm, 0x6A4B) // 橋
 	tm.CarriageReturn()
-	tm.DeleteChars(uint(tm.cols) - 1)
+	tm.DeleteChars(uint(tm.Cols) - 1)
 	tm3Print(t, &tm, '0')
 
 	{
@@ -348,7 +348,7 @@ func TestTm3_Terminal_deleteChars_wide_char_boundary_conditions(t *testing.T) {
 
 	tm.SetCursorPos(1, 2)
 	tm.DeleteChars(3)
-	tm.screens.active.cursor.page_pin.node.data.AssertIntegrity()
+	tm.Screens.Active.Cursor.PagePin.Node.data.AssertIntegrity()
 
 	{
 		expectEqualStrings(t, "  b😀", tm3Plain(t, &tm))
@@ -394,7 +394,7 @@ func TestTm3_Terminal_deleteChars_wide_char_wrap_boundary_conditions(t *testing.
 
 	tm.SetCursorPos(2, 2)
 	tm.DeleteChars(3)
-	tm.screens.active.cursor.page_pin.node.data.AssertIntegrity()
+	tm.Screens.Active.Cursor.PagePin.Node.data.AssertIntegrity()
 
 	{
 		expectEqualStrings(t, ".......\n cde\n😀......", tm3Plain(t, &tm))
@@ -418,7 +418,7 @@ func TestTm3_Terminal_deleteChars_wide_char_across_right_margin(t *testing.T) {
 	// DCH 1
 
 	tm3PrintString(t, &tm, "123456橋")
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(2, 7)
 
 	{
@@ -427,7 +427,7 @@ func TestTm3_Terminal_deleteChars_wide_char_across_right_margin(t *testing.T) {
 
 	tm.SetCursorPos(1, 2)
 	tm.DeleteChars(1)
-	tm.screens.active.cursor.page_pin.node.data.AssertIntegrity()
+	tm.Screens.Active.Cursor.PagePin.Node.data.AssertIntegrity()
 
 	// NOTE: This behavior is slightly inconsistent with xterm. xterm
 	// _visually_ splits the wide character (half the wide character shows
@@ -449,16 +449,16 @@ func TestTm3_Terminal_saveCursor(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3SetAttribute(t, &tm, tm3Attr(SGRAttributeTagBold))
-	tm.screens.active.charset.gr = CharsetsSlotsG3
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Screens.Active.Charset.Gr = CharsetsSlotsG3
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.SaveCursor()
-	tm.screens.active.charset.gr = CharsetsSlotsG0
+	tm.Screens.Active.Charset.Gr = CharsetsSlotsG0
 	tm3SetAttribute(t, &tm, tm3Attr(SGRAttributeTagUnset))
-	tm.modes.Set(ModesModeOrigin, false)
+	tm.Modes.Set(ModesModeOrigin, false)
 	tm.RestoreCursor()
-	expect(t, tm.screens.active.cursor.style.flags.bold, "t.screens.active.cursor.style.flags.bold")
-	expect(t, tm.screens.active.charset.gr == CharsetsSlotsG3, "t.screens.active.charset.gr == .G3")
-	expect(t, tm.modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
+	expect(t, tm.Screens.Active.Cursor.Style.Flags.Bold, "t.screens.active.cursor.style.flags.bold")
+	expect(t, tm.Screens.Active.Charset.Gr == CharsetsSlotsG3, "t.screens.active.charset.gr == .G3")
+	expect(t, tm.Modes.Get(ModesModeOrigin), "t.modes.get(.origin)")
 }
 
 // Zig: test "Terminal: saveCursor position"
@@ -505,9 +505,9 @@ func TestTm3_Terminal_saveCursor_origin_mode(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(10, 5))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.SaveCursor()
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(3, 5)
 	tm.SetTopAndBottomMargin(2, 4)
 	tm.RestoreCursor()
@@ -542,13 +542,13 @@ func TestTm3_Terminal_saveCursor_protected_pen(t *testing.T) {
 	defer tm.Deinit()
 
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
 	tm.SetCursorPos(1, 10)
 	tm.SaveCursor()
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
 	tm.RestoreCursor()
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
 }
 
 // Zig: test "Terminal: saveCursor doesn't modify hyperlink state"
@@ -557,12 +557,12 @@ func TestTm3_Terminal_saveCursor_doesn_t_modify_hyperlink_state(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(3, 3))
 	defer tm.Deinit()
 
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
-	id := tm.screens.active.cursor.hyperlink_id
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	id := tm.Screens.Active.Cursor.HyperlinkID
 	tm.SaveCursor()
-	expectEqual(t, id, tm.screens.active.cursor.hyperlink_id)
+	expectEqual(t, id, tm.Screens.Active.Cursor.HyperlinkID)
 	tm.RestoreCursor()
-	expectEqual(t, id, tm.screens.active.cursor.hyperlink_id)
+	expectEqual(t, id, tm.Screens.Active.Cursor.HyperlinkID)
 }
 
 // Zig: test "Terminal: restoreCursor uses default style on OutOfSpace"
@@ -582,13 +582,13 @@ func TestTm3_Terminal_restoreCursor_uses_default_style_on_OutOfSpace(t *testing.
 
 	// Clear the style
 	tm3SetAttribute(t, &tm, tm3Attr(SGRAttributeTagUnset))
-	expect(t, !tm.screens.active.cursor.style.flags.bold, "!t.screens.active.cursor.style.flags.bold")
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Bold, "!t.screens.active.cursor.style.flags.bold")
 
 	// Fill the style map to max capacity
 	const max_styles = math.MaxUint16 // std.math.maxInt(size.CellCountInt)
-	for tm.screens.active.cursor.page_pin.node.data.capacity.styles < max_styles {
-		_, err := tm.screens.active.IncreaseCapacity(
-			tm.screens.active.cursor.page_pin.node,
+	for tm.Screens.Active.Cursor.PagePin.Node.data.capacity.styles < max_styles {
+		_, err := tm.Screens.Active.IncreaseCapacity(
+			tm.Screens.Active.Cursor.PagePin.Node,
 			Some(PageListIncreaseCapacityStyles),
 		)
 		if err != nil {
@@ -596,7 +596,7 @@ func TestTm3_Terminal_restoreCursor_uses_default_style_on_OutOfSpace(t *testing.
 		}
 	}
 
-	page := &tm.screens.active.cursor.page_pin.node.data
+	page := &tm.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, SizeStyleCountInt(max_styles), page.capacity.styles)
 
 	// Fill all style slots using the StyleSet's layout capacity which accounts
@@ -611,9 +611,9 @@ func TestTm3_Terminal_restoreCursor_uses_default_style_on_OutOfSpace(t *testing.
 		for n := uint(1); n < max_items; n++ {
 			_, err := page.styles.Add(
 				// Zig: .{ .bg_color = .{ .rgb = @bitCast(@as(u24, @intCast(n))) } }
-				Style{bg_color: StyleColor{
+				Style{BgColor: StyleColor{
 					Tag: StyleColorRgb,
-					Rgb: ColorRGB{r: uint8(n), g: uint8(n >> 8), b: uint8(n >> 16)},
+					Rgb: ColorRGB{R: uint8(n), G: uint8(n >> 8), B: uint8(n >> 16)},
 				}},
 			)
 			if err != nil {
@@ -627,8 +627,8 @@ func TestTm3_Terminal_restoreCursor_uses_default_style_on_OutOfSpace(t *testing.
 	tm.RestoreCursor()
 
 	// The style should be reset to default because OutOfSpace occurred
-	expect(t, !tm.screens.active.cursor.style.flags.bold, "!t.screens.active.cursor.style.flags.bold")
-	expectEqual(t, StyleDefaultId, tm.screens.active.cursor.style_id)
+	expect(t, !tm.Screens.Active.Cursor.Style.Flags.Bold, "!t.screens.active.cursor.style.flags.bold")
+	expectEqual(t, StyleDefaultID, tm.Screens.Active.Cursor.StyleID)
 }
 
 // Zig: test "Terminal: setProtectedMode"
@@ -637,15 +637,15 @@ func TestTm3_Terminal_setProtectedMode(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(3, 3))
 	defer tm.Deinit()
 
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
 	tm.SetProtectedMode(ANSIProtectedModeIso)
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
 	tm.SetProtectedMode(ANSIProtectedModeDec)
-	expect(t, tm.screens.active.cursor.protected, "t.screens.active.cursor.protected")
+	expect(t, tm.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
 	tm.SetProtectedMode(ANSIProtectedModeOff)
-	expect(t, !tm.screens.active.cursor.protected, "!t.screens.active.cursor.protected")
+	expect(t, !tm.Screens.Active.Cursor.Protected, "!t.screens.active.cursor.protected")
 }
 
 // Zig: test "Terminal: eraseLine simple erase right"
@@ -672,9 +672,9 @@ func TestTm3_Terminal_eraseLine_resets_pending_wrap(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3PrintEach(t, &tm, "ABCDE")
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm.EraseLine(CSIEraseLineRight, false)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	tm3Print(t, &tm, 'B')
 
 	{
@@ -691,7 +691,7 @@ func TestTm3_Terminal_eraseLine_resets_wrap(t *testing.T) {
 	tm3PrintEach(t, &tm, "ABCDE123")
 	{
 		list_cell := tm3At(t, &tm, 0, 0)
-		expect(t, list_cell.row.wrap, "list_cell.row.wrap")
+		expect(t, list_cell.Row.wrap, "list_cell.row.wrap")
 	}
 
 	tm.SetCursorPos(1, 1)
@@ -699,7 +699,7 @@ func TestTm3_Terminal_eraseLine_resets_wrap(t *testing.T) {
 
 	{
 		list_cell := tm3At(t, &tm, 0, 0)
-		expect(t, !list_cell.row.wrap, "!list_cell.row.wrap")
+		expect(t, !list_cell.Row.wrap, "!list_cell.row.wrap")
 	}
 	tm3Print(t, &tm, 'X')
 
@@ -723,7 +723,7 @@ func TestTm3_Terminal_eraseLine_right_preserves_background_sgr(t *testing.T) {
 		expectEqualStrings(t, "A", tm3Plain(t, &tm))
 		for x := uint(1); x < 5; x++ {
 			list_cell := tm3At(t, &tm, x, 0)
-			tm3ExpectBgRGB(t, list_cell.cell, 0xFF, 0, 0)
+			tm3ExpectBgRGB(t, list_cell.Cell, 0xFF, 0, 0)
 		}
 	}
 }
@@ -810,10 +810,10 @@ func TestTm3_Terminal_eraseLine_right_protected_requested(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3PrintEach(t, &tm, "12345678")
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 6)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 6)
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm3Print(t, &tm, 'X')
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 4)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 4)
 	tm.clearDirty()
 	tm.EraseLine(CSIEraseLineRight, true)
 	expect(t, tm3Dirty(&tm, 0), "t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
@@ -847,11 +847,11 @@ func TestTm3_Terminal_eraseLine_left_resets_wrap(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3PrintEach(t, &tm, "ABCDE")
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	tm.clearDirty()
 	tm.EraseLine(CSIEraseLineLeft, false)
 	expect(t, tm3Dirty(&tm, 0), "t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	tm3Print(t, &tm, 'B')
 
 	{
@@ -874,7 +874,7 @@ func TestTm3_Terminal_eraseLine_left_preserves_background_sgr(t *testing.T) {
 		expectEqualStrings(t, "  CDE", tm3Plain(t, &tm))
 		for x := uint(0); x < 2; x++ {
 			list_cell := tm3At(t, &tm, x, 0)
-			tm3ExpectBgRGB(t, list_cell.cell, 0xFF, 0, 0)
+			tm3ExpectBgRGB(t, list_cell.Cell, 0xFF, 0, 0)
 		}
 	}
 }
@@ -961,10 +961,10 @@ func TestTm3_Terminal_eraseLine_left_protected_requested(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3PrintEach(t, &tm, "123456789")
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 6)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 6)
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm3Print(t, &tm, 'X')
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 8)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 8)
 	tm.clearDirty()
 	tm.EraseLine(CSIEraseLineLeft, true)
 	expect(t, tm3Dirty(&tm, 0), "t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
@@ -989,7 +989,7 @@ func TestTm3_Terminal_eraseLine_complete_preserves_background_sgr(t *testing.T) 
 		expectEqualStrings(t, "", tm3Plain(t, &tm))
 		for x := uint(0); x < 5; x++ {
 			list_cell := tm3At(t, &tm, x, 0)
-			tm3ExpectBgRGB(t, list_cell.cell, 0xFF, 0, 0)
+			tm3ExpectBgRGB(t, list_cell.Cell, 0xFF, 0, 0)
 		}
 	}
 }
@@ -1057,10 +1057,10 @@ func TestTm3_Terminal_eraseLine_complete_protected_requested(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3PrintEach(t, &tm, "123456789")
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 6)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 6)
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm3Print(t, &tm, 'X')
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 8)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 8)
 	tm.clearDirty()
 	tm.EraseLine(CSIEraseLineComplete, true)
 	expect(t, tm3Dirty(&tm, 0), "t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
@@ -1081,7 +1081,7 @@ func TestTm3_Terminal_tabClear_single(t *testing.T) {
 	expect(t, !tm3Dirty(&tm, 0), "!t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	tm.SetCursorPos(1, 1)
 	tm.HorizontalTab()
-	expectEqual(t, uint(16), uint(tm.screens.active.cursor.x))
+	expectEqual(t, uint(16), uint(tm.Screens.Active.Cursor.X))
 }
 
 // Zig: test "Terminal: tabClear all"
@@ -1094,7 +1094,7 @@ func TestTm3_Terminal_tabClear_all(t *testing.T) {
 	expect(t, !tm3Dirty(&tm, 0), "!t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	tm.SetCursorPos(1, 1)
 	tm.HorizontalTab()
-	expectEqual(t, uint(29), uint(tm.screens.active.cursor.x))
+	expectEqual(t, uint(29), uint(tm.Screens.Active.Cursor.X))
 }
 
 // Zig: test "Terminal: printRepeat simple"
@@ -1246,7 +1246,7 @@ func TestTm3_Terminal_eraseDisplay_erase_below_preserves_SGR_bg(t *testing.T) {
 		expectEqualStrings(t, "ABC\nD", tm3Plain(t, &tm))
 		for x := uint(1); x < 5; x++ {
 			list_cell := tm3At(t, &tm, x, 1)
-			tm3ExpectBgRGB(t, list_cell.cell, 0xFF, 0, 0)
+			tm3ExpectBgRGB(t, list_cell.Cell, 0xFF, 0, 0)
 		}
 	}
 }
@@ -1410,7 +1410,7 @@ func TestTm3_Terminal_eraseDisplay_erase_above_preserves_SGR_bg(t *testing.T) {
 		expectEqualStrings(t, "\n  F\nGHI", tm3Plain(t, &tm))
 		for x := uint(0); x < 2; x++ {
 			list_cell := tm3At(t, &tm, x, 1)
-			tm3ExpectBgRGB(t, list_cell.cell, 0xFF, 0, 0)
+			tm3ExpectBgRGB(t, list_cell.Cell, 0xFF, 0, 0)
 		}
 	}
 }
@@ -1536,14 +1536,14 @@ func TestTm3_Terminal_eraseDisplay_protected_complete(t *testing.T) {
 	tm.CarriageReturn()
 	tm3Linefeed(t, &tm)
 	tm3PrintEach(t, &tm, "123456789")
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 6)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 6)
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm3Print(t, &tm, 'X')
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 4)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 4)
 
 	tm.clearDirty()
 	tm.EraseDisplay(CSIEraseDisplayComplete, true)
-	for y := uint32(0); y < uint32(tm.rows); y++ {
+	for y := uint32(0); y < uint32(tm.Rows); y++ {
 		expect(t, tm3Dirty(&tm, y), "t.isDirty(.{ .active = .{ .x = 0, .y = y } })")
 	}
 
@@ -1562,10 +1562,10 @@ func TestTm3_Terminal_eraseDisplay_protected_below(t *testing.T) {
 	tm.CarriageReturn()
 	tm3Linefeed(t, &tm)
 	tm3PrintEach(t, &tm, "123456789")
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 6)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 6)
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm3Print(t, &tm, 'X')
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 4)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 4)
 	tm.EraseDisplay(CSIEraseDisplayBelow, true)
 
 	{
@@ -1599,10 +1599,10 @@ func TestTm3_Terminal_eraseDisplay_protected_above(t *testing.T) {
 	tm.CarriageReturn()
 	tm3Linefeed(t, &tm)
 	tm3PrintEach(t, &tm, "123456789")
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 6)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 6)
 	tm.SetProtectedMode(ANSIProtectedModeDec)
 	tm3Print(t, &tm, 'X')
-	tm.SetCursorPos(uint(tm.screens.active.cursor.y)+1, 8)
+	tm.SetCursorPos(uint(tm.Screens.Active.Cursor.Y)+1, 8)
 	tm.EraseDisplay(CSIEraseDisplayAbove, true)
 
 	{
@@ -1619,13 +1619,13 @@ func TestTm3_Terminal_eraseDisplay_complete_preserves_cursor(t *testing.T) {
 	// Set our cursur
 	tm3SetAttribute(t, &tm, tm3Attr(SGRAttributeTagBold))
 	tm3PrintString(t, &tm, "AAAA")
-	expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
+	expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
 
 	// Erasing the display may detect that our style is no longer in use
 	// and prune our style, which we don't want because its still our
 	// active cursor.
 	tm.EraseDisplay(CSIEraseDisplayComplete, false)
-	expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
+	expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
 }
 
 // Zig: test "Terminal: semantic prompt"
@@ -1637,14 +1637,14 @@ func TestTm3_Terminal_semantic_prompt(t *testing.T) {
 	// Prompt
 	tm3SemanticPrompt(t, &tm, OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt))
 	tm3PrintEach(t, &tm, "hello")
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(5), tm.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(5), tm.Screens.Active.Cursor.X)
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x)-1, uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellSemanticContentPrompt, cell.semantic_content)
 
-		row := list_cell.row
+		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptPrompt, row.semantic_prompt)
 	}
 
@@ -1654,15 +1654,15 @@ func TestTm3_Terminal_semantic_prompt(t *testing.T) {
 	tm3Linefeed(t, &tm)
 
 	// Write some output
-	expectEqual(t, SizeCellCountInt(1), tm.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(1), tm.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.X)
 	tm3PrintEach(t, &tm, "world")
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x)-1, uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellSemanticContentOutput, cell.semantic_content)
 
-		row := list_cell.row
+		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptNone, row.semantic_prompt)
 	}
 }
@@ -1676,14 +1676,14 @@ func TestTm3_Terminal_semantic_prompt_continuations(t *testing.T) {
 	// Prompt
 	tm3SemanticPrompt(t, &tm, OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt))
 	tm3PrintEach(t, &tm, "hello")
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(5), tm.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(5), tm.Screens.Active.Cursor.X)
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x)-1, uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellSemanticContentPrompt, cell.semantic_content)
 
-		row := list_cell.row
+		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptPrompt, row.semantic_prompt)
 	}
 
@@ -1693,15 +1693,15 @@ func TestTm3_Terminal_semantic_prompt_continuations(t *testing.T) {
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionPromptStart, "k=c"))
 
 	// Write some output
-	expectEqual(t, SizeCellCountInt(1), tm.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(1), tm.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.X)
 	tm3PrintEach(t, &tm, "world")
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x)-1, uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X)-1, uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellSemanticContentPrompt, cell.semantic_content)
 
-		row := list_cell.row
+		row := list_cell.Row
 		expectEqual(t, PageRowSemanticPromptPromptContinuation, row.semantic_prompt)
 	}
 }
@@ -1722,7 +1722,7 @@ func TestTm3_Terminal_index_in_prompt_mode_marks_new_row_as_prompt_continuation(
 	// Verify first row is marked as prompt
 	{
 		list_cell := tm3At(t, &tm, 0, 0)
-		expectEqual(t, PageRowSemanticPromptPrompt, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPrompt, list_cell.Row.semantic_prompt)
 	}
 
 	// Now do a linefeed while still in prompt mode
@@ -1732,11 +1732,11 @@ func TestTm3_Terminal_index_in_prompt_mode_marks_new_row_as_prompt_continuation(
 	// The new row should automatically be marked as prompt continuation
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 
 	// The cursor semantic content should still be prompt
-	expectEqual(t, PageCellSemanticContentPrompt, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentPrompt, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "Terminal: index in input mode does not mark new row as prompt"
@@ -1760,11 +1760,11 @@ func TestTm3_Terminal_index_in_input_mode_does_not_mark_new_row_as_prompt(t *tes
 	// The new row should be marked as prompt continuation
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 
 	// Our cursor should still be in input
-	expectEqual(t, PageCellSemanticContentInput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, PageCellSemanticContentInput, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "Terminal: index in output mode does not mark new row as prompt"
@@ -1788,7 +1788,7 @@ func TestTm3_Terminal_index_in_output_mode_does_not_mark_new_row_as_prompt(t *te
 	// The new row should NOT be marked as a prompt
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptNone, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptNone, list_cell.Row.semantic_prompt)
 	}
 }
 
@@ -1812,17 +1812,17 @@ func TestTm3_Terminal_OSC133C_at_x_eq_0_on_prompt_row_clears_prompt_mark(t *test
 	// Verify the new row is marked as prompt continuation
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 
 	// Now Fish sends OSC133C at column 0 (cursor is still at x=0)
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.X)
 	tm3SemanticPrompt(t, &tm, OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionEndInputStartOutput))
 
 	// The prompt continuation should be cleared
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptNone, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptNone, list_cell.Row.semantic_prompt)
 	}
 }
 
@@ -1846,17 +1846,17 @@ func TestTm3_Terminal_OSC133C_at_x_gt_0_on_prompt_row_does_not_clear_prompt_mark
 	// Verify the row is marked as prompt continuation
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 
 	// Now send OSC133C but cursor is NOT at column 0
-	expect(t, tm.screens.active.cursor.x > 0, "t.screens.active.cursor.x > 0")
+	expect(t, tm.Screens.Active.Cursor.X > 0, "t.screens.active.cursor.x > 0")
 	tm3SemanticPrompt(t, &tm, OSCParsersSemanticPromptCommandInit(OSCParsersSemanticPromptCommandActionEndInputStartOutput))
 
 	// The prompt continuation should NOT be cleared (we're not at x=0)
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 }
 
@@ -1882,17 +1882,17 @@ func TestTm3_Terminal_multiple_newlines_in_prompt_mode_marks_all_rows(t *testing
 	// First row should be prompt
 	{
 		list_cell := tm3At(t, &tm, 0, 0)
-		expectEqual(t, PageRowSemanticPromptPrompt, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPrompt, list_cell.Row.semantic_prompt)
 	}
 
 	// Second and third rows should be prompt continuation
 	{
 		list_cell := tm3At(t, &tm, 0, 1)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 	{
 		list_cell := tm3At(t, &tm, 0, 2)
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 }
 
@@ -1903,12 +1903,12 @@ func TestTm3_Terminal_OSC133A_click_events_1_sets_click_to_click_events(t *testi
 	defer tm.Deinit()
 
 	// Verify default state is none
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, tm.Screens.Active.SemanticPrompt.Click)
 
 	// OSC 133;A with click_events=1
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "click_events=1"))
 
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickClickEvents}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickClickEvents}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: OSC133A click_events=0 does not set click_events"
@@ -1921,7 +1921,7 @@ func TestTm3_Terminal_OSC133A_click_events_0_does_not_set_click_events(t *testin
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "click_events=0"))
 
 	// Should remain none since click_events=0 doesn't activate anything
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: OSC133A cl option sets click to cl value"
@@ -1933,7 +1933,7 @@ func TestTm3_Terminal_OSC133A_cl_option_sets_click_to_cl_value(t *testing.T) {
 	// OSC 133;A with cl=m (multiple)
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cl=m"))
 
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickCl, Cl: OSCParsersSemanticPromptClickMultiple}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickCl, Cl: OSCParsersSemanticPromptClickMultiple}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: OSC133A cl=line sets click to line"
@@ -1944,7 +1944,7 @@ func TestTm3_Terminal_OSC133A_cl_eq_line_sets_click_to_line(t *testing.T) {
 
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "cl=line"))
 
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickCl, Cl: OSCParsersSemanticPromptClickLine}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickCl, Cl: OSCParsersSemanticPromptClickLine}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: OSC133A click_events=1 takes priority over cl"
@@ -1957,7 +1957,7 @@ func TestTm3_Terminal_OSC133A_click_events_1_takes_priority_over_cl(t *testing.T
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "click_events=1;cl=m"))
 
 	// click_events should take priority
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickClickEvents}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickClickEvents}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: OSC133A click_events=0 falls back to cl"
@@ -1970,7 +1970,7 @@ func TestTm3_Terminal_OSC133A_click_events_0_falls_back_to_cl(t *testing.T) {
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "click_events=0;cl=v"))
 
 	// Should fall back to cl since click_events is disabled
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickCl, Cl: OSCParsersSemanticPromptClickConservativeVertical}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickCl, Cl: OSCParsersSemanticPromptClickConservativeVertical}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: OSC133A no click options leaves click as none"
@@ -1982,7 +1982,7 @@ func TestTm3_Terminal_OSC133A_no_click_options_leaves_click_as_none(t *testing.T
 	// OSC 133;A with no click-related options
 	tm3SemanticPrompt(t, &tm, tm3Prompt(OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, "aid=123"))
 
-	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, tm.screens.active.semantic_prompt.click)
+	expectEqual(t, ScreenSemanticPromptSemanticClick{Tag: ScreenSemanticPromptSemanticClickNone}, tm.Screens.Active.SemanticPrompt.Click)
 }
 
 // Zig: test "Terminal: cursorIsAtPrompt"
@@ -2040,17 +2040,17 @@ func TestTm3_Terminal_fullReset_with_a_non_empty_pen(t *testing.T) {
 
 	tm3SetAttribute(t, &tm, tm3DirectFg(0xFF, 0, 0x7F))
 	tm3SetAttribute(t, &tm, tm3DirectBg(0xFF, 0, 0x7F))
-	tm.screens.active.cursor.semantic_content = PageCellSemanticContentInput
+	tm.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentInput
 	tm.FullReset()
 
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x), uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expect(t, cell.style_id == 0, "cell.style_id == 0")
 	}
 
-	expectEqual(t, StyleId(0), tm.screens.active.cursor.style_id)
-	expectEqual(t, PageCellSemanticContentOutput, tm.screens.active.cursor.semantic_content)
+	expectEqual(t, StyleID(0), tm.Screens.Active.Cursor.StyleID)
+	expectEqual(t, PageCellSemanticContentOutput, tm.Screens.Active.Cursor.SemanticContent)
 }
 
 // Zig: test "Terminal: fullReset hyperlink"
@@ -2059,9 +2059,9 @@ func TestTm3_Terminal_fullReset_hyperlink(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(80, 80))
 	defer tm.Deinit()
 
-	zigTry(t, tm.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, tm.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	tm.FullReset()
-	expectEqual(t, HyperlinkId(0), tm.screens.active.cursor.hyperlink_id)
+	expectEqual(t, HyperlinkID(0), tm.Screens.Active.Cursor.HyperlinkID)
 }
 
 // Zig: test "Terminal: fullReset with a non-empty saved cursor"
@@ -2076,12 +2076,12 @@ func TestTm3_Terminal_fullReset_with_a_non_empty_saved_cursor(t *testing.T) {
 	tm.FullReset()
 
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x), uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expect(t, cell.style_id == 0, "cell.style_id == 0")
 	}
 
-	expectEqual(t, StyleId(0), tm.screens.active.cursor.style_id)
+	expectEqual(t, StyleID(0), tm.Screens.Active.Cursor.StyleID)
 }
 
 // Zig: test "Terminal: fullReset origin mode"
@@ -2091,13 +2091,13 @@ func TestTm3_Terminal_fullReset_origin_mode(t *testing.T) {
 	defer tm.Deinit()
 
 	tm.SetCursorPos(3, 5)
-	tm.modes.Set(ModesModeOrigin, true)
+	tm.Modes.Set(ModesModeOrigin, true)
 	tm.FullReset()
 
 	// Origin mode should be reset and the cursor should be moved
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), tm.screens.active.cursor.x)
-	expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), tm.Screens.Active.Cursor.X)
+	expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
 }
 
 // Zig: test "Terminal: fullReset status display"
@@ -2106,9 +2106,9 @@ func TestTm3_Terminal_fullReset_status_display(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(10, 10))
 	defer tm.Deinit()
 
-	tm.status_display = ANSIStatusDisplayStatusLine
+	tm.StatusDisplay = ANSIStatusDisplayStatusLine
 	tm.FullReset()
-	expect(t, tm.status_display == ANSIStatusDisplayMain, "t.status_display == .main")
+	expect(t, tm.StatusDisplay == ANSIStatusDisplayMain, "t.status_display == .main")
 }
 
 // https://github.com/mitchellh/ghostty/issues/1607
@@ -2120,30 +2120,30 @@ func TestTm3_Terminal_fullReset_clears_alt_screen_kitty_keyboard_state(t *testin
 	defer tm.Deinit()
 
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1049, true)
-	tm.screens.active.kitty_keyboard.Push(KittyKeyFlags{
-		disambiguate:      true,
-		report_events:     false,
-		report_alternates: true,
-		report_all:        true,
-		report_associated: true,
+	tm.Screens.Active.KittyKeyboard.Push(KittyKeyFlags{
+		Disambiguate:     true,
+		ReportEvents:     false,
+		ReportAlternates: true,
+		ReportAll:        true,
+		ReportAssociated: true,
 	})
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1049, false)
 
 	tm.FullReset()
-	expect(t, tm.screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
+	expect(t, tm.Screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
 }
 
 // Zig: test "Terminal: fullReset default modes"
 func TestTm3_Terminal_fullReset_default_modes(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 10)
-	opts.default_modes = ModesModePackedInit()
-	opts.default_modes.grapheme_cluster = true
+	opts.DefaultModes = ModesModePackedInit()
+	opts.DefaultModes.grapheme_cluster = true
 	tm := tm3Init(t, opts)
 	defer tm.Deinit()
-	expect(t, tm.modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
+	expect(t, tm.Modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
 	tm.FullReset()
-	expect(t, tm.modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
+	expect(t, tm.Modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
 }
 
 // Zig: test "Terminal: fullReset tracked pins"
@@ -2153,10 +2153,10 @@ func TestTm3_Terminal_fullReset_tracked_pins(t *testing.T) {
 	defer tm.Deinit()
 
 	// Create a tracked pin
-	p, err := tm.screens.active.pages.TrackPin(*tm.screens.active.cursor.page_pin)
+	p, err := tm.Screens.Active.Pages.TrackPin(*tm.Screens.Active.Cursor.PagePin)
 	zigTry(t, err)
 	tm.FullReset()
-	expect(t, tm.screens.active.pages.PinIsValid(*p), "t.screens.active.pages.pinIsValid(p.*)")
+	expect(t, tm.Screens.Active.Pages.PinIsValid(*p), "t.screens.active.pages.pinIsValid(p.*)")
 }
 
 // https://github.com/mitchellh/ghostty/issues/272
@@ -2187,13 +2187,13 @@ func TestTm3_Terminal_resize_with_left_and_right_margin_set(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(cols, rows))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm3Print(t, &tm, '0')
-	tm.modes.Set(ModesModeEnableMode3, true)
+	tm.Modes.Set(ModesModeEnableMode3, true)
 	tm3Resize(t, &tm, cols, rows)
 	tm.SetLeftAndRightMargin(2, 0)
 	zigTry(t, tm.PrintRepeat(1850))
-	_ = tm.modes.Restore(ModesModeEnableMode3)
+	_ = tm.Modes.Restore(ModesModeEnableMode3)
 	tm3Resize(t, &tm, cols, rows)
 }
 
@@ -2207,7 +2207,7 @@ func TestTm3_Terminal_resize_with_wraparound_off(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(cols, rows))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeWraparound, false)
+	tm.Modes.Set(ModesModeWraparound, false)
 	tm3Print(t, &tm, '0')
 	tm3Print(t, &tm, '1')
 	tm3Print(t, &tm, '2')
@@ -2227,7 +2227,7 @@ func TestTm3_Terminal_resize_with_wraparound_on(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(cols, rows))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeWraparound, true)
+	tm.Modes.Set(ModesModeWraparound, true)
 	tm3Print(t, &tm, '0')
 	tm3Print(t, &tm, '1')
 	tm3Print(t, &tm, '2')
@@ -2245,8 +2245,8 @@ func TestTm3_Terminal_resize_with_high_unique_style_per_cell(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(30, 30))
 	defer tm.Deinit()
 
-	for y := uint(0); y < uint(tm.rows); y++ {
-		for x := uint(0); x < uint(tm.cols); x++ {
+	for y := uint(0); y < uint(tm.Rows); y++ {
+		for x := uint(0); x < uint(tm.Cols); x++ {
 			tm.SetCursorPos(y, x)
 			tm3SetAttribute(t, &tm, tm3DirectBg(uint8(x), uint8(y), 0))
 			tm3Print(t, &tm, 'x')
@@ -2262,7 +2262,7 @@ func TestTm3_Terminal_resize_with_high_unique_style_per_cell_with_wrapping(t *te
 	tm := tm3Init(t, terminalOptionsDefault(30, 30))
 	defer tm.Deinit()
 
-	cell_count := uint16(tm.rows * tm.cols)
+	cell_count := uint16(tm.Rows * tm.Cols)
 	for i := uint(0); i < uint(cell_count); i++ {
 		r := uint8(i >> 8)
 		g := uint8(i & 0xFF)
@@ -2282,8 +2282,8 @@ func TestTm3_Terminal_resize_with_reflow_and_saved_cursor(t *testing.T) {
 	tm3PrintString(t, &tm, "1A2B")
 	tm.SetCursorPos(2, 2)
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x), uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('B'), cell.content.codepoint)
 	}
 
@@ -2301,8 +2301,8 @@ func TestTm3_Terminal_resize_with_reflow_and_saved_cursor(t *testing.T) {
 
 	// Verify our cursor is still in the same place
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x), uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('B'), cell.content.codepoint)
 	}
 }
@@ -2314,8 +2314,8 @@ func TestTm3_Terminal_resize_with_reflow_and_saved_cursor_pending_wrap(t *testin
 	defer tm.Deinit()
 	tm3PrintString(t, &tm, "1A2B")
 	{
-		list_cell := tm3At(t, &tm, uint(tm.screens.active.cursor.x), uint(tm.screens.active.cursor.y))
-		cell := list_cell.cell
+		list_cell := tm3At(t, &tm, uint(tm.Screens.Active.Cursor.X), uint(tm.Screens.Active.Cursor.Y))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('B'), cell.content.codepoint)
 	}
 
@@ -2344,11 +2344,11 @@ func TestTm3_Terminal_DECCOLM_without_DEC_mode_40(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(5, 5))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesMode132Column, true)
+	tm.Modes.Set(ModesMode132Column, true)
 	tm3Deccolm(t, &tm, TerminalDeccolmMode132Cols)
-	expectEqual(t, SizeCellCountInt(5), tm.cols)
-	expectEqual(t, SizeCellCountInt(5), tm.rows)
-	expect(t, !tm.modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
+	expectEqual(t, SizeCellCountInt(5), tm.Cols)
+	expectEqual(t, SizeCellCountInt(5), tm.Rows)
+	expect(t, !tm.Modes.Get(ModesMode132Column), "!t.modes.get(.@\"132_column\")")
 }
 
 // Zig: test "Terminal: DECCOLM unset"
@@ -2357,10 +2357,10 @@ func TestTm3_Terminal_DECCOLM_unset(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(5, 5))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableMode3, true)
+	tm.Modes.Set(ModesModeEnableMode3, true)
 	tm3Deccolm(t, &tm, TerminalDeccolmMode80Cols)
-	expectEqual(t, SizeCellCountInt(80), tm.cols)
-	expectEqual(t, SizeCellCountInt(5), tm.rows)
+	expectEqual(t, SizeCellCountInt(80), tm.Cols)
+	expectEqual(t, SizeCellCountInt(5), tm.Rows)
 }
 
 // Zig: test "Terminal: DECCOLM resets pending wrap"
@@ -2370,13 +2370,13 @@ func TestTm3_Terminal_DECCOLM_resets_pending_wrap(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3PrintEach(t, &tm, "ABCDE")
-	expect(t, tm.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, tm.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
-	tm.modes.Set(ModesModeEnableMode3, true)
+	tm.Modes.Set(ModesModeEnableMode3, true)
 	tm3Deccolm(t, &tm, TerminalDeccolmMode80Cols)
-	expectEqual(t, SizeCellCountInt(80), tm.cols)
-	expectEqual(t, SizeCellCountInt(5), tm.rows)
-	expect(t, !tm.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, SizeCellCountInt(80), tm.Cols)
+	expectEqual(t, SizeCellCountInt(5), tm.Rows)
+	expect(t, !tm.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 }
 
 // Zig: test "Terminal: DECCOLM preserves SGR bg"
@@ -2386,12 +2386,12 @@ func TestTm3_Terminal_DECCOLM_preserves_SGR_bg(t *testing.T) {
 	defer tm.Deinit()
 
 	tm3SetAttribute(t, &tm, tm3DirectBg(0xFF, 0, 0))
-	tm.modes.Set(ModesModeEnableMode3, true)
+	tm.Modes.Set(ModesModeEnableMode3, true)
 	tm3Deccolm(t, &tm, TerminalDeccolmMode80Cols)
 
 	{
 		list_cell := tm3At(t, &tm, 0, 0)
-		tm3ExpectBgRGB(t, list_cell.cell, 0xFF, 0, 0)
+		tm3ExpectBgRGB(t, list_cell.Cell, 0xFF, 0, 0)
 	}
 }
 
@@ -2401,18 +2401,18 @@ func TestTm3_Terminal_DECCOLM_resets_scroll_region(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(5, 5))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetTopAndBottomMargin(2, 3)
 	tm.SetLeftAndRightMargin(3, 5)
 
-	tm.modes.Set(ModesModeEnableMode3, true)
+	tm.Modes.Set(ModesModeEnableMode3, true)
 	tm3Deccolm(t, &tm, TerminalDeccolmMode80Cols)
 
-	expect(t, tm.modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.top)
-	expectEqual(t, SizeCellCountInt(4), tm.scrolling_region.bottom)
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.left)
-	expectEqual(t, SizeCellCountInt(79), tm.scrolling_region.right)
+	expect(t, tm.Modes.Get(ModesModeEnableLeftAndRightMargin), "t.modes.get(.enable_left_and_right_margin)")
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Top)
+	expectEqual(t, SizeCellCountInt(4), tm.ScrollingRegion.Bottom)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Left)
+	expectEqual(t, SizeCellCountInt(79), tm.ScrollingRegion.Right)
 }
 
 // Zig: test "Terminal: mode 47 alt screen plain"
@@ -2426,7 +2426,7 @@ func TestTm3_Terminal_mode_47_alt_screen_plain(t *testing.T) {
 
 	// Go to alt screen with mode 47
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode47, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Screen should be empty
 	{
@@ -2442,7 +2442,7 @@ func TestTm3_Terminal_mode_47_alt_screen_plain(t *testing.T) {
 
 	// Go back to primary
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode47, false)
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	// Primary screen should still have the original content
 	{
@@ -2451,7 +2451,7 @@ func TestTm3_Terminal_mode_47_alt_screen_plain(t *testing.T) {
 
 	// Go back to alt screen with mode 47
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode47, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Screen should retain content
 	{
@@ -2470,14 +2470,14 @@ func TestTm3_Terminal_mode_47_copies_cursor_both_directions(t *testing.T) {
 
 	// Go to alt screen with mode 47
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode47, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Verify that our style is set
 	{
-		expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
-		page := &tm.screens.active.cursor.page_pin.node.data
+		expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
+		page := &tm.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, uint(1), page.styles.Count())
-		expect(t, page.styles.RefCount(tm.screens.active.cursor.style_id) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
+		expect(t, page.styles.RefCount(tm.Screens.Active.Cursor.StyleID) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
 	}
 
 	// Set a new style
@@ -2485,14 +2485,14 @@ func TestTm3_Terminal_mode_47_copies_cursor_both_directions(t *testing.T) {
 
 	// Go back to primary
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode47, false)
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	// Verify that our style is still set
 	{
-		expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
-		page := &tm.screens.active.cursor.page_pin.node.data
+		expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
+		page := &tm.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, uint(1), page.styles.Count())
-		expect(t, page.styles.RefCount(tm.screens.active.cursor.style_id) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
+		expect(t, page.styles.RefCount(tm.Screens.Active.Cursor.StyleID) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
 	}
 }
 
@@ -2507,7 +2507,7 @@ func TestTm3_Terminal_mode_1047_alt_screen_plain(t *testing.T) {
 
 	// Go to alt screen with mode 47
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1047, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Screen should be empty
 	{
@@ -2523,7 +2523,7 @@ func TestTm3_Terminal_mode_1047_alt_screen_plain(t *testing.T) {
 
 	// Go back to primary
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1047, false)
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	// Primary screen should still have the original content
 	{
@@ -2532,7 +2532,7 @@ func TestTm3_Terminal_mode_1047_alt_screen_plain(t *testing.T) {
 
 	// Go back to alt screen with mode 1047
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1047, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Screen should be empty
 	{
@@ -2551,14 +2551,14 @@ func TestTm3_Terminal_mode_1047_copies_cursor_both_directions(t *testing.T) {
 
 	// Go to alt screen with mode 47
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1047, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Verify that our style is set
 	{
-		expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
-		page := &tm.screens.active.cursor.page_pin.node.data
+		expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
+		page := &tm.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, uint(1), page.styles.Count())
-		expect(t, page.styles.RefCount(tm.screens.active.cursor.style_id) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
+		expect(t, page.styles.RefCount(tm.Screens.Active.Cursor.StyleID) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
 	}
 
 	// Set a new style
@@ -2566,14 +2566,14 @@ func TestTm3_Terminal_mode_1047_copies_cursor_both_directions(t *testing.T) {
 
 	// Go back to primary
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1047, false)
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	// Verify that our style is still set
 	{
-		expect(t, tm.screens.active.cursor.style_id != StyleDefaultId, "t.screens.active.cursor.style_id != style.default_id")
-		page := &tm.screens.active.cursor.page_pin.node.data
+		expect(t, tm.Screens.Active.Cursor.StyleID != StyleDefaultID, "t.screens.active.cursor.style_id != style.default_id")
+		page := &tm.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, uint(1), page.styles.Count())
-		expect(t, page.styles.RefCount(tm.screens.active.cursor.style_id) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
+		expect(t, page.styles.RefCount(tm.Screens.Active.Cursor.StyleID) > 0, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 0")
 	}
 }
 
@@ -2588,7 +2588,7 @@ func TestTm3_Terminal_mode_1049_alt_screen_plain(t *testing.T) {
 
 	// Go to alt screen with mode 47
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1049, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Screen should be empty
 	{
@@ -2604,7 +2604,7 @@ func TestTm3_Terminal_mode_1049_alt_screen_plain(t *testing.T) {
 
 	// Go back to primary
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1049, false)
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
 
 	// Primary screen should still have the original content
 	{
@@ -2619,7 +2619,7 @@ func TestTm3_Terminal_mode_1049_alt_screen_plain(t *testing.T) {
 
 	// Go back to alt screen with mode 1049
 	tm3SwitchScreenMode(t, &tm, TerminalSwitchScreenMode1049, true)
-	expectEqual(t, ScreenSetKeyAlternate, tm.screens.active_key)
+	expectEqual(t, ScreenSetKeyAlternate, tm.Screens.ActiveKey)
 
 	// Screen should be empty
 	{
@@ -2648,14 +2648,14 @@ func TestTm3_Terminal_deleteLines_wide_char_at_right_margin_with_full_clear(t *t
 	// Set left/right scroll margins so scrolling_region.right = 38.
 	// clearCells will clear cells[4..39], which includes the wide cell
 	// at col 38 but NOT the spacer_tail at col 39.
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(5, 39)
 
 	// scrollUp with count >= region height causes deleteLines to clear
 	// ALL rows without any shifting, so rowWillBeShifted is never called
 	// and the orphaned spacer_tail at col 39 triggers a page integrity
 	// violation in clearCells.
-	zigTry(t, tm.ScrollUp(uint(tm.rows)))
+	zigTry(t, tm.ScrollUp(uint(tm.Rows)))
 }
 
 // ---------------------------------------------------------------------------
@@ -2692,19 +2692,19 @@ func TestTm3_term51_MouseEvents_motion_every_enum_value(t *testing.T) {
 func TestTm3_term51_Options_defaults(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(7, 3)
-	expectEqual(t, SizeCellCountInt(7), opts.cols)
-	expectEqual(t, SizeCellCountInt(3), opts.rows)
-	expectEqual(t, uint64(10_000), opts.max_scrollback)
-	expectEqual(t, TerminalColorsDefault.background, opts.colors.background)
-	expectEqual(t, TerminalColorsDefault.foreground, opts.colors.foreground)
-	expectEqual(t, TerminalColorsDefault.cursor, opts.colors.cursor)
-	expectEqual(t, TerminalColorsDefault.palette.current, opts.colors.palette.current)
-	expectEqual(t, ModesModePackedInit(), opts.default_modes)
+	expectEqual(t, SizeCellCountInt(7), opts.Cols)
+	expectEqual(t, SizeCellCountInt(3), opts.Rows)
+	expectEqual(t, uint64(10_000), opts.MaxScrollback)
+	expectEqual(t, TerminalColorsDefault.Background, opts.Colors.Background)
+	expectEqual(t, TerminalColorsDefault.Foreground, opts.Colors.Foreground)
+	expectEqual(t, TerminalColorsDefault.Cursor, opts.Colors.Cursor)
+	expectEqual(t, TerminalColorsDefault.Palette.Current, opts.Colors.Palette.Current)
+	expectEqual(t, ModesModePackedInit(), opts.DefaultModes)
 	// Wraparound is the only default-on mode among those we care about.
-	expect(t, opts.default_modes.wraparound, "opts.default_modes.wraparound")
-	expect(t, !opts.default_modes.insert, "!opts.default_modes.insert")
-	expect(t, !opts.default_modes.origin, "!opts.default_modes.origin")
-	expect(t, !opts.default_modes.grapheme_cluster, "!opts.default_modes.grapheme_cluster")
+	expect(t, opts.DefaultModes.wraparound, "opts.default_modes.wraparound")
+	expect(t, !opts.DefaultModes.insert, "!opts.default_modes.insert")
+	expect(t, !opts.DefaultModes.origin, "!opts.default_modes.origin")
+	expect(t, !opts.DefaultModes.grapheme_cluster, "!opts.default_modes.grapheme_cluster")
 }
 
 // Zig: test "term51: init: initial state"
@@ -2713,45 +2713,45 @@ func TestTm3_term51_init_initial_state(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(20, 6))
 	defer tm.Deinit()
 
-	expectEqual(t, SizeCellCountInt(20), tm.cols)
-	expectEqual(t, SizeCellCountInt(6), tm.rows)
-	expectEqual(t, uint32(0), tm.width_px)
-	expectEqual(t, uint32(0), tm.height_px)
-	expectEqual(t, ANSIStatusDisplayMain, tm.status_display)
-	expectEqual(t, None[uint32](), tm.previous_char)
-	expectEqual(t, MouseShapeText, tm.mouse_shape)
+	expectEqual(t, SizeCellCountInt(20), tm.Cols)
+	expectEqual(t, SizeCellCountInt(6), tm.Rows)
+	expectEqual(t, uint32(0), tm.WidthPx)
+	expectEqual(t, uint32(0), tm.HeightPx)
+	expectEqual(t, ANSIStatusDisplayMain, tm.StatusDisplay)
+	expectEqual(t, None[uint32](), tm.PreviousChar)
+	expectEqual(t, MouseShapeText, tm.MouseShape)
 
 	// Scrolling region is the full screen.
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.top)
-	expectEqual(t, SizeCellCountInt(5), tm.scrolling_region.bottom)
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.left)
-	expectEqual(t, SizeCellCountInt(19), tm.scrolling_region.right)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Top)
+	expectEqual(t, SizeCellCountInt(5), tm.ScrollingRegion.Bottom)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Left)
+	expectEqual(t, SizeCellCountInt(19), tm.ScrollingRegion.Right)
 
 	// Primary screen is active, the alternate screen does not exist yet.
-	expectEqual(t, ScreenSetKeyPrimary, tm.screens.active_key)
-	expect(t, tm.screens.Get(ScreenSetKeyPrimary) != nil, "t.screens.get(.primary) != null")
-	expect(t, tm.screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
-	expect(t, tm.screens.active == tm.screens.Get(ScreenSetKeyPrimary), "t.screens.active == t.screens.get(.primary).?")
+	expectEqual(t, ScreenSetKeyPrimary, tm.Screens.ActiveKey)
+	expect(t, tm.Screens.Get(ScreenSetKeyPrimary) != nil, "t.screens.get(.primary) != null")
+	expect(t, tm.Screens.Get(ScreenSetKeyAlternate) == nil, "t.screens.get(.alternate) == null")
+	expect(t, tm.Screens.Active == tm.Screens.Get(ScreenSetKeyPrimary), "t.screens.active == t.screens.get(.primary).?")
 	tm3SExpectCursor(t, &tm, 0, 0, false)
-	expect(t, !tm.screens.active.saved_cursor.Valid, "t.screens.active.saved_cursor == null")
+	expect(t, !tm.Screens.Active.SavedCursor.Valid, "t.screens.active.saved_cursor == null")
 
 	// No pwd.
-	expectEqual(t, uint(0), uint(len(tm.pwd)))
+	expectEqual(t, uint(0), uint(len(tm.Pwd)))
 	expect(t, !tm.GetPwd().Valid, "t.getPwd() == null")
 
 	// The flags are at their defaults.
-	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.flags.shell_redraws_prompt)
-	expect(t, !tm.flags.modify_other_keys_2, "!t.flags.modify_other_keys_2")
-	expectEqual(t, TerminalMouseEventsNone, tm.flags.mouse_event)
-	expectEqual(t, TerminalMouseFormatX10, tm.flags.mouse_format)
-	expect(t, tm.flags.focused, "t.flags.focused")
-	expect(t, !tm.flags.password_input, "!t.flags.password_input")
-	expect(t, !tm.flags.selection_scroll, "!t.flags.selection_scroll")
-	expect(t, !tm.flags.search_viewport_dirty, "!t.flags.search_viewport_dirty")
-	expect(t, !tm.flags.dirty.palette, "!t.flags.dirty.palette")
-	expect(t, !tm.flags.dirty.reverse_colors, "!t.flags.dirty.reverse_colors")
-	expect(t, !tm.flags.dirty.clear, "!t.flags.dirty.clear")
-	expect(t, !tm.flags.dirty.preedit, "!t.flags.dirty.preedit")
+	expectEqual(t, OSCParsersSemanticPromptRedrawTrue, tm.Flags.ShellRedrawsPrompt)
+	expect(t, !tm.Flags.ModifyOtherKeys2, "!t.flags.modify_other_keys_2")
+	expectEqual(t, TerminalMouseEventsNone, tm.Flags.MouseEvent)
+	expectEqual(t, TerminalMouseFormatX10, tm.Flags.MouseFormat)
+	expect(t, tm.Flags.Focused, "t.flags.focused")
+	expect(t, !tm.Flags.PasswordInput, "!t.flags.password_input")
+	expect(t, !tm.Flags.SelectionScroll, "!t.flags.selection_scroll")
+	expect(t, !tm.Flags.SearchViewportDirty, "!t.flags.search_viewport_dirty")
+	expect(t, !tm.Flags.Dirty.Palette, "!t.flags.dirty.palette")
+	expect(t, !tm.Flags.Dirty.ReverseColors, "!t.flags.dirty.reverse_colors")
+	expect(t, !tm.Flags.Dirty.Clear, "!t.flags.dirty.clear")
+	expect(t, !tm.Flags.Dirty.Preedit, "!t.flags.dirty.preedit")
 
 	// Empty screen.
 	tm3SExpectPlain(t, &tm, "")
@@ -2765,7 +2765,7 @@ func TestTm3_term51_init_tabstops_every_8_columns_excluding_column_0_and_the_las
 		defer tm.Deinit()
 		for col := uint(0); col < 20; col++ {
 			expected := col == 8 || col == 16
-			expectEqual(t, expected, tm.tabstops.Get(col))
+			expectEqual(t, expected, tm.Tabstops.Get(col))
 		}
 	}
 
@@ -2774,14 +2774,14 @@ func TestTm3_term51_init_tabstops_every_8_columns_excluding_column_0_and_the_las
 	{
 		tm := tm3Init(t, terminalOptionsDefault(17, 2))
 		defer tm.Deinit()
-		expect(t, tm.tabstops.Get(8), "t.tabstops.get(8)")
-		expect(t, !tm.tabstops.Get(16), "!t.tabstops.get(16)")
+		expect(t, tm.Tabstops.Get(8), "t.tabstops.get(8)")
+		expect(t, !tm.Tabstops.Get(16), "!t.tabstops.get(16)")
 	}
 	{
 		tm := tm3Init(t, terminalOptionsDefault(18, 2))
 		defer tm.Deinit()
-		expect(t, tm.tabstops.Get(8), "t.tabstops.get(8)")
-		expect(t, tm.tabstops.Get(16), "t.tabstops.get(16)")
+		expect(t, tm.Tabstops.Get(8), "t.tabstops.get(8)")
+		expect(t, tm.Tabstops.Get(16), "t.tabstops.get(16)")
 	}
 
 	// Very narrow terminals have no tabstops at all.
@@ -2789,7 +2789,7 @@ func TestTm3_term51_init_tabstops_every_8_columns_excluding_column_0_and_the_las
 		tm := tm3Init(t, terminalOptionsDefault(8, 2))
 		defer tm.Deinit()
 		for col := uint(0); col < 8; col++ {
-			expect(t, !tm.tabstops.Get(col), "!t.tabstops.get(col)")
+			expect(t, !tm.Tabstops.Get(col), "!t.tabstops.get(col)")
 		}
 	}
 }
@@ -2800,37 +2800,37 @@ func TestTm3_term51_init_minimum_size_1x1(t *testing.T) {
 	tm := tm3Init(t, terminalOptionsDefault(1, 1))
 	defer tm.Deinit()
 
-	expectEqual(t, SizeCellCountInt(1), tm.cols)
-	expectEqual(t, SizeCellCountInt(1), tm.rows)
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.top)
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.bottom)
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.left)
-	expectEqual(t, SizeCellCountInt(0), tm.scrolling_region.right)
+	expectEqual(t, SizeCellCountInt(1), tm.Cols)
+	expectEqual(t, SizeCellCountInt(1), tm.Rows)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Top)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Bottom)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Left)
+	expectEqual(t, SizeCellCountInt(0), tm.ScrollingRegion.Right)
 	tm3SExpectCursor(t, &tm, 0, 0, false)
 }
 
 // Zig: test "term51: init: colors option is copied into the terminal"
 func TestTm3_term51_init_colors_option_is_copied_into_the_terminal(t *testing.T) {
 	testStdCapacity(t)
-	rgb := ColorRGB{r: 1, g: 2, b: 3}
+	rgb := ColorRGB{R: 1, G: 2, B: 3}
 	colors := TerminalColorsDefault
-	colors.background = ColorDynamicRGBInit(rgb)
-	colors.foreground = ColorDynamicRGB{override: Some(ColorRGB{r: 9, g: 8, b: 7}), default_: None[ColorRGB]()}
-	colors.palette.Set(5, rgb)
+	colors.Background = ColorDynamicRGBInit(rgb)
+	colors.Foreground = ColorDynamicRGB{Override: Some(ColorRGB{R: 9, G: 8, B: 7}), Default: None[ColorRGB]()}
+	colors.Palette.Set(5, rgb)
 
 	opts := terminalOptionsDefault(4, 4)
-	opts.colors = colors
+	opts.Colors = colors
 	tm := tm3Init(t, opts)
 	defer tm.Deinit()
 
-	expectEqual(t, Some(rgb), tm.colors.background.default_)
-	expectEqual(t, None[ColorRGB](), tm.colors.background.override)
-	expectEqual(t, Some(ColorRGB{r: 9, g: 8, b: 7}), tm.colors.foreground.override)
-	expectEqual(t, None[ColorRGB](), tm.colors.foreground.default_)
-	expectEqual(t, ColorDynamicRGBUnset, tm.colors.cursor)
-	expectEqual(t, rgb, tm.colors.palette.current[5])
-	expect(t, tm.colors.palette.mask.isSet(5), "t.colors.palette.mask.isSet(5)")
-	expect(t, !tm.colors.palette.mask.isSet(4), "!t.colors.palette.mask.isSet(4)")
+	expectEqual(t, Some(rgb), tm.Colors.Background.Default)
+	expectEqual(t, None[ColorRGB](), tm.Colors.Background.Override)
+	expectEqual(t, Some(ColorRGB{R: 9, G: 8, B: 7}), tm.Colors.Foreground.Override)
+	expectEqual(t, None[ColorRGB](), tm.Colors.Foreground.Default)
+	expectEqual(t, ColorDynamicRGBUnset, tm.Colors.Cursor)
+	expectEqual(t, rgb, tm.Colors.Palette.Current[5])
+	expect(t, tm.Colors.Palette.Mask.isSet(5), "t.colors.palette.mask.isSet(5)")
+	expect(t, !tm.Colors.Palette.Mask.isSet(4), "!t.colors.palette.mask.isSet(4)")
 }
 
 // Zig: test "term51: init: default colors when option omitted"
@@ -2838,11 +2838,11 @@ func TestTm3_term51_init_default_colors_when_option_omitted(t *testing.T) {
 	testStdCapacity(t)
 	tm := tm3Init(t, terminalOptionsDefault(4, 4))
 	defer tm.Deinit()
-	expectEqual(t, ColorDynamicRGBUnset, tm.colors.background)
-	expectEqual(t, ColorDynamicRGBUnset, tm.colors.foreground)
-	expectEqual(t, ColorDynamicRGBUnset, tm.colors.cursor)
-	expectEqual(t, TerminalColorsDefault.palette.current, tm.colors.palette.current)
-	expectEqual(t, 0, tm.colors.palette.mask.count())
+	expectEqual(t, ColorDynamicRGBUnset, tm.Colors.Background)
+	expectEqual(t, ColorDynamicRGBUnset, tm.Colors.Foreground)
+	expectEqual(t, ColorDynamicRGBUnset, tm.Colors.Cursor)
+	expectEqual(t, TerminalColorsDefault.Palette.Current, tm.Colors.Palette.Current)
+	expectEqual(t, 0, tm.Colors.Palette.Mask.count())
 }
 
 // Zig: test "term51: init: default modes seed both values and defaults"
@@ -2851,12 +2851,12 @@ func TestTm3_term51_init_default_modes_seed_both_values_and_defaults(t *testing.
 	{
 		tm := tm3Init(t, terminalOptionsDefault(4, 4))
 		defer tm.Deinit()
-		expect(t, tm.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
-		expect(t, !tm.modes.Get(ModesModeInsert), "!t.modes.get(.insert)")
-		expect(t, !tm.modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
-		expect(t, !tm.modes.Get(ModesModeGraphemeCluster), "!t.modes.get(.grapheme_cluster)")
-		expectEqual(t, ModesModePackedInit(), tm.modes.values)
-		expectEqual(t, ModesModePackedInit(), tm.modes.default_)
+		expect(t, tm.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+		expect(t, !tm.Modes.Get(ModesModeInsert), "!t.modes.get(.insert)")
+		expect(t, !tm.Modes.Get(ModesModeOrigin), "!t.modes.get(.origin)")
+		expect(t, !tm.Modes.Get(ModesModeGraphemeCluster), "!t.modes.get(.grapheme_cluster)")
+		expectEqual(t, ModesModePackedInit(), tm.Modes.Values)
+		expectEqual(t, ModesModePackedInit(), tm.Modes.Default)
 	}
 	{
 		dm := ModesModePackedInit()
@@ -2864,18 +2864,18 @@ func TestTm3_term51_init_default_modes_seed_both_values_and_defaults(t *testing.
 		dm.wraparound = false
 		dm.grapheme_cluster = true
 		opts := terminalOptionsDefault(4, 4)
-		opts.default_modes = dm
+		opts.DefaultModes = dm
 		tm := tm3Init(t, opts)
 		defer tm.Deinit()
-		expect(t, tm.modes.Get(ModesModeInsert), "t.modes.get(.insert)")
-		expect(t, !tm.modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
-		expect(t, tm.modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
-		expectEqual(t, dm, tm.modes.values)
-		expectEqual(t, dm, tm.modes.default_)
+		expect(t, tm.Modes.Get(ModesModeInsert), "t.modes.get(.insert)")
+		expect(t, !tm.Modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
+		expect(t, tm.Modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
+		expectEqual(t, dm, tm.Modes.Values)
+		expectEqual(t, dm, tm.Modes.Default)
 
 		// The saved defaults are independent of later changes to values.
-		tm.modes.Set(ModesModeInsert, false)
-		expect(t, tm.modes.default_.insert, "t.modes.default.insert")
+		tm.Modes.Set(ModesModeInsert, false)
+		expect(t, tm.Modes.Default.insert, "t.modes.default.insert")
 	}
 }
 
@@ -2885,24 +2885,24 @@ func TestTm3_term51_init_max_scrollback_is_forwarded_to_the_screen(t *testing.T)
 	{
 		tm := tm3Init(t, terminalOptionsDefault(4, 2))
 		defer tm.Deinit()
-		expectEqual(t, uint64(10_000), tm.screens.active.pages.explicit_max_size)
-		expect(t, !tm.screens.active.no_scrollback, "!t.screens.active.no_scrollback")
+		expectEqual(t, uint64(10_000), tm.Screens.Active.Pages.explicit_max_size)
+		expect(t, !tm.Screens.Active.NoScrollback, "!t.screens.active.no_scrollback")
 	}
 	{
 		opts := terminalOptionsDefault(4, 2)
-		opts.max_scrollback = 12345
+		opts.MaxScrollback = 12345
 		tm := tm3Init(t, opts)
 		defer tm.Deinit()
-		expectEqual(t, uint64(12345), tm.screens.active.pages.explicit_max_size)
-		expect(t, !tm.screens.active.no_scrollback, "!t.screens.active.no_scrollback")
+		expectEqual(t, uint64(12345), tm.Screens.Active.Pages.explicit_max_size)
+		expect(t, !tm.Screens.Active.NoScrollback, "!t.screens.active.no_scrollback")
 	}
 	{
 		opts := terminalOptionsDefault(4, 2)
-		opts.max_scrollback = 0
+		opts.MaxScrollback = 0
 		tm := tm3Init(t, opts)
 		defer tm.Deinit()
-		expectEqual(t, uint64(0), tm.screens.active.pages.explicit_max_size)
-		expect(t, tm.screens.active.no_scrollback, "t.screens.active.no_scrollback")
+		expectEqual(t, uint64(0), tm.Screens.Active.Pages.explicit_max_size)
+		expect(t, tm.Screens.Active.NoScrollback, "t.screens.active.no_scrollback")
 	}
 }
 
@@ -2949,14 +2949,14 @@ func TestTm3_term51_vtHandler_handler_wraps_this_terminal(t *testing.T) {
 	defer h.Deinit()
 	expect(t, h.terminal == &tm, "h.terminal == &t")
 
-	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'h'}}))
-	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'i'}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{Cp: 'h'}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{Cp: 'i'}}))
 	tm3SExpectPlain(t, &tm, "hi")
 	tm3SExpectCursor(t, &tm, 2, 0, false)
 
 	zigTry(t, h.Vt(StreamActionKeyCarriageReturn, &StreamAction{Tag: StreamActionKeyCarriageReturn}))
 	zigTry(t, h.Vt(StreamActionKeyLinefeed, &StreamAction{Tag: StreamActionKeyLinefeed}))
-	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: 'x'}}))
+	zigTry(t, h.Vt(StreamActionKeyPrint, &StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{Cp: 'x'}}))
 	tm3SExpectPlain(t, &tm, "hi\nx")
 }
 
@@ -2982,9 +2982,9 @@ func TestTm3_term51_vtStream_processes_VT_bytes_into_terminal_state(t *testing.T
 	zigTry(t, s.NextSlice([]uint8("\x1b[2;1H\x1b[1mB")))
 	{
 		lc := tm3SAt(t, &tm, 0, 1)
-		expectEqual(t, uint32('B'), lc.cell.Codepoint())
-		expect(t, lc.cell.style_id != StyleDefaultId, "lc.cell.style_id != style.default_id")
-		expect(t, lc.node.data.styles.Get(lc.cell.style_id).flags.bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
+		expectEqual(t, uint32('B'), lc.Cell.Codepoint())
+		expect(t, lc.Cell.style_id != StyleDefaultID, "lc.cell.style_id != style.default_id")
+		expect(t, lc.Node.data.styles.Get(lc.Cell.style_id).Flags.Bold, "lc.node.data.styles.get(lc.node.data.memory, lc.cell.style_id).flags.bold")
 	}
 }
 
@@ -3038,11 +3038,11 @@ func TestTm3_term51_printString_ascii_empty_and_newline_handling(t *testing.T) {
 	// Empty string is a no-op.
 	tm3PrintString(t, &tm, "")
 	tm3SExpectCursor(t, &tm, 0, 0, false)
-	expectEqual(t, None[uint32](), tm.previous_char)
+	expectEqual(t, None[uint32](), tm.PreviousChar)
 
 	tm3PrintString(t, &tm, "abc")
 	tm3SExpectCursor(t, &tm, 3, 0, false)
-	expectEqual(t, Some(uint32('c')), tm.previous_char)
+	expectEqual(t, Some(uint32('c')), tm.PreviousChar)
 
 	// '\n' is carriage return plus linefeed (no linefeed mode needed).
 	tm3PrintString(t, &tm, "\nxy")
@@ -3072,8 +3072,8 @@ func TestTm3_term51_printString_newline_clears_pending_wrap_and_returns_to_colum
 	tm3SExpectCursor(t, &tm, 1, 1, false)
 	tm3SExpectPlain(t, &tm, "abc\nd")
 	// The newline did not soft wrap the row.
-	expect(t, !tm3SAt(t, &tm, 0, 0).row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
-	expect(t, !tm3SAt(t, &tm, 0, 1).row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
+	expect(t, !tm3SAt(t, &tm, 0, 0).Row.wrap, "!term51SAt(&t, 0, 0).row.wrap")
+	expect(t, !tm3SAt(t, &tm, 0, 1).Row.wrap_continuation, "!term51SAt(&t, 0, 1).row.wrap_continuation")
 }
 
 // Zig: test "term51: printString: newline with a left margin returns to the left margin"
@@ -3082,7 +3082,7 @@ func TestTm3_term51_printString_newline_with_a_left_margin_returns_to_the_left_m
 	tm := tm3Init(t, terminalOptionsDefault(10, 4))
 	defer tm.Deinit()
 
-	tm.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	tm.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	tm.SetLeftAndRightMargin(3, 8)
 	tm.SetCursorPos(1, 5)
 	tm3PrintString(t, &tm, "a\nb")
@@ -3163,7 +3163,7 @@ func TestTm3_term51_printRepeat_nothing_printed_before_any_character(t *testing.
 	zigTry(t, tm.PrintRepeat(5))
 	tm3SExpectCursor(t, &tm, 0, 0, false)
 	tm3SExpectPlain(t, &tm, "")
-	expectEqual(t, None[uint32](), tm.previous_char)
+	expectEqual(t, None[uint32](), tm.PreviousChar)
 }
 
 // Zig: test "term51: printRepeat: count zero repeats once and counts repeat exactly"
@@ -3180,7 +3180,7 @@ func TestTm3_term51_printRepeat_count_zero_repeats_once_and_counts_repeat_exactl
 	zigTry(t, tm.PrintRepeat(4))
 	tm3SExpectPlain(t, &tm, "aaaaaaa")
 	tm3SExpectCursor(t, &tm, 7, 0, false)
-	expectEqual(t, Some(uint32('a')), tm.previous_char)
+	expectEqual(t, Some(uint32('a')), tm.PreviousChar)
 }
 
 // Zig: test "term51: printRepeat: wraps across lines"
@@ -3227,7 +3227,7 @@ func TestTm3_term51_printRepeat_previous_char_survives_cursor_movement_and_is_no
 	// A combining mark (non-2027) is attached and does not replace
 	// previous_char.
 	tm3Print(t, &tm, 0x301)
-	expectEqual(t, Some(uint32('q')), tm.previous_char)
+	expectEqual(t, Some(uint32('q')), tm.PreviousChar)
 	zigTry(t, tm.PrintRepeat(1))
 	tm3SExpectCell(t, &tm, 4, 1, 'q', PageCellWideNarrow)
 }
@@ -3271,15 +3271,15 @@ func TestTm3_go_only_setCursorPos_huge_column_clamps_to_margin(t *testing.T) {
 	term, err := TerminalInit(terminalOptionsDefault(20, 10))
 	zigTry(t, err)
 	defer term.Deinit()
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 8)
 	term.SetTopAndBottomMargin(2, 6)
-	term.modes.Set(ModesModeOrigin, true)
+	term.Modes.Set(ModesModeOrigin, true)
 	// 0xFFFFFFFF + left margin overflows a 32-bit uint but not the 64-bit
 	// usize of the reference.
 	term.SetCursorPos(1, 0xFFFFFFFF)
-	expectEqual(t, SizeCellCountInt(7), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(7), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), term.Screens.Active.Cursor.Y)
 }
 
 // Go-only: panic test: Terminal.setPwd: pwd aliases the terminal's own pwd (Zig: @memcpy arguments alias)

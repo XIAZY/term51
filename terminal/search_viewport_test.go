@@ -60,26 +60,26 @@ func TestSaViewport_simple_search(t *testing.T) {
 	search, err := SearchViewportInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	// Viewport contains active so update should always re-search.
-	changed, err = search.Update(&term.screens.active.pages)
+	changed, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 2), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 2), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -98,22 +98,22 @@ func TestSaViewport_clear_screen_and_search(t *testing.T) {
 	search, err := SearchViewportInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	zigTry(t, s.NextSlice([]uint8("\x1b[2J"))) // Clear screen
 	zigTry(t, s.NextSlice([]uint8("\x1b[H")))  // Move cursor home
 	zigTry(t, s.NextSlice([]uint8("Buzz\r\nFizz\r\nBuzz")))
-	changed, err = search.Update(&term.screens.active.pages)
+	changed, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -137,12 +137,12 @@ func TestSaViewport_clear_screen_and_search_dirty_tracking(t *testing.T) {
 	search.active_dirty = Some(false)
 
 	// Should update since we've never searched before
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	// Should not update since nothing changed
-	changed, err = search.Update(&term.screens.active.pages)
+	changed, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, !changed, "!try search.update(&t.screens.active.pages)")
 
@@ -151,21 +151,21 @@ func TestSaViewport_clear_screen_and_search_dirty_tracking(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("Buzz\r\nFizz\r\nBuzz")))
 
 	// Should still not update since active area isn't dirty
-	changed, err = search.Update(&term.screens.active.pages)
+	changed, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, !changed, "!try search.update(&t.screens.active.pages)")
 
 	// Mark
 	search.active_dirty = Some(true)
-	changed, err = search.Update(&term.screens.active.pages)
+	changed, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.start)))
-		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagActive, sel.end)))
+		expectEqualPoint(t, saActivePoint(0, 1), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.Start)))
+		expectEqualPoint(t, saActivePoint(3, 1), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagActive, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 }
@@ -181,16 +181,16 @@ func TestSaViewport_history_search_no_active_area(t *testing.T) {
 	defer s.Deinit()
 
 	// Fill up first page
-	first_page_rows := uint(term.screens.active.pages.pages.first.data.capacity.rows)
+	first_page_rows := uint(term.Screens.Active.Pages.pages.first.data.capacity.rows)
 	zigTry(t, s.NextSlice([]uint8("Fizz\r\n")))
 	for i := uint(1); i < first_page_rows-1; i++ {
 		zigTry(t, s.NextSlice([]uint8("\r\n")))
 	}
-	expect(t, term.screens.active.pages.pages.first == term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first == term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first == t.screens.active.pages.pages.last")
 
 	// Create second page
 	zigTry(t, s.NextSlice([]uint8("\r\n")))
-	expect(t, term.screens.active.pages.pages.first != term.screens.active.pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
+	expect(t, term.Screens.Active.Pages.pages.first != term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.first != t.screens.active.pages.pages.last")
 	zigTry(t, s.NextSlice([]uint8("Buzz\r\nFizz")))
 
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
@@ -198,20 +198,20 @@ func TestSaViewport_history_search_no_active_area(t *testing.T) {
 	search, err := SearchViewportInit([]uint8("Fizz"))
 	zigTry(t, err)
 	defer search.Deinit()
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 
 	{
 		h := zigUnwrap(t, search.Next())
 		sel := h.Untracked()
-		expectEqualPoint(t, saScreenPoint(0, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, sel.start)))
-		expectEqualPoint(t, saScreenPoint(3, 0), zigUnwrap(t, term.screens.active.pages.PointFromPin(PointTagScreen, sel.end)))
+		expectEqualPoint(t, saScreenPoint(0, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagScreen, sel.Start)))
+		expectEqualPoint(t, saScreenPoint(3, 0), zigUnwrap(t, term.Screens.Active.Pages.PointFromPin(PointTagScreen, sel.End)))
 	}
 	expect(t, !search.Next().Valid, "search.next() == null")
 
 	// Viewport doesn't contain active
-	changed, err = search.Update(&term.screens.active.pages)
+	changed, err = search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, !changed, "!try search.update(&t.screens.active.pages)")
 	expect(t, !search.Next().Valid, "search.next() == null")
@@ -247,7 +247,7 @@ func TestSaViewport_term51_ViewportSearch_init_empty_needle_is_accepted(t *testi
 	// would panic on an integer underflow in SlidingWindow.highlight.
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 	expectEqual(t, uint(1), search.window.meta.Len())
@@ -266,7 +266,7 @@ func TestSaViewport_term51_ViewportSearch_deinit_frees_fingerprint_and_window(t 
 	saWrite(t, term, "Fizz")
 	search, err := SearchViewportInit([]uint8("Fizz"))
 	zigTry(t, err)
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 	expect(t, search.fingerprint.Valid, "search.fingerprint != null")
@@ -278,7 +278,7 @@ func TestSaViewport_term51_ViewportSearch_reset_drops_fingerprint_and_results_so
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{{y: 0, text: "Fizz"}})
 	p1 := pages.pages.first
@@ -355,7 +355,7 @@ func TestSaViewport_term51_ViewportSearch_update_first_update_fingerprints_the_v
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz\r\nBuzz\r\nFizz\r\nBang")
 	p := pages.pages.first
 
@@ -381,7 +381,7 @@ func TestSaViewport_term51_ViewportSearch_update_viewport_at_the_bottom_re_searc
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz")
 	p := pages.pages.first
 
@@ -403,7 +403,7 @@ func TestSaViewport_term51_ViewportSearch_update_terminal_changes_are_found_by_r
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz\r\nBuzz")
 	p := pages.pages.first
 
@@ -431,7 +431,7 @@ func TestSaViewport_term51_ViewportSearch_update_unchanged_viewport_in_history_r
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{
 		{y: 0, text: "Fizz"},
@@ -469,7 +469,7 @@ func TestSaViewport_term51_ViewportSearch_update_history_viewport_reports_matche
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{
 		{y: 0, text: "Fizz"},
@@ -500,7 +500,7 @@ func TestSaViewport_term51_ViewportSearch_update_moving_within_the_same_page_is_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, nil)
 	p1 := pages.pages.first
@@ -530,7 +530,7 @@ func TestSaViewport_term51_ViewportSearch_update_viewport_moving_to_other_pages_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{
 		{y: 0, text: "Fizz"},
@@ -599,7 +599,7 @@ func TestSaViewport_term51_ViewportSearch_update_a_viewport_that_overlaps_the_ac
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, nil)
 
@@ -639,14 +639,14 @@ func TestSaViewport_term51_ViewportSearch_update_overlap_with_the_active_area_is
 	// overlapping.
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+1, nil)
 	p1 := pages.pages.first
 	p2 := pages.pages.last
 	expect(t, p1 != p2, "p1 != p2")
-	expect(t, pages.GetTopLeft(PointTagActive).node == p1, "pages.getTopLeft(.active).node == p1")
-	expect(t, zigUnwrap(t, pages.GetBottomRight(PointTagActive)).node == p2, "pages.getBottomRight(.active).?.node == p2")
+	expect(t, pages.GetTopLeft(PointTagActive).Node == p1, "pages.getTopLeft(.active).node == p1")
+	expect(t, zigUnwrap(t, pages.GetBottomRight(PointTagActive)).Node == p2, "pages.getBottomRight(.active).?.node == p2")
 
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	expectEqual(t, uint(1), saPageCountOfViewport(t, pages))
@@ -680,7 +680,7 @@ func TestSaViewport_term51_ViewportSearch_update_dirty_tracking_only_re_searches
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz")
 	p := pages.pages.first
 
@@ -722,7 +722,7 @@ func TestSaViewport_term51_ViewportSearch_update_the_dirty_flag_is_consumed_even
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, nil)
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
@@ -746,7 +746,7 @@ func TestSaViewport_term51_ViewportSearch_update_a_changed_viewport_re_searches_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, nil)
 
@@ -784,7 +784,7 @@ func TestSaViewport_term51_ViewportSearch_update_leading_overlap_adds_a_soft_wra
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{{y: cap_ - 1, text: "xxxxxxxxTestZ"}})
 	p1 := pages.pages.first
@@ -817,7 +817,7 @@ func TestSaViewport_term51_ViewportSearch_update_previous_page_that_is_not_soft_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{
 		{y: cap_ - 1, text: "xxxxxxxxTe"},
@@ -843,7 +843,7 @@ func TestSaViewport_term51_ViewportSearch_update_leading_overlap_skips_empty_wra
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+10, []saMark{{y: 0, text: "Fizz"}})
 	p1 := pages.pages.first
@@ -890,7 +890,7 @@ func TestSaViewport_term51_ViewportSearch_update_leading_overlap_pages_are_appen
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+10, []saMark{
 		{y: 0, text: "Fizz"},
@@ -922,7 +922,7 @@ func TestSaViewport_term51_ViewportSearch_update_leading_overlap_sums_the_bytes_
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 3*cap_+10, []saMark{
 		{y: 0, text: "z"},
@@ -976,7 +976,7 @@ func TestSaViewport_term51_ViewportSearch_update_one_character_needle_stops_lead
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+10, []saMark{{y: 0, text: "z"}})
 	p1 := pages.pages.first
@@ -1001,7 +1001,7 @@ func TestSaViewport_term51_ViewportSearch_update_trailing_overlap_adds_a_soft_wr
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{{y: cap_ - 1, text: "xxxxxxxxTestZ"}})
 	p1 := pages.pages.first
@@ -1032,7 +1032,7 @@ func TestSaViewport_term51_ViewportSearch_update_no_trailing_overlap_when_the_la
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{
 		{y: cap_ - 1, text: "xxxxxxxxTe"},
@@ -1055,7 +1055,7 @@ func TestSaViewport_term51_ViewportSearch_update_trailing_overlap_stops_at_a_sho
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+10, []saMark{{y: 0, text: "Q"}})
 	p1 := pages.pages.first
@@ -1102,7 +1102,7 @@ func TestSaViewport_term51_ViewportSearch_update_trailing_overlap_stops_when_a_p
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+10, []saMark{{y: 0, text: "Q"}, {y: cap_, text: "abc"}})
 	p1 := pages.pages.first
@@ -1126,7 +1126,7 @@ func TestSaViewport_term51_ViewportSearch_update_trailing_overlap_sums_the_bytes
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 3*cap_+10, []saMark{
 		{y: 0, text: "Q"},
@@ -1171,7 +1171,7 @@ func TestSaViewport_term51_ViewportSearch_update_one_character_needle_stops_trai
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, 2*cap_+10, []saMark{{y: 0, text: "Q"}})
 	p1 := pages.pages.first
@@ -1197,7 +1197,7 @@ func TestSaViewport_term51_ViewportSearch_update_a_soft_wrapped_last_page_has_no
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	saWrite(t, term, "Fizz")
 	saWrapLast(pages.pages.last)
 
@@ -1222,9 +1222,9 @@ func TestSaViewport_term51_ViewportSearch_next_null_before_any_update_and_after_
 
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	p := term.screens.active.pages.pages.first
+	p := term.Screens.Active.Pages.pages.first
 	saWrite(t, term, "Fizz\r\nxfizz")
-	changed, err := search.Update(&term.screens.active.pages)
+	changed, err := search.Update(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	expect(t, changed, "try search.update(&t.screens.active.pages)")
 	saExpectHighlight(t, zigUnwrap(t, search.Next()), 0, 3, []saChunk{{node: p, start: 0, end: 1}})
@@ -1238,7 +1238,7 @@ func TestSaViewport_term51_ViewportSearch_Fingerprint_init_lists_the_pages_of_th
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 
 	// One page.
 	func() {
@@ -1297,7 +1297,7 @@ func TestSaViewport_term51_ViewportSearch_Fingerprint_deinit_frees_the_node_list
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	fp, err := searchViewportFingerprintInit(&term.screens.active.pages)
+	fp, err := searchViewportFingerprintInit(&term.Screens.Active.Pages)
 	zigTry(t, err)
 	fp.Deinit()
 }
@@ -1307,7 +1307,7 @@ func TestSaViewport_term51_ViewportSearch_Fingerprint_eql_compares_length_and_no
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, nil)
 	p1 := pages.pages.first
@@ -1360,7 +1360,7 @@ func TestSaViewport_panic_ViewportSearch_update_a_soft_wrap_overlap_candidate_pa
 	testStdCapacity(t)
 	term := saTerminal(t, 10, 10)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	cap_ := saCap(term)
 	saFill(t, term, cap_+10, []saMark{{y: cap_ - 1, text: "xxxxxxxxTestZ"}})
 	p1 := pages.pages.first

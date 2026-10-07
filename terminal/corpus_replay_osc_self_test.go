@@ -825,7 +825,7 @@ func oscSelfVariants(b *oscSelfBlock, v reflect.Value) []string {
 			s := "color:" + name(r.Tag)
 			switch r.Tag {
 			case OSCParsersColorRequestSet:
-				s += "/" + name(r.Set.target.Tag)
+				s += "/" + name(r.Set.Target.Tag)
 			case OSCParsersColorRequestQuery:
 				s += "/" + name(r.Query.Tag)
 			case OSCParsersColorRequestReset:
@@ -835,14 +835,14 @@ func oscSelfVariants(b *oscSelfBlock, v reflect.Value) []string {
 		}
 	}
 	kitty := func(k KittyColorOSC) {
-		out = append(out, "terminator:"+name(k.terminator))
-		for _, r := range k.list {
+		out = append(out, "terminator:"+name(k.Terminator))
+		for _, r := range k.List {
 			s := "kitty:" + name(r.Tag) + "/"
 			switch r.Tag {
 			case KittyColorOSCRequestQuery:
 				s += name(r.Query.Tag)
 			case KittyColorOSCRequestSet:
-				s += name(r.Set.key.Tag)
+				s += name(r.Set.Key.Tag)
 			case KittyColorOSCRequestReset:
 				s += name(r.Reset.Tag)
 			}
@@ -855,13 +855,13 @@ func oscSelfVariants(b *oscSelfBlock, v reflect.Value) []string {
 	case StreamAction:
 		switch b.tag {
 		case "color_operation":
-			color(a.ColorOperation.requests, a.ColorOperation.terminator, a.ColorOperation.op)
+			color(a.ColorOperation.Requests, a.ColorOperation.Terminator, a.ColorOperation.Op)
 		case "kitty_color_report":
 			kitty(a.KittyColorReport)
 		case "progress_report":
-			out = append(out, "progress:"+name(a.ProgressReport.state))
+			out = append(out, "progress:"+name(a.ProgressReport.State))
 		case "semantic_prompt":
-			out = append(out, "semantic:"+name(a.SemanticPrompt.action))
+			out = append(out, "semantic:"+name(a.SemanticPrompt.Action))
 		}
 	}
 	return out
@@ -950,7 +950,7 @@ func oscSelfCmdDump(c OSCCommand) string {
 	return buf.String()
 }
 
-func oscSelfRGB(r, g, b uint8) ColorRGB { return ColorRGB{r: r, g: g, b: b} }
+func oscSelfRGB(r, g, b uint8) ColorRGB { return ColorRGB{R: r, G: g, B: b} }
 
 // Every variant of osc.Command, dumped as the parser trace dumps it. Where the
 // corpus records the same payload (a stream action of the same type), the
@@ -970,69 +970,69 @@ func TestCorpusReplaySelfOSCVariants(t *testing.T) {
 		{"change_window_title", OSCCommand{Tag: OSCCommandKeyChangeWindowTitle, ChangeWindowTitle: str("tA")}, oscSelfCmd("change_window_title", "=tA")},
 		{"change_window_icon", OSCCommand{Tag: OSCCommandKeyChangeWindowIcon, ChangeWindowIcon: str("i\\c\x01")}, oscSelfCmd("change_window_icon", "=i\\x5cc\\x01")},
 		{"semantic_prompt", OSCCommand{Tag: OSCCommandKeySemanticPrompt, SemanticPrompt: OSCCommandSemanticPrompt{
-			action: OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, options_unvalidated: str("k=c")}},
+			Action: OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, OptionsUnvalidated: str("k=c")}},
 			oscSelfCmd("semantic_prompt", ".action=fresh_line_new_prompt", ".options_unvalidated=k=c")},
-		{"clipboard_contents", OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{kind: 'c', data: str("aGk=")}},
+		{"clipboard_contents", OSCCommand{Tag: OSCCommandKeyClipboardContents, ClipboardContents: OSCCommandClipboardContentsPayload{Kind: 'c', Data: str("aGk=")}},
 			oscSelfCmd("clipboard_contents", ".kind=99", ".data=aGk=")},
-		{"report_pwd", OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{value: str("file:///tmp")}},
+		{"report_pwd", OSCCommand{Tag: OSCCommandKeyReportPwd, ReportPwd: OSCCommandReportPwdPayload{Value: str("file:///tmp")}},
 			oscSelfCmd("report_pwd", ".value=file:///tmp")},
-		{"mouse_shape", OSCCommand{Tag: OSCCommandKeyMouseShape, MouseShape: OSCCommandMouseShapePayload{value: str("pointer")}},
+		{"mouse_shape", OSCCommand{Tag: OSCCommandKeyMouseShape, MouseShape: OSCCommandMouseShapePayload{Value: str("pointer")}},
 			oscSelfCmd("mouse_shape", ".value=pointer")},
 		{"color_operation", OSCCommand{Tag: OSCCommandKeyColorOperation, ColorOperation: OSCCommandColorOperationPayload{
-			op: OSCParsersColorOperationOsc4, terminator: OSCTerminatorBel,
-			requests: OSCParsersColorList{items: []OSCParsersColorRequest{
-				{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{target: OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette, Palette: 1}, color: oscSelfRGB(0x12, 0x34, 0x56)}},
+			Op: OSCParsersColorOperationOsc4, Terminator: OSCTerminatorBel,
+			Requests: OSCParsersColorList{items: []OSCParsersColorRequest{
+				{Tag: OSCParsersColorRequestSet, Set: OSCParsersColorColoredTarget{Target: OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette, Palette: 1}, Color: oscSelfRGB(0x12, 0x34, 0x56)}},
 				{Tag: OSCParsersColorRequestResetSpecial},
 			}}}},
 			oscSelfCmd("color_operation", ".op=osc_4", ".requests.len=2", ".requests[0]:", ".requests[]=set",
 				".requests[].set.target=palette", ".requests[].set.target.palette=1",
 				".requests[].set.color.r=18", ".requests[].set.color.g=52", ".requests[].set.color.b=86",
 				".requests[1]:", ".requests[]=reset_special", ".terminator=bel")},
-		{"kitty_color_protocol", OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{terminator: OSCTerminatorSt,
-			list: []KittyColorOSCRequest{{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialForeground}}}}},
+		{"kitty_color_protocol", OSCCommand{Tag: OSCCommandKeyKittyColorProtocol, KittyColorProtocol: KittyColorOSC{Terminator: OSCTerminatorSt,
+			List: []KittyColorOSCRequest{{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialForeground}}}}},
 			oscSelfCmd("kitty_color_protocol", ".list.len=1", ".list[0]:", ".list[]=query", ".list[].query=special",
 				".list[].query.special=foreground", ".terminator=st")},
-		{"show_desktop_notification", OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{title: str("a"), body: str("b")}},
+		{"show_desktop_notification", OSCCommand{Tag: OSCCommandKeyShowDesktopNotification, ShowDesktopNotification: OSCCommandShowDesktopNotificationPayload{Title: str("a"), Body: str("b")}},
 			oscSelfCmd("show_desktop_notification", ".title=a", ".body=b")},
-		{"hyperlink_start", OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{id: Some(str("a")), uri: str("http://example.com")}},
+		{"hyperlink_start", OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{ID: Some(str("a")), URI: str("http://example.com")}},
 			oscSelfCmd("hyperlink_start", ".id=a", ".uri=http://example.com")},
-		{"hyperlink_start null id", OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{uri: str("u")}},
+		{"hyperlink_start null id", OSCCommand{Tag: OSCCommandKeyHyperlinkStart, HyperlinkStart: OSCCommandHyperlinkStartPayload{URI: str("u")}},
 			oscSelfCmd("hyperlink_start", ".id=null", ".uri=u")},
 		{"hyperlink_end", OSCCommand{Tag: OSCCommandKeyHyperlinkEnd}, oscSelfCmd("hyperlink_end")},
-		{"conemu_sleep", OSCCommand{Tag: OSCCommandKeyConemuSleep, ConemuSleep: OSCCommandConemuSleepPayload{duration_ms: 65535}},
+		{"conemu_sleep", OSCCommand{Tag: OSCCommandKeyConemuSleep, ConemuSleep: OSCCommandConemuSleepPayload{DurationMs: 65535}},
 			oscSelfCmd("conemu_sleep", ".duration_ms=65535")},
 		{"conemu_show_message_box", OSCCommand{Tag: OSCCommandKeyConemuShowMessageBox, ConemuShowMessageBox: str("m")}, oscSelfCmd("conemu_show_message_box", "=m")},
 		{"conemu_change_tab_title value", OSCCommand{Tag: OSCCommandKeyConemuChangeTabTitle, ConemuChangeTabTitle: OSCCommandConemuChangeTabTitlePayload{Tag: OSCCommandConemuChangeTabTitlePayloadValue, Value: str("tab")}},
 			oscSelfCmd("conemu_change_tab_title", "=value", ".value=tab")},
 		{"conemu_change_tab_title reset", OSCCommand{Tag: OSCCommandKeyConemuChangeTabTitle, ConemuChangeTabTitle: OSCCommandConemuChangeTabTitlePayload{Tag: OSCCommandConemuChangeTabTitlePayloadReset}},
 			oscSelfCmd("conemu_change_tab_title", "=reset")},
-		{"conemu_progress_report", OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateSet, progress: Some(uint8(50))}},
+		{"conemu_progress_report", OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateSet, Progress: Some(uint8(50))}},
 			oscSelfCmd("conemu_progress_report", ".state=set", ".progress=50")},
-		{"conemu_progress_report null", OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateError}},
+		{"conemu_progress_report null", OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateError}},
 			oscSelfCmd("conemu_progress_report", ".state=error", ".progress=null")},
-		{"conemu_progress_report unnamed", OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{state: 9}},
+		{"conemu_progress_report unnamed", OSCCommand{Tag: OSCCommandKeyConemuProgressReport, ConemuProgressReport: OSCCommandProgressReport{State: 9}},
 			oscSelfCmd("conemu_progress_report", ".state=#9", ".progress=null")},
 		{"conemu_wait_input", OSCCommand{Tag: OSCCommandKeyConemuWaitInput}, oscSelfCmd("conemu_wait_input")},
 		{"conemu_guimacro", OSCCommand{Tag: OSCCommandKeyConemuGuimacro, ConemuGuimacro: str("g")}, oscSelfCmd("conemu_guimacro", "=g")},
 		{"conemu_run_process", OSCCommand{Tag: OSCCommandKeyConemuRunProcess, ConemuRunProcess: str("p")}, oscSelfCmd("conemu_run_process", "=p")},
 		{"conemu_output_environment_variable", OSCCommand{Tag: OSCCommandKeyConemuOutputEnvironmentVariable, ConemuOutputEnvironmentVariable: str("e")},
 			oscSelfCmd("conemu_output_environment_variable", "=e")},
-		{"conemu_xterm_emulation", OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation, ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{keyboard: Some(true), output: Some(false)}},
+		{"conemu_xterm_emulation", OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation, ConemuXtermEmulation: OSCCommandConemuXtermEmulationPayload{Keyboard: Some(true), Output: Some(false)}},
 			oscSelfCmd("conemu_xterm_emulation", ".keyboard=1", ".output=0")},
 		{"conemu_xterm_emulation null", OSCCommand{Tag: OSCCommandKeyConemuXtermEmulation},
 			oscSelfCmd("conemu_xterm_emulation", ".keyboard=null", ".output=null")},
 		{"conemu_comment", OSCCommand{Tag: OSCCommandKeyConemuComment, ConemuComment: str("c")}, oscSelfCmd("conemu_comment", "=c")},
 		{"kitty_text_sizing", OSCCommand{Tag: OSCCommandKeyKittyTextSizing, KittyTextSizing: OSCParsersKittyTextSizingOSC{
-			scale: 2, width: 7, numerator: 1, denominator: 15,
-			valign: OSCParsersKittyTextSizingVAlignCenter, halign: OSCParsersKittyTextSizingHAlignRight, text: str("hi")}},
+			Scale: 2, Width: 7, Numerator: 1, Denominator: 15,
+			Valign: OSCParsersKittyTextSizingVAlignCenter, Halign: OSCParsersKittyTextSizingHAlignRight, Text: str("hi")}},
 			oscSelfCmd("kitty_text_sizing", ".scale=2", ".width=7", ".numerator=1", ".denominator=15", ".valign=center", ".halign=right", ".text=hi")},
 		{"kitty_clipboard_protocol", OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{
-			metadata: str("type=read"), payload: Some(str("abc")), terminator: OSCTerminatorBel}},
+			Metadata: str("type=read"), Payload: Some(str("abc")), Terminator: OSCTerminatorBel}},
 			oscSelfCmd("kitty_clipboard_protocol", ".metadata=type=read", ".payload=abc", ".terminator=bel")},
-		{"kitty_clipboard_protocol null", OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{metadata: str("m")}},
+		{"kitty_clipboard_protocol null", OSCCommand{Tag: OSCCommandKeyKittyClipboardProtocol, KittyClipboardProtocol: OSCCommandKittyClipboardProtocol{Metadata: str("m")}},
 			oscSelfCmd("kitty_clipboard_protocol", ".metadata=m", ".payload=null", ".terminator=st")},
 		{"context_signal", OSCCommand{Tag: OSCCommandKeyContextSignal, ContextSignal: OSCParsersContextSignalCommand{
-			action: OSCParsersContextSignalCommandActionEnd, id: str("abc"), metadata: str("type=shell")}},
+			Action: OSCParsersContextSignalCommandActionEnd, ID: str("abc"), Metadata: str("type=shell")}},
 			oscSelfCmd("context_signal", ".action=end", ".id=abc", ".metadata=type=shell")},
 	}
 	seen := map[string]bool{}
@@ -1073,20 +1073,20 @@ func TestCorpusReplaySelfOSCVariants(t *testing.T) {
 		value StreamAction
 		text  string
 	}{
-		{"semantic_prompt", StreamAction{SemanticPrompt: OSCCommandSemanticPrompt{action: OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, options_unvalidated: str("k=c")}},
+		{"semantic_prompt", StreamAction{SemanticPrompt: OSCCommandSemanticPrompt{Action: OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, OptionsUnvalidated: str("k=c")}},
 			" v.action=fresh_line_new_prompt\n v.options_unvalidated=k=c\n"},
-		{"progress_report", StreamAction{ProgressReport: OSCCommandProgressReport{state: OSCCommandProgressReportStateSet, progress: Some(uint8(50))}},
+		{"progress_report", StreamAction{ProgressReport: OSCCommandProgressReport{State: OSCCommandProgressReportStateSet, Progress: Some(uint8(50))}},
 			" v.state=set\n v.progress=50\n"},
 		{"mouse_shape", StreamAction{MouseShape: MouseShapePointer}, " v=pointer\n"},
-		{"clipboard_contents", StreamAction{ClipboardContents: StreamActionClipboardContents{kind: 'c', data: str("aGk=")}}, " v.kind=99\n v.data=aGk=\n"},
-		{"show_desktop_notification", StreamAction{ShowDesktopNotification: StreamActionShowDesktopNotification{title: str("a"), body: str("b")}}, " v.title=a\n v.body=b\n"},
+		{"clipboard_contents", StreamAction{ClipboardContents: StreamActionClipboardContents{Kind: 'c', Data: str("aGk=")}}, " v.kind=99\n v.data=aGk=\n"},
+		{"show_desktop_notification", StreamAction{ShowDesktopNotification: StreamActionShowDesktopNotification{Title: str("a"), Body: str("b")}}, " v.title=a\n v.body=b\n"},
 		{"end_hyperlink", StreamAction{}, ""},
-		{"kitty_color_report", StreamAction{KittyColorReport: KittyColorOSC{terminator: OSCTerminatorSt,
-			list: []KittyColorOSCRequest{{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialForeground}}}}},
+		{"kitty_color_report", StreamAction{KittyColorReport: KittyColorOSC{Terminator: OSCTerminatorSt,
+			List: []KittyColorOSCRequest{{Tag: KittyColorOSCRequestQuery, Query: KittyColorKind{Tag: KittyColorKindSpecial, Special: KittyColorSpecialForeground}}}}},
 			" v.list.len=1\n v.list[0]:\n v.list[]=query\n v.list[].query=special\n v.list[].query.special=foreground\n v.terminator=st\n"},
-		{"color_operation", StreamAction{ColorOperation: StreamActionColorOperation{op: OSCParsersColorOperationOsc4, terminator: OSCTerminatorSt,
-			requests: OSCParsersColorList{items: []OSCParsersColorRequest{{Tag: OSCParsersColorRequestSet,
-				Set: OSCParsersColorColoredTarget{target: OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette, Palette: 1}, color: oscSelfRGB(0x12, 0x34, 0x56)}}}}}},
+		{"color_operation", StreamAction{ColorOperation: StreamActionColorOperation{Op: OSCParsersColorOperationOsc4, Terminator: OSCTerminatorSt,
+			Requests: OSCParsersColorList{items: []OSCParsersColorRequest{{Tag: OSCParsersColorRequestSet,
+				Set: OSCParsersColorColoredTarget{Target: OSCParsersColorTarget{Tag: OSCParsersColorTargetPalette, Palette: 1}, Color: oscSelfRGB(0x12, 0x34, 0x56)}}}}}},
 			" v.op=osc_4\n v.requests.len=1\n v.requests[0]:\n v.requests[]=set\n v.requests[].set.target=palette\n v.requests[].set.target.palette=1\n" +
 				" v.requests[].set.color.r=18\n v.requests[].set.color.g=52\n v.requests[].set.color.b=86\n v.terminator=st\n"},
 	} {
@@ -1104,8 +1104,8 @@ func TestCorpusReplaySelfOSCVariants(t *testing.T) {
 	// The colour requests that the corpus does not record (reset_special, and
 	// osc_105): the lines follow the rules of the union and enum arms.
 	var buf bytes.Buffer
-	dumpAny(&buf, " v", StreamActionColorOperation{op: OSCParsersColorOperationOsc105, terminator: OSCTerminatorBel,
-		requests: OSCParsersColorList{items: []OSCParsersColorRequest{
+	dumpAny(&buf, " v", StreamActionColorOperation{Op: OSCParsersColorOperationOsc105, Terminator: OSCTerminatorBel,
+		Requests: OSCParsersColorList{items: []OSCParsersColorRequest{
 			{Tag: OSCParsersColorRequestResetSpecial},
 			{Tag: OSCParsersColorRequestQuery, Query: OSCParsersColorTarget{Tag: OSCParsersColorTargetSpecial, Special: ColorSpecialItalic}},
 			{Tag: OSCParsersColorRequestReset, Reset: OSCParsersColorTarget{Tag: OSCParsersColorTargetDynamic, Dynamic: ColorDynamicHighlightForeground}},
@@ -1118,7 +1118,7 @@ func TestCorpusReplaySelfOSCVariants(t *testing.T) {
 	}
 	// An empty list and an unnamed enum value.
 	buf.Reset()
-	dumpAny(&buf, " v", StreamActionColorOperation{op: 77})
+	dumpAny(&buf, " v", StreamActionColorOperation{Op: 77})
 	if got, want := buf.String(), " v.op=#77\n v.requests.len=0\n v.terminator=st\n"; got != want {
 		t.Errorf("empty list %q, want %q", got, want)
 	}

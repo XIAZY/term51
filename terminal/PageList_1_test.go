@@ -97,17 +97,17 @@ func pl1Clone(t *testing.T, s *PageList, opts PageListClone) PageList {
 
 // pl1Active is the Zig literal `.{ .active = .{ .x = x, .y = y } }`.
 func pl1Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 // pl1Screen is the Zig literal `.{ .screen = .{ .x = x, .y = y } }`.
 func pl1Screen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 // pl1History is the Zig literal `.{ .history = .{ .x = x, .y = y } }`.
 func pl1History(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: x, Y: y}}
 }
 
 // pl1Codepoint is the Zig literal `.{ .content_tag = .codepoint, .content =
@@ -148,20 +148,20 @@ func TestPl1_PageList(t *testing.T) {
 
 	// Our viewport pin must be defined. It isn't used until the
 	// viewport is a pin but it prevents undefined access on clone.
-	expect(t, s.viewport_pin.node == s.pages.first, "s.viewport_pin.node == s.pages.first.?")
+	expect(t, s.viewport_pin.Node == s.pages.first, "s.viewport_pin.node == s.pages.first.?")
 
 	// Active area should be the top
 	expectEqual(t, PageListPin{
-		node: s.pages.first,
-		y:    0,
-		x:    0,
+		Node: s.pages.first,
+		Y:    0,
+		X:    0,
 	}, s.GetTopLeft(PointTagActive))
 
 	// Scrollbar should be where we expect it
 	expectEqual(t, PageListScrollbar{
-		total:  uint(s.rows),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  uint(s.rows),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -196,9 +196,9 @@ func TestPl1_PageList_init_rows_across_two_pages(t *testing.T) {
 
 	// Scrollbar should be where we expect it
 	expectEqual(t, PageListScrollbar{
-		total:  uint(s.rows),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  uint(s.rows),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -229,9 +229,9 @@ func TestPl1_PageList_init_more_than_max_cols(t *testing.T) {
 
 	// Scrollbar should be where we expect it
 	expectEqual(t, PageListScrollbar{
-		total:  uint(s.rows),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  uint(s.rows),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -244,16 +244,16 @@ func TestPl1_PageList_pointFromPin_active_no_history(t *testing.T) {
 
 	{
 		expectEqualPoint(t, pl1Active(0, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.first,
-			y:    0,
-			x:    0,
+			Node: s.pages.first,
+			Y:    0,
+			X:    0,
 		})))
 	}
 	{
 		expectEqualPoint(t, pl1Active(4, 2), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.first,
-			y:    2,
-			x:    4,
+			Node: s.pages.first,
+			Y:    2,
+			X:    4,
 		})))
 	}
 }
@@ -268,18 +268,18 @@ func TestPl1_PageList_pointFromPin_active_with_history(t *testing.T) {
 
 	{
 		expectEqualPoint(t, pl1Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.first,
-			y:    30,
-			x:    2,
+			Node: s.pages.first,
+			Y:    30,
+			X:    2,
 		})))
 	}
 
 	// In history, invalid
 	{
 		expect(t, !s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.first,
-			y:    21,
-			x:    2,
+			Node: s.pages.first,
+			Y:    21,
+			X:    2,
 		}).Valid, "s.pointFromPin(.active, .{ ... }) == null")
 	}
 }
@@ -305,18 +305,18 @@ func TestPl1_PageList_pointFromPin_active_from_prior_page(t *testing.T) {
 
 	{
 		expectEqualPoint(t, pl1Active(2, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.last,
-			y:    0,
-			x:    2,
+			Node: s.pages.last,
+			Y:    0,
+			X:    2,
 		})))
 	}
 
 	// Prior page
 	{
 		expect(t, !s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.first,
-			y:    0,
-			x:    0,
+			Node: s.pages.first,
+			Y:    0,
+			X:    0,
 		}).Valid, "s.pointFromPin(.active, .{ ... }) == null")
 	}
 }
@@ -347,18 +347,18 @@ func TestPl1_PageList_pointFromPin_traverse_pages(t *testing.T) {
 		expected_y := page_cap*(pages-2) + 5
 
 		expectEqualPoint(t, pl1Screen(2, uint32(expected_y)), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{
-			node: s.pages.last.prev,
-			y:    5,
-			x:    2,
+			Node: s.pages.last.prev,
+			Y:    5,
+			X:    2,
 		})))
 	}
 
 	// Prior page
 	{
 		expect(t, !s.PointFromPin(PointTagActive, PageListPin{
-			node: s.pages.first,
-			y:    0,
-			x:    0,
+			Node: s.pages.first,
+			Y:    0,
+			X:    0,
 		}).Valid, "s.pointFromPin(.active, .{ ... }) == null")
 	}
 }
@@ -390,9 +390,9 @@ func TestPl1_PageList_active_after_grow(t *testing.T) {
 
 	// Scrollbar should be in the active area
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 10,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 10,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -478,9 +478,9 @@ func TestPl1_PageList_grow_prune_required_with_a_single_page(t *testing.T) {
 
 	// Scrollbar should be in the active area
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -497,10 +497,10 @@ func TestPl1_PageList_scrollbar_with_max_size_0_after_grow(t *testing.T) {
 	sb := s.Scrollbar()
 
 	// With no scrollback (max_size = 0), total should equal rows
-	expectEqual(t, uint(s.rows), sb.total)
+	expectEqual(t, uint(s.rows), sb.Total)
 
 	// With no scrollback, offset should be 0 (nowhere to scroll back to)
-	expectEqual(t, uint(0), sb.offset)
+	expectEqual(t, uint(0), sb.Offset)
 }
 
 // Zig: test "PageList scroll with max_size 0 no history"
@@ -546,9 +546,9 @@ func TestPl1_PageList_scroll_top(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	pl1GrowRows(t, &s, 10)
@@ -558,9 +558,9 @@ func TestPl1_PageList_scroll_top(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	s.Scroll(PageListScroll{Tag: PageListScrollActive})
@@ -570,9 +570,9 @@ func TestPl1_PageList_scroll_top(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -592,9 +592,9 @@ func TestPl1_PageList_scroll_delta_row_back(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -1})
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows) - 1,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows) - 1,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -609,17 +609,17 @@ func TestPl1_PageList_scroll_delta_row_back(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows) - 11,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows) - 11,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -1})
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows) - 12,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows) - 12,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -644,9 +644,9 @@ func TestPl1_PageList_scroll_delta_row_back_overflow(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	pl1GrowRows(t, &s, 10)
@@ -656,9 +656,9 @@ func TestPl1_PageList_scroll_delta_row_back_overflow(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -679,9 +679,9 @@ func TestPl1_PageList_scroll_delta_row_forward(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: 2})
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 2,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 2,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -696,9 +696,9 @@ func TestPl1_PageList_scroll_delta_row_forward(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 2,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 2,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -717,9 +717,9 @@ func TestPl1_PageList_scroll_delta_row_forward_into_active(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -739,9 +739,9 @@ func TestPl1_PageList_scroll_delta_row_back_without_space_preserves_active(t *te
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -756,9 +756,9 @@ func TestPl1_PageList_scroll_to_pin(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(2, 4)))})
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 4,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 4,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -769,9 +769,9 @@ func TestPl1_PageList_scroll_to_pin(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(2, 5)))})
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 5,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 5,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -791,9 +791,9 @@ func TestPl1_PageList_scroll_to_pin_in_active(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(2, 30)))})
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -815,9 +815,9 @@ func TestPl1_PageList_scroll_to_pin_at_top(t *testing.T) {
 	expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.totalRows(),
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.totalRows(),
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -848,9 +848,9 @@ func TestPl1_PageList_scroll_to_row_0(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	pl1GrowRows(t, &s, 10)
@@ -860,9 +860,9 @@ func TestPl1_PageList_scroll_to_row_0(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 0,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 0,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -882,9 +882,9 @@ func TestPl1_PageList_scroll_to_row_in_scrollback(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollRow, Row: 5})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 5,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 5,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -899,9 +899,9 @@ func TestPl1_PageList_scroll_to_row_in_scrollback(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 5,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 5,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -919,9 +919,9 @@ func TestPl1_PageList_scroll_to_row_in_middle(t *testing.T) {
 
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: midpoint,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: midpoint,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -936,9 +936,9 @@ func TestPl1_PageList_scroll_to_row_in_middle(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: midpoint,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: midpoint,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -962,9 +962,9 @@ func TestPl1_PageList_scroll_to_row_at_active_boundary(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	pl1GrowRows(t, &s, 10)
@@ -972,9 +972,9 @@ func TestPl1_PageList_scroll_to_row_at_active_boundary(t *testing.T) {
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -996,9 +996,9 @@ func TestPl1_PageList_scroll_to_row_beyond_active(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1019,9 +1019,9 @@ func TestPl1_PageList_scroll_to_row_without_scrollback(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1043,9 +1043,9 @@ func TestPl1_PageList_scroll_to_row_then_delta(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 10,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 10,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: 5})
@@ -1058,9 +1058,9 @@ func TestPl1_PageList_scroll_to_row_then_delta(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 15,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 15,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	s.Scroll(PageListScroll{Tag: PageListScrollDeltaRow, DeltaRow: -3})
@@ -1073,9 +1073,9 @@ func TestPl1_PageList_scroll_to_row_then_delta(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 12,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 12,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1091,9 +1091,9 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_down(t *testing.T) {
 
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 10,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 10,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -1110,9 +1110,9 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_down(t *testing.T) {
 
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 20,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 20,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -1127,9 +1127,9 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_down(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 20,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 20,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1145,9 +1145,9 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_up(t *testing.T) {
 
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 30,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 30,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -1164,9 +1164,9 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_up(t *testing.T) {
 
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 15,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 15,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	{
@@ -1181,9 +1181,9 @@ func TestPl1_PageList_scroll_to_row_with_cache_fast_path_up(t *testing.T) {
 	}
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: 15,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: 15,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1196,11 +1196,11 @@ func TestPl1_PageList_scroll_clear(t *testing.T) {
 
 	{
 		cell := zigUnwrap(t, s.GetCell(pl1Active(0, 0)))
-		*cell.cell = pl1Codepoint('A')
+		*cell.Cell = pl1Codepoint('A')
 	}
 	{
 		cell := zigUnwrap(t, s.GetCell(pl1Active(0, 1)))
-		*cell.cell = pl1Codepoint('A')
+		*cell.Cell = pl1Codepoint('A')
 	}
 
 	zigTry(t, s.ScrollClear())
@@ -1233,9 +1233,9 @@ func TestPl1_PageList_jump_zero_prompts(t *testing.T) {
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: s.total_rows - uint(s.rows),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: s.total_rows - uint(s.rows),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1264,9 +1264,9 @@ func TestPl1_Screen_jump_back_one_prompt(t *testing.T) {
 		expectEqualPoint(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
 
 		expectEqual(t, PageListScrollbar{
-			total:  s.total_rows,
-			offset: 1,
-			len:    uint(s.rows),
+			Total:  s.total_rows,
+			Offset: 1,
+			Len:    uint(s.rows),
 		}, s.Scrollbar())
 	}
 	{
@@ -1275,9 +1275,9 @@ func TestPl1_Screen_jump_back_one_prompt(t *testing.T) {
 		expectEqualPoint(t, pl1Screen(0, 1), zigUnwrap(t, s.PointFromPin(PointTagScreen, zigUnwrap(t, s.Pin(Point{Tag: PointTagViewport})))))
 
 		expectEqual(t, PageListScrollbar{
-			total:  s.total_rows,
-			offset: 1,
-			len:    uint(s.rows),
+			Total:  s.total_rows,
+			Offset: 1,
+			Len:    uint(s.rows),
 		}, s.Scrollbar())
 	}
 
@@ -1286,18 +1286,18 @@ func TestPl1_Screen_jump_back_one_prompt(t *testing.T) {
 		s.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: 1})
 		expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 		expectEqual(t, PageListScrollbar{
-			total:  s.total_rows,
-			offset: s.total_rows - uint(s.rows),
-			len:    uint(s.rows),
+			Total:  s.total_rows,
+			Offset: s.total_rows - uint(s.rows),
+			Len:    uint(s.rows),
 		}, s.Scrollbar())
 	}
 	{
 		s.Scroll(PageListScroll{Tag: PageListScrollDeltaPrompt, DeltaPrompt: 1})
 		expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 		expectEqual(t, PageListScrollbar{
-			total:  s.total_rows,
-			offset: s.total_rows - uint(s.rows),
-			len:    uint(s.rows),
+			Total:  s.total_rows,
+			Offset: s.total_rows - uint(s.rows),
+			Len:    uint(s.rows),
 		}, s.Scrollbar())
 	}
 }
@@ -1385,7 +1385,7 @@ func TestPl1_PageList_grow_allocate(t *testing.T) {
 	expect(t, last_node.next == new, "last_node.next.? == new")
 	{
 		cell := zigUnwrap(t, s.GetCell(pl1Active(0, uint32(s.rows-1))))
-		expect(t, cell.node == new, "cell.node == new")
+		expect(t, cell.Node == new, "cell.node == new")
 		expectEqualPoint(t, pl1Screen(0, uint32(last.capacity.rows)), cell.ScreenPoint())
 	}
 }
@@ -1420,7 +1420,7 @@ func TestPl1_PageList_grow_prune_scrollback(t *testing.T) {
 	p, err := s.TrackPin(zigUnwrap(t, s.Pin(Point{Tag: PointTagScreen})))
 	zigTry(t, err)
 	defer s.UntrackPin(p)
-	expect(t, p.node == s.pages.first, "p.node == s.pages.first.?")
+	expect(t, p.Node == s.pages.first, "p.node == s.pages.first.?")
 
 	// Scroll back to create a pinned viewport (not active)
 	pin_y := page1.capacity.rows / 2
@@ -1429,7 +1429,7 @@ func TestPl1_PageList_grow_prune_scrollback(t *testing.T) {
 
 	// Get the scrollbar state to populate the cache
 	scrollbar_before := s.Scrollbar()
-	expectEqual(t, uint(pin_y), scrollbar_before.offset)
+	expectEqual(t, uint(pin_y), scrollbar_before.Offset)
 
 	// Next should create a new page, but it should reuse our first
 	// page since we're at max size.
@@ -1443,10 +1443,10 @@ func TestPl1_PageList_grow_prune_scrollback(t *testing.T) {
 	expectEqual(t, page1_node, s.pages.last)
 
 	// Our tracked pin should point to the top-left of the first page
-	expect(t, p.node == s.pages.first, "p.node == s.pages.first.?")
-	expect(t, p.x == 0, "p.x == 0")
-	expect(t, p.y == 0, "p.y == 0")
-	expect(t, p.garbage, "p.garbage")
+	expect(t, p.Node == s.pages.first, "p.node == s.pages.first.?")
+	expect(t, p.X == 0, "p.x == 0")
+	expect(t, p.Y == 0, "p.y == 0")
+	expect(t, p.Garbage, "p.garbage")
 
 	// Verify the viewport offset cache was invalidated. After pruning,
 	// the offset should have changed because we removed rows from
@@ -1460,7 +1460,7 @@ func TestPl1_PageList_grow_prune_scrollback(t *testing.T) {
 		} else {
 			expected_offset = 0
 		}
-		expectEqual(t, expected_offset, scrollbar_after.offset)
+		expectEqual(t, expected_offset, scrollbar_after.Offset)
 	}
 }
 
@@ -1496,11 +1496,11 @@ func TestPl1_PageList_grow_prune_scrollback_with_viewport_pin_not_in_pruned_page
 	pin_y := page1.capacity.rows + 5
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, uint32(pin_y))))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expect(t, s.viewport_pin.node == page2_node, "s.viewport_pin.node == page2_node")
+	expect(t, s.viewport_pin.Node == page2_node, "s.viewport_pin.node == page2_node")
 
 	// Get the scrollbar state to populate the cache
 	scrollbar_before := s.Scrollbar()
-	expectEqual(t, uint(pin_y), scrollbar_before.offset)
+	expectEqual(t, uint(pin_y), scrollbar_before.Offset)
 
 	// Next grow will trigger pruning of the first page.
 	// The viewport_pin.node is page2, not page1, so it won't be moved
@@ -1515,7 +1515,7 @@ func TestPl1_PageList_grow_prune_scrollback_with_viewport_pin_not_in_pruned_page
 	expectEqual(t, page2_node, s.pages.first)
 
 	// The viewport pin should still be on page2, unchanged
-	expect(t, s.viewport_pin.node == page2_node, "s.viewport_pin.node == page2_node")
+	expect(t, s.viewport_pin.Node == page2_node, "s.viewport_pin.node == page2_node")
 
 	// Verify the viewport offset cache was invalidated/updated.
 	// After pruning, the offset should have decreased by the number
@@ -1523,7 +1523,7 @@ func TestPl1_PageList_grow_prune_scrollback_with_viewport_pin_not_in_pruned_page
 	scrollbar_after := s.Scrollbar()
 	rows_pruned := page1.capacity.rows
 	expected_offset := pin_y - rows_pruned
-	expectEqual(t, uint(expected_offset), scrollbar_after.offset)
+	expectEqual(t, uint(expected_offset), scrollbar_after.Offset)
 }
 
 // Zig: test "PageList eraseRows invalidates viewport offset cache"
@@ -1551,9 +1551,9 @@ func TestPl1_PageList_eraseRows_invalidates_viewport_offset_cache(t *testing.T) 
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, uint32(pin_y))))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Erase some history rows BEFORE the viewport pin.
@@ -1562,13 +1562,13 @@ func TestPl1_PageList_eraseRows_invalidates_viewport_offset_cache(t *testing.T) 
 	rows_to_erase := page.capacity.rows / 2
 	s.EraseRows(
 		Point{Tag: PointTagHistory},
-		Some(Point{Tag: PointTagHistory, History: PointCoordinate{y: uint32(rows_to_erase - 1)}}),
+		Some(Point{Tag: PointTagHistory, History: PointCoordinate{Y: uint32(rows_to_erase - 1)}}),
 	)
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y - rows_to_erase),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y - rows_to_erase),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1597,9 +1597,9 @@ func TestPl1_PageList_eraseRow_invalidates_viewport_offset_cache(t *testing.T) {
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, uint32(pin_y))))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Erase a single row from the history BEFORE the viewport pin.
@@ -1608,9 +1608,9 @@ func TestPl1_PageList_eraseRow_invalidates_viewport_offset_cache(t *testing.T) {
 	zigTry(t, s.EraseRow(pl1History(0, 0)))
 
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y) - 1,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y) - 1,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1639,9 +1639,9 @@ func TestPl1_PageList_eraseRowBounded_invalidates_viewport_offset_cache(t *testi
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, uint32(pin_y))))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Erase a row from the history BEFORE the viewport pin with a bounded
@@ -1651,9 +1651,9 @@ func TestPl1_PageList_eraseRowBounded_invalidates_viewport_offset_cache(t *testi
 
 	// Verify the scrollbar reflects the change (offset decreased by 1)
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y) - 1,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y) - 1,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1682,9 +1682,9 @@ func TestPl1_PageList_eraseRowBounded_multi_page_invalidates_viewport_offset_cac
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, uint32(pin_y))))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Erase a row from the beginning of history with a limit that spans
@@ -1695,9 +1695,9 @@ func TestPl1_PageList_eraseRowBounded_multi_page_invalidates_viewport_offset_cac
 
 	// Verify the scrollbar reflects the change (offset decreased by 1)
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y) - 1,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y) - 1,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1726,9 +1726,9 @@ func TestPl1_PageList_eraseRowBounded_full_page_shift_invalidates_viewport_offse
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, pin_y)))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: pin_y,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: pin_y,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Erase a row from the beginning of history with a limit that is
@@ -1741,9 +1741,9 @@ func TestPl1_PageList_eraseRowBounded_full_page_shift_invalidates_viewport_offse
 
 	// Verify the scrollbar reflects the change (offset decreased by 1)
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: pin_y - 1,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: pin_y - 1,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1776,9 +1776,9 @@ func TestPl1_PageList_eraseRowBounded_exhausts_pages_invalidates_viewport_offset
 	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: zigUnwrap(t, s.Pin(pl1Screen(0, uint32(pin_y))))})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y),
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y),
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 
 	// Erase a row from the beginning of history with a limit that is
@@ -1789,9 +1789,9 @@ func TestPl1_PageList_eraseRowBounded_exhausts_pages_invalidates_viewport_offset
 
 	// Verify the scrollbar reflects the change (offset decreased by 1)
 	expectEqual(t, PageListScrollbar{
-		total:  s.total_rows,
-		offset: uint(pin_y) - 1,
-		len:    uint(s.rows),
+		Total:  s.total_rows,
+		Offset: uint(pin_y) - 1,
+		Len:    uint(s.rows),
 	}, s.Scrollbar())
 }
 
@@ -1983,16 +1983,16 @@ func TestPl1_PageList_increaseCapacity_tracked_pins(t *testing.T) {
 	defer s.UntrackPin(tracked)
 
 	old_node := s.pages.first
-	expectEqual(t, old_node, tracked.node)
+	expectEqual(t, old_node, tracked.Node)
 
 	// Increase capacity
 	new_node, err := s.IncreaseCapacity(s.pages.first, Some(PageListIncreaseCapacityStyles))
 	zigTry(t, err)
 
 	// Pin should now point to the new node
-	expectEqual(t, new_node, tracked.node)
-	expectEqual(t, SizeCellCountInt(1), tracked.x)
-	expectEqual(t, SizeCellCountInt(1), tracked.y)
+	expectEqual(t, new_node, tracked.Node)
+	expectEqual(t, SizeCellCountInt(1), tracked.X)
+	expectEqual(t, SizeCellCountInt(1), tracked.Y)
 }
 
 // Zig: test "PageList increaseCapacity returns OutOfSpace at max capacity"
@@ -2026,7 +2026,7 @@ func TestPl1_PageList_increaseCapacity_after_col_shrink(t *testing.T) {
 	defer s.Deinit()
 
 	// Shrink columns
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, SizeCellCountInt(5), s.cols)
 
 	{
@@ -2203,7 +2203,7 @@ func TestPl1_PageList_pageIterator_history_two_pages(t *testing.T) {
 		expect(t, chunk.node == s.pages.first, "chunk.node == s.pages.first.?")
 		start := uint(0)
 		expectEqual(t, start, uint(chunk.start))
-		expectEqual(t, active_tl.y, chunk.end)
+		expectEqual(t, active_tl.Y, chunk.end)
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2296,7 +2296,7 @@ func TestPl1_PageList_pageIterator_reverse_history_two_pages(t *testing.T) {
 		expect(t, chunk.node == s.pages.first, "chunk.node == s.pages.first.?")
 		start := uint(0)
 		expectEqual(t, start, uint(chunk.start))
-		expectEqual(t, active_tl.y, chunk.end)
+		expectEqual(t, active_tl.Y, chunk.end)
 	}
 	expect(t, !it.Next().Valid, "it.next() == null")
 }
@@ -2635,8 +2635,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(2, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt with output"
@@ -2682,8 +2682,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_with_output(t *testing.T) 
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(6, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(6, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt multiline"
@@ -2724,8 +2724,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_multiline(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(2, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(4, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(4, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt only"
@@ -2758,8 +2758,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_only(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent prompt to end of screen"
@@ -2792,8 +2792,8 @@ func TestPl1_PageList_highlightSemanticContent_prompt_to_end_of_screen(t *testin
 		zigUnwrap(t, s.Pin(pl1Screen(0, 15))),
 		PageCellSemanticContentPrompt,
 	))
-	expectEqualPoint(t, pl1Screen(0, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(7, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(7, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent input basic"
@@ -2833,8 +2833,8 @@ func TestPl1_PageList_highlightSemanticContent_input_basic(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentInput,
 	))
-	expectEqualPoint(t, pl1Screen(3, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(3, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent input with output"
@@ -2880,8 +2880,8 @@ func TestPl1_PageList_highlightSemanticContent_input_with_output(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentInput,
 	))
-	expectEqualPoint(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent input multiline with continuation"
@@ -2935,8 +2935,8 @@ func TestPl1_PageList_highlightSemanticContent_input_multiline_with_continuation
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentInput,
 	))
-	expectEqualPoint(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(5, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(2, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(5, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent input no input returns null"
@@ -3009,8 +3009,8 @@ func TestPl1_PageList_highlightSemanticContent_input_to_end_of_screen(t *testing
 		zigUnwrap(t, s.Pin(pl1Screen(0, 15))),
 		PageCellSemanticContentInput,
 	))
-	expectEqualPoint(t, pl1Screen(2, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(6, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(2, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(6, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent input prompt only returns null"
@@ -3105,8 +3105,8 @@ func TestPl1_PageList_highlightSemanticContent_output_basic(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqualPoint(t, pl1Screen(5, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(5, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(7, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent output multiline"
@@ -3170,8 +3170,8 @@ func TestPl1_PageList_highlightSemanticContent_output_multiline(t *testing.T) {
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(4, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(4, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent output stops at next prompt"
@@ -3229,8 +3229,8 @@ func TestPl1_PageList_highlightSemanticContent_output_stops_at_next_prompt(t *te
 		zigUnwrap(t, s.Pin(pl1Screen(0, 5))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(2, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(4, 5), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(2, 6), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent output to end of screen"
@@ -3279,8 +3279,8 @@ func TestPl1_PageList_highlightSemanticContent_output_to_end_of_screen(t *testin
 		zigUnwrap(t, s.Pin(pl1Screen(0, 15))),
 		PageCellSemanticContentOutput,
 	))
-	expectEqualPoint(t, pl1Screen(4, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(7, 16), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(4, 15), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(7, 16), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList highlightSemanticContent output no output returns null"
@@ -3390,8 +3390,8 @@ func TestPl1_PageList_highlightSemanticContent_output_skips_empty_cells(t *testi
 		PageCellSemanticContentOutput,
 	))
 	// Output should start at row 7, not row 5 (where empty cells have default .output)
-	expectEqualPoint(t, pl1Screen(0, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.start)))
-	expectEqualPoint(t, pl1Screen(4, 8), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.end)))
+	expectEqualPoint(t, pl1Screen(0, 7), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Start)))
+	expectEqualPoint(t, pl1Screen(4, 8), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.End)))
 }
 
 // Zig: test "PageList erase"
@@ -3488,9 +3488,9 @@ func TestPl1_PageList_erase_row_with_tracked_pin_resets_to_top_left(t *testing.T
 	expectEqual(t, uint(s.rows), s.total_rows)
 
 	// Our pin should move to the first page
-	expectEqual(t, s.pages.first, p.node)
-	expectEqual(t, uint(0), uint(p.y))
-	expectEqual(t, uint(0), uint(p.x))
+	expectEqual(t, s.pages.first, p.Node)
+	expectEqual(t, uint(0), uint(p.Y))
+	expectEqual(t, uint(0), uint(p.X))
 }
 
 // Zig: test "PageList erase row with tracked pin shifts"
@@ -3510,9 +3510,9 @@ func TestPl1_PageList_erase_row_with_tracked_pin_shifts(t *testing.T) {
 	expectEqual(t, uint(s.rows), s.total_rows)
 
 	// Our pin should move to the first page
-	expectEqual(t, s.pages.first, p.node)
-	expectEqual(t, uint(0), uint(p.y))
-	expectEqual(t, uint(2), uint(p.x))
+	expectEqual(t, s.pages.first, p.Node)
+	expectEqual(t, uint(0), uint(p.Y))
+	expectEqual(t, uint(2), uint(p.X))
 }
 
 // Zig: test "PageList erase row with tracked pin is erased"
@@ -3532,9 +3532,9 @@ func TestPl1_PageList_erase_row_with_tracked_pin_is_erased(t *testing.T) {
 	expectEqual(t, uint(s.rows), s.total_rows)
 
 	// Our pin should move to the first page
-	expectEqual(t, s.pages.first, p.node)
-	expectEqual(t, uint(0), uint(p.y))
-	expectEqual(t, uint(0), uint(p.x))
+	expectEqual(t, s.pages.first, p.Node)
+	expectEqual(t, uint(0), uint(p.Y))
+	expectEqual(t, uint(0), uint(p.X))
 }
 
 // Zig: test "PageList erase resets viewport to active if moves within active"
@@ -3655,7 +3655,7 @@ func TestPl1_PageList_erase_a_one_row_active(t *testing.T) {
 	// The row should be empty
 	{
 		get := zigUnwrap(t, s.GetCell(pl1Active(0, 0)))
-		expectEqual(t, uint32(0), get.cell.content.codepoint)
+		expectEqual(t, uint32(0), get.Cell.content.codepoint)
 	}
 }
 
@@ -3686,17 +3686,17 @@ func TestPl1_PageList_eraseRowBounded_less_than_full_row(t *testing.T) {
 	expect(t, s.IsDirty(pl1Active(0, 6)), "s.isDirty(.{ .active = .{ .x = 0, .y = 6 } })")
 	expect(t, s.IsDirty(pl1Active(0, 7)), "s.isDirty(.{ .active = .{ .x = 0, .y = 7 } })")
 
-	expectEqual(t, s.pages.first, p_top.node)
-	expectEqual(t, uint(4), uint(p_top.y))
-	expectEqual(t, uint(0), uint(p_top.x))
+	expectEqual(t, s.pages.first, p_top.Node)
+	expectEqual(t, uint(4), uint(p_top.Y))
+	expectEqual(t, uint(0), uint(p_top.X))
 
-	expectEqual(t, s.pages.first, p_bot.node)
-	expectEqual(t, uint(7), uint(p_bot.y))
-	expectEqual(t, uint(0), uint(p_bot.x))
+	expectEqual(t, s.pages.first, p_bot.Node)
+	expectEqual(t, uint(7), uint(p_bot.Y))
+	expectEqual(t, uint(0), uint(p_bot.X))
 
-	expectEqual(t, s.pages.first, p_out.node)
-	expectEqual(t, uint(9), uint(p_out.y))
-	expectEqual(t, uint(0), uint(p_out.x))
+	expectEqual(t, s.pages.first, p_out.Node)
+	expectEqual(t, uint(9), uint(p_out.Y))
+	expectEqual(t, uint(0), uint(p_out.X))
 }
 
 // Zig: test "PageList eraseRowBounded with pin at top"
@@ -3720,9 +3720,9 @@ func TestPl1_PageList_eraseRowBounded_with_pin_at_top(t *testing.T) {
 	expect(t, s.IsDirty(pl1Active(0, 1)), "s.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	expect(t, s.IsDirty(pl1Active(0, 2)), "s.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 
-	expectEqual(t, s.pages.first, p_top.node)
-	expectEqual(t, uint(0), uint(p_top.y))
-	expectEqual(t, uint(0), uint(p_top.x))
+	expectEqual(t, s.pages.first, p_top.Node)
+	expectEqual(t, uint(0), uint(p_top.Y))
+	expectEqual(t, uint(0), uint(p_top.X))
 }
 
 // Zig: test "PageList eraseRowBounded full rows single page"
@@ -3750,13 +3750,13 @@ func TestPl1_PageList_eraseRowBounded_full_rows_single_page(t *testing.T) {
 	}
 
 	// Our pin should move to the first page
-	expectEqual(t, s.pages.first, p_in.node)
-	expectEqual(t, uint(6), uint(p_in.y))
-	expectEqual(t, uint(0), uint(p_in.x))
+	expectEqual(t, s.pages.first, p_in.Node)
+	expectEqual(t, uint(6), uint(p_in.Y))
+	expectEqual(t, uint(0), uint(p_in.X))
 
-	expectEqual(t, s.pages.first, p_out.node)
-	expectEqual(t, uint(8), uint(p_out.y))
-	expectEqual(t, uint(0), uint(p_out.x))
+	expectEqual(t, s.pages.first, p_out.Node)
+	expectEqual(t, uint(8), uint(p_out.Y))
+	expectEqual(t, uint(0), uint(p_out.X))
 }
 
 // Zig: test "PageList eraseRowBounded full rows two pages"
@@ -3794,21 +3794,21 @@ func TestPl1_PageList_eraseRowBounded_full_rows_two_pages(t *testing.T) {
 	defer s.UntrackPin(p_out)
 
 	{
-		expectEqual(t, s.pages.last.prev, p_first.node)
-		expectEqual(t, uint(p_first.node.data.size.rows-1), uint(p_first.y))
-		expectEqual(t, uint(0), uint(p_first.x))
+		expectEqual(t, s.pages.last.prev, p_first.Node)
+		expectEqual(t, uint(p_first.Node.data.size.rows-1), uint(p_first.Y))
+		expectEqual(t, uint(0), uint(p_first.X))
 
-		expectEqual(t, s.pages.last.prev, p_first_out.node)
-		expectEqual(t, uint(p_first_out.node.data.size.rows-2), uint(p_first_out.y))
-		expectEqual(t, uint(0), uint(p_first_out.x))
+		expectEqual(t, s.pages.last.prev, p_first_out.Node)
+		expectEqual(t, uint(p_first_out.Node.data.size.rows-2), uint(p_first_out.Y))
+		expectEqual(t, uint(0), uint(p_first_out.X))
 
-		expectEqual(t, s.pages.last, p_in.node)
-		expectEqual(t, uint(3), uint(p_in.y))
-		expectEqual(t, uint(0), uint(p_in.x))
+		expectEqual(t, s.pages.last, p_in.Node)
+		expectEqual(t, uint(3), uint(p_in.Y))
+		expectEqual(t, uint(0), uint(p_in.X))
 
-		expectEqual(t, s.pages.last, p_out.node)
-		expectEqual(t, uint(4), uint(p_out.y))
-		expectEqual(t, uint(0), uint(p_out.x))
+		expectEqual(t, s.pages.last, p_out.Node)
+		expectEqual(t, uint(4), uint(p_out.Y))
+		expectEqual(t, uint(0), uint(p_out.X))
 	}
 
 	// Erase only a few rows in our active
@@ -3820,24 +3820,24 @@ func TestPl1_PageList_eraseRowBounded_full_rows_two_pages(t *testing.T) {
 	}
 
 	// In page in first page is shifted
-	expectEqual(t, s.pages.last.prev, p_first.node)
-	expectEqual(t, uint(p_first.node.data.size.rows-2), uint(p_first.y))
-	expectEqual(t, uint(0), uint(p_first.x))
+	expectEqual(t, s.pages.last.prev, p_first.Node)
+	expectEqual(t, uint(p_first.Node.data.size.rows-2), uint(p_first.Y))
+	expectEqual(t, uint(0), uint(p_first.X))
 
 	// Out page in first page should not be shifted
-	expectEqual(t, s.pages.last.prev, p_first_out.node)
-	expectEqual(t, uint(p_first_out.node.data.size.rows-2), uint(p_first_out.y))
-	expectEqual(t, uint(0), uint(p_first_out.x))
+	expectEqual(t, s.pages.last.prev, p_first_out.Node)
+	expectEqual(t, uint(p_first_out.Node.data.size.rows-2), uint(p_first_out.Y))
+	expectEqual(t, uint(0), uint(p_first_out.X))
 
 	// In page is shifted
-	expectEqual(t, s.pages.last, p_in.node)
-	expectEqual(t, uint(2), uint(p_in.y))
-	expectEqual(t, uint(0), uint(p_in.x))
+	expectEqual(t, s.pages.last, p_in.Node)
+	expectEqual(t, uint(2), uint(p_in.Y))
+	expectEqual(t, uint(0), uint(p_in.X))
 
 	// Out page is not shifted
-	expectEqual(t, s.pages.last, p_out.node)
-	expectEqual(t, uint(4), uint(p_out.y))
-	expectEqual(t, uint(0), uint(p_out.x))
+	expectEqual(t, s.pages.last, p_out.Node)
+	expectEqual(t, uint(4), uint(p_out.Y))
+	expectEqual(t, uint(0), uint(p_out.X))
 }
 
 // Zig: test "PageList clone"
@@ -3849,7 +3849,7 @@ func TestPl1_PageList_clone(t *testing.T) {
 	expectEqual(t, uint(s.rows), s.totalRows())
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Screen(0, 0),
+		Top: pl1Screen(0, 0),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(s.rows), s2.totalRows())
@@ -3865,8 +3865,8 @@ func TestPl1_PageList_clone_partial_trimmed_right(t *testing.T) {
 	pl1GrowRows(t, &s, 30)
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Screen(0, 0),
-		bot: Some(pl1Screen(0, 39)),
+		Top: pl1Screen(0, 0),
+		Bot: Some(pl1Screen(0, 39)),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(40), s2.totalRows())
@@ -3882,7 +3882,7 @@ func TestPl1_PageList_clone_partial_trimmed_left(t *testing.T) {
 	pl1GrowRows(t, &s, 30)
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Screen(0, 10),
+		Top: pl1Screen(0, 10),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(40), s2.totalRows())
@@ -3902,7 +3902,7 @@ func TestPl1_PageList_clone_partial_trimmed_left_reclaims_styles(t *testing.T) {
 		expect(t, s.pages.first == s.pages.last, "s.pages.first == s.pages.last")
 		page := &s.pages.first.data
 
-		style := Style{flags: styleFlags{bold: true}}
+		style := Style{Flags: StyleFlags{Bold: true}}
 		style_id, err := page.styles.Add(style)
 		zigTry(t, err)
 
@@ -3931,7 +3931,7 @@ func TestPl1_PageList_clone_partial_trimmed_left_reclaims_styles(t *testing.T) {
 	}
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Screen(0, 10),
+		Top: pl1Screen(0, 10),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(40), s2.totalRows())
@@ -3953,8 +3953,8 @@ func TestPl1_PageList_clone_partial_trimmed_both(t *testing.T) {
 	pl1GrowRows(t, &s, 30)
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Screen(0, 10),
-		bot: Some(pl1Screen(0, 35)),
+		Top: pl1Screen(0, 10),
+		Bot: Some(pl1Screen(0, 35)),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(26), s2.totalRows())
@@ -3969,7 +3969,7 @@ func TestPl1_PageList_clone_less_than_active(t *testing.T) {
 	expectEqual(t, uint(s.rows), s.totalRows())
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Active(0, 5),
+		Top: pl1Active(0, 5),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(s.rows), s2.totalRows())
@@ -3990,8 +3990,8 @@ func TestPl1_PageList_clone_remap_tracked_pin(t *testing.T) {
 
 	pin_remap := PageListCloneTrackedPinsRemap{}
 	s2 := pl1Clone(t, &s, PageListClone{
-		top:          pl1Active(0, 5),
-		tracked_pins: &pin_remap,
+		Top:         pl1Active(0, 5),
+		TrackedPins: &pin_remap,
 	})
 	defer s2.Deinit()
 
@@ -4019,8 +4019,8 @@ func TestPl1_PageList_clone_remap_tracked_pin_not_in_cloned_area(t *testing.T) {
 
 	pin_remap := PageListCloneTrackedPinsRemap{}
 	s2 := pl1Clone(t, &s, PageListClone{
-		top:          pl1Active(0, 5),
-		tracked_pins: &pin_remap,
+		Top:         pl1Active(0, 5),
+		TrackedPins: &pin_remap,
 	})
 	defer s2.Deinit()
 
@@ -4043,7 +4043,7 @@ func TestPl1_PageList_clone_full_dirty(t *testing.T) {
 	s.markDirty(pl1Active(0, 23))
 
 	s2 := pl1Clone(t, &s, PageListClone{
-		top: pl1Screen(0, 0),
+		Top: pl1Screen(0, 0),
 	})
 	defer s2.Deinit()
 	expectEqual(t, uint(s.rows), s2.totalRows())
@@ -4070,7 +4070,7 @@ func TestPl1_PageList_resize_no_reflow_more_rows(t *testing.T) {
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](10), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](10), Reflow: false}))
 	expectEqual(t, uint(10), uint(s.rows))
 	expectEqual(t, uint(10), s.totalRows())
 
@@ -4102,7 +4102,7 @@ func TestPl1_PageList_resize_no_reflow_more_rows_with_history(t *testing.T) {
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.rows))
 	expectEqual(t, uint(53), s.totalRows())
 
@@ -4134,7 +4134,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.rows))
 	expectEqual(t, uint(10), s.totalRows())
 	{
@@ -4162,7 +4162,7 @@ func TestPl1_PageList_resize_no_reflow_one_rows(t *testing.T) {
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](1), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](1), Reflow: false}))
 	expectEqual(t, uint(1), uint(s.rows))
 	expectEqual(t, uint(10), s.totalRows())
 	{
@@ -4195,12 +4195,12 @@ func TestPl1_PageList_resize_no_reflow_less_rows_cursor_on_bottom(t *testing.T) 
 	defer s.UntrackPin(p)
 	{
 		cursor := zigUnwrap(t, s.PointFromPin(PointTagActive, *p)).Active
-		get := zigUnwrap(t, s.GetCell(pl1Active(cursor.x, cursor.y)))
-		expectEqual(t, uint32(9), get.cell.content.codepoint)
+		get := zigUnwrap(t, s.GetCell(pl1Active(cursor.X, cursor.Y)))
+		expectEqual(t, uint32(9), get.Cell.content.codepoint)
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.rows))
 	expectEqual(t, uint(10), s.totalRows())
 
@@ -4237,12 +4237,12 @@ func TestPl1_PageList_resize_no_reflow_less_rows_cursor_in_scrollback(t *testing
 	defer s.UntrackPin(p)
 	{
 		cursor := zigUnwrap(t, s.PointFromPin(PointTagActive, *p)).Active
-		get := zigUnwrap(t, s.GetCell(pl1Active(cursor.x, cursor.y)))
-		expectEqual(t, uint32(2), get.cell.content.codepoint)
+		get := zigUnwrap(t, s.GetCell(pl1Active(cursor.X, cursor.Y)))
+		expectEqual(t, uint32(2), get.Cell.content.codepoint)
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.rows))
 	expectEqual(t, uint(10), s.totalRows())
 
@@ -4276,7 +4276,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines(t *testing.T)
 		rac := page.GetRowAndCell(0, y)
 		*rac.cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 0xFF, g: 0, b: 0}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
 		}
 	}
 
@@ -4286,12 +4286,12 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines(t *testing.T)
 	defer s.UntrackPin(p)
 	{
 		cursor := zigUnwrap(t, s.PointFromPin(PointTagActive, *p)).Active
-		get := zigUnwrap(t, s.GetCell(pl1Active(cursor.x, cursor.y)))
-		expectEqual(t, uint32('A'), get.cell.content.codepoint)
+		get := zigUnwrap(t, s.GetCell(pl1Active(cursor.X, cursor.Y)))
+		expectEqual(t, uint32('A'), get.Cell.content.codepoint)
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](2), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](2), Reflow: false}))
 	expectEqual(t, uint(2), uint(s.rows))
 	expectEqual(t, uint(2), s.totalRows())
 
@@ -4324,7 +4324,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines_cursor_in_bla
 		rac := page.GetRowAndCell(0, y)
 		*rac.cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 0xFF, g: 0, b: 0}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
 		}
 	}
 
@@ -4334,7 +4334,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines_cursor_in_bla
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](2), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](2), Reflow: false}))
 	expectEqual(t, uint(2), uint(s.rows))
 	expectEqual(t, uint(4), s.totalRows())
 
@@ -4354,7 +4354,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines_erases_pages(
 	// Resize to take up two pages
 	{
 		rows := page.capacity.rows + 10
-		zigTry(t, s.Resize(PageListResize{rows: Some(rows), reflow: false}))
+		zigTry(t, s.Resize(PageListResize{Rows: Some(rows), Reflow: false}))
 		expectEqual(t, uint(2), s.TotalPages())
 	}
 
@@ -4366,7 +4366,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_trims_blank_lines_erases_pages(
 
 	// Resize down. Every row except the first is blank so we
 	// should erase the second page.
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.rows))
 	expectEqual(t, uint(5), s.totalRows())
 	expectEqual(t, uint(1), s.TotalPages())
@@ -4392,12 +4392,12 @@ func TestPl1_PageList_resize_no_reflow_more_rows_extends_blank_lines(t *testing.
 		rac := page.GetRowAndCell(0, y)
 		*rac.cell = PageCell{
 			content_tag: PageCellContentTagBgColorRgb,
-			content:     PageCellContent{color_rgb: PageCellRGB{r: 0xFF, g: 0, b: 0}},
+			content:     PageCellContent{color_rgb: PageCellRGB{R: 0xFF, G: 0, B: 0}},
 		}
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](7), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](7), Reflow: false}))
 	expectEqual(t, uint(7), uint(s.rows))
 	expectEqual(t, uint(7), s.totalRows())
 	{
@@ -4429,7 +4429,7 @@ func TestPl1_PageList_resize_no_reflow_more_rows_contains_viewport(t *testing.T)
 	expectEqual(t, PageListViewport{Tag: PageListViewportTop}, s.viewport)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{rows: Some[SizeCellCountInt](7), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Rows: Some[SizeCellCountInt](7), Reflow: false}))
 	expectEqual(t, uint(7), uint(s.rows))
 	expectEqual(t, uint(7), s.totalRows())
 
@@ -4446,7 +4446,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols(t *testing.T) {
 	defer s.Deinit()
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.cols))
 	expectEqual(t, uint(10), s.totalRows())
 
@@ -4458,7 +4458,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols(t *testing.T) {
 		}
 		offset := o.Value
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(5), uint(len(cells)))
 	}
 }
@@ -4476,7 +4476,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols_pin_in_trimmed_cols(t *testing.
 	defer s.UntrackPin(p)
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.cols))
 	expectEqual(t, uint(10), s.totalRows())
 
@@ -4488,7 +4488,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols_pin_in_trimmed_cols(t *testing.
 		}
 		offset := o.Value
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(5), uint(len(cells)))
 	}
 
@@ -4512,7 +4512,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols_clears_graphemes(t *testing.T) 
 	expectEqual(t, uint(1), page.GraphemeCount())
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.cols))
 	expectEqual(t, uint(10), s.totalRows())
 
@@ -4535,7 +4535,7 @@ func TestPl1_PageList_resize_no_reflow_more_cols(t *testing.T) {
 	defer s.Deinit()
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](10), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](10), Reflow: false}))
 	expectEqual(t, uint(10), uint(s.cols))
 	expectEqual(t, uint(3), s.totalRows())
 
@@ -4547,7 +4547,7 @@ func TestPl1_PageList_resize_no_reflow_more_cols(t *testing.T) {
 		}
 		offset := o.Value
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(10), uint(len(cells)))
 	}
 }
@@ -4594,7 +4594,7 @@ func TestPl1_PageList_resize_no_reflow_more_cols_with_spacer_head(t *testing.T) 
 	}
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](3), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](3), Reflow: false}))
 	expectEqual(t, uint(3), uint(s.cols))
 	expectEqual(t, uint(3), s.totalRows())
 
@@ -4634,7 +4634,7 @@ func TestPl1_PageList_resize_no_reflow_grow_cols_fast_path_with_spacer_head(t *t
 	defer s.Deinit()
 
 	// Shrink to 5 cols. The page keeps capacity for 10 cols.
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.cols))
 
 	// Place a spacer_head at the last column (col 4) on two rows
@@ -4671,7 +4671,7 @@ func TestPl1_PageList_resize_no_reflow_grow_cols_fast_path_with_spacer_head(t *t
 
 	// Grow back to 10 cols. This must not leave stale spacer_head
 	// cells at col 4 (which is no longer the last column).
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](10), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](10), Reflow: false}))
 	expectEqual(t, uint(10), uint(s.cols))
 
 	// Verify the old spacer_head positions are now narrow.
@@ -4729,7 +4729,7 @@ func TestPl1_PageList_resize_no_reflow_more_cols_forces_less_rows_per_page(t *te
 
 			return new_cols
 		}()
-		zigTry(t, s.Resize(PageListResize{cols: Some(new_cols), reflow: false}))
+		zigTry(t, s.Resize(PageListResize{Cols: Some(new_cols), Reflow: false}))
 		expectEqual(t, uint(new_cols), uint(s.cols))
 		expectEqual(t, uint(rows), s.totalRows())
 	}
@@ -4765,7 +4765,7 @@ func TestPl1_PageList_resize_no_reflow_more_cols_forces_less_rows_per_page(t *te
 			return new_cols
 		}()
 
-		zigTry(t, s.Resize(PageListResize{cols: Some(new_cols), reflow: false}))
+		zigTry(t, s.Resize(PageListResize{Cols: Some(new_cols), Reflow: false}))
 		expectEqual(t, uint(new_cols), uint(s.cols))
 		expectEqual(t, uint(rows), s.totalRows())
 	}
@@ -4792,11 +4792,11 @@ func TestPl1_PageList_resize_no_reflow_less_cols_then_more_cols(t *testing.T) {
 	defer s.Deinit()
 
 	// Resize less
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](2), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](2), Reflow: false}))
 	expectEqual(t, uint(2), uint(s.cols))
 
 	// Resize
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](5), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](5), Reflow: false}))
 	expectEqual(t, uint(5), uint(s.cols))
 	expectEqual(t, uint(3), s.totalRows())
 
@@ -4808,7 +4808,7 @@ func TestPl1_PageList_resize_no_reflow_less_cols_then_more_cols(t *testing.T) {
 		}
 		offset := o.Value
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(5), uint(len(cells)))
 	}
 }
@@ -4822,9 +4822,9 @@ func TestPl1_PageList_resize_no_reflow_less_rows_and_cols(t *testing.T) {
 
 	// Resize less
 	zigTry(t, s.Resize(PageListResize{
-		cols:   Some[SizeCellCountInt](5),
-		rows:   Some[SizeCellCountInt](7),
-		reflow: false,
+		Cols:   Some[SizeCellCountInt](5),
+		Rows:   Some[SizeCellCountInt](7),
+		Reflow: false,
 	}))
 	expectEqual(t, uint(5), uint(s.cols))
 	expectEqual(t, uint(7), uint(s.rows))
@@ -4837,7 +4837,7 @@ func TestPl1_PageList_resize_no_reflow_less_rows_and_cols(t *testing.T) {
 		}
 		offset := o.Value
 		rac := offset.RowAndCell()
-		cells := offset.node.data.GetCells(rac.row)
+		cells := offset.Node.data.GetCells(rac.row)
 		expectEqual(t, uint(5), uint(len(cells)))
 	}
 }
@@ -4880,7 +4880,7 @@ func TestPl1_panic_Resize_zero_cols(t *testing.T) {
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	pl1ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{cols: Some[SizeCellCountInt](0), reflow: false})
+		_ = s.Resize(PageListResize{Cols: Some[SizeCellCountInt](0), Reflow: false})
 	})
 }
 
@@ -4889,7 +4889,7 @@ func TestPl1_panic_Resize_zero_rows(t *testing.T) {
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	pl1ExpectPanic(t, func() {
-		_ = s.Resize(PageListResize{rows: Some[SizeCellCountInt](0), reflow: false})
+		_ = s.Resize(PageListResize{Rows: Some[SizeCellCountInt](0), Reflow: false})
 	})
 }
 
@@ -4898,7 +4898,7 @@ func TestPl1_panic_TrackPin_row_out_of_page(t *testing.T) {
 	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: s.pages.first, y: s.pages.first.data.size.rows, x: 0}
+	p := PageListPin{Node: s.pages.first, Y: s.pages.first.data.size.rows, X: 0}
 	pl1ExpectPanic(t, func() { _, _ = s.TrackPin(p) })
 }
 
@@ -4907,7 +4907,7 @@ func TestPl1_panic_TrackPin_col_out_of_page(t *testing.T) {
 	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: s.pages.first, y: 0, x: s.pages.first.data.size.cols}
+	p := PageListPin{Node: s.pages.first, Y: 0, X: s.pages.first.data.size.cols}
 	pl1ExpectPanic(t, func() { _, _ = s.TrackPin(p) })
 }
 
@@ -4917,7 +4917,7 @@ func TestPl1_panic_TrackPin_node_not_in_list(t *testing.T) {
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
 	other := pl1Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: other.pages.first, y: 0, x: 0}
+	p := PageListPin{Node: other.pages.first, Y: 0, X: 0}
 	pl1ExpectPanic(t, func() { _, _ = s.TrackPin(p) })
 }
 
@@ -5009,7 +5009,7 @@ func TestPl1_panic_EraseRows_tl_out_of_range(t *testing.T) {
 func TestPl1_panic_Clone_top_out_of_range(t *testing.T) {
 	testStdCapacity(t)
 	s := pl1Init(t, 80, 24, None[uint64]())
-	pl1ExpectPanic(t, func() { _, _ = s.Clone(PageListClone{top: pl1Screen(0, 1000)}) })
+	pl1ExpectPanic(t, func() { _, _ = s.Clone(PageListClone{Top: pl1Screen(0, 1000)}) })
 }
 
 // Go-only: panic test: PageList.IsDirty: point outside the screen (self.getCell(pt).?)

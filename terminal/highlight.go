@@ -67,8 +67,8 @@ package terminal
 //
 // To simplify all operations, start MUST be before or equal to end.
 type HighlightUntracked struct {
-	start PageListPin
-	end   PageListPin
+	Start PageListPin
+	End   PageListPin
 }
 
 // Track is highlight.Untracked.track.
@@ -78,14 +78,14 @@ type HighlightUntracked struct {
 func (self *HighlightUntracked) Track(screen *Screen) (HighlightTracked, error) {
 	return HighlightTrackedInit(
 		screen,
-		self.start,
-		self.end,
+		self.Start,
+		self.End,
 	)
 }
 
 // Eql is highlight.Untracked.eql.
 func (self HighlightUntracked) Eql(other HighlightUntracked) bool {
-	return self.start.Eql(other.start) && self.end.Eql(other.end)
+	return self.Start.Eql(other.Start) && self.End.Eql(other.End)
 }
 
 // HighlightTracked is highlight.Tracked.
@@ -102,8 +102,8 @@ func (self HighlightUntracked) Eql(other HighlightUntracked) bool {
 // that the terminal state won't change, you can use the `initAssume`
 // function.
 type HighlightTracked struct {
-	start *PageListPin
-	end   *PageListPin
+	Start *PageListPin
+	End   *PageListPin
 }
 
 // HighlightTrackedInit is highlight.Tracked.init.
@@ -115,25 +115,25 @@ func HighlightTrackedInit(
 	start PageListPin,
 	end PageListPin,
 ) (_ HighlightTracked, err error) {
-	start_tracked, err := screen.pages.TrackPin(start)
+	start_tracked, err := screen.Pages.TrackPin(start)
 	if err != nil {
 		return HighlightTracked{}, err
 	}
 	defer func() {
 		// errdefer
 		if err != nil {
-			screen.pages.UntrackPin(start_tracked)
+			screen.Pages.UntrackPin(start_tracked)
 		}
 	}()
-	end_tracked, err := screen.pages.TrackPin(end)
+	end_tracked, err := screen.Pages.TrackPin(end)
 	if err != nil {
 		return HighlightTracked{}, err
 	}
 	// Zig: errdefer screen.pages.untrackPin(end_tracked); nothing after it
 	// can fail, so it never runs.
 	return HighlightTracked{
-		start: start_tracked,
-		end:   end_tracked,
+		Start: start_tracked,
+		End:   end_tracked,
 	}, nil
 }
 
@@ -148,8 +148,8 @@ func HighlightTrackedInit(
 // Do not call deinit on highlights created with this function.
 func HighlightTrackedInitAssume(start *PageListPin, end *PageListPin) HighlightTracked {
 	return HighlightTracked{
-		start: start,
-		end:   end,
+		Start: start,
+		End:   end,
 	}
 }
 
@@ -157,8 +157,8 @@ func HighlightTrackedInitAssume(start *PageListPin, end *PageListPin) HighlightT
 //
 // Kept: it untracks both pins in the screen's page list.
 func (self HighlightTracked) Deinit(screen *Screen) {
-	screen.pages.UntrackPin(self.start)
-	screen.pages.UntrackPin(self.end)
+	screen.Pages.UntrackPin(self.Start)
+	screen.Pages.UntrackPin(self.End)
 }
 
 // HighlightFlattened is highlight.Flattened.
@@ -174,13 +174,13 @@ type HighlightFlattened struct {
 	// and chunks[len - 1].end is the last highlighted row (exclsive).
 	//
 	// Zig: std.MultiArrayList(Chunk). See the file header.
-	chunks []HighlightFlattenedChunk
+	Chunks []HighlightFlattenedChunk
 
 	// The x bounds of the highlight. `bot_x` may be less than `top_x`
 	// for typical left-to-right highlights: can start the selection right
 	// of the end on a higher row.
-	top_x SizeCellCountInt
-	bot_x SizeCellCountInt
+	TopX SizeCellCountInt
+	BotX SizeCellCountInt
 }
 
 // HighlightFlattenedChunk is highlight.Flattened.Chunk.
@@ -190,18 +190,18 @@ type HighlightFlattened struct {
 // highlight more robust for comparisons and validity checks with
 // the PageList.
 type HighlightFlattenedChunk struct {
-	node *PageListNode
+	Node *PageListNode
 	// Zig: u64.
-	serial uint64
-	start  SizeCellCountInt
-	end    SizeCellCountInt
+	Serial uint64
+	Start  SizeCellCountInt
+	End    SizeCellCountInt
 }
 
 // HighlightFlattenedEmpty is highlight.Flattened.empty.
 var HighlightFlattenedEmpty = HighlightFlattened{
-	chunks: nil,
-	top_x:  0,
-	bot_x:  0,
+	Chunks: nil,
+	TopX:   0,
+	BotX:   0,
 }
 
 // highlight.Flattened.init (line 141) is omitted: upstream's body does not
@@ -216,7 +216,7 @@ func (self *HighlightFlattened) Deinit() {
 	// Zig: self.chunks.deinit(alloc), which frees the list and leaves
 	// `chunks` undefined. The garbage collector frees in Go; the list is
 	// dropped (nil).
-	self.chunks = nil
+	self.Chunks = nil
 }
 
 // Clone is highlight.Flattened.clone.
@@ -227,34 +227,34 @@ func (self *HighlightFlattened) Deinit() {
 func (self *HighlightFlattened) Clone() (HighlightFlattened, error) {
 	// Zig: try self.chunks.clone(alloc): a list with its own storage holding
 	// the same elements (std's clone of an empty list is an empty list).
-	chunks := make([]HighlightFlattenedChunk, len(self.chunks))
-	copy(chunks, self.chunks)
+	chunks := make([]HighlightFlattenedChunk, len(self.Chunks))
+	copy(chunks, self.Chunks)
 	return HighlightFlattened{
-		chunks: chunks,
-		top_x:  self.top_x,
-		bot_x:  self.bot_x,
+		Chunks: chunks,
+		TopX:   self.TopX,
+		BotX:   self.BotX,
 	}, nil
 }
 
 // StartPin is highlight.Flattened.startPin.
 func (self HighlightFlattened) StartPin() PageListPin {
-	slice := self.chunks
+	slice := self.Chunks
 	return PageListPin{
-		node: slice[0].node,
-		x:    self.top_x,
-		y:    slice[0].start,
+		Node: slice[0].Node,
+		X:    self.TopX,
+		Y:    slice[0].Start,
 	}
 }
 
 // EndPin is highlight.Flattened.endPin.
 func (self HighlightFlattened) EndPin() PageListPin {
-	slice := self.chunks
-	end := slice[len(slice)-1].end
+	slice := self.Chunks
+	end := slice[len(slice)-1].End
 	assert(end > 0) // Zig: `end - 1` traps on u16 underflow.
 	return PageListPin{
-		node: slice[len(slice)-1].node,
-		x:    self.bot_x,
-		y:    end - 1,
+		Node: slice[len(slice)-1].Node,
+		X:    self.BotX,
+		Y:    end - 1,
 	}
 }
 
@@ -267,20 +267,20 @@ func (self HighlightFlattened) Untracked() HighlightUntracked {
 	//
 	// Zig: `slice.items(.node)`, `.items(.start)`, `.items(.end)` are the
 	// fields of the elements of the one Go slice (file header).
-	slice := self.chunks
+	slice := self.Chunks
 	start := PageListPin{
-		node: slice[0].node,
-		x:    self.top_x,
-		y:    slice[0].start,
+		Node: slice[0].Node,
+		X:    self.TopX,
+		Y:    slice[0].Start,
 	}
-	end := slice[len(slice)-1].end
+	end := slice[len(slice)-1].End
 	assert(end > 0) // Zig: `ends[ends.len - 1] - 1` traps on u16 underflow.
 	return HighlightUntracked{
-		start: start,
-		end: PageListPin{
-			node: slice[len(slice)-1].node,
-			x:    self.bot_x,
-			y:    end - 1,
+		Start: start,
+		End: PageListPin{
+			Node: slice[len(slice)-1].Node,
+			X:    self.BotX,
+			Y:    end - 1,
 		},
 	}
 }

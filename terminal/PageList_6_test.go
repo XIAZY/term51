@@ -101,7 +101,7 @@ func pl6Pages(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, pages 
 
 // pl6Pt is term51NPt: shortcut for a screen point.
 func pl6Pt(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 // pl6ExpectPin is term51NExpectPin.
@@ -109,9 +109,9 @@ func pl6ExpectPin(t *testing.T, p Optional[PageListPin], node *PageListNode, y u
 	t.Helper()
 	expect(t, p.Valid, "p != null")
 	got := p.Value
-	expect(t, got.node == node, "got.node == node")
-	expectEqual(t, y, uint(got.y))
-	expectEqual(t, x, uint(got.x))
+	expect(t, got.Node == node, "got.node == node")
+	expectEqual(t, y, uint(got.Y))
+	expectEqual(t, x, uint(got.X))
 }
 
 // pl6ExpectPinV is term51NExpectPin for a plain Pin, which Zig coerces to the
@@ -205,8 +205,8 @@ func TestPl6_Pin_isDirty_dirty_state_is_per_page(t *testing.T) {
 	last := s.pages.last
 
 	first.data.dirty = true
-	expect(t, PageListPin{node: first, y: 5}.IsDirty(), "(Pin{ .node = first, .y = 5 }).isDirty()")
-	expect(t, !PageListPin{node: last, y: 5}.IsDirty(), "!(Pin{ .node = last, .y = 5 }).isDirty()")
+	expect(t, PageListPin{Node: first, Y: 5}.IsDirty(), "(Pin{ .node = first, .y = 5 }).isDirty()")
+	expect(t, !PageListPin{Node: last, Y: 5}.IsDirty(), "!(Pin{ .node = last, .y = 5 }).isDirty()")
 }
 
 // Zig: test "term51: Pin.markDirty: marks only the row of the pin"
@@ -218,7 +218,7 @@ func TestPl6_Pin_markDirty_marks_only_the_row_of_the_pin(t *testing.T) {
 	page := &node.data
 	s.ClearDirty()
 
-	p := PageListPin{node: node, y: 1, x: 3}
+	p := PageListPin{Node: node, Y: 1, X: 3}
 	p.MarkDirty()
 	expect(t, page.GetRowAndCell(0, 1).row.dirty, "page.getRowAndCell(0, 1).row.dirty")
 	expect(t, !page.GetRowAndCell(0, 0).row.dirty, "!page.getRowAndCell(0, 0).row.dirty")
@@ -232,8 +232,8 @@ func TestPl6_Pin_markDirty_marks_only_the_row_of_the_pin(t *testing.T) {
 	expect(t, page.GetRowAndCell(0, 1).row.dirty, "page.getRowAndCell(0, 1).row.dirty")
 
 	// Row 0 and the last row.
-	PageListPin{node: node}.MarkDirty()
-	PageListPin{node: node, y: 3, x: 4}.MarkDirty()
+	PageListPin{Node: node}.MarkDirty()
+	PageListPin{Node: node, Y: 3, X: 4}.MarkDirty()
 	expect(t, page.GetRowAndCell(0, 0).row.dirty, "page.getRowAndCell(0, 0).row.dirty")
 	expect(t, !page.GetRowAndCell(0, 2).row.dirty, "!page.getRowAndCell(0, 2).row.dirty")
 	expect(t, page.GetRowAndCell(0, 3).row.dirty, "page.getRowAndCell(0, 3).row.dirty")
@@ -249,8 +249,8 @@ func TestPl6_Cell_isDirty_row_dirty_page_dirty_or_clean(t *testing.T) {
 	page := &s.pages.first.data
 	s.ClearDirty()
 
-	c1 := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 2, y: 1}}))
-	c2 := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 2, y: 2}}))
+	c1 := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 2, Y: 1}}))
+	c2 := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 2, Y: 2}}))
 	expect(t, !c1.IsDirty(), "!c1.isDirty()")
 	expect(t, !c2.IsDirty(), "!c2.isDirty()")
 
@@ -258,7 +258,7 @@ func TestPl6_Cell_isDirty_row_dirty_page_dirty_or_clean(t *testing.T) {
 	expect(t, c1.IsDirty(), "c1.isDirty()")
 	expect(t, !c2.IsDirty(), "!c2.isDirty()")
 	// Another cell in the same row is dirty too.
-	expect(t, zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 4, y: 1}})).IsDirty(),
+	expect(t, zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 4, Y: 1}})).IsDirty(),
 		"s.getCell(.{ .active = .{ .x = 4, .y = 1 } }).?.isDirty()")
 
 	page.GetRowAndCell(0, 1).row.dirty = false
@@ -274,7 +274,7 @@ func TestPl6_Cell_style_default_and_non_default_style(t *testing.T) {
 	defer s.Deinit()
 	page := &s.pages.first.data
 
-	italic := Style{flags: styleFlags{italic: true}}
+	italic := Style{Flags: StyleFlags{Italic: true}}
 	id, err := page.styles.Add(italic)
 	zigTry(t, err)
 	rac := page.GetRowAndCell(3, 2)
@@ -285,11 +285,11 @@ func TestPl6_Cell_style_default_and_non_default_style(t *testing.T) {
 		style_id:    id,
 	}
 
-	styled := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 3, y: 2}}))
+	styled := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 3, Y: 2}}))
 	expect(t, styled.Style().Eql(italic), "styled.style().eql(italic)")
-	expect(t, styled.Style().flags.italic, "styled.style().flags.italic")
+	expect(t, styled.Style().Flags.Italic, "styled.style().flags.italic")
 
-	plain := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 0, y: 0}}))
+	plain := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 0, Y: 0}}))
 	expect(t, plain.Style().Default(), "plain.style().default()")
 }
 
@@ -299,14 +299,14 @@ func TestPl6_Cell_screenPoint_row_and_column_on_a_single_page(t *testing.T) {
 	s := pl6Init(t, 5, 4)
 	defer s.Deinit()
 
-	c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{x: 3, y: 2}}))
+	c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagActive, Active: PointCoordinate{X: 3, Y: 2}}))
 	expectEqualPoint(t, pl6Pt(3, 2), c.ScreenPoint())
 	tl := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen}))
 	expectEqualPoint(t, pl6Pt(0, 0), tl.ScreenPoint())
-	br := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 4, y: 3}}))
+	br := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 4, Y: 3}}))
 	expectEqualPoint(t, pl6Pt(4, 3), br.ScreenPoint())
 	// The result tag is always screen, whatever tag was used to get the cell.
-	v := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: 1, y: 1}}))
+	v := zigUnwrap(t, s.GetCell(Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: 1, Y: 1}}))
 	expect(t, v.ScreenPoint().Tag == PointTagScreen, "v.screenPoint() == .screen")
 }
 
@@ -320,19 +320,19 @@ func TestPl6_Cell_screenPoint_adds_the_rows_of_all_previous_pages(t *testing.T) 
 
 	// Page 2 (middle)
 	{
-		c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 4, y: n1 + 7}}))
-		expect(t, c.node == s.pages.first.next, "c.node == s.pages.first.?.next.?")
-		expectEqual(t, uint(7), uint(c.row_idx))
-		expectEqual(t, uint(4), uint(c.col_idx))
+		c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 4, Y: n1 + 7}}))
+		expect(t, c.Node == s.pages.first.next, "c.node == s.pages.first.?.next.?")
+		expectEqual(t, uint(7), uint(c.RowIdx))
+		expectEqual(t, uint(4), uint(c.ColIdx))
 		expectEqualPoint(t, pl6Pt(4, n1+7), c.ScreenPoint())
 	}
 	// First row of page 3 and last row of page 2
 	{
-		c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 0, y: n1 + n2}}))
-		expect(t, c.node == s.pages.last, "c.node == s.pages.last.?")
+		c := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 0, Y: n1 + n2}}))
+		expect(t, c.Node == s.pages.last, "c.node == s.pages.last.?")
 		expectEqualPoint(t, pl6Pt(0, n1+n2), c.ScreenPoint())
-		d := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 9, y: n1 + n2 - 1}}))
-		expect(t, d.node == s.pages.first.next, "d.node == s.pages.first.?.next.?")
+		d := zigUnwrap(t, s.GetCell(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 9, Y: n1 + n2 - 1}}))
+		expect(t, d.Node == s.pages.first.next, "d.node == s.pages.first.?.next.?")
 		expectEqualPoint(t, pl6Pt(9, n1+n2-1), d.ScreenPoint())
 	}
 }
@@ -347,21 +347,21 @@ func TestPl6_Pin_eql_node_y_and_x_all_have_to_match(t *testing.T) {
 	first := s.pages.first
 	last := s.pages.last
 
-	a := PageListPin{node: first, y: 4, x: 5}
+	a := PageListPin{Node: first, Y: 4, X: 5}
 	expect(t, a.Eql(a), "a.eql(a)")
-	expect(t, a.Eql(PageListPin{node: first, y: 4, x: 5}), "a.eql(.{ .node = first, .y = 4, .x = 5 })")
-	expect(t, !a.Eql(PageListPin{node: last, y: 4, x: 5}), "!a.eql(.{ .node = last, .y = 4, .x = 5 })")
-	expect(t, !a.Eql(PageListPin{node: first, y: 3, x: 5}), "!a.eql(.{ .node = first, .y = 3, .x = 5 })")
-	expect(t, !a.Eql(PageListPin{node: first, y: 5, x: 5}), "!a.eql(.{ .node = first, .y = 5, .x = 5 })")
-	expect(t, !a.Eql(PageListPin{node: first, y: 4, x: 4}), "!a.eql(.{ .node = first, .y = 4, .x = 4 })")
-	expect(t, !a.Eql(PageListPin{node: first, y: 4, x: 6}), "!a.eql(.{ .node = first, .y = 4, .x = 6 })")
+	expect(t, a.Eql(PageListPin{Node: first, Y: 4, X: 5}), "a.eql(.{ .node = first, .y = 4, .x = 5 })")
+	expect(t, !a.Eql(PageListPin{Node: last, Y: 4, X: 5}), "!a.eql(.{ .node = last, .y = 4, .x = 5 })")
+	expect(t, !a.Eql(PageListPin{Node: first, Y: 3, X: 5}), "!a.eql(.{ .node = first, .y = 3, .x = 5 })")
+	expect(t, !a.Eql(PageListPin{Node: first, Y: 5, X: 5}), "!a.eql(.{ .node = first, .y = 5, .x = 5 })")
+	expect(t, !a.Eql(PageListPin{Node: first, Y: 4, X: 4}), "!a.eql(.{ .node = first, .y = 4, .x = 4 })")
+	expect(t, !a.Eql(PageListPin{Node: first, Y: 4, X: 6}), "!a.eql(.{ .node = first, .y = 4, .x = 6 })")
 	// The default y and x are zero.
-	expect(t, PageListPin{node: first}.Eql(PageListPin{node: first, y: 0, x: 0}),
+	expect(t, PageListPin{Node: first}.Eql(PageListPin{Node: first, Y: 0, X: 0}),
 		"(Pin{ .node = first }).eql(.{ .node = first, .y = 0, .x = 0 })")
 	// The garbage flag does not take part in the comparison.
-	expect(t, a.Eql(PageListPin{node: first, y: 4, x: 5, garbage: true}),
+	expect(t, a.Eql(PageListPin{Node: first, Y: 4, X: 5, Garbage: true}),
 		"a.eql(.{ .node = first, .y = 4, .x = 5, .garbage = true })")
-	expect(t, PageListPin{node: first, y: 4, x: 5, garbage: true}.Eql(a),
+	expect(t, PageListPin{Node: first, Y: 4, X: 5, Garbage: true}.Eql(a),
 		"(Pin{ .node = first, .y = 4, .x = 5, .garbage = true }).eql(a)")
 }
 
@@ -372,21 +372,21 @@ func TestPl6_Pin_before_same_page_orders_by_y_then_x(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	a := PageListPin{node: node, y: 2, x: 3}
+	a := PageListPin{Node: node, Y: 2, X: 3}
 	// Equal is not before.
 	expect(t, !a.Before(a), "!a.before(a)")
 	// x only
-	expect(t, a.Before(PageListPin{node: node, y: 2, x: 4}), "a.before(.{ .node = node, .y = 2, .x = 4 })")
-	expect(t, !a.Before(PageListPin{node: node, y: 2, x: 2}), "!a.before(.{ .node = node, .y = 2, .x = 2 })")
+	expect(t, a.Before(PageListPin{Node: node, Y: 2, X: 4}), "a.before(.{ .node = node, .y = 2, .x = 4 })")
+	expect(t, !a.Before(PageListPin{Node: node, Y: 2, X: 2}), "!a.before(.{ .node = node, .y = 2, .x = 2 })")
 	// y wins over x in both directions
-	expect(t, a.Before(PageListPin{node: node, y: 3, x: 0}), "a.before(.{ .node = node, .y = 3, .x = 0 })")
-	expect(t, !a.Before(PageListPin{node: node, y: 1, x: 9}), "!a.before(.{ .node = node, .y = 1, .x = 9 })")
-	expect(t, PageListPin{node: node, y: 1, x: 9}.Before(a), "(Pin{ .node = node, .y = 1, .x = 9 }).before(a)")
-	expect(t, !PageListPin{node: node, y: 3, x: 0}.Before(a), "!(Pin{ .node = node, .y = 3, .x = 0 }).before(a)")
+	expect(t, a.Before(PageListPin{Node: node, Y: 3, X: 0}), "a.before(.{ .node = node, .y = 3, .x = 0 })")
+	expect(t, !a.Before(PageListPin{Node: node, Y: 1, X: 9}), "!a.before(.{ .node = node, .y = 1, .x = 9 })")
+	expect(t, PageListPin{Node: node, Y: 1, X: 9}.Before(a), "(Pin{ .node = node, .y = 1, .x = 9 }).before(a)")
+	expect(t, !PageListPin{Node: node, Y: 3, X: 0}.Before(a), "!(Pin{ .node = node, .y = 3, .x = 0 }).before(a)")
 	// Largest gap
-	expect(t, PageListPin{node: node}.Before(PageListPin{node: node, y: 4, x: 9}),
+	expect(t, PageListPin{Node: node}.Before(PageListPin{Node: node, Y: 4, X: 9}),
 		"(Pin{ .node = node }).before(.{ .node = node, .y = 4, .x = 9 })")
-	expect(t, !PageListPin{node: node, y: 4, x: 9}.Before(PageListPin{node: node}),
+	expect(t, !PageListPin{Node: node, Y: 4, X: 9}.Before(PageListPin{Node: node}),
 		"!(Pin{ .node = node, .y = 4, .x = 9 }).before(.{ .node = node })")
 }
 
@@ -400,16 +400,16 @@ func TestPl6_Pin_before_different_pages_follow_list_order(t *testing.T) {
 	n3 := n2.next
 
 	// The y and x are irrelevant when the pages differ.
-	hi1 := PageListPin{node: n1, y: n1.data.size.rows - 1, x: 9}
-	lo2 := PageListPin{node: n2}
-	hi2 := PageListPin{node: n2, y: n2.data.size.rows - 1, x: 9}
-	lo3 := PageListPin{node: n3}
+	hi1 := PageListPin{Node: n1, Y: n1.data.size.rows - 1, X: 9}
+	lo2 := PageListPin{Node: n2}
+	hi2 := PageListPin{Node: n2, Y: n2.data.size.rows - 1, X: 9}
+	lo3 := PageListPin{Node: n3}
 	expect(t, hi1.Before(lo2), "hi1.before(lo2)")
 	expect(t, !lo2.Before(hi1), "!lo2.before(hi1)")
 	// Non adjacent pages
 	expect(t, hi1.Before(lo3), "hi1.before(lo3)")
 	expect(t, !lo3.Before(hi1), "!lo3.before(hi1)")
-	expect(t, PageListPin{node: n1}.Before(hi2), "(Pin{ .node = n1 }).before(hi2)")
+	expect(t, PageListPin{Node: n1}.Before(hi2), "(Pin{ .node = n1 }).before(hi2)")
 	expect(t, hi2.Before(lo3), "hi2.before(lo3)")
 	expect(t, !lo3.Before(hi2), "!lo3.before(hi2)")
 	expect(t, !hi2.Before(lo2), "!hi2.before(lo2)")
@@ -425,8 +425,8 @@ func TestPl6_Pin_isBetween_single_page_y_and_x_boundaries(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	top := PageListPin{node: node, y: 3, x: 2}
-	bot := PageListPin{node: node, y: 7, x: 5}
+	top := PageListPin{Node: node, Y: 3, X: 2}
+	bot := PageListPin{Node: node, Y: 7, X: 5}
 	type Case struct {
 		y    uint
 		x    uint
@@ -459,7 +459,7 @@ func TestPl6_Pin_isBetween_single_page_y_and_x_boundaries(t *testing.T) {
 		{y: 9, x: 9, want: false},
 	}
 	for _, c := range cases {
-		p := PageListPin{node: node, y: SizeCellCountInt(c.y), x: SizeCellCountInt(c.x)}
+		p := PageListPin{Node: node, Y: SizeCellCountInt(c.y), X: SizeCellCountInt(c.x)}
 		expectEqual(t, c.want, p.IsBetween(top, bot))
 	}
 }
@@ -471,24 +471,24 @@ func TestPl6_Pin_isBetween_top_and_bottom_on_the_same_row(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	top := PageListPin{node: node, y: 4, x: 2}
-	bot := PageListPin{node: node, y: 4, x: 6}
+	top := PageListPin{Node: node, Y: 4, X: 2}
+	bot := PageListPin{Node: node, Y: 4, X: 6}
 	for x := uint(0); x < 10; x++ {
-		p := PageListPin{node: node, y: 4, x: SizeCellCountInt(x)}
+		p := PageListPin{Node: node, Y: 4, X: SizeCellCountInt(x)}
 		expectEqual(t, x >= 2 && x <= 6, p.IsBetween(top, bot))
 	}
-	expect(t, !PageListPin{node: node, y: 3, x: 4}.IsBetween(top, bot), "!(Pin{ .node = node, .y = 3, .x = 4 }).isBetween(top, bot)")
-	expect(t, !PageListPin{node: node, y: 5, x: 4}.IsBetween(top, bot), "!(Pin{ .node = node, .y = 5, .x = 4 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: node, Y: 3, X: 4}.IsBetween(top, bot), "!(Pin{ .node = node, .y = 3, .x = 4 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: node, Y: 5, X: 4}.IsBetween(top, bot), "!(Pin{ .node = node, .y = 5, .x = 4 }).isBetween(top, bot)")
 
 	// A single cell range only contains itself.
 	expect(t, top.IsBetween(top, top), "top.isBetween(top, top)")
-	expect(t, !PageListPin{node: node, y: 4, x: 3}.IsBetween(top, top), "!(Pin{ .node = node, .y = 4, .x = 3 }).isBetween(top, top)")
-	expect(t, !PageListPin{node: node, y: 4, x: 1}.IsBetween(top, top), "!(Pin{ .node = node, .y = 4, .x = 1 }).isBetween(top, top)")
-	expect(t, !PageListPin{node: node, y: 5, x: 2}.IsBetween(top, top), "!(Pin{ .node = node, .y = 5, .x = 2 }).isBetween(top, top)")
+	expect(t, !PageListPin{Node: node, Y: 4, X: 3}.IsBetween(top, top), "!(Pin{ .node = node, .y = 4, .x = 3 }).isBetween(top, top)")
+	expect(t, !PageListPin{Node: node, Y: 4, X: 1}.IsBetween(top, top), "!(Pin{ .node = node, .y = 4, .x = 1 }).isBetween(top, top)")
+	expect(t, !PageListPin{Node: node, Y: 5, X: 2}.IsBetween(top, top), "!(Pin{ .node = node, .y = 5, .x = 2 }).isBetween(top, top)")
 
 	// The first and last cell of the page.
-	first := PageListPin{node: node}
-	last := PageListPin{node: node, y: 9, x: 9}
+	first := PageListPin{Node: node}
+	last := PageListPin{Node: node, Y: 9, X: 9}
 	expect(t, first.IsBetween(first, last), "first.isBetween(first, last)")
 	expect(t, last.IsBetween(first, last), "last.isBetween(first, last)")
 }
@@ -504,41 +504,41 @@ func TestPl6_Pin_isBetween_range_across_pages(t *testing.T) {
 	n4 := n3.next
 
 	// Range from the middle of page 2 to the middle of page 3.
-	top := PageListPin{node: n2, y: 5, x: 4}
-	bot := PageListPin{node: n3, y: 6, x: 3}
+	top := PageListPin{Node: n2, Y: 5, X: 4}
+	bot := PageListPin{Node: n3, Y: 6, X: 3}
 
 	// Page 1 and page 4 are outside.
-	expect(t, !PageListPin{node: n1, y: 3}.IsBetween(top, bot), "!(Pin{ .node = n1, .y = 3 }).isBetween(top, bot)")
-	expect(t, !PageListPin{node: n1, y: n1.data.size.rows - 1, x: 9}.IsBetween(top, bot),
+	expect(t, !PageListPin{Node: n1, Y: 3}.IsBetween(top, bot), "!(Pin{ .node = n1, .y = 3 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: n1, Y: n1.data.size.rows - 1, X: 9}.IsBetween(top, bot),
 		"!(Pin{ .node = n1, .y = n1.data.size.rows - 1, .x = 9 }).isBetween(top, bot)")
-	expect(t, !PageListPin{node: n4, y: 0}.IsBetween(top, bot), "!(Pin{ .node = n4, .y = 0 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: n4, Y: 0}.IsBetween(top, bot), "!(Pin{ .node = n4, .y = 0 }).isBetween(top, bot)")
 
 	// Page 2, the top page: only rows after the top row are in.
-	expect(t, !PageListPin{node: n2, y: 4, x: 9}.IsBetween(top, bot), "!(Pin{ .node = n2, .y = 4, .x = 9 }).isBetween(top, bot)")
-	expect(t, !PageListPin{node: n2, y: 0, x: 0}.IsBetween(top, bot), "!(Pin{ .node = n2, .y = 0, .x = 0 }).isBetween(top, bot)")
-	expect(t, PageListPin{node: n2, y: 6, x: 0}.IsBetween(top, bot), "(Pin{ .node = n2, .y = 6, .x = 0 }).isBetween(top, bot)")
-	expect(t, PageListPin{node: n2, y: n2.data.size.rows - 1, x: 9}.IsBetween(top, bot),
+	expect(t, !PageListPin{Node: n2, Y: 4, X: 9}.IsBetween(top, bot), "!(Pin{ .node = n2, .y = 4, .x = 9 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: n2, Y: 0, X: 0}.IsBetween(top, bot), "!(Pin{ .node = n2, .y = 0, .x = 0 }).isBetween(top, bot)")
+	expect(t, PageListPin{Node: n2, Y: 6, X: 0}.IsBetween(top, bot), "(Pin{ .node = n2, .y = 6, .x = 0 }).isBetween(top, bot)")
+	expect(t, PageListPin{Node: n2, Y: n2.data.size.rows - 1, X: 9}.IsBetween(top, bot),
 		"(Pin{ .node = n2, .y = n2.data.size.rows - 1, .x = 9 }).isBetween(top, bot)")
 	// The top row itself, x before the top x is out.
-	expect(t, !PageListPin{node: n2, y: 5, x: 3}.IsBetween(top, bot), "!(Pin{ .node = n2, .y = 5, .x = 3 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: n2, Y: 5, X: 3}.IsBetween(top, bot), "!(Pin{ .node = n2, .y = 5, .x = 3 }).isBetween(top, bot)")
 
 	// Page 3, the bottom page: only rows up to the bottom row are in.
-	expect(t, PageListPin{node: n3, y: 0, x: 9}.IsBetween(top, bot), "(Pin{ .node = n3, .y = 0, .x = 9 }).isBetween(top, bot)")
-	expect(t, PageListPin{node: n3, y: 5, x: 9}.IsBetween(top, bot), "(Pin{ .node = n3, .y = 5, .x = 9 }).isBetween(top, bot)")
-	expect(t, PageListPin{node: n3, y: 6, x: 3}.IsBetween(top, bot), "(Pin{ .node = n3, .y = 6, .x = 3 }).isBetween(top, bot)")
-	expect(t, !PageListPin{node: n3, y: 6, x: 4}.IsBetween(top, bot), "!(Pin{ .node = n3, .y = 6, .x = 4 }).isBetween(top, bot)")
-	expect(t, !PageListPin{node: n3, y: 7, x: 0}.IsBetween(top, bot), "!(Pin{ .node = n3, .y = 7, .x = 0 }).isBetween(top, bot)")
+	expect(t, PageListPin{Node: n3, Y: 0, X: 9}.IsBetween(top, bot), "(Pin{ .node = n3, .y = 0, .x = 9 }).isBetween(top, bot)")
+	expect(t, PageListPin{Node: n3, Y: 5, X: 9}.IsBetween(top, bot), "(Pin{ .node = n3, .y = 5, .x = 9 }).isBetween(top, bot)")
+	expect(t, PageListPin{Node: n3, Y: 6, X: 3}.IsBetween(top, bot), "(Pin{ .node = n3, .y = 6, .x = 3 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: n3, Y: 6, X: 4}.IsBetween(top, bot), "!(Pin{ .node = n3, .y = 6, .x = 4 }).isBetween(top, bot)")
+	expect(t, !PageListPin{Node: n3, Y: 7, X: 0}.IsBetween(top, bot), "!(Pin{ .node = n3, .y = 7, .x = 0 }).isBetween(top, bot)")
 
 	// Whole pages in between: with 4 pages, a range from page 1 to page 4.
-	wide_top := PageListPin{node: n1, y: 1, x: 0}
-	wide_bot := PageListPin{node: n4, y: 2, x: 0}
-	expect(t, PageListPin{node: n2, y: 0, x: 0}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n2, .y = 0, .x = 0 }).isBetween(wide_top, wide_bot)")
-	expect(t, PageListPin{node: n3, y: 9, x: 9}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n3, .y = 9, .x = 9 }).isBetween(wide_top, wide_bot)")
-	expect(t, PageListPin{node: n4, y: 2, x: 0}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n4, .y = 2, .x = 0 }).isBetween(wide_top, wide_bot)")
-	expect(t, !PageListPin{node: n4, y: 2, x: 1}.IsBetween(wide_top, wide_bot), "!(Pin{ .node = n4, .y = 2, .x = 1 }).isBetween(wide_top, wide_bot)")
-	expect(t, !PageListPin{node: n1, y: 0, x: 9}.IsBetween(wide_top, wide_bot), "!(Pin{ .node = n1, .y = 0, .x = 9 }).isBetween(wide_top, wide_bot)")
+	wide_top := PageListPin{Node: n1, Y: 1, X: 0}
+	wide_bot := PageListPin{Node: n4, Y: 2, X: 0}
+	expect(t, PageListPin{Node: n2, Y: 0, X: 0}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n2, .y = 0, .x = 0 }).isBetween(wide_top, wide_bot)")
+	expect(t, PageListPin{Node: n3, Y: 9, X: 9}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n3, .y = 9, .x = 9 }).isBetween(wide_top, wide_bot)")
+	expect(t, PageListPin{Node: n4, Y: 2, X: 0}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n4, .y = 2, .x = 0 }).isBetween(wide_top, wide_bot)")
+	expect(t, !PageListPin{Node: n4, Y: 2, X: 1}.IsBetween(wide_top, wide_bot), "!(Pin{ .node = n4, .y = 2, .x = 1 }).isBetween(wide_top, wide_bot)")
+	expect(t, !PageListPin{Node: n1, Y: 0, X: 9}.IsBetween(wide_top, wide_bot), "!(Pin{ .node = n1, .y = 0, .x = 9 }).isBetween(wide_top, wide_bot)")
 	// The row after the top row on the top page is in.
-	expect(t, PageListPin{node: n1, y: 2, x: 0}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n1, .y = 2, .x = 0 }).isBetween(wide_top, wide_bot)")
+	expect(t, PageListPin{Node: n1, Y: 2, X: 0}.IsBetween(wide_top, wide_bot), "(Pin{ .node = n1, .y = 2, .x = 0 }).isBetween(wide_top, wide_bot)")
 }
 
 // Zig: test "term51: Pin.isBetween: the top pin itself with the bottom on a later page"
@@ -555,17 +555,17 @@ func TestPl6_Pin_isBetween_the_top_pin_itself_with_the_bottom_on_a_later_page(t 
 	n2 := n1.next
 	n3 := n2.next
 
-	top := PageListPin{node: n2, y: 5, x: 4}
-	bot := PageListPin{node: n3, y: 6, x: 3}
+	top := PageListPin{Node: n2, Y: 5, X: 4}
+	bot := PageListPin{Node: n3, Y: 6, X: 3}
 	expectEqual(t, false, top.IsBetween(top, bot))
-	expectEqual(t, false, PageListPin{node: n2, y: 5, x: 9}.IsBetween(top, bot))
+	expectEqual(t, false, PageListPin{Node: n2, Y: 5, X: 9}.IsBetween(top, bot))
 	// The row below the top row is in, as is the bottom pin itself.
-	expectEqual(t, true, PageListPin{node: n2, y: 6, x: 0}.IsBetween(top, bot))
+	expectEqual(t, true, PageListPin{Node: n2, Y: 6, X: 0}.IsBetween(top, bot))
 	expectEqual(t, true, bot.IsBetween(top, bot))
 
 	// Adjacent pages, same behaviour.
-	bot2 := PageListPin{node: n3}
-	top2 := PageListPin{node: n2, y: n2.data.size.rows - 1, x: 0}
+	bot2 := PageListPin{Node: n3}
+	top2 := PageListPin{Node: n2, Y: n2.data.size.rows - 1, X: 0}
 	expectEqual(t, false, top2.IsBetween(top2, bot2))
 	expectEqual(t, true, bot2.IsBetween(top2, bot2))
 }
@@ -579,20 +579,20 @@ func TestPl6_Pin_left_moves_the_x_left_and_keeps_everything_else(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 2, x: 7, garbage: true}
+	p := PageListPin{Node: node, Y: 2, X: 7, Garbage: true}
 	pl6ExpectPinV(t, p.Left(0), node, 2, 7)
 	pl6ExpectPinV(t, p.Left(1), node, 2, 6)
 	pl6ExpectPinV(t, p.Left(3), node, 2, 4)
 	pl6ExpectPinV(t, p.Left(7), node, 2, 0)
-	expect(t, p.Left(3).garbage, "p.left(3).garbage")
+	expect(t, p.Left(3).Garbage, "p.left(3).garbage")
 	expect(t, p.Left(0).Eql(p), "p.left(0).eql(p)")
 
 	// x of zero can only move by zero.
-	z := PageListPin{node: node, y: 1}
+	z := PageListPin{Node: node, Y: 1}
 	pl6ExpectPinV(t, z.Left(0), node, 1, 0)
 
 	// The largest x
-	e := PageListPin{node: node, y: 0, x: 9}
+	e := PageListPin{Node: node, Y: 0, X: 9}
 	pl6ExpectPinV(t, e.Left(9), node, 0, 0)
 	pl6ExpectPinV(t, e.Left(1), node, 0, 8)
 }
@@ -604,17 +604,17 @@ func TestPl6_Pin_right_moves_the_x_right_and_keeps_everything_else(t *testing.T)
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 1, x: 2, garbage: true}
+	p := PageListPin{Node: node, Y: 1, X: 2, Garbage: true}
 	pl6ExpectPinV(t, p.Right(0), node, 1, 2)
 	pl6ExpectPinV(t, p.Right(1), node, 1, 3)
 	pl6ExpectPinV(t, p.Right(5), node, 1, 7)
 	// To the last column exactly.
 	pl6ExpectPinV(t, p.Right(7), node, 1, 9)
-	expect(t, p.Right(7).garbage, "p.right(7).garbage")
+	expect(t, p.Right(7).Garbage, "p.right(7).garbage")
 
-	z := PageListPin{node: node}
+	z := PageListPin{Node: node}
 	pl6ExpectPinV(t, z.Right(9), node, 0, 9)
-	e := PageListPin{node: node, y: 2, x: 9}
+	e := PageListPin{Node: node, Y: 2, X: 9}
 	pl6ExpectPinV(t, e.Right(0), node, 2, 9)
 }
 
@@ -625,16 +625,16 @@ func TestPl6_Pin_leftClamp_stops_at_the_first_column(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 2, x: 5, garbage: true}
+	p := PageListPin{Node: node, Y: 2, X: 5, Garbage: true}
 	pl6ExpectPinV(t, p.LeftClamp(0), node, 2, 5)
 	pl6ExpectPinV(t, p.LeftClamp(1), node, 2, 4)
 	pl6ExpectPinV(t, p.LeftClamp(4), node, 2, 1)
 	pl6ExpectPinV(t, p.LeftClamp(5), node, 2, 0)
 	pl6ExpectPinV(t, p.LeftClamp(6), node, 2, 0)
 	pl6ExpectPinV(t, p.LeftClamp(math.MaxUint16), node, 2, 0)
-	expect(t, p.LeftClamp(100).garbage, "p.leftClamp(100).garbage")
+	expect(t, p.LeftClamp(100).Garbage, "p.leftClamp(100).garbage")
 
-	z := PageListPin{node: node, y: 1}
+	z := PageListPin{Node: node, Y: 1}
 	pl6ExpectPinV(t, z.LeftClamp(0), node, 1, 0)
 	pl6ExpectPinV(t, z.LeftClamp(3), node, 1, 0)
 }
@@ -646,7 +646,7 @@ func TestPl6_Pin_rightClamp_stops_at_the_last_column(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 2, x: 5, garbage: true}
+	p := PageListPin{Node: node, Y: 2, X: 5, Garbage: true}
 	pl6ExpectPinV(t, p.RightClamp(0), node, 2, 5)
 	pl6ExpectPinV(t, p.RightClamp(1), node, 2, 6)
 	pl6ExpectPinV(t, p.RightClamp(3), node, 2, 8)
@@ -655,12 +655,12 @@ func TestPl6_Pin_rightClamp_stops_at_the_last_column(t *testing.T) {
 	pl6ExpectPinV(t, p.RightClamp(6), node, 2, 9)
 	// The addition saturates instead of overflowing.
 	pl6ExpectPinV(t, p.RightClamp(math.MaxUint16), node, 2, 9)
-	expect(t, p.RightClamp(100).garbage, "p.rightClamp(100).garbage")
+	expect(t, p.RightClamp(100).Garbage, "p.rightClamp(100).garbage")
 
-	e := PageListPin{node: node, y: 0, x: 9}
+	e := PageListPin{Node: node, Y: 0, X: 9}
 	pl6ExpectPinV(t, e.RightClamp(0), node, 0, 9)
 	pl6ExpectPinV(t, e.RightClamp(1), node, 0, 9)
-	z := PageListPin{node: node}
+	z := PageListPin{Node: node}
 	pl6ExpectPinV(t, z.RightClamp(9), node, 0, 9)
 	pl6ExpectPinV(t, z.RightClamp(8), node, 0, 8)
 }
@@ -672,7 +672,7 @@ func TestPl6_Pin_leftWrap_within_the_row_and_wrapping_to_previous_rows(t *testin
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 5, x: 3}
+	p := PageListPin{Node: node, Y: 5, X: 3}
 	// Fits in the row: same as left.
 	pl6ExpectPin(t, p.LeftWrap(0), node, 5, 3)
 	pl6ExpectPin(t, p.LeftWrap(1), node, 5, 2)
@@ -701,14 +701,14 @@ func TestPl6_Pin_leftWrap_landing_exactly_on_the_first_column_of_a_row_is_off_by
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 5, x: 3}
+	p := PageListPin{Node: node, Y: 5, X: 3}
 	// 3 + 10 cells left would be (0, 4); upstream returns (10, 3).
 	pl6ExpectPin(t, p.LeftWrap(13), node, 3, 10)
 	pl6ExpectPin(t, p.LeftWrap(23), node, 2, 10)
 	pl6ExpectPin(t, p.LeftWrap(33), node, 1, 10)
 
 	// From the first column: cols cells left is (0, y-1); upstream gives (10, y-2).
-	z := PageListPin{node: node, y: 5, x: 0}
+	z := PageListPin{Node: node, Y: 5, X: 0}
 	pl6ExpectPin(t, z.LeftWrap(10), node, 3, 10)
 	// But one cell and cols-1 cells are right.
 	pl6ExpectPin(t, z.LeftWrap(1), node, 4, 9)
@@ -725,22 +725,22 @@ func TestPl6_Pin_leftWrap_top_of_the_screen_and_page_crossing(t *testing.T) {
 	n2 := n1.next
 
 	// First row of the first page.
-	top := PageListPin{node: n1, y: 0, x: 3}
+	top := PageListPin{Node: n1, Y: 0, X: 3}
 	pl6ExpectPin(t, top.LeftWrap(0), n1, 0, 3)
 	pl6ExpectPin(t, top.LeftWrap(3), n1, 0, 0)
 	expect(t, !top.LeftWrap(4).Valid, "top.leftWrap(4) == null")
-	expect(t, !PageListPin{node: n1}.LeftWrap(1).Valid, "(Pin{ .node = n1 }).leftWrap(1) == null")
-	pl6ExpectPin(t, PageListPin{node: n1}.LeftWrap(0), n1, 0, 0)
+	expect(t, !PageListPin{Node: n1}.LeftWrap(1).Valid, "(Pin{ .node = n1 }).leftWrap(1) == null")
+	pl6ExpectPin(t, PageListPin{Node: n1}.LeftWrap(0), n1, 0, 0)
 
 	// Wrapping from the first row of the second page goes to the last row of
 	// the first page.
-	p := PageListPin{node: n2, y: 0, x: 2}
+	p := PageListPin{Node: n2, Y: 0, X: 2}
 	pl6ExpectPin(t, p.LeftWrap(2), n2, 0, 0)
 	pl6ExpectPin(t, p.LeftWrap(3), n1, uint(n1.data.size.rows)-1, 9)
 	pl6ExpectPin(t, p.LeftWrap(5), n1, uint(n1.data.size.rows)-1, 7)
 	pl6ExpectPin(t, p.LeftWrap(13), n1, uint(n1.data.size.rows)-2, 9)
 	// Wrapping from a later row of the second page that stays on that page.
-	q := PageListPin{node: n2, y: 2, x: 2}
+	q := PageListPin{Node: n2, Y: 2, X: 2}
 	pl6ExpectPin(t, q.LeftWrap(3), n2, 1, 9)
 	// Wrapping from a later row that crosses into the first page.
 	pl6ExpectPin(t, q.LeftWrap(23), n1, uint(n1.data.size.rows)-1, 9)
@@ -753,7 +753,7 @@ func TestPl6_Pin_rightWrap_within_the_row_and_wrapping_to_next_rows(t *testing.T
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 2, x: 3}
+	p := PageListPin{Node: node, Y: 2, X: 3}
 	// Fits in the row: same as right.
 	pl6ExpectPin(t, p.RightWrap(0), node, 2, 3)
 	pl6ExpectPin(t, p.RightWrap(1), node, 2, 4)
@@ -766,14 +766,14 @@ func TestPl6_Pin_rightWrap_within_the_row_and_wrapping_to_next_rows(t *testing.T
 	pl6ExpectPin(t, p.RightWrap(17), node, 4, 0)
 	pl6ExpectPin(t, p.RightWrap(25), node, 4, 8)
 	// From the last column.
-	e := PageListPin{node: node, y: 2, x: 9}
+	e := PageListPin{Node: node, Y: 2, X: 9}
 	pl6ExpectPin(t, e.RightWrap(0), node, 2, 9)
 	pl6ExpectPin(t, e.RightWrap(1), node, 3, 0)
 	pl6ExpectPin(t, e.RightWrap(2), node, 3, 1)
 	pl6ExpectPin(t, e.RightWrap(9), node, 3, 8)
 	pl6ExpectPin(t, e.RightWrap(11), node, 4, 0)
 	// From the first column.
-	z := PageListPin{node: node, y: 0, x: 0}
+	z := PageListPin{Node: node, Y: 0, X: 0}
 	pl6ExpectPin(t, z.RightWrap(9), node, 0, 9)
 	pl6ExpectPin(t, z.RightWrap(10), node, 1, 0)
 	// The last count that still fits below: 5 rows down from y=2 is y=7.
@@ -793,7 +793,7 @@ func TestPl6_Pin_rightWrap_bottom_of_the_screen_and_page_crossing(t *testing.T) 
 	last_y := n2.data.size.rows - 1
 
 	// Last cell of the page list.
-	bottom := PageListPin{node: n2, y: last_y, x: 9}
+	bottom := PageListPin{Node: n2, Y: last_y, X: 9}
 	pl6ExpectPin(t, bottom.RightWrap(0), n2, uint(last_y), 9)
 	expect(t, !bottom.RightWrap(1).Valid, "bottom.rightWrap(1) == null")
 	// Overflow is detected before any x computation, so even counts that
@@ -801,13 +801,13 @@ func TestPl6_Pin_rightWrap_bottom_of_the_screen_and_page_crossing(t *testing.T) 
 	expect(t, !bottom.RightWrap(10).Valid, "bottom.rightWrap(10) == null")
 	expect(t, !bottom.RightWrap(11).Valid, "bottom.rightWrap(11) == null")
 	expect(t, !bottom.RightWrap(20).Valid, "bottom.rightWrap(20) == null")
-	mid := PageListPin{node: n2, y: last_y, x: 3}
+	mid := PageListPin{Node: n2, Y: last_y, X: 3}
 	pl6ExpectPin(t, mid.RightWrap(6), n2, uint(last_y), 9)
 	expect(t, !mid.RightWrap(7).Valid, "mid.rightWrap(7) == null")
 	expect(t, !mid.RightWrap(16).Valid, "mid.rightWrap(16) == null")
 
 	// Wrapping from the last row of the first page goes to the second page.
-	p := PageListPin{node: n1, y: n1.data.size.rows - 1, x: 8}
+	p := PageListPin{Node: n1, Y: n1.data.size.rows - 1, X: 8}
 	pl6ExpectPin(t, p.RightWrap(1), n1, uint(n1.data.size.rows)-1, 9)
 	pl6ExpectPin(t, p.RightWrap(2), n2, 0, 0)
 	pl6ExpectPin(t, p.RightWrap(3), n2, 0, 1)
@@ -828,7 +828,7 @@ func TestPl6_Pin_downOverflow_offsets_within_and_across_pages(t *testing.T) {
 	r2 := uint(n2.data.size.rows)
 	r3 := uint(n3.data.size.rows)
 
-	p := PageListPin{node: n1, y: 2, x: 4, garbage: true}
+	p := PageListPin{Node: n1, Y: 2, X: 4, Garbage: true}
 	// Rows left on the pin's page below the pin.
 	below := r1 - 1 - 2
 
@@ -836,7 +836,7 @@ func TestPl6_Pin_downOverflow_offsets_within_and_across_pages(t *testing.T) {
 	{
 		r := p.DownOverflow(0)
 		pl6ExpectPinV(t, pl6Offset(t, r), n1, 2, 4)
-		expect(t, !r.Offset.garbage, "!r.offset.garbage")
+		expect(t, !r.Offset.Garbage, "!r.offset.garbage")
 	}
 	pl6ExpectPinV(t, pl6Offset(t, p.DownOverflow(1)), n1, 3, 4)
 	// Last row of the page.
@@ -854,15 +854,15 @@ func TestPl6_Pin_downOverflow_offsets_within_and_across_pages(t *testing.T) {
 	// One past the end: overflow by exactly one, ending on the last row.
 	{
 		r := pl6Overflow(t, p.DownOverflow(below+r2+r3+1)).Overflow
-		expect(t, r.end.node == n3, "r.end.node == n3")
-		expectEqual(t, r3-1, uint(r.end.y))
-		expectEqual(t, uint(4), uint(r.end.x))
+		expect(t, r.end.Node == n3, "r.end.node == n3")
+		expectEqual(t, r3-1, uint(r.end.Y))
+		expectEqual(t, uint(4), uint(r.end.X))
 		expectEqual(t, uint(1), r.remaining)
 	}
 	{
 		r := pl6Overflow(t, p.DownOverflow(below+r2+r3+100)).Overflow
-		expect(t, r.end.node == n3, "r.end.node == n3")
-		expectEqual(t, r3-1, uint(r.end.y))
+		expect(t, r.end.Node == n3, "r.end.node == n3")
+		expectEqual(t, r3-1, uint(r.end.Y))
 		expectEqual(t, uint(100), r.remaining)
 	}
 }
@@ -874,25 +874,25 @@ func TestPl6_Pin_downOverflow_single_page(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 4, x: 7}
+	p := PageListPin{Node: node, Y: 4, X: 7}
 	pl6ExpectPinV(t, pl6Offset(t, p.DownOverflow(0)), node, 4, 7)
 	pl6ExpectPinV(t, pl6Offset(t, p.DownOverflow(1)), node, 5, 7)
 	{
 		r := pl6Overflow(t, p.DownOverflow(2)).Overflow
-		expect(t, r.end.node == node, "r.end.node == node")
-		expectEqual(t, uint(5), uint(r.end.y))
-		expectEqual(t, uint(7), uint(r.end.x))
+		expect(t, r.end.Node == node, "r.end.node == node")
+		expectEqual(t, uint(5), uint(r.end.Y))
+		expectEqual(t, uint(7), uint(r.end.X))
 		expectEqual(t, uint(1), r.remaining)
 	}
 
 	// On the last row: zero is fine, anything else overflows by n.
-	last := PageListPin{node: node, y: 5, x: 0}
+	last := PageListPin{Node: node, Y: 5, X: 0}
 	pl6ExpectPinV(t, pl6Offset(t, last.DownOverflow(0)), node, 5, 0)
 	expectEqual(t, uint(1), pl6Overflow(t, last.DownOverflow(1)).Overflow.remaining)
 	expectEqual(t, uint(9), pl6Overflow(t, last.DownOverflow(9)).Overflow.remaining)
 
 	// From the first row to the last
-	first := PageListPin{node: node}
+	first := PageListPin{Node: node}
 	pl6ExpectPinV(t, pl6Offset(t, first.DownOverflow(5)), node, 5, 0)
 	expectEqual(t, uint(1), pl6Overflow(t, first.DownOverflow(6)).Overflow.remaining)
 }
@@ -908,13 +908,13 @@ func TestPl6_Pin_upOverflow_offsets_within_and_across_pages(t *testing.T) {
 	r1 := uint(n1.data.size.rows)
 	r2 := uint(n2.data.size.rows)
 
-	p := PageListPin{node: n3, y: 4, x: 6, garbage: true}
+	p := PageListPin{Node: n3, Y: 4, X: 6, Garbage: true}
 
 	// Zero keeps the position, but the garbage flag is not carried.
 	{
 		r := p.UpOverflow(0)
 		pl6ExpectPinV(t, pl6Offset(t, r), n3, 4, 6)
-		expect(t, !r.Offset.garbage, "!r.offset.garbage")
+		expect(t, !r.Offset.Garbage, "!r.offset.garbage")
 	}
 	pl6ExpectPinV(t, pl6Offset(t, p.UpOverflow(1)), n3, 3, 6)
 	// First row of the page.
@@ -932,15 +932,15 @@ func TestPl6_Pin_upOverflow_offsets_within_and_across_pages(t *testing.T) {
 	// One past the top: overflow by exactly one, ending on row zero.
 	{
 		r := pl6Overflow(t, p.UpOverflow(4+r2+r1+1)).Overflow
-		expect(t, r.end.node == n1, "r.end.node == n1")
-		expectEqual(t, uint(0), uint(r.end.y))
-		expectEqual(t, uint(6), uint(r.end.x))
+		expect(t, r.end.Node == n1, "r.end.node == n1")
+		expectEqual(t, uint(0), uint(r.end.Y))
+		expectEqual(t, uint(6), uint(r.end.X))
 		expectEqual(t, uint(1), r.remaining)
 	}
 	{
 		r := pl6Overflow(t, p.UpOverflow(4+r2+r1+100)).Overflow
-		expect(t, r.end.node == n1, "r.end.node == n1")
-		expectEqual(t, uint(0), uint(r.end.y))
+		expect(t, r.end.Node == n1, "r.end.node == n1")
+		expectEqual(t, uint(0), uint(r.end.Y))
 		expectEqual(t, uint(100), r.remaining)
 	}
 }
@@ -952,25 +952,25 @@ func TestPl6_Pin_upOverflow_single_page(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	p := PageListPin{node: node, y: 1, x: 7}
+	p := PageListPin{Node: node, Y: 1, X: 7}
 	pl6ExpectPinV(t, pl6Offset(t, p.UpOverflow(0)), node, 1, 7)
 	pl6ExpectPinV(t, pl6Offset(t, p.UpOverflow(1)), node, 0, 7)
 	{
 		r := pl6Overflow(t, p.UpOverflow(2)).Overflow
-		expect(t, r.end.node == node, "r.end.node == node")
-		expectEqual(t, uint(0), uint(r.end.y))
-		expectEqual(t, uint(7), uint(r.end.x))
+		expect(t, r.end.Node == node, "r.end.node == node")
+		expectEqual(t, uint(0), uint(r.end.Y))
+		expectEqual(t, uint(7), uint(r.end.X))
 		expectEqual(t, uint(1), r.remaining)
 	}
 
 	// On the first row: zero is fine, anything else overflows by n.
-	first := PageListPin{node: node, y: 0, x: 3}
+	first := PageListPin{Node: node, Y: 0, X: 3}
 	pl6ExpectPinV(t, pl6Offset(t, first.UpOverflow(0)), node, 0, 3)
 	expectEqual(t, uint(1), pl6Overflow(t, first.UpOverflow(1)).Overflow.remaining)
 	expectEqual(t, uint(9), pl6Overflow(t, first.UpOverflow(9)).Overflow.remaining)
 
 	// From the last row to the first
-	last := PageListPin{node: node, y: 5}
+	last := PageListPin{Node: node, Y: 5}
 	pl6ExpectPinV(t, pl6Offset(t, last.UpOverflow(5)), node, 0, 0)
 	expectEqual(t, uint(1), pl6Overflow(t, last.UpOverflow(6)).Overflow.remaining)
 }
@@ -985,9 +985,9 @@ func TestPl6_Pin_down_moves_down_or_returns_null_past_the_end(t *testing.T) {
 	r1 := uint(n1.data.size.rows)
 	r2 := uint(n2.data.size.rows)
 
-	p := PageListPin{node: n1, y: 2, x: 4, garbage: true}
+	p := PageListPin{Node: n1, Y: 2, X: 4, Garbage: true}
 	pl6ExpectPin(t, p.Down(0), n1, 2, 4)
-	expect(t, !p.Down(0).Value.garbage, "!p.down(0).?.garbage")
+	expect(t, !p.Down(0).Value.Garbage, "!p.down(0).?.garbage")
 	pl6ExpectPin(t, p.Down(1), n1, 3, 4)
 	pl6ExpectPin(t, p.Down(r1-1-2), n1, r1-1, 4)
 	pl6ExpectPin(t, p.Down(r1-2), n2, 0, 4)
@@ -998,7 +998,7 @@ func TestPl6_Pin_down_moves_down_or_returns_null_past_the_end(t *testing.T) {
 	expect(t, !p.Down(1_000_000).Valid, "p.down(1_000_000) == null")
 
 	// From the very last row
-	last := PageListPin{node: n2, y: SizeCellCountInt(r2 - 1), x: 9}
+	last := PageListPin{Node: n2, Y: SizeCellCountInt(r2 - 1), X: 9}
 	pl6ExpectPin(t, last.Down(0), n2, r2-1, 9)
 	expect(t, !last.Down(1).Valid, "last.down(1) == null")
 }
@@ -1012,9 +1012,9 @@ func TestPl6_Pin_up_moves_up_or_returns_null_past_the_start(t *testing.T) {
 	n2 := n1.next
 	r1 := uint(n1.data.size.rows)
 
-	p := PageListPin{node: n2, y: 2, x: 4, garbage: true}
+	p := PageListPin{Node: n2, Y: 2, X: 4, Garbage: true}
 	pl6ExpectPin(t, p.Up(0), n2, 2, 4)
-	expect(t, !p.Up(0).Value.garbage, "!p.up(0).?.garbage")
+	expect(t, !p.Up(0).Value.Garbage, "!p.up(0).?.garbage")
 	pl6ExpectPin(t, p.Up(1), n2, 1, 4)
 	pl6ExpectPin(t, p.Up(2), n2, 0, 4)
 	pl6ExpectPin(t, p.Up(3), n1, r1-1, 4)
@@ -1025,7 +1025,7 @@ func TestPl6_Pin_up_moves_up_or_returns_null_past_the_start(t *testing.T) {
 	expect(t, !p.Up(1_000_000).Valid, "p.up(1_000_000) == null")
 
 	// From the very first row
-	first := PageListPin{node: n1, y: 0, x: 9}
+	first := PageListPin{Node: n1, Y: 0, X: 9}
 	pl6ExpectPin(t, first.Up(0), n1, 0, 9)
 	expect(t, !first.Up(1).Valid, "first.up(1) == null")
 }
@@ -1133,7 +1133,7 @@ func TestPl6_getTopLeft_viewport_follows_active_top_and_pin(t *testing.T) {
 	expect(t, !s.GetTopLeft(PointTagActive).Eql(s.GetTopLeft(PointTagViewport)), "!s.getTopLeft(.active).eql(s.getTopLeft(.viewport))")
 
 	// Pin: the viewport pin itself, including its x.
-	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: n2, y: 5, x: 3}})
+	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: n2, Y: 5, X: 3}})
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 	pl6ExpectPinV(t, s.GetTopLeft(PointTagViewport), n2, 5, 3)
 	expect(t, s.GetTopLeft(PointTagViewport).Eql(*s.viewport_pin), "s.getTopLeft(.viewport).eql(s.viewport_pin.*)")
@@ -1199,9 +1199,9 @@ func TestPl6_getBottomRight_viewport_is_rows_below_the_viewport_top_left(t *test
 
 	// Pin viewport that crosses a page boundary: the x is the last column
 	// even though the viewport pin x is not.
-	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: n1, y: SizeCellCountInt(r1 - 2), x: 4}})
+	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: n1, Y: SizeCellCountInt(r1 - 2), X: 4}})
 	pl6ExpectPin(t, s.GetBottomRight(PointTagViewport), n2, 0, 9)
-	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: n1, y: SizeCellCountInt(r1 - 1), x: 4}})
+	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: n1, Y: SizeCellCountInt(r1 - 1), X: 4}})
 	pl6ExpectPin(t, s.GetBottomRight(PointTagViewport), n2, 1, 9)
 }
 
@@ -1424,7 +1424,7 @@ func TestPl6_markDirty_marks_the_row_of_a_point_in_any_tag(t *testing.T) {
 	s.ClearDirty()
 
 	// Active y=2 is screen y=12.
-	s.markDirty(Point{Tag: PointTagActive, Active: PointCoordinate{x: 3, y: 2}})
+	s.markDirty(Point{Tag: PointTagActive, Active: PointCoordinate{X: 3, Y: 2}})
 	expect(t, page.GetRowAndCell(0, 12).row.dirty, "page.getRowAndCell(0, 12).row.dirty")
 	expect(t, !page.GetRowAndCell(0, 2).row.dirty, "!page.getRowAndCell(0, 2).row.dirty")
 	expect(t, !page.GetRowAndCell(0, 11).row.dirty, "!page.getRowAndCell(0, 11).row.dirty")
@@ -1432,14 +1432,14 @@ func TestPl6_markDirty_marks_the_row_of_a_point_in_any_tag(t *testing.T) {
 	expect(t, !page.dirty, "!page.dirty")
 
 	// Screen
-	s.markDirty(Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 9, y: 2}})
+	s.markDirty(Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 9, Y: 2}})
 	expect(t, page.GetRowAndCell(0, 2).row.dirty, "page.getRowAndCell(0, 2).row.dirty")
 	expect(t, !page.GetRowAndCell(0, 3).row.dirty, "!page.getRowAndCell(0, 3).row.dirty")
 
 	// History and viewport
-	s.markDirty(Point{Tag: PointTagHistory, History: PointCoordinate{x: 0, y: 4}})
+	s.markDirty(Point{Tag: PointTagHistory, History: PointCoordinate{X: 0, Y: 4}})
 	expect(t, page.GetRowAndCell(0, 4).row.dirty, "page.getRowAndCell(0, 4).row.dirty")
-	s.markDirty(Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: 0, y: 4}})
+	s.markDirty(Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: 0, Y: 4}})
 	expect(t, page.GetRowAndCell(0, 14).row.dirty, "page.getRowAndCell(0, 14).row.dirty")
 	expect(t, !page.GetRowAndCell(0, 13).row.dirty, "!page.getRowAndCell(0, 13).row.dirty")
 }
@@ -1473,7 +1473,7 @@ func TestPl6_isDirty_row_and_page_dirty_state_of_a_point(t *testing.T) {
 
 	expect(t, !s.IsDirty(pl6Pt(0, 0)), "!s.isDirty(term51NPt(0, 0))")
 	expect(t, !s.IsDirty(pl6Pt(9, r1)), "!s.isDirty(term51NPt(9, r1))")
-	expect(t, !s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{x: 0, y: 0}}), "!s.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
+	expect(t, !s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{X: 0, Y: 0}}), "!s.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 
 	// A dirty row: every x of that row, no other rows.
 	n2.data.GetRowAndCell(0, 0).row.dirty = true
@@ -1486,9 +1486,9 @@ func TestPl6_isDirty_row_and_page_dirty_state_of_a_point(t *testing.T) {
 	active_tl_y := uint32(n2.data.size.rows) - 3
 	n2.data.GetRowAndCell(0, 0).row.dirty = false
 	n2.data.GetRowAndCell(0, uint(active_tl_y)+1).row.dirty = true
-	expect(t, s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{x: 4, y: 1}}), "s.isDirty(.{ .active = .{ .x = 4, .y = 1 } })")
-	expect(t, !s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{x: 4, y: 0}}), "!s.isDirty(.{ .active = .{ .x = 4, .y = 0 } })")
-	expect(t, !s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{x: 4, y: 2}}), "!s.isDirty(.{ .active = .{ .x = 4, .y = 2 } })")
+	expect(t, s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{X: 4, Y: 1}}), "s.isDirty(.{ .active = .{ .x = 4, .y = 1 } })")
+	expect(t, !s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{X: 4, Y: 0}}), "!s.isDirty(.{ .active = .{ .x = 4, .y = 0 } })")
+	expect(t, !s.IsDirty(Point{Tag: PointTagActive, Active: PointCoordinate{X: 4, Y: 2}}), "!s.isDirty(.{ .active = .{ .x = 4, .y = 2 } })")
 
 	// A dirty page marks all of its rows dirty and no other page.
 	n2.data.GetRowAndCell(0, uint(active_tl_y)+1).row.dirty = false
@@ -1687,7 +1687,7 @@ func TestPl6_PageIterator_next_default_iterator_is_empty_and_dispatches_by_direc
 	expect(t, !empty_up.Next().Valid, "empty_up.next() == null")
 
 	// right_down behaves as nextDown.
-	a := PageListPageIterator{row: Some(PageListPin{node: n2, y: 4}), direction: PageListDirectionRightDown}
+	a := PageListPageIterator{row: Some(PageListPin{Node: n2, Y: 4}), direction: PageListDirectionRightDown}
 	b := a
 	pl6ExpectChunk(t, a.Next(), n2, 4, uint(n2.data.size.rows))
 	pl6ExpectChunk(t, b.nextDown(), n2, 4, uint(n2.data.size.rows))
@@ -1697,7 +1697,7 @@ func TestPl6_PageIterator_next_default_iterator_is_empty_and_dispatches_by_direc
 	expect(t, !b.nextDown().Valid, "b.nextDown() == null")
 
 	// left_up behaves as nextUp.
-	c := PageListPageIterator{row: Some(PageListPin{node: n2, y: 4}), direction: PageListDirectionLeftUp}
+	c := PageListPageIterator{row: Some(PageListPin{Node: n2, Y: 4}), direction: PageListDirectionLeftUp}
 	d := c
 	pl6ExpectChunk(t, c.Next(), n2, 0, 5)
 	pl6ExpectChunk(t, d.nextUp(), n2, 0, 5)
@@ -1717,7 +1717,7 @@ func TestPl6_PageIterator_nextDown_no_limit_consumes_whole_pages_from_the_row(t 
 	n3 := n2.next
 
 	// From the middle of the first page.
-	it := PageListPageIterator{row: Some(PageListPin{node: n1, y: 5, x: 7}), direction: PageListDirectionRightDown}
+	it := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: 5, X: 7}), direction: PageListDirectionRightDown}
 	var buf [4]PageListPageIteratorChunk
 	n := pl6DrainPages(t, &it, buf[:])
 	expectEqual(t, uint(3), n)
@@ -1728,18 +1728,18 @@ func TestPl6_PageIterator_nextDown_no_limit_consumes_whole_pages_from_the_row(t 
 	expect(t, buf[1].FullPage(), "buf[1].fullPage()")
 
 	// The state after one call: the next page, row 0.
-	it2 := PageListPageIterator{row: Some(PageListPin{node: n1, y: 5}), direction: PageListDirectionRightDown}
+	it2 := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: 5}), direction: PageListDirectionRightDown}
 	_ = zigUnwrap(t, it2.nextDown())
 	pl6ExpectPin(t, it2.row, n2, 0, 0)
 
 	// Starting on the last row of a page gives a one row chunk.
-	it3 := PageListPageIterator{row: Some(PageListPin{node: n2, y: n2.data.size.rows - 1}), direction: PageListDirectionRightDown}
+	it3 := PageListPageIterator{row: Some(PageListPin{Node: n2, Y: n2.data.size.rows - 1}), direction: PageListDirectionRightDown}
 	pl6ExpectChunk(t, it3.nextDown(), n2, uint(n2.data.size.rows)-1, uint(n2.data.size.rows))
 	pl6ExpectChunk(t, it3.nextDown(), n3, 0, uint(n3.data.size.rows))
 	expect(t, !it3.nextDown().Valid, "it3.nextDown() == null")
 
 	// Starting at the first row of the last page.
-	it4 := PageListPageIterator{row: Some(PageListPin{node: n3}), direction: PageListDirectionRightDown}
+	it4 := PageListPageIterator{row: Some(PageListPin{Node: n3}), direction: PageListDirectionRightDown}
 	pl6ExpectChunk(t, it4.nextDown(), n3, 0, uint(n3.data.size.rows))
 	expect(t, !it4.row.Valid, "it4.row == null")
 	expect(t, !it4.nextDown().Valid, "it4.nextDown() == null")
@@ -1755,8 +1755,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_the_same_page(t *testing.T) {
 	// The limit row is included, and the iterator ends after one chunk even
 	// though more pages follow.
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 2}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 7}),
+		row:       Some(PageListPin{Node: n1, Y: 2}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 7}),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectChunk(t, it.nextDown(), n1, 2, 8)
@@ -1765,8 +1765,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_the_same_page(t *testing.T) {
 
 	// Single row.
 	one := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 5}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 5}),
+		row:       Some(PageListPin{Node: n1, Y: 5}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 5}),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectChunk(t, one.nextDown(), n1, 5, 6)
@@ -1774,8 +1774,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_the_same_page(t *testing.T) {
 
 	// The first row only.
 	zero := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 0}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 0}),
+		row:       Some(PageListPin{Node: n1, Y: 0}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 0}),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectChunk(t, zero.nextDown(), n1, 0, 1)
@@ -1785,8 +1785,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_the_same_page(t *testing.T) {
 	// and nothing from the next page.
 	last_y := n1.data.size.rows - 1
 	last := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 4}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: last_y}),
+		row:       Some(PageListPin{Node: n1, Y: 4}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: last_y}),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectChunk(t, last.nextDown(), n1, 4, uint(n1.data.size.rows))
@@ -1794,8 +1794,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_the_same_page(t *testing.T) {
 
 	// The x of the row and the limit is not used.
 	xs := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 3, x: 9}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 3, x: 0}),
+		row:       Some(PageListPin{Node: n1, Y: 3, X: 9}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 3, X: 0}),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectChunk(t, xs.nextDown(), n1, 3, 4)
@@ -1811,8 +1811,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_a_later_page(t *testing.T) {
 	n3 := n2.next
 
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 4}),
-		limit:     pl6LimitRow(PageListPin{node: n3, y: 6}),
+		row:       Some(PageListPin{Node: n1, Y: 4}),
+		limit:     pl6LimitRow(PageListPin{Node: n3, Y: 6}),
 		direction: PageListDirectionRightDown,
 	}
 	var buf [4]PageListPageIteratorChunk
@@ -1824,8 +1824,8 @@ func TestPl6_PageIterator_nextDown_row_limit_on_a_later_page(t *testing.T) {
 
 	// Limit on the first row of the next page.
 	adj := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: n2.data.size.rows - 1}),
-		limit:     pl6LimitRow(PageListPin{node: n3, y: 0}),
+		row:       Some(PageListPin{Node: n2, Y: n2.data.size.rows - 1}),
+		limit:     pl6LimitRow(PageListPin{Node: n3, Y: 0}),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectChunk(t, adj.nextDown(), n2, uint(n2.data.size.rows)-1, uint(n2.data.size.rows))
@@ -1847,8 +1847,8 @@ func TestPl6_PageIterator_nextDown_row_limit_before_the_row_or_on_an_earlier_pag
 
 	// Same page, limit above the row: nothing, and the iterator is finished.
 	above := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 7}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 2}),
+		row:       Some(PageListPin{Node: n1, Y: 7}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 2}),
 		direction: PageListDirectionRightDown,
 	}
 	expect(t, !above.nextDown().Valid, "above.nextDown() == null")
@@ -1858,8 +1858,8 @@ func TestPl6_PageIterator_nextDown_row_limit_before_the_row_or_on_an_earlier_pag
 	// The limit is on an earlier page, so it is never reached and every page
 	// to the end of the list is returned.
 	earlier := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 3}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 3}),
+		row:       Some(PageListPin{Node: n2, Y: 3}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 3}),
 		direction: PageListDirectionRightDown,
 	}
 	var buf [4]PageListPageIteratorChunk
@@ -1882,32 +1882,32 @@ func TestPl6_PageIterator_nextDown_count_limit_yields_a_single_chunk(t *testing.
 	r1 := n1.data.size.rows
 
 	// Fewer rows than remain in the page.
-	it := PageListPageIterator{row: Some(PageListPin{node: n1, y: 2}), limit: pl6LimitCount(5), direction: PageListDirectionRightDown}
+	it := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: 2}), limit: pl6LimitCount(5), direction: PageListDirectionRightDown}
 	pl6ExpectChunk(t, it.nextDown(), n1, 2, 7)
 	expect(t, !it.row.Valid, "it.row == null")
 	expectEqual(t, uint(5), it.limit.Count)
 	expect(t, !it.nextDown().Valid, "it.nextDown() == null")
 
 	// Exactly the rows that remain in the page.
-	exact := PageListPageIterator{row: Some(PageListPin{node: n1, y: r1 - 3}), limit: pl6LimitCount(3), direction: PageListDirectionRightDown}
+	exact := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: r1 - 3}), limit: pl6LimitCount(3), direction: PageListDirectionRightDown}
 	pl6ExpectChunk(t, exact.nextDown(), n1, uint(r1)-3, uint(r1))
 	expect(t, !exact.nextDown().Valid, "exact.nextDown() == null")
 
 	// More rows than remain: the chunk is cut at the page end and the next
 	// page is not visited.
-	more := PageListPageIterator{row: Some(PageListPin{node: n1, y: r1 - 3}), limit: pl6LimitCount(10), direction: PageListDirectionRightDown}
+	more := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: r1 - 3}), limit: pl6LimitCount(10), direction: PageListDirectionRightDown}
 	pl6ExpectChunk(t, more.nextDown(), n1, uint(r1)-3, uint(r1))
 	expect(t, !more.row.Valid, "more.row == null")
 	expect(t, !more.nextDown().Valid, "more.nextDown() == null")
 
 	// A count of one.
-	one := PageListPageIterator{row: Some(PageListPin{node: n1, y: 0}), limit: pl6LimitCount(1), direction: PageListDirectionRightDown}
+	one := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: 0}), limit: pl6LimitCount(1), direction: PageListDirectionRightDown}
 	pl6ExpectChunk(t, one.nextDown(), n1, 0, 1)
 	expect(t, !one.nextDown().Valid, "one.nextDown() == null")
 
 	// Through next().
 	via := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 1}),
+		row:       Some(PageListPin{Node: n1, Y: 1}),
 		limit:     pl6LimitCount(2),
 		direction: PageListDirectionRightDown,
 	}
@@ -1924,7 +1924,7 @@ func TestPl6_PageIterator_nextUp_no_limit_consumes_whole_pages_up_to_row_zero(t 
 	n2 := n1.next
 	n3 := n2.next
 
-	it := PageListPageIterator{row: Some(PageListPin{node: n3, y: 5, x: 7}), direction: PageListDirectionLeftUp}
+	it := PageListPageIterator{row: Some(PageListPin{Node: n3, Y: 5, X: 7}), direction: PageListDirectionLeftUp}
 	var buf [4]PageListPageIteratorChunk
 	n := pl6DrainPages(t, &it, buf[:])
 	expectEqual(t, uint(3), n)
@@ -1933,18 +1933,18 @@ func TestPl6_PageIterator_nextUp_no_limit_consumes_whole_pages_up_to_row_zero(t 
 	pl6ExpectChunkV(t, buf[2], n1, 0, uint(n1.data.size.rows))
 
 	// The state after one call: the last row of the previous page.
-	it2 := PageListPageIterator{row: Some(PageListPin{node: n3, y: 5}), direction: PageListDirectionLeftUp}
+	it2 := PageListPageIterator{row: Some(PageListPin{Node: n3, Y: 5}), direction: PageListDirectionLeftUp}
 	_ = zigUnwrap(t, it2.nextUp())
 	pl6ExpectPin(t, it2.row, n2, uint(n2.data.size.rows)-1, 0)
 
 	// The first row of a page gives a one row chunk.
-	it3 := PageListPageIterator{row: Some(PageListPin{node: n2, y: 0}), direction: PageListDirectionLeftUp}
+	it3 := PageListPageIterator{row: Some(PageListPin{Node: n2, Y: 0}), direction: PageListDirectionLeftUp}
 	pl6ExpectChunk(t, it3.nextUp(), n2, 0, 1)
 	pl6ExpectChunk(t, it3.nextUp(), n1, 0, uint(n1.data.size.rows))
 	expect(t, !it3.nextUp().Valid, "it3.nextUp() == null")
 
 	// The first page ends the iteration.
-	it4 := PageListPageIterator{row: Some(PageListPin{node: n1, y: 0}), direction: PageListDirectionLeftUp}
+	it4 := PageListPageIterator{row: Some(PageListPin{Node: n1, Y: 0}), direction: PageListDirectionLeftUp}
 	pl6ExpectChunk(t, it4.nextUp(), n1, 0, 1)
 	expect(t, !it4.row.Valid, "it4.row == null")
 	expect(t, !it4.nextUp().Valid, "it4.nextUp() == null")
@@ -1960,8 +1960,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_the_same_page(t *testing.T) {
 
 	// Limit row is included; one chunk even though earlier pages exist.
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 7}),
-		limit:     pl6LimitRow(PageListPin{node: n2, y: 2}),
+		row:       Some(PageListPin{Node: n2, Y: 7}),
+		limit:     pl6LimitRow(PageListPin{Node: n2, Y: 2}),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectChunk(t, it.nextUp(), n2, 2, 8)
@@ -1970,8 +1970,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_the_same_page(t *testing.T) {
 
 	// Single row.
 	one := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 5}),
-		limit:     pl6LimitRow(PageListPin{node: n2, y: 5}),
+		row:       Some(PageListPin{Node: n2, Y: 5}),
+		limit:     pl6LimitRow(PageListPin{Node: n2, Y: 5}),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectChunk(t, one.nextUp(), n2, 5, 6)
@@ -1979,8 +1979,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_the_same_page(t *testing.T) {
 
 	// Limit is the first row of the page.
 	zero := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 4}),
-		limit:     pl6LimitRow(PageListPin{node: n2, y: 0}),
+		row:       Some(PageListPin{Node: n2, Y: 4}),
+		limit:     pl6LimitRow(PageListPin{Node: n2, Y: 0}),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectChunk(t, zero.nextUp(), n2, 0, 5)
@@ -1988,8 +1988,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_the_same_page(t *testing.T) {
 
 	// Both are row zero.
 	zz := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 0}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 0}),
+		row:       Some(PageListPin{Node: n1, Y: 0}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 0}),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectChunk(t, zz.nextUp(), n1, 0, 1)
@@ -1997,8 +1997,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_the_same_page(t *testing.T) {
 
 	// The x of the row and the limit is not used.
 	xs := PageListPageIterator{
-		row:       Some(PageListPin{node: n1, y: 3, x: 0}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 3, x: 9}),
+		row:       Some(PageListPin{Node: n1, Y: 3, X: 0}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 3, X: 9}),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectChunk(t, xs.nextUp(), n1, 3, 4)
@@ -2014,8 +2014,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_an_earlier_page(t *testing.T) {
 	n3 := n2.next
 
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: n3, y: 4}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: 6}),
+		row:       Some(PageListPin{Node: n3, Y: 4}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: 6}),
 		direction: PageListDirectionLeftUp,
 	}
 	var buf [4]PageListPageIteratorChunk
@@ -2027,8 +2027,8 @@ func TestPl6_PageIterator_nextUp_row_limit_on_an_earlier_page(t *testing.T) {
 
 	// Limit on the last row of the previous page.
 	adj := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 0}),
-		limit:     pl6LimitRow(PageListPin{node: n1, y: n1.data.size.rows - 1}),
+		row:       Some(PageListPin{Node: n2, Y: 0}),
+		limit:     pl6LimitRow(PageListPin{Node: n1, Y: n1.data.size.rows - 1}),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectChunk(t, adj.nextUp(), n2, 0, 1)
@@ -2048,8 +2048,8 @@ func TestPl6_PageIterator_nextUp_row_limit_below_the_row_or_on_a_later_page(t *t
 
 	// Same page, limit below the row: nothing, and the iterator is finished.
 	below := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 2}),
-		limit:     pl6LimitRow(PageListPin{node: n2, y: 7}),
+		row:       Some(PageListPin{Node: n2, Y: 2}),
+		limit:     pl6LimitRow(PageListPin{Node: n2, Y: 7}),
 		direction: PageListDirectionLeftUp,
 	}
 	expect(t, !below.nextUp().Valid, "below.nextUp() == null")
@@ -2058,8 +2058,8 @@ func TestPl6_PageIterator_nextUp_row_limit_below_the_row_or_on_a_later_page(t *t
 	// The limit is on a later page so it is never reached and every page to
 	// the start of the list is returned.
 	later := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 3}),
-		limit:     pl6LimitRow(PageListPin{node: s.pages.last, y: 3}),
+		row:       Some(PageListPin{Node: n2, Y: 3}),
+		limit:     pl6LimitRow(PageListPin{Node: s.pages.last, Y: 3}),
 		direction: PageListDirectionLeftUp,
 	}
 	var buf [4]PageListPageIteratorChunk
@@ -2083,7 +2083,7 @@ func TestPl6_PageIterator_nextUp_count_limit_yields_a_single_chunk_with_a_short_
 	n2 := n1.next
 
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 5}),
+		row:       Some(PageListPin{Node: n2, Y: 5}),
 		limit:     pl6LimitCount(3),
 		direction: PageListDirectionLeftUp,
 	}
@@ -2094,7 +2094,7 @@ func TestPl6_PageIterator_nextUp_count_limit_yields_a_single_chunk_with_a_short_
 
 	// Count larger than the rows above: capped at row.y.
 	big := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 5}),
+		row:       Some(PageListPin{Node: n2, Y: 5}),
 		limit:     pl6LimitCount(100),
 		direction: PageListDirectionLeftUp,
 	}
@@ -2103,7 +2103,7 @@ func TestPl6_PageIterator_nextUp_count_limit_yields_a_single_chunk_with_a_short_
 
 	// Count equal to the rows above.
 	eq := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 5}),
+		row:       Some(PageListPin{Node: n2, Y: 5}),
 		limit:     pl6LimitCount(5),
 		direction: PageListDirectionLeftUp,
 	}
@@ -2111,7 +2111,7 @@ func TestPl6_PageIterator_nextUp_count_limit_yields_a_single_chunk_with_a_short_
 
 	// From row 1 the chunk is empty.
 	one := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 1}),
+		row:       Some(PageListPin{Node: n2, Y: 1}),
 		limit:     pl6LimitCount(10),
 		direction: PageListDirectionLeftUp,
 	}
@@ -2120,7 +2120,7 @@ func TestPl6_PageIterator_nextUp_count_limit_yields_a_single_chunk_with_a_short_
 
 	// Through next(), and the earlier page is not visited.
 	via := PageListPageIterator{
-		row:       Some(PageListPin{node: n2, y: 4}),
+		row:       Some(PageListPin{Node: n2, Y: 4}),
 		limit:     pl6LimitCount(2),
 		direction: PageListDirectionLeftUp,
 	}
@@ -2380,23 +2380,23 @@ func TestPl6_pageIterator_bounds_in_different_tags(t *testing.T) {
 
 	for _, dir := range pl6Dirs {
 		// The whole active area given in active points.
-		it := s.PageIterator(dir, Point{Tag: PointTagActive}, Some(Point{Tag: PointTagActive, Active: PointCoordinate{x: 9, y: 2}}))
+		it := s.PageIterator(dir, Point{Tag: PointTagActive}, Some(Point{Tag: PointTagActive, Active: PointCoordinate{X: 9, Y: 2}}))
 		pl6CheckPages(t, &it, dir, []pl6ExpChunk{
 			{node: n3, start: uint(r3) - 2, end: uint(r3)},
 			{node: n4, start: 0, end: 1},
 		})
 		// The first two active rows
-		it = s.PageIterator(dir, Point{Tag: PointTagActive}, Some(Point{Tag: PointTagActive, Active: PointCoordinate{y: 1}}))
+		it = s.PageIterator(dir, Point{Tag: PointTagActive}, Some(Point{Tag: PointTagActive, Active: PointCoordinate{Y: 1}}))
 		pl6CheckPages(t, &it, dir, []pl6ExpChunk{
 			{node: n3, start: uint(r3) - 2, end: uint(r3)},
 		})
 		// The last active row only, in viewport points.
-		it = s.PageIterator(dir, Point{Tag: PointTagViewport, Viewport: PointCoordinate{y: 2}}, Some(Point{Tag: PointTagViewport, Viewport: PointCoordinate{y: 2}}))
+		it = s.PageIterator(dir, Point{Tag: PointTagViewport, Viewport: PointCoordinate{Y: 2}}, Some(Point{Tag: PointTagViewport, Viewport: PointCoordinate{Y: 2}}))
 		pl6CheckPages(t, &it, dir, []pl6ExpChunk{
 			{node: n4, start: 0, end: 1},
 		})
 		// Last row of history to the first active row.
-		it = s.PageIterator(dir, Point{Tag: PointTagHistory, History: PointCoordinate{y: r1 + r2 + r3 - 3}}, Some(Point{Tag: PointTagActive}))
+		it = s.PageIterator(dir, Point{Tag: PointTagHistory, History: PointCoordinate{Y: r1 + r2 + r3 - 3}}, Some(Point{Tag: PointTagActive}))
 		pl6CheckPages(t, &it, dir, []pl6ExpChunk{
 			{node: n3, start: uint(r3) - 3, end: uint(r3) - 1},
 		})
@@ -2412,8 +2412,8 @@ func TestPl6_Pin_pageIterator_sets_row_limit_and_direction(t *testing.T) {
 	n2 := n1.next
 	n3 := n2.next
 
-	a := PageListPin{node: n1, y: 3, x: 4}
-	b := PageListPin{node: n3, y: 7, x: 5}
+	a := PageListPin{Node: n1, Y: 3, X: 4}
+	b := PageListPin{Node: n3, Y: 7, X: 5}
 
 	// No limit
 	{
@@ -2480,7 +2480,7 @@ func pl6DrainRows(t *testing.T, it *PageListRowIterator, dir PageListDirection) 
 		if !p.Valid {
 			break
 		}
-		expectEqual(t, uint(0), uint(p.Value.x))
+		expectEqual(t, uint(0), uint(p.Value.X))
 		if result.last.Valid {
 			prev := result.last.Value
 			var want Optional[PageListPin]
@@ -2512,8 +2512,8 @@ func TestPl6_RowIterator_next_right_down_on_one_page(t *testing.T) {
 	node := s.pages.first
 
 	// Rows 2..=5, in order, then exhausted. The x of the start pin is not used.
-	start := PageListPin{node: node, y: 2, x: 7}
-	it := start.RowIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 5, x: 3}))
+	start := PageListPin{Node: node, Y: 2, X: 7}
+	it := start.RowIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 5, X: 3}))
 	pl6ExpectPin(t, it.Next(), node, 2, 0)
 	pl6ExpectPin(t, it.Next(), node, 3, 0)
 	pl6ExpectPin(t, it.Next(), node, 4, 0)
@@ -2529,11 +2529,11 @@ func TestPl6_RowIterator_next_right_down_on_one_page(t *testing.T) {
 	expect(t, !one.Next().Valid, "one.next() == null")
 
 	// First row only, and last row only.
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 	first := top.RowIterator(PageListDirectionRightDown, Some(top))
 	pl6ExpectPin(t, first.Next(), node, 0, 0)
 	expect(t, !first.Next().Valid, "first.next() == null")
-	bottom := PageListPin{node: node, y: 9}
+	bottom := PageListPin{Node: node, Y: 9}
 	last := bottom.RowIterator(PageListDirectionRightDown, Some(bottom))
 	pl6ExpectPin(t, last.Next(), node, 9, 0)
 	expect(t, !last.Next().Valid, "last.next() == null")
@@ -2552,8 +2552,8 @@ func TestPl6_RowIterator_next_left_up_on_one_page(t *testing.T) {
 	node := s.pages.first
 
 	// From row 5 up to row 2 inclusive; the limit page does not start at row 0.
-	start := PageListPin{node: node, y: 5, x: 7}
-	it := start.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 2, x: 3}))
+	start := PageListPin{Node: node, Y: 5, X: 7}
+	it := start.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 2, X: 3}))
 	pl6ExpectPin(t, it.Next(), node, 5, 0)
 	pl6ExpectPin(t, it.Next(), node, 4, 0)
 	pl6ExpectPin(t, it.Next(), node, 3, 0)
@@ -2569,21 +2569,21 @@ func TestPl6_RowIterator_next_left_up_on_one_page(t *testing.T) {
 	expect(t, !one.Next().Valid, "one.next() == null")
 
 	// Down to row 0.
-	z := PageListPin{node: node, y: 2}
-	to0 := z.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: node}))
+	z := PageListPin{Node: node, Y: 2}
+	to0 := z.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node}))
 	pl6ExpectPin(t, to0.Next(), node, 2, 0)
 	pl6ExpectPin(t, to0.Next(), node, 1, 0)
 	pl6ExpectPin(t, to0.Next(), node, 0, 0)
 	expect(t, !to0.Next().Valid, "to0.next() == null")
 
 	// Row 0 alone.
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 	r0 := top.RowIterator(PageListDirectionLeftUp, Some(top))
 	pl6ExpectPin(t, r0.Next(), node, 0, 0)
 	expect(t, !r0.Next().Valid, "r0.next() == null")
 
 	// The last row alone, and the whole page.
-	bottom := PageListPin{node: node, y: 9}
+	bottom := PageListPin{Node: node, Y: 9}
 	last := bottom.RowIterator(PageListDirectionLeftUp, Some(bottom))
 	pl6ExpectPin(t, last.Next(), node, 9, 0)
 	expect(t, !last.Next().Valid, "last.next() == null")
@@ -2604,8 +2604,8 @@ func TestPl6_RowIterator_next_right_down_across_pages(t *testing.T) {
 	r2 := uint(n2.data.size.rows)
 
 	// Over the boundary of two pages.
-	a := PageListPin{node: n1, y: SizeCellCountInt(r1 - 2)}
-	it := a.RowIterator(PageListDirectionRightDown, Some(PageListPin{node: n2, y: 1}))
+	a := PageListPin{Node: n1, Y: SizeCellCountInt(r1 - 2)}
+	it := a.RowIterator(PageListDirectionRightDown, Some(PageListPin{Node: n2, Y: 1}))
 	pl6ExpectPin(t, it.Next(), n1, r1-2, 0)
 	pl6ExpectPin(t, it.Next(), n1, r1-1, 0)
 	pl6ExpectPin(t, it.Next(), n2, 0, 0)
@@ -2614,16 +2614,16 @@ func TestPl6_RowIterator_next_right_down_across_pages(t *testing.T) {
 	expect(t, !it.Next().Valid, "it.next() == null")
 
 	// Across a whole middle page.
-	wide := a.RowIterator(PageListDirectionRightDown, Some(PageListPin{node: n3, y: 2}))
+	wide := a.RowIterator(PageListDirectionRightDown, Some(PageListPin{Node: n3, Y: 2}))
 	d := pl6DrainRows(t, &wide, PageListDirectionRightDown)
 	expectEqual(t, 2+r2+3, d.count)
-	expect(t, d.first.Value.node == n1, "d.first.?.node == n1")
-	expectEqual(t, r1-2, uint(d.first.Value.y))
+	expect(t, d.first.Value.Node == n1, "d.first.?.node == n1")
+	expectEqual(t, r1-2, uint(d.first.Value.Y))
 	pl6ExpectPin(t, d.last, n3, 2, 0)
 
 	// Last row of a page to the first row of the next one.
-	b := PageListPin{node: n2, y: SizeCellCountInt(r2 - 1)}
-	edge := b.RowIterator(PageListDirectionRightDown, Some(PageListPin{node: n3}))
+	b := PageListPin{Node: n2, Y: SizeCellCountInt(r2 - 1)}
+	edge := b.RowIterator(PageListDirectionRightDown, Some(PageListPin{Node: n3}))
 	pl6ExpectPin(t, edge.Next(), n2, r2-1, 0)
 	pl6ExpectPin(t, edge.Next(), n3, 0, 0)
 	expect(t, !edge.Next().Valid, "edge.next() == null")
@@ -2647,8 +2647,8 @@ func TestPl6_RowIterator_next_left_up_across_pages(t *testing.T) {
 	r2 := uint(n2.data.size.rows)
 
 	// Over the boundary of two pages.
-	a := PageListPin{node: n2, y: 1}
-	it := a.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: n1, y: SizeCellCountInt(r1 - 2)}))
+	a := PageListPin{Node: n2, Y: 1}
+	it := a.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n1, Y: SizeCellCountInt(r1 - 2)}))
 	pl6ExpectPin(t, it.Next(), n2, 1, 0)
 	pl6ExpectPin(t, it.Next(), n2, 0, 0)
 	pl6ExpectPin(t, it.Next(), n1, r1-1, 0)
@@ -2657,22 +2657,22 @@ func TestPl6_RowIterator_next_left_up_across_pages(t *testing.T) {
 	expect(t, !it.Next().Valid, "it.next() == null")
 
 	// Across a whole middle page.
-	b := PageListPin{node: n3, y: 2}
-	wide := b.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: n1, y: SizeCellCountInt(r1 - 2)}))
+	b := PageListPin{Node: n3, Y: 2}
+	wide := b.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n1, Y: SizeCellCountInt(r1 - 2)}))
 	d := pl6DrainRows(t, &wide, PageListDirectionLeftUp)
 	expectEqual(t, 3+r2+2, d.count)
 	pl6ExpectPin(t, d.first, n3, 2, 0)
 	pl6ExpectPin(t, d.last, n1, r1-2, 0)
 
 	// First row of a page down to the last row of the previous one.
-	c := PageListPin{node: n3}
-	edge := c.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: n2, y: SizeCellCountInt(r2 - 1)}))
+	c := PageListPin{Node: n3}
+	edge := c.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n2, Y: SizeCellCountInt(r2 - 1)}))
 	pl6ExpectPin(t, edge.Next(), n3, 0, 0)
 	pl6ExpectPin(t, edge.Next(), n2, r2-1, 0)
 	expect(t, !edge.Next().Valid, "edge.next() == null")
 
 	// All the way to the first row of the first page.
-	all := b.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: n1}))
+	all := b.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n1}))
 	da := pl6DrainRows(t, &all, PageListDirectionLeftUp)
 	expectEqual(t, 3+r2+r1, da.count)
 	pl6ExpectPin(t, da.last, n1, 0, 0)
@@ -2687,8 +2687,8 @@ func TestPl6_Pin_rowIterator_initial_chunk_and_offset(t *testing.T) {
 	n2 := n1.next
 	r1 := uint(n1.data.size.rows)
 
-	a := PageListPin{node: n1, y: 4, x: 2}
-	b := PageListPin{node: n2, y: 6, x: 5}
+	a := PageListPin{Node: n1, Y: 4, X: 2}
+	b := PageListPin{Node: n2, Y: 6, X: 5}
 
 	// right_down starts at the first row of the first chunk.
 	{
@@ -2740,13 +2740,13 @@ func TestPl6_Pin_rowIterator_no_limit_iterates_to_the_edge_of_the_list(t *testin
 	r1 := uint(n1.data.size.rows)
 	r2 := uint(n2.data.size.rows)
 
-	a := PageListPin{node: n1, y: SizeCellCountInt(r1 - 3), x: 6}
+	a := PageListPin{Node: n1, Y: SizeCellCountInt(r1 - 3), X: 6}
 	down := a.RowIterator(PageListDirectionRightDown, None[PageListPin]())
 	dd := pl6DrainRows(t, &down, PageListDirectionRightDown)
 	expectEqual(t, 3+r2, dd.count)
 	pl6ExpectPin(t, dd.last, n2, r2-1, 0)
 
-	b := PageListPin{node: n2, y: 2, x: 6}
+	b := PageListPin{Node: n2, Y: 2, X: 6}
 	up := b.RowIterator(PageListDirectionLeftUp, None[PageListPin]())
 	du := pl6DrainRows(t, &up, PageListDirectionLeftUp)
 	expectEqual(t, 3+r1, du.count)
@@ -2902,7 +2902,7 @@ func pl6DrainCells(t *testing.T, s *PageList, it *PageListCellIterator, dir Page
 			break
 		}
 		pt := zigUnwrap(t, s.PointFromPin(PointTagScreen, p.Value))
-		lin := int64(pt.Screen.y)*int64(s.cols) + int64(pt.Screen.x)
+		lin := int64(pt.Screen.Y)*int64(s.cols) + int64(pt.Screen.X)
 		if prev.Valid {
 			q := prev.Value
 			var want int64
@@ -2943,8 +2943,8 @@ func TestPl6_CellIterator_next_right_down_walks_rows_left_to_right(t *testing.T)
 
 	// The x of the start applies to the first row only and the x of the
 	// limit is ignored: the last row is walked to its last column.
-	start := PageListPin{node: node, y: 1, x: 1}
-	it := start.CellIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 2, x: 2}))
+	start := PageListPin{Node: node, Y: 1, X: 1}
+	it := start.CellIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 2, X: 2}))
 	pl6CheckCells(t, &it, []pl6ExpPin{
 		{node: node, y: 1, x: 1},
 		{node: node, y: 1, x: 2},
@@ -2956,8 +2956,8 @@ func TestPl6_CellIterator_next_right_down_walks_rows_left_to_right(t *testing.T)
 	})
 
 	// Starting on the last column of the first row.
-	last_col := PageListPin{node: node, y: 3, x: 3}
-	it2 := last_col.CellIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 4}))
+	last_col := PageListPin{Node: node, Y: 3, X: 3}
+	it2 := last_col.CellIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 4}))
 	pl6CheckCells(t, &it2, []pl6ExpPin{
 		{node: node, y: 3, x: 3},
 		{node: node, y: 4, x: 0},
@@ -2983,8 +2983,8 @@ func TestPl6_CellIterator_next_left_up_walks_rows_right_to_left(t *testing.T) {
 	// The x of the start applies to the first row only; the x of the limit
 	// is ignored: the limit row is walked to its first column. Rows above
 	// the first are entered at their last column.
-	start := PageListPin{node: node, y: 2, x: 2}
-	it := start.CellIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 1, x: 1}))
+	start := PageListPin{Node: node, Y: 2, X: 2}
+	it := start.CellIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 1, X: 1}))
 	pl6CheckCells(t, &it, []pl6ExpPin{
 		{node: node, y: 2, x: 2},
 		{node: node, y: 2, x: 1},
@@ -2996,8 +2996,8 @@ func TestPl6_CellIterator_next_left_up_walks_rows_right_to_left(t *testing.T) {
 	})
 
 	// Starting on the first column.
-	first_col := PageListPin{node: node, y: 4, x: 0}
-	it2 := first_col.CellIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 3, x: 3}))
+	first_col := PageListPin{Node: node, Y: 4, X: 0}
+	it2 := first_col.CellIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 3, X: 3}))
 	pl6CheckCells(t, &it2, []pl6ExpPin{
 		{node: node, y: 4, x: 0},
 		{node: node, y: 3, x: 3},
@@ -3107,8 +3107,8 @@ func TestPl6_CellIterator_next_across_a_page_boundary(t *testing.T) {
 	last := n1.data.size.rows - 1
 
 	// right_down: the end of the first page then the start of the second.
-	a := PageListPin{node: n1, y: last, x: 1}
-	down := a.CellIterator(PageListDirectionRightDown, Some(PageListPin{node: n2, y: 1}))
+	a := PageListPin{Node: n1, Y: last, X: 1}
+	down := a.CellIterator(PageListDirectionRightDown, Some(PageListPin{Node: n2, Y: 1}))
 	pl6CheckCells(t, &down, []pl6ExpPin{
 		{node: n1, y: uint(last), x: 1},
 		{node: n1, y: uint(last), x: 2},
@@ -3121,8 +3121,8 @@ func TestPl6_CellIterator_next_across_a_page_boundary(t *testing.T) {
 	})
 
 	// left_up: the start of the second page then the end of the first.
-	b := PageListPin{node: n2, y: 0, x: 1}
-	up := b.CellIterator(PageListDirectionLeftUp, Some(PageListPin{node: n1, y: last}))
+	b := PageListPin{Node: n2, Y: 0, X: 1}
+	up := b.CellIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n1, Y: last}))
 	pl6CheckCells(t, &up, []pl6ExpPin{
 		{node: n2, y: 0, x: 1},
 		{node: n2, y: 0, x: 0},
@@ -3231,8 +3231,8 @@ func TestPl6_cellIterator_explicit_bounds_in_both_directions(t *testing.T) {
 
 	// Bounds in the active tag.
 	act := s.CellIterator(PageListDirectionRightDown,
-		Point{Tag: PointTagActive, Active: PointCoordinate{x: 3, y: 0}},
-		Some(Point{Tag: PointTagActive, Active: PointCoordinate{x: 0, y: 1}}))
+		Point{Tag: PointTagActive, Active: PointCoordinate{X: 3, Y: 0}},
+		Some(Point{Tag: PointTagActive, Active: PointCoordinate{X: 0, Y: 1}}))
 	da := pl6DrainCells(t, &s, &act, PageListDirectionRightDown)
 	expectEqual(t, uint(5), da.count)
 }
@@ -3265,8 +3265,8 @@ func TestPl6_Pin_cellIterator_first_cell_uses_the_x_of_the_pin(t *testing.T) {
 	n1 := s.pages.first
 	n2 := n1.next
 
-	a := PageListPin{node: n1, y: 3, x: 6}
-	b := PageListPin{node: n2, y: 4, x: 2}
+	a := PageListPin{Node: n1, Y: 3, X: 6}
+	b := PageListPin{Node: n2, Y: 4, X: 2}
 
 	// right_down: the first cell is `a`, row_it holds the rest.
 	{
@@ -3311,9 +3311,9 @@ func pl6DrainPrompts(t *testing.T, it *PageListPromptIterator, out []uint) uint 
 		if !p.Valid {
 			break
 		}
-		expectEqual(t, uint(0), uint(p.Value.x))
+		expectEqual(t, uint(0), uint(p.Value.X))
 		expect(t, n < uint(len(out)), "n < out.len")
-		out[n] = uint(p.Value.y)
+		out[n] = uint(p.Value.Y)
 		n += 1
 	}
 	expect(t, !it.current.Valid, "it.current == null")
@@ -3415,8 +3415,8 @@ func TestPl6_PromptIterator_next_empty_iterator_and_direction_dispatch(t *testin
 	expect(t, !empty_down.Next().Valid, "empty_down.next() == null")
 
 	// next() is nextRightDown for right_down and nextLeftUp for left_up.
-	top := PageListPin{node: node}
-	bottom := PageListPin{node: node, y: 19}
+	top := PageListPin{Node: node}
+	bottom := PageListPin{Node: node, Y: 19}
 	a := top.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	b := a
 	c := bottom.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
@@ -3448,8 +3448,8 @@ func TestPl6_PromptIterator_next_both_directions_find_the_same_prompts(t *testin
 	node := s.pages.first
 	pl6Semantic(&node.data, "..Pcc.PPc.ccP")
 
-	top := PageListPin{node: node}
-	bottom := PageListPin{node: node, y: 19}
+	top := PageListPin{Node: node}
+	bottom := PageListPin{Node: node, Y: 19}
 	down := top.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	pl6ExpectRows(t, &down, []uint{2, 6, 7, 10, 12})
 	up := bottom.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
@@ -3464,19 +3464,19 @@ func TestPl6_PromptIterator_nextRightDown_no_prompts_and_exhausted_iterators(t *
 	node := s.pages.first
 
 	// No prompt rows at all: the whole list is scanned.
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 	it := top.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	expect(t, !it.NextRightDown().Valid, "it.nextRightDown() == null")
 	expect(t, !it.current.Valid, "it.current == null")
 	expect(t, !it.NextRightDown().Valid, "it.nextRightDown() == null")
 
 	// A limit that is never hit.
-	lim := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 5}))
+	lim := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 5}))
 	expect(t, !lim.NextRightDown().Valid, "lim.nextRightDown() == null")
 	expect(t, !lim.current.Valid, "lim.current == null")
 
 	// Started on the last row.
-	bottom := PageListPin{node: node, y: 9}
+	bottom := PageListPin{Node: node, Y: 9}
 	last := bottom.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	expect(t, !last.NextRightDown().Valid, "last.nextRightDown() == null")
 	expect(t, !last.current.Valid, "last.current == null")
@@ -3490,7 +3490,7 @@ func TestPl6_PromptIterator_nextRightDown_prompts_and_continuations_in_order(t *
 	node := s.pages.first
 	pl6Semantic(&node.data, "..Pcc.PPc.ccP")
 
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 	it := top.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 
 	// Prompt at 2 with continuations 3 and 4, resumes at the next row.
@@ -3523,7 +3523,7 @@ func TestPl6_PromptIterator_nextRightDown_returned_pins_are_on_column_zero(t *te
 	pl6Semantic(&node.data, "..Pcc.P")
 
 	// The start x is carried in the resume pin but not in returned pins.
-	start := PageListPin{node: node, y: 0, x: 3}
+	start := PageListPin{Node: node, Y: 0, X: 3}
 	it := start.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	pl6ExpectPin(t, it.NextRightDown(), node, 2, 0)
 	pl6ExpectPin(t, it.current, node, 5, 3)
@@ -3531,7 +3531,7 @@ func TestPl6_PromptIterator_nextRightDown_returned_pins_are_on_column_zero(t *te
 	expect(t, !it.NextRightDown().Valid, "it.nextRightDown() == null")
 
 	// Starting on a prompt row at x > 0 returns column 0 of the row.
-	mid := PageListPin{node: node, y: 2, x: 2}
+	mid := PageListPin{Node: node, Y: 2, X: 2}
 	it2 := mid.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	pl6ExpectPin(t, it2.NextRightDown(), node, 2, 0)
 }
@@ -3545,20 +3545,20 @@ func TestPl6_PromptIterator_nextRightDown_limit_on_a_non_prompt_row(t *testing.T
 	pl6Semantic(&node.data, "..P..")
 
 	// The limit stops the scan before the prompt below it.
-	top := PageListPin{node: node}
-	it := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 1}))
+	top := PageListPin{Node: node}
+	it := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 1}))
 	expect(t, !it.NextRightDown().Valid, "it.nextRightDown() == null")
 	expect(t, !it.current.Valid, "it.current == null")
 
 	// A limit equal to the start on a non prompt row.
-	one := PageListPin{node: node, y: 1}
+	one := PageListPin{Node: node, Y: 1}
 	it2 := one.PromptIterator(PageListDirectionRightDown, Some(one))
 	expect(t, !it2.NextRightDown().Valid, "it2.nextRightDown() == null")
 	expect(t, !it2.current.Valid, "it2.current == null")
 
 	// A limit after a prompt on a non prompt row: the prompt is found, then
 	// the following scan stops on the limit.
-	it3 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 4}))
+	it3 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 4}))
 	pl6ExpectPin(t, it3.NextRightDown(), node, 2, 0)
 	pl6ExpectPin(t, it3.current, node, 3, 0)
 	expect(t, !it3.NextRightDown().Valid, "it3.nextRightDown() == null")
@@ -3571,36 +3571,36 @@ func TestPl6_PromptIterator_nextRightDown_limit_on_a_prompt_or_continuation_row(
 	s := pl6Init(t, 4, 20)
 	defer s.Deinit()
 	node := s.pages.first
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 
 	// Prompt at the limit is returned, and the iterator is finished even
 	// though continuation rows follow.
 	pl6Semantic(&node.data, "..Pcc..")
-	a := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 2}))
+	a := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 2}))
 	pl6ExpectPin(t, a.NextRightDown(), node, 2, 0)
 	expect(t, !a.current.Valid, "a.current == null")
 	expect(t, !a.NextRightDown().Valid, "a.nextRightDown() == null")
 
 	// A limit in the middle of the continuation rows ends the scan.
 	pl6Semantic(&node.data, "..Pcccc..")
-	b := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 4}))
+	b := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 4}))
 	pl6ExpectPin(t, b.NextRightDown(), node, 2, 0)
 	expect(t, !b.current.Valid, "b.current == null")
 	expect(t, !b.NextRightDown().Valid, "b.nextRightDown() == null")
 
 	// On the first continuation row.
-	b2 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 3}))
+	b2 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 3}))
 	pl6ExpectPin(t, b2.NextRightDown(), node, 2, 0)
 	expect(t, !b2.current.Valid, "b2.current == null")
 
 	// On the last continuation row.
-	b3 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 6}))
+	b3 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 6}))
 	pl6ExpectPin(t, b3.NextRightDown(), node, 2, 0)
 	expect(t, !b3.current.Valid, "b3.current == null")
 
 	// On the row right after the continuation rows: the prompt is returned and
 	// the next call stops at the limit.
-	b4 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 7}))
+	b4 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 7}))
 	pl6ExpectPin(t, b4.NextRightDown(), node, 2, 0)
 	pl6ExpectPin(t, b4.current, node, 7, 0)
 	expect(t, !b4.NextRightDown().Valid, "b4.nextRightDown() == null")
@@ -3608,7 +3608,7 @@ func TestPl6_PromptIterator_nextRightDown_limit_on_a_prompt_or_continuation_row(
 
 	// A limit on a following prompt is returned.
 	pl6Semantic(&node.data, "..P.P")
-	c := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 4}))
+	c := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 4}))
 	pl6ExpectPin(t, c.NextRightDown(), node, 2, 0)
 	pl6ExpectPin(t, c.NextRightDown(), node, 4, 0)
 	expect(t, !c.current.Valid, "c.current == null")
@@ -3616,18 +3616,18 @@ func TestPl6_PromptIterator_nextRightDown_limit_on_a_prompt_or_continuation_row(
 
 	// A continuation at the limit is returned.
 	pl6Semantic(&node.data, "..cc..")
-	at2 := PageListPin{node: node, y: 2}
+	at2 := PageListPin{Node: node, Y: 2}
 	d := at2.PromptIterator(PageListDirectionRightDown, Some(at2))
 	pl6ExpectPin(t, d.NextRightDown(), node, 2, 0)
 	expect(t, !d.current.Valid, "d.current == null")
 	// ... and a limit on the second continuation row ends the scan.
-	d2 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 3}))
+	d2 := top.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 3}))
 	pl6ExpectPin(t, d2.NextRightDown(), node, 2, 0)
 	expect(t, !d2.current.Valid, "d2.current == null")
 
 	// A limit above the start is never reached.
 	pl6Semantic(&node.data, "..P.P")
-	e := PageListPin{node: node, y: 2}.PromptIterator(PageListDirectionRightDown, Some(top))
+	e := PageListPin{Node: node, Y: 2}.PromptIterator(PageListDirectionRightDown, Some(top))
 	pl6ExpectRows(t, &e, []uint{2, 4})
 }
 
@@ -3637,7 +3637,7 @@ func TestPl6_PromptIterator_nextRightDown_prompts_at_the_end_of_the_page_list(t 
 	s := pl6Init(t, 4, 6)
 	defer s.Deinit()
 	node := s.pages.first
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 
 	// Continuations to the last row.
 	pl6Semantic(&node.data, "...Pcc")
@@ -3698,7 +3698,7 @@ func TestPl6_PromptIterator_nextRightDown_across_pages(t *testing.T) {
 	n3.data.GetRowAndCell(0, 0).row.semantic_prompt = PageRowSemanticPromptPrompt
 	n3.data.GetRowAndCell(0, uint(l3)).row.semantic_prompt = PageRowSemanticPromptPromptContinuation
 
-	it := PageListPin{node: n1}.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
+	it := PageListPin{Node: n1}.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	pl6ExpectPin(t, it.Next(), n1, uint(l1), 0)
 	pl6ExpectPin(t, it.current, n2, 2, 0)
 	pl6ExpectPin(t, it.Next(), n2, 5, 0)
@@ -3710,19 +3710,19 @@ func TestPl6_PromptIterator_nextRightDown_across_pages(t *testing.T) {
 	expect(t, !it.Next().Valid, "it.next() == null")
 
 	// A limit inside the continuation run in the second page.
-	lim := PageListPin{node: n1}.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: n2, y: 1}))
+	lim := PageListPin{Node: n1}.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: n2, Y: 1}))
 	pl6ExpectPin(t, lim.Next(), n1, uint(l1), 0)
 	expect(t, !lim.current.Valid, "lim.current == null")
 	expect(t, !lim.Next().Valid, "lim.next() == null")
 
 	// A limit on the second page's prompt.
-	lim2 := PageListPin{node: n1}.PromptIterator(PageListDirectionRightDown, Some(PageListPin{node: n2, y: 5}))
+	lim2 := PageListPin{Node: n1}.PromptIterator(PageListDirectionRightDown, Some(PageListPin{Node: n2, Y: 5}))
 	pl6ExpectPin(t, lim2.Next(), n1, uint(l1), 0)
 	pl6ExpectPin(t, lim2.Next(), n2, 5, 0)
 	expect(t, !lim2.Next().Valid, "lim2.next() == null")
 
 	// Starting in the middle of the list.
-	mid := PageListPin{node: n2, y: 3}.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
+	mid := PageListPin{Node: n2, Y: 3}.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	pl6ExpectPin(t, mid.Next(), n2, 5, 0)
 	pl6ExpectPin(t, mid.Next(), n3, 0, 0)
 }
@@ -3734,19 +3734,19 @@ func TestPl6_PromptIterator_nextLeftUp_no_prompts_and_exhausted_iterators(t *tes
 	defer s.Deinit()
 	node := s.pages.first
 
-	bottom := PageListPin{node: node, y: 9}
+	bottom := PageListPin{Node: node, Y: 9}
 	it := bottom.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	expect(t, !it.NextLeftUp().Valid, "it.nextLeftUp() == null")
 	expect(t, !it.current.Valid, "it.current == null")
 	expect(t, !it.NextLeftUp().Valid, "it.nextLeftUp() == null")
 
 	// A limit that is never hit.
-	lim := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 5}))
+	lim := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 5}))
 	expect(t, !lim.NextLeftUp().Valid, "lim.nextLeftUp() == null")
 	expect(t, !lim.current.Valid, "lim.current == null")
 
 	// Started on the first row.
-	top := PageListPin{node: node}
+	top := PageListPin{Node: node}
 	first := top.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	expect(t, !first.NextLeftUp().Valid, "first.nextLeftUp() == null")
 	expect(t, !first.current.Valid, "first.current == null")
@@ -3760,7 +3760,7 @@ func TestPl6_PromptIterator_nextLeftUp_prompts_and_continuations_in_order(t *tes
 	node := s.pages.first
 	pl6Semantic(&node.data, "..Pcc.PPc.ccP")
 
-	bottom := PageListPin{node: node, y: 19}
+	bottom := PageListPin{Node: node, Y: 19}
 	it := bottom.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 
 	// Prompt on 12: resume right above it.
@@ -3796,7 +3796,7 @@ func TestPl6_PromptIterator_nextLeftUp_returned_pins_are_on_column_zero(t *testi
 	// The start x is carried in the resume pin but not in returned pins:
 	// for a prompt row, a continuation run ended by a non prompt row, and a
 	// continuation run ended by a prompt.
-	start := PageListPin{node: node, y: 12, x: 3}
+	start := PageListPin{Node: node, Y: 12, X: 3}
 	it := start.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, it.NextLeftUp(), node, 8, 0)
 	pl6ExpectPin(t, it.current, node, 7, 3)
@@ -3807,11 +3807,11 @@ func TestPl6_PromptIterator_nextLeftUp_returned_pins_are_on_column_zero(t *testi
 	expect(t, !it.NextLeftUp().Valid, "it.nextLeftUp() == null")
 
 	// Starting on a prompt row at x > 0.
-	mid := PageListPin{node: node, y: 1, x: 2}
+	mid := PageListPin{Node: node, Y: 1, X: 2}
 	it2 := mid.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, it2.NextLeftUp(), node, 1, 0)
 	// Starting on a continuation row at x > 0 whose prompt is above.
-	cont := PageListPin{node: node, y: 3, x: 2}
+	cont := PageListPin{Node: node, Y: 3, X: 2}
 	it3 := cont.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, it3.NextLeftUp(), node, 1, 0)
 }
@@ -3825,8 +3825,8 @@ func TestPl6_PromptIterator_nextLeftUp_limit_on_a_non_prompt_row(t *testing.T) {
 	pl6Semantic(&node.data, "..P...")
 
 	// The limit stops the scan before the prompt above it.
-	bottom := PageListPin{node: node, y: 5}
-	it := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 4}))
+	bottom := PageListPin{Node: node, Y: 5}
+	it := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 4}))
 	expect(t, !it.NextLeftUp().Valid, "it.nextLeftUp() == null")
 	expect(t, !it.current.Valid, "it.current == null")
 
@@ -3836,7 +3836,7 @@ func TestPl6_PromptIterator_nextLeftUp_limit_on_a_non_prompt_row(t *testing.T) {
 	expect(t, !it2.current.Valid, "it2.current == null")
 
 	// A limit before the prompt (above it): the prompt is found first.
-	it3 := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 1}))
+	it3 := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 1}))
 	pl6ExpectPin(t, it3.NextLeftUp(), node, 2, 0)
 	pl6ExpectPin(t, it3.current, node, 1, 0)
 	// ... and then the limit row stops the scan.
@@ -3853,8 +3853,8 @@ func TestPl6_PromptIterator_nextLeftUp_limit_on_a_prompt_row(t *testing.T) {
 
 	// A prompt at the limit is returned and finishes the iterator.
 	pl6Semantic(&node.data, "..P..")
-	bottom := PageListPin{node: node, y: 4}
-	a := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 2}))
+	bottom := PageListPin{Node: node, Y: 4}
+	a := bottom.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 2}))
 	pl6ExpectPin(t, a.NextLeftUp(), node, 2, 0)
 	expect(t, !a.current.Valid, "a.current == null")
 	expect(t, !a.NextLeftUp().Valid, "a.nextLeftUp() == null")
@@ -3867,7 +3867,7 @@ func TestPl6_PromptIterator_nextLeftUp_limit_on_a_prompt_row(t *testing.T) {
 
 	// A prompt on the first row has nothing above it to resume on.
 	pl6Semantic(&node.data, "P...")
-	row3 := PageListPin{node: node, y: 3}
+	row3 := PageListPin{Node: node, Y: 3}
 	c := row3.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, c.NextLeftUp(), node, 0, 0)
 	expect(t, !c.current.Valid, "c.current == null")
@@ -3875,8 +3875,8 @@ func TestPl6_PromptIterator_nextLeftUp_limit_on_a_prompt_row(t *testing.T) {
 
 	// A limit below the start is never reached.
 	pl6Semantic(&node.data, "..P.P")
-	at4 := PageListPin{node: node, y: 4}
-	d := at4.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 8}))
+	at4 := PageListPin{Node: node, Y: 4}
+	d := at4.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 8}))
 	pl6ExpectRows(t, &d, []uint{4, 2})
 }
 
@@ -3889,7 +3889,7 @@ func TestPl6_PromptIterator_nextLeftUp_limit_on_a_continuation_row(t *testing.T)
 	pl6Semantic(&node.data, "..cc..")
 
 	// A continuation at the limit is returned and finishes the iterator.
-	at3 := PageListPin{node: node, y: 3}
+	at3 := PageListPin{Node: node, Y: 3}
 	a := at3.PromptIterator(PageListDirectionLeftUp, Some(at3))
 	pl6ExpectPin(t, a.NextLeftUp(), node, 3, 0)
 	expect(t, !a.current.Valid, "a.current == null")
@@ -3906,14 +3906,14 @@ func TestPl6_PromptIterator_nextLeftUp_continuation_runs(t *testing.T) {
 	// A run of continuations ended by a non prompt row: the top-most
 	// continuation is returned and the scan resumes on the non prompt row.
 	pl6Semantic(&node.data, ".cc")
-	a := PageListPin{node: node, y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	a := PageListPin{Node: node, Y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, a.NextLeftUp(), node, 1, 0)
 	pl6ExpectPin(t, a.current, node, 0, 0)
 	expect(t, !a.NextLeftUp().Valid, "a.nextLeftUp() == null")
 
 	// A run ended by a non prompt row with a prompt further above.
 	pl6Semantic(&node.data, "P.cc")
-	b := PageListPin{node: node, y: 3}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	b := PageListPin{Node: node, Y: 3}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, b.NextLeftUp(), node, 2, 0)
 	pl6ExpectPin(t, b.current, node, 1, 0)
 	pl6ExpectPin(t, b.NextLeftUp(), node, 0, 0)
@@ -3922,20 +3922,20 @@ func TestPl6_PromptIterator_nextLeftUp_continuation_runs(t *testing.T) {
 
 	// A single continuation with a non prompt row above.
 	pl6Semantic(&node.data, ".c")
-	c := PageListPin{node: node, y: 1}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	c := PageListPin{Node: node, Y: 1}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, c.NextLeftUp(), node, 1, 0)
 	pl6ExpectPin(t, c.current, node, 0, 0)
 
 	// A run ended by its prompt on the first row.
 	pl6Semantic(&node.data, "Pcc")
-	d := PageListPin{node: node, y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	d := PageListPin{Node: node, Y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, d.NextLeftUp(), node, 0, 0)
 	expect(t, !d.current.Valid, "d.current == null")
 	expect(t, !d.NextLeftUp().Valid, "d.nextLeftUp() == null")
 
 	// A single continuation right below its prompt.
 	pl6Semantic(&node.data, ".Pc")
-	e := PageListPin{node: node, y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	e := PageListPin{Node: node, Y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, e.NextLeftUp(), node, 1, 0)
 	pl6ExpectPin(t, e.current, node, 0, 0)
 }
@@ -3952,17 +3952,17 @@ func TestPl6_PromptIterator_nextLeftUp_continuations_running_to_the_first_row_re
 	node := s.pages.first
 	pl6Semantic(&node.data, "ccc")
 
-	up := PageListPin{node: node, y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	up := PageListPin{Node: node, Y: 2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, up.NextLeftUp(), node, 2, 0)
 	expect(t, !up.current.Valid, "up.current == null")
 	expect(t, !up.NextLeftUp().Valid, "up.nextLeftUp() == null")
 
-	down := PageListPin{node: node}.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
+	down := PageListPin{Node: node}.PromptIterator(PageListDirectionRightDown, None[PageListPin]())
 	pl6ExpectPin(t, down.NextRightDown(), node, 0, 0)
 
 	// The same for a single continuation on the first row and from x > 0.
 	pl6Semantic(&node.data, "c")
-	one := PageListPin{node: node, y: 0, x: 3}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	one := PageListPin{Node: node, Y: 0, X: 3}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, one.NextLeftUp(), node, 0, 0)
 	expect(t, !one.current.Valid, "one.current == null")
 }
@@ -3979,16 +3979,16 @@ func TestPl6_PromptIterator_nextLeftUp_limit_reached_while_scanning_continuation
 	defer s.Deinit()
 	node := s.pages.first
 	pl6Semantic(&node.data, "..Pcc")
-	start := PageListPin{node: node, y: 4}
+	start := PageListPin{Node: node, Y: 4}
 
 	// Limit on the first continuation row.
-	a := start.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 3}))
+	a := start.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 3}))
 	pl6ExpectPin(t, a.NextLeftUp(), node, 4, 0)
 	expect(t, !a.current.Valid, "a.current == null")
 	expect(t, !a.NextLeftUp().Valid, "a.nextLeftUp() == null")
 
 	// Limit on the prompt row of the run.
-	b := start.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 2}))
+	b := start.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 2}))
 	pl6ExpectPin(t, b.NextLeftUp(), node, 4, 0)
 	expect(t, !b.current.Valid, "b.current == null")
 	expect(t, !b.NextLeftUp().Valid, "b.nextLeftUp() == null")
@@ -3999,7 +3999,7 @@ func TestPl6_PromptIterator_nextLeftUp_limit_reached_while_scanning_continuation
 	expect(t, !c.current.Valid, "c.current == null")
 
 	// A limit above the prompt does not interfere.
-	d := start.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 1}))
+	d := start.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 1}))
 	pl6ExpectPin(t, d.NextLeftUp(), node, 2, 0)
 	pl6ExpectPin(t, d.current, node, 1, 0)
 }
@@ -4022,7 +4022,7 @@ func TestPl6_PromptIterator_nextLeftUp_across_pages(t *testing.T) {
 	n3.data.GetRowAndCell(0, 0).row.semantic_prompt = PageRowSemanticPromptPrompt
 	n3.data.GetRowAndCell(0, uint(l3)).row.semantic_prompt = PageRowSemanticPromptPromptContinuation
 
-	it := PageListPin{node: n3, y: l3}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	it := PageListPin{Node: n3, Y: l3}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	// Continuation on the last row with a non prompt row above.
 	pl6ExpectPin(t, it.Next(), n3, uint(l3), 0)
 	pl6ExpectPin(t, it.current, n3, uint(l3)-1, 0)
@@ -4040,7 +4040,7 @@ func TestPl6_PromptIterator_nextLeftUp_across_pages(t *testing.T) {
 	expect(t, !it.current.Valid, "it.current == null")
 
 	// A limit on the second page's prompt.
-	lim := PageListPin{node: n3, y: l3}.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{node: n2, y: 5}))
+	lim := PageListPin{Node: n3, Y: l3}.PromptIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n2, Y: 5}))
 	pl6ExpectPin(t, lim.Next(), n3, uint(l3), 0)
 	pl6ExpectPin(t, lim.Next(), n3, 0, 0)
 	pl6ExpectPin(t, lim.Next(), n2, 5, 0)
@@ -4048,7 +4048,7 @@ func TestPl6_PromptIterator_nextLeftUp_across_pages(t *testing.T) {
 	expect(t, !lim.Next().Valid, "lim.next() == null")
 
 	// Starting on the page boundary.
-	mid := PageListPin{node: n2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
+	mid := PageListPin{Node: n2}.PromptIterator(PageListDirectionLeftUp, None[PageListPin]())
 	pl6ExpectPin(t, mid.Next(), n1, uint(l1), 0)
 	expect(t, !mid.Next().Valid, "mid.next() == null")
 }
@@ -4060,13 +4060,13 @@ func TestPl6_Pin_promptIterator_stores_the_pin_limit_and_direction(t *testing.T)
 	defer s.Deinit()
 	node := s.pages.first
 
-	a := PageListPin{node: node, y: 2, x: 3, garbage: true}
-	b := PageListPin{node: node, y: 7, x: 1}
+	a := PageListPin{Node: node, Y: 2, X: 3, Garbage: true}
+	b := PageListPin{Node: node, Y: 7, X: 1}
 
 	it := a.PromptIterator(PageListDirectionRightDown, Some(b))
 	expect(t, it.direction == PageListDirectionRightDown, "it.direction == .right_down")
 	expect(t, zigUnwrap(t, it.current).Eql(a), "it.current.?.eql(a)")
-	expect(t, zigUnwrap(t, it.current).garbage, "it.current.?.garbage")
+	expect(t, zigUnwrap(t, it.current).Garbage, "it.current.?.garbage")
 	expect(t, zigUnwrap(t, it.limit).Eql(b), "it.limit.?.eql(b)")
 
 	it2 := b.PromptIterator(PageListDirectionLeftUp, Some(a))
@@ -4161,7 +4161,7 @@ func TestPl6_promptIterator_no_bottom_bound_uses_the_area_of_the_tag(t *testing.
 	pl6ExpectRows(t, &top_u, []uint{9, 5, 2})
 
 	// The starting point at a later x keeps the x in the resume pin.
-	xs := s.PromptIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen, Screen: PointCoordinate{x: 2, y: 3}}, None[Point]())
+	xs := s.PromptIterator(PageListDirectionRightDown, Point{Tag: PointTagScreen, Screen: PointCoordinate{X: 2, Y: 3}}, None[Point]())
 	pl6ExpectPin(t, xs.current, node, 3, 2)
 	pl6ExpectRows(t, &xs, []uint{5, 9, 15})
 }
@@ -4229,7 +4229,7 @@ func TestPl6_promptIterator_history_without_history_is_the_empty_iterator(t *tes
 	}
 
 	// With an explicit bottom bound the area is fine.
-	it := s.PromptIterator(PageListDirectionRightDown, Point{Tag: PointTagHistory}, Some(Point{Tag: PointTagHistory, History: PointCoordinate{y: 3}}))
+	it := s.PromptIterator(PageListDirectionRightDown, Point{Tag: PointTagHistory}, Some(Point{Tag: PointTagHistory, History: PointCoordinate{Y: 3}}))
 	pl6ExpectRows(t, &it, []uint{0, 2})
 }
 
@@ -4247,8 +4247,8 @@ func pl6ExpectHl(
 ) {
 	t.Helper()
 	expect(t, hl.Valid, "hl != null")
-	expectEqualPoint(t, pl6Pt(sx, sy), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.start)))
-	expectEqualPoint(t, pl6Pt(ex, ey), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.end)))
+	expectEqualPoint(t, pl6Pt(sx, sy), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.Start)))
+	expectEqualPoint(t, pl6Pt(ex, ey), zigUnwrap(t, s.PointFromPin(PointTagScreen, hl.Value.End)))
 }
 
 // pl6At is `s.pin(term51NPt(x, y)).?`.
@@ -4346,20 +4346,20 @@ func TestPl6_highlightSemanticContent_prompt_across_pages(t *testing.T) {
 	pl6Cells(&n1.data, uint(l1), "ppppiiiiii")
 	pl6Cells(&n2.data, 0, "iiiiiiiiii")
 	pl6Cells(&n2.data, 1, "iiioooooo")
-	at := PageListPin{node: n1, y: l1, x: 1}
+	at := PageListPin{Node: n1, Y: l1, X: 1}
 
 	// No further prompt: the scan crosses the page, and stops at the output.
 	hl := s.HighlightSemanticContent(at, PageCellSemanticContentPrompt)
 	expect(t, hl.Valid, "hl != null")
-	pl6ExpectPinV(t, hl.Value.start, n1, uint(l1), 0)
-	pl6ExpectPinV(t, hl.Value.end, n2, 1, 2)
+	pl6ExpectPinV(t, hl.Value.Start, n1, uint(l1), 0)
+	pl6ExpectPinV(t, hl.Value.End, n2, 1, 2)
 
 	// A prompt at the start of the next page bounds the result to page 1.
 	n2.data.GetRowAndCell(0, 0).row.semantic_prompt = PageRowSemanticPromptPrompt
 	hl = s.HighlightSemanticContent(at, PageCellSemanticContentPrompt)
 	expect(t, hl.Valid, "hl != null")
-	pl6ExpectPinV(t, hl.Value.start, n1, uint(l1), 0)
-	pl6ExpectPinV(t, hl.Value.end, n1, uint(l1), 9)
+	pl6ExpectPinV(t, hl.Value.Start, n1, uint(l1), 0)
+	pl6ExpectPinV(t, hl.Value.End, n1, uint(l1), 9)
 }
 
 // Zig: test "term51: highlightSemanticContent: input between prompt and output"
@@ -4522,7 +4522,7 @@ func TestPl6_highlightSemanticContent_output_skips_cells_without_text(t *testing
 	pl6Cells(page, 5, "ppii")
 	*page.GetRowAndCell(4, 5).cell = PageCell{
 		content_tag: PageCellContentTagBgColorRgb,
-		content:     PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}},
+		content:     PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}},
 	}
 	*page.GetRowAndCell(5, 5).cell = PageCellInit('x')
 	hl = s.HighlightSemanticContent(pl6At(t, &s, 0, 5), PageCellSemanticContentOutput)
@@ -4648,34 +4648,34 @@ func TestPl6_highlightSemanticContent_output_to_the_end_of_the_screen_without_a_
 	n1.data.GetRowAndCell(0, uint(l1)).row.semantic_prompt = PageRowSemanticPromptPrompt
 	pl6Cells(&n1.data, uint(l1), "ppii")
 	pl6Cells(&n2.data, 0, "oooo")
-	at := PageListPin{node: n1, y: l1}
+	at := PageListPin{Node: n1, Y: l1}
 
 	// The output is on the next page; the scan ends at the end of the list.
 	hl := s.HighlightSemanticContent(at, PageCellSemanticContentOutput)
 	expect(t, hl.Valid, "hl != null")
-	pl6ExpectPinV(t, hl.Value.start, n2, 0, 0)
-	pl6ExpectPinV(t, hl.Value.end, n2, 0, 3)
+	pl6ExpectPinV(t, hl.Value.Start, n2, 0, 0)
+	pl6ExpectPinV(t, hl.Value.End, n2, 0, 3)
 
 	// Output on the last row of the last page is found too.
 	last := n2.data.size.rows - 1
 	pl6Cells(&n2.data, uint(last), ".........o")
 	hl = s.HighlightSemanticContent(at, PageCellSemanticContentOutput)
 	expect(t, hl.Valid, "hl != null")
-	pl6ExpectPinV(t, hl.Value.start, n2, 0, 0)
-	pl6ExpectPinV(t, hl.Value.end, n2, uint(last), 9)
+	pl6ExpectPinV(t, hl.Value.Start, n2, 0, 0)
+	pl6ExpectPinV(t, hl.Value.End, n2, uint(last), 9)
 
 	// Input at the end of the screen with no output.
-	prompt_at_end := PageListPin{node: n2, y: last}
+	prompt_at_end := PageListPin{Node: n2, Y: last}
 	n2.data.GetRowAndCell(0, uint(last)).row.semantic_prompt = PageRowSemanticPromptPrompt
 	pl6Cells(&n2.data, uint(last), "ppiiiiiiii")
 	input := s.HighlightSemanticContent(prompt_at_end, PageCellSemanticContentInput)
 	expect(t, input.Valid, "input != null")
-	pl6ExpectPinV(t, input.Value.start, n2, uint(last), 2)
-	pl6ExpectPinV(t, input.Value.end, n2, uint(last), 9)
+	pl6ExpectPinV(t, input.Value.Start, n2, uint(last), 2)
+	pl6ExpectPinV(t, input.Value.End, n2, uint(last), 9)
 	prompt := s.HighlightSemanticContent(prompt_at_end, PageCellSemanticContentPrompt)
 	expect(t, prompt.Valid, "prompt != null")
-	pl6ExpectPinV(t, prompt.Value.start, n2, uint(last), 0)
-	pl6ExpectPinV(t, prompt.Value.end, n2, uint(last), 9)
+	pl6ExpectPinV(t, prompt.Value.Start, n2, uint(last), 0)
+	pl6ExpectPinV(t, prompt.Value.End, n2, uint(last), 9)
 	expect(t, !s.HighlightSemanticContent(prompt_at_end, PageCellSemanticContentOutput).Valid, "s.highlightSemanticContent(prompt_at_end, .output) == null")
 }
 
@@ -4691,7 +4691,7 @@ func TestPl6_panic_Pin_left_n_greater_than_x(t *testing.T) {
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 3)
 	defer s.Deinit()
-	p := PageListPin{node: s.pages.first, y: 1, x: 4}
+	p := PageListPin{Node: s.pages.first, Y: 1, X: 4}
 	pl6ExpectPanic(t, func() { p.Left(5) })
 }
 
@@ -4700,9 +4700,9 @@ func TestPl6_panic_Pin_right_beyond_the_last_column(t *testing.T) {
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 3)
 	defer s.Deinit()
-	p := PageListPin{node: s.pages.first, y: 1, x: 4}
+	p := PageListPin{Node: s.pages.first, Y: 1, X: 4}
 	pl6ExpectPanic(t, func() { p.Right(6) })
-	z := PageListPin{node: s.pages.first}
+	z := PageListPin{Node: s.pages.first}
 	pl6ExpectPanic(t, func() { z.Right(10) })
 }
 
@@ -4712,7 +4712,7 @@ func TestPl6_panic_Pin_rightWrap_extra_multiple_of_cols(t *testing.T) {
 	s := pl6Init(t, 10, 8)
 	defer s.Deinit()
 	// 6 cells remain in the row, 16 - 6 = 10 is a multiple of cols.
-	p := PageListPin{node: s.pages.first, y: 2, x: 3}
+	p := PageListPin{Node: s.pages.first, Y: 2, X: 3}
 	pl6ExpectPanic(t, func() { p.RightWrap(16) })
 	pl6ExpectPanic(t, func() { p.RightWrap(26) })
 }
@@ -4722,7 +4722,7 @@ func TestPl6_panic_Pin_downOverflow_y_beyond_rows(t *testing.T) {
 	testStdCapacity(t)
 	s := pl6Init(t, 10, 6)
 	defer s.Deinit()
-	p := PageListPin{node: s.pages.first, y: 6}
+	p := PageListPin{Node: s.pages.first, Y: 6}
 	pl6ExpectPanic(t, func() { p.DownOverflow(1) })
 	pl6ExpectPanic(t, func() { p.Down(0) })
 }
@@ -4734,9 +4734,9 @@ func TestPl6_panic_Pin_isBetween_top_below_bottom(t *testing.T) {
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
 	node := s.pages.first
-	top := PageListPin{node: node, y: 7, x: 2}
-	bot := PageListPin{node: node, y: 3, x: 5}
-	p := PageListPin{node: node, y: 5}
+	top := PageListPin{Node: node, Y: 7, X: 2}
+	bot := PageListPin{Node: node, Y: 3, X: 5}
+	p := PageListPin{Node: node, Y: 5}
 	pl6ExpectPanic(t, func() { p.IsBetween(top, bot) })
 }
 
@@ -4747,9 +4747,9 @@ func TestPl6_panic_Pin_isBetween_top_right_of_bottom(t *testing.T) {
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
 	node := s.pages.first
-	top := PageListPin{node: node, y: 4, x: 6}
-	bot := PageListPin{node: node, y: 4, x: 2}
-	p := PageListPin{node: node, y: 4, x: 3}
+	top := PageListPin{Node: node, Y: 4, X: 6}
+	bot := PageListPin{Node: node, Y: 4, X: 2}
+	p := PageListPin{Node: node, Y: 4, X: 3}
 	pl6ExpectPanic(t, func() { p.IsBetween(top, bot) })
 }
 
@@ -4761,9 +4761,9 @@ func TestPl6_panic_Pin_isBetween_bottom_page_before_top_page(t *testing.T) {
 	defer s.Deinit()
 	n1 := s.pages.first
 	n2 := n1.next
-	top := PageListPin{node: n2}
-	bot := PageListPin{node: n1}
-	p := PageListPin{node: n1, y: 1}
+	top := PageListPin{Node: n2}
+	bot := PageListPin{Node: n1}
+	p := PageListPin{Node: n1, Y: 1}
 	pl6ExpectPanic(t, func() { p.IsBetween(top, bot) })
 }
 
@@ -4775,12 +4775,12 @@ func TestPl6_panic_Pin_pageIterator_right_down_limit_before_pin(t *testing.T) {
 	defer s.Deinit()
 	n1 := s.pages.first
 	n2 := n1.next
-	a := PageListPin{node: n1, y: 3}
+	a := PageListPin{Node: n1, Y: 3}
 	pl6ExpectPanic(t, func() {
-		a.PageIterator(PageListDirectionRightDown, Some(PageListPin{node: n1, y: 2}))
+		a.PageIterator(PageListDirectionRightDown, Some(PageListPin{Node: n1, Y: 2}))
 	})
 	pl6ExpectPanic(t, func() {
-		PageListPin{node: n2}.PageIterator(PageListDirectionRightDown, Some(PageListPin{node: n1, y: 9}))
+		PageListPin{Node: n2}.PageIterator(PageListDirectionRightDown, Some(PageListPin{Node: n1, Y: 9}))
 	})
 }
 
@@ -4792,12 +4792,12 @@ func TestPl6_panic_Pin_pageIterator_left_up_limit_after_pin(t *testing.T) {
 	defer s.Deinit()
 	n1 := s.pages.first
 	n2 := n1.next
-	a := PageListPin{node: n1, y: 3}
+	a := PageListPin{Node: n1, Y: 3}
 	pl6ExpectPanic(t, func() {
-		a.PageIterator(PageListDirectionLeftUp, Some(PageListPin{node: n1, y: 4}))
+		a.PageIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n1, Y: 4}))
 	})
 	pl6ExpectPanic(t, func() {
-		a.PageIterator(PageListDirectionLeftUp, Some(PageListPin{node: n2}))
+		a.PageIterator(PageListDirectionLeftUp, Some(PageListPin{Node: n2}))
 	})
 }
 
@@ -4808,12 +4808,12 @@ func TestPl6_panic_Pin_rowIterator_limit_before_pin(t *testing.T) {
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
 	node := s.pages.first
-	a := PageListPin{node: node, y: 5}
+	a := PageListPin{Node: node, Y: 5}
 	pl6ExpectPanic(t, func() {
-		a.RowIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 4}))
+		a.RowIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 4}))
 	})
 	pl6ExpectPanic(t, func() {
-		a.RowIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 6}))
+		a.RowIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 6}))
 	})
 }
 
@@ -4824,12 +4824,12 @@ func TestPl6_panic_Pin_cellIterator_limit_before_pin(t *testing.T) {
 	s := pl6Init(t, 10, 10)
 	defer s.Deinit()
 	node := s.pages.first
-	a := PageListPin{node: node, y: 5}
+	a := PageListPin{Node: node, Y: 5}
 	pl6ExpectPanic(t, func() {
-		a.CellIterator(PageListDirectionRightDown, Some(PageListPin{node: node, y: 4}))
+		a.CellIterator(PageListDirectionRightDown, Some(PageListPin{Node: node, Y: 4}))
 	})
 	pl6ExpectPanic(t, func() {
-		a.CellIterator(PageListDirectionLeftUp, Some(PageListPin{node: node, y: 6}))
+		a.CellIterator(PageListDirectionLeftUp, Some(PageListPin{Node: node, Y: 6}))
 	})
 }
 
@@ -4839,13 +4839,13 @@ func TestPl6_panic_PageIterator_nextDown_count_zero(t *testing.T) {
 	s := pl6Init(t, 10, 5)
 	defer s.Deinit()
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: s.pages.first, y: 1}),
+		row:       Some(PageListPin{Node: s.pages.first, Y: 1}),
 		limit:     pl6LimitCount(0),
 		direction: PageListDirectionRightDown,
 	}
 	pl6ExpectPanic(t, func() { it.nextDown() })
 	it2 := PageListPageIterator{
-		row:       Some(PageListPin{node: s.pages.first, y: 1}),
+		row:       Some(PageListPin{Node: s.pages.first, Y: 1}),
 		limit:     pl6LimitCount(0),
 		direction: PageListDirectionRightDown,
 	}
@@ -4858,13 +4858,13 @@ func TestPl6_panic_PageIterator_nextUp_count_zero(t *testing.T) {
 	s := pl6Init(t, 10, 5)
 	defer s.Deinit()
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: s.pages.first, y: 3}),
+		row:       Some(PageListPin{Node: s.pages.first, Y: 3}),
 		limit:     pl6LimitCount(0),
 		direction: PageListDirectionLeftUp,
 	}
 	pl6ExpectPanic(t, func() { it.nextUp() })
 	it2 := PageListPageIterator{
-		row:       Some(PageListPin{node: s.pages.first, y: 3}),
+		row:       Some(PageListPin{Node: s.pages.first, Y: 3}),
 		limit:     pl6LimitCount(0),
 		direction: PageListDirectionLeftUp,
 	}
@@ -4877,7 +4877,7 @@ func TestPl6_panic_PageIterator_nextUp_count_from_row_zero(t *testing.T) {
 	s := pl6Init(t, 10, 5)
 	defer s.Deinit()
 	it := PageListPageIterator{
-		row:       Some(PageListPin{node: s.pages.first, y: 0}),
+		row:       Some(PageListPin{Node: s.pages.first, Y: 0}),
 		limit:     pl6LimitCount(3),
 		direction: PageListDirectionLeftUp,
 	}
@@ -4988,7 +4988,7 @@ func TestPl6_panic_getBottomRight_viewport_pin_near_the_end(t *testing.T) {
 	// Scroll never produces this (a pin in the active area becomes the active
 	// viewport), so the viewport is set by hand.
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: last, y: last.data.size.rows - 1}
+	*s.viewport_pin = PageListPin{Node: last, Y: last.data.size.rows - 1}
 	pl6ExpectPanic(t, func() { s.GetBottomRight(PointTagViewport) })
 	s.viewport = PageListViewport{Tag: PageListViewportActive}
 }

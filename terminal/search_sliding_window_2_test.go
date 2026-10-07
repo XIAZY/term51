@@ -99,10 +99,10 @@ func sw2Next(t *testing.T, w *SearchSlidingWindow) HighlightFlattened {
 func sw2Screen(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Screen {
 	t.Helper()
 	s, err := ScreenInit(ScreenOptions{
-		cols:                      cols,
-		rows:                      rows,
-		max_scrollback:            0,
-		kitty_image_storage_limit: 320 * 1000 * 1000,
+		Cols:                   cols,
+		Rows:                   rows,
+		MaxScrollback:          0,
+		KittyImageStorageLimit: 320 * 1000 * 1000,
 	})
 	zigTry(t, err)
 	return &s
@@ -200,14 +200,14 @@ func sw2ExpectHl(
 	want []sw2Chunk,
 ) {
 	t.Helper()
-	expectEqual(t, len(want), len(h.chunks))
+	expectEqual(t, len(want), len(h.Chunks))
 	for i, c := range want {
-		expectEqual(t, c.node, h.chunks[i].node)
-		expectEqual(t, c.start, h.chunks[i].start)
-		expectEqual(t, c.end, h.chunks[i].end)
+		expectEqual(t, c.node, h.Chunks[i].Node)
+		expectEqual(t, c.start, h.Chunks[i].Start)
+		expectEqual(t, c.end, h.Chunks[i].End)
 	}
-	expectEqual(t, top_x, h.top_x)
-	expectEqual(t, bot_x, h.bot_x)
+	expectEqual(t, top_x, h.TopX)
+	expectEqual(t, bot_x, h.BotX)
 }
 
 // sw2Many is term51AKMany: a page list with one page per entry of `texts`.
@@ -551,7 +551,7 @@ func TestSw2_SlidingWindow_next_ASCII_case_folding_only(t *testing.T) {
 	s := sw2Screen(t, 20, 5)
 	defer s.Deinit()
 	zigTry(t, s.TestWriteString([]uint8("xAéy")))
-	n2 := s.pages.pages.first
+	n2 := s.Pages.pages.first
 	{
 		w := sw2Init(t, searchSlidingWindowDirectionForward, "aÉ")
 		defer w.Deinit()
@@ -655,7 +655,7 @@ func TestSw2_SlidingWindow_next_soft_wrapped_rows_join_hard_line_ends_do_not(t *
 		s := sw2Screen(t, 4, 5)
 		defer s.Deinit()
 		zigTry(t, s.TestWriteString([]uint8("abcdefgh")))
-		node := s.pages.pages.first
+		node := s.Pages.pages.first
 
 		w := sw2Init(t, searchSlidingWindowDirectionForward, "cdef")
 		defer w.Deinit()
@@ -677,7 +677,7 @@ func TestSw2_SlidingWindow_next_soft_wrapped_rows_join_hard_line_ends_do_not(t *
 		s := sw2Screen(t, 4, 5)
 		defer s.Deinit()
 		zigTry(t, s.TestWriteString([]uint8("abcd\nefgh")))
-		node := s.pages.pages.first
+		node := s.Pages.pages.first
 		expect(t, !node.data.GetRow(0).wrap, "!node.data.getRow(0).wrap")
 
 		w := sw2Init(t, searchSlidingWindowDirectionForward, "cdef")
@@ -705,7 +705,7 @@ func TestSw2_SlidingWindow_next_wide_characters_split_across_rows_by_a_spacer_he
 	s := sw2Screen(t, 4, 5)
 	defer s.Deinit()
 	zigTry(t, s.TestWriteString([]uint8("abc世d")))
-	node := s.pages.pages.first
+	node := s.Pages.pages.first
 
 	for _, dir := range sw2Directions {
 		// The spacer head produces no byte, so "c" and the wide character
@@ -742,7 +742,7 @@ func TestSw2_SlidingWindow_next_wide_characters_on_one_row_skip_the_spacer_tail(
 	s := sw2Screen(t, 10, 5)
 	defer s.Deinit()
 	zigTry(t, s.TestWriteString([]uint8("a世b")))
-	node := s.pages.pages.first
+	node := s.Pages.pages.first
 
 	w := sw2Init(t, searchSlidingWindowDirectionForward, "世b")
 	defer w.Deinit()
@@ -764,7 +764,7 @@ func TestSw2_SlidingWindow_next_grapheme_clusters_are_searched_bytewise(t *testi
 	s := sw2Screen(t, 10, 5)
 	defer s.Deinit()
 	zigTry(t, s.TestWriteString([]uint8("aéb")))
-	node := s.pages.pages.first
+	node := s.Pages.pages.first
 
 	// The whole cluster plus a neighbour.
 	{
@@ -828,8 +828,8 @@ func TestSw2_SlidingWindow_next_match_across_two_pages_forward(t *testing.T) {
 		{node: a, start: 0, end: sw2Rows(a)},
 		{node: b, start: 0, end: 1},
 	})
-	expectEqual(t, a.serial, h.chunks[0].serial)
-	expectEqual(t, b.serial, h.chunks[1].serial)
+	expectEqual(t, a.serial, h.Chunks[0].Serial)
+	expectEqual(t, b.serial, h.Chunks[1].Serial)
 	// The match starts in page A so nothing is pruned.
 	expectEqual(t, 2, w.meta.Len())
 	expectEqual(t, 10, w.data.Len())
@@ -868,8 +868,8 @@ func TestSw2_SlidingWindow_next_match_across_two_pages_reverse(t *testing.T) {
 	// Upstream defect: the reverse fix-up reverses node/start/end but not
 	// serial, so the serials stay in data order (B, A) while the nodes
 	// are in screen order (A, B).
-	expectEqual(t, b.serial, h.chunks[0].serial)
-	expectEqual(t, a.serial, h.chunks[1].serial)
+	expectEqual(t, b.serial, h.Chunks[0].Serial)
+	expectEqual(t, a.serial, h.Chunks[1].Serial)
 	expect(t, a.serial != b.serial, "a.serial != b.serial")
 	expectEqual(t, 2, w.meta.Len())
 	expectEqual(t, 4, w.data_offset)
@@ -952,9 +952,9 @@ func TestSw2_SlidingWindow_next_match_across_three_pages(t *testing.T) {
 			{node: b, start: 0, end: sw2Rows(b)},
 			{node: c, start: 0, end: 1},
 		})
-		expectEqual(t, a.serial, h.chunks[0].serial)
-		expectEqual(t, b.serial, h.chunks[1].serial)
-		expectEqual(t, c.serial, h.chunks[2].serial)
+		expectEqual(t, a.serial, h.Chunks[0].Serial)
+		expectEqual(t, b.serial, h.Chunks[1].Serial)
+		expectEqual(t, c.serial, h.Chunks[2].Serial)
 		expectEqual(t, 3, w.meta.Len())
 		expectEqual(t, 4, w.data_offset)
 
@@ -982,9 +982,9 @@ func TestSw2_SlidingWindow_next_match_across_three_pages(t *testing.T) {
 		})
 		// Upstream defect (see the two page test): serials are in data
 		// order (C, B, A) while the nodes are in screen order (A, B, C).
-		expectEqual(t, c.serial, h.chunks[0].serial)
-		expectEqual(t, b.serial, h.chunks[1].serial)
-		expectEqual(t, a.serial, h.chunks[2].serial)
+		expectEqual(t, c.serial, h.Chunks[0].Serial)
+		expectEqual(t, b.serial, h.Chunks[1].Serial)
+		expectEqual(t, a.serial, h.Chunks[2].Serial)
 		expectEqual(t, 3, w.meta.Len())
 		expectEqual(t, 6, w.data_offset)
 		expect(t, !w.Next().Valid, "w.next() == null")
@@ -1505,8 +1505,8 @@ func TestSw2_SlidingWindow_next_window_refilled_from_a_recycled_page_sees_the_bl
 			{node: a, start: 3, end: a_rows},
 			{node: b, start: 0, end: 1},
 		})
-		expectEqual(t, a_serial, h.chunks[0].serial)
-		expectEqual(t, b_serial, h.chunks[1].serial)
+		expectEqual(t, a_serial, h.Chunks[0].Serial)
+		expectEqual(t, b_serial, h.Chunks[1].Serial)
 	}
 
 	// Recycle page A: it becomes the last page again with a new serial
@@ -1569,9 +1569,9 @@ func TestSw2_SlidingWindow_next_stale_pages_keep_their_append_time_serial_and_li
 		{node: a, start: 3, end: 1},
 		{node: b, start: 0, end: 1},
 	})
-	expectEqual(t, a_serial, h.chunks[0].serial)
-	expect(t, h.chunks[0].serial != a.serial, "h.chunks.items(.serial)[0] != a.serial")
-	expectEqual(t, b.serial, h.chunks[1].serial)
+	expectEqual(t, a_serial, h.Chunks[0].Serial)
+	expect(t, h.Chunks[0].Serial != a.serial, "h.chunks.items(.serial)[0] != a.serial")
+	expectEqual(t, b.serial, h.Chunks[1].Serial)
 }
 
 // Zig: test "term51: SlidingWindow.next: results alias the internal chunk buffer"
@@ -1592,24 +1592,24 @@ func TestSw2_SlidingWindow_next_results_alias_the_internal_chunk_buffer(t *testi
 
 	h1 := sw2Next(t, w)
 	expectEqual(t, 1, len(w.chunk_buf))
-	expect(t, &h1.chunks[0] == &w.chunk_buf[0], "h1.chunks.bytes == w.chunk_buf.bytes")
-	expectEqual(t, 0, h1.chunks[0].start)
-	expectEqual(t, 1, h1.chunks[0].end)
+	expect(t, &h1.Chunks[0] == &w.chunk_buf[0], "h1.chunks.bytes == w.chunk_buf.bytes")
+	expectEqual(t, 0, h1.Chunks[0].Start)
+	expectEqual(t, 1, h1.Chunks[0].End)
 	kept, err := h1.Clone()
 	zigTry(t, err)
 	defer kept.Deinit()
 
 	h2 := sw2Next(t, w)
-	expect(t, &h2.chunks[0] == &h1.chunks[0], "h2.chunks.bytes == h1.chunks.bytes")
-	expectEqual(t, 2, h2.chunks[0].start)
-	expectEqual(t, 3, h2.chunks[0].end)
+	expect(t, &h2.Chunks[0] == &h1.Chunks[0], "h2.chunks.bytes == h1.chunks.bytes")
+	expectEqual(t, 2, h2.Chunks[0].Start)
+	expectEqual(t, 3, h2.Chunks[0].End)
 	// The first result's chunk memory now shows the second match, but a
 	// clone is unaffected.
-	expectEqual(t, 2, h1.chunks[0].start)
-	expectEqual(t, 0, kept.chunks[0].start)
-	expectEqual(t, 1, kept.chunks[0].end)
-	expectEqual(t, 0, kept.top_x)
-	expectEqual(t, 1, kept.bot_x)
+	expectEqual(t, 2, h1.Chunks[0].Start)
+	expectEqual(t, 0, kept.Chunks[0].Start)
+	expectEqual(t, 1, kept.Chunks[0].End)
+	expectEqual(t, 0, kept.TopX)
+	expectEqual(t, 1, kept.BotX)
 }
 
 // Zig: test "term51: SlidingWindow.highlight: start offset is relative to data_offset"
@@ -1726,7 +1726,7 @@ func TestSw2_SlidingWindow_highlight_reverse_flips_chunks_y_bounds_and_x_bounds(
 		s := sw2Screen(t, 4, 5)
 		defer s.Deinit()
 		zigTry(t, s.TestWriteString([]uint8("abcdefgh")))
-		node := s.pages.pages.first
+		node := s.Pages.pages.first
 
 		// Reversed data: "\n" "hgfe" "dcba", map y: 1 for \nhgfe, 0 for dcba.
 		w := sw2Init(t, searchSlidingWindowDirectionReverse, "zz")

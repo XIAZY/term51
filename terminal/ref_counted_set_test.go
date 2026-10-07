@@ -181,7 +181,7 @@ type sm2_FixSet = sm2_Fix[sm2_Val, uint16, uint16, sm2_Ctx]
 type sm2_FixSetDel = sm2_Fix[sm2_Val, uint16, uint16, sm2_CtxDel]
 type sm2_FixSet8 = sm2_Fix[sm2_Val, uint8, uint8, sm2_Ctx]
 type sm2_FixSetMix = sm2_Fix[sm2_Val, uint16, uint32, sm2_Ctx]
-type sm2_FixStyleSet = sm2_Fix[Style, StyleId, SizeCellCountInt, StyleSetContext]
+type sm2_FixStyleSet = sm2_Fix[Style, StyleID, SizeCellCountInt, StyleSetContext]
 
 // sm2_itemSizes16 and sm2_itemSizes8 are @sizeOf and @alignOf of the Zig
 // items of term51GSet (and term51GSetDel, term51GSetMix): 16 and 4, and of
@@ -212,7 +212,7 @@ func sm2_newSetMix(t *testing.T, cap uint, ctx sm2_Ctx) *sm2_FixSetMix {
 }
 
 func sm2_newStyleSet(t *testing.T, cap uint) *sm2_FixStyleSet {
-	return sm2_fixInit[Style, StyleId, SizeCellCountInt, StyleSetContext](t, styleSetItemSizes, cap, StyleSetContext{})
+	return sm2_fixInit[Style, StyleID, SizeCellCountInt, StyleSetContext](t, styleSetItemSizes, cap, StyleSetContext{})
 }
 
 // add is `try f.set.add(f.buf, v)`.
@@ -352,7 +352,7 @@ func sm2_palette(p uint8) StyleColor {
 }
 
 func sm2_rgb(r uint8, g uint8, b uint8) StyleColor {
-	return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: r, g: g, b: b}}
+	return StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{R: r, G: g, B: b}}
 }
 
 // Zig: test "term51: RefCountedSet: constants, re-exported types, item defaults"
@@ -378,8 +378,8 @@ func TestRefCountedSet_term51_RefCountedSet_constants_re_exported_types_item_def
 	expectEqual(t, uint8(255), s8.meta.bucket)
 
 	// The style set used by Page is a 16-bit id / 16-bit count set.
-	ss := RefCountedSetItemInit[Style, StyleId, SizeCellCountInt]()
-	expect(t, reflect.TypeOf(StyleId(0)) == reflect.TypeOf(uint16(0)), "SS.Id == u16")
+	ss := RefCountedSetItemInit[Style, StyleID, SizeCellCountInt]()
+	expect(t, reflect.TypeOf(StyleID(0)) == reflect.TypeOf(uint16(0)), "SS.Id == u16")
 	expect(t, reflect.TypeOf(ss.meta.ref) == reflect.TypeOf(uint16(0)), "@TypeOf(@as(SS.Item, .{}).meta.ref) == u16")
 	expect(t, RefCountedSetLoadFactor == 0.8125, "SS.load_factor == 0.8125")
 	// Zig-only: `SS.base_align.toByteUnits() >= 8`: base_align is omitted.
@@ -536,7 +536,7 @@ func TestRefCountedSet_term51_RefCountedSet_Layout_init_layout_style_set_offsets
 	isz := styleSetItemSizes.item_size
 	ial := styleSetItemSizes.item_align
 	for _, cap := range []uint{1, 2, 3, 16, 17, 1000, 16384} {
-		l := RefCountedSetLayoutInit[StyleId](cap, styleSetItemSizes)
+		l := RefCountedSetLayoutInit[StyleID](cap, styleSetItemSizes)
 		tc := sm2_ceilPowerOfTwo(cap)
 		expectEqual(t, tc, l.table_cap)
 		expectEqual(t, tc-1, uint(l.table_mask))
@@ -560,7 +560,7 @@ func TestRefCountedSet_term51_RefCountedSet_Layout_init_capacity_is_a_power_of_t
 			return l.table_cap, l.cap
 		},
 		func(cap uint) (uint, uint) {
-			l := RefCountedSetLayoutInit[StyleId](cap, styleSetItemSizes)
+			l := RefCountedSetLayoutInit[StyleID](cap, styleSetItemSizes)
 			return l.table_cap, l.cap
 		},
 	} {
@@ -2315,18 +2315,18 @@ func TestRefCountedSet_term51_RefCountedSet_add_style_set_separates_styles_by_ev
 
 	styles := []Style{
 		{}, // the default style is an ordinary value to the set
-		{flags: styleFlags{bold: true}},
-		{flags: styleFlags{italic: true}},
-		{flags: styleFlags{underline: SGRAttributeUnderlineSingle}},
-		{flags: styleFlags{underline: SGRAttributeUnderlineCurly}},
-		{fg_color: sm2_palette(1)},
-		{bg_color: sm2_palette(1)},
+		{Flags: StyleFlags{Bold: true}},
+		{Flags: StyleFlags{Italic: true}},
+		{Flags: StyleFlags{Underline: SGRAttributeUnderlineSingle}},
+		{Flags: StyleFlags{Underline: SGRAttributeUnderlineCurly}},
+		{FgColor: sm2_palette(1)},
+		{BgColor: sm2_palette(1)},
 		{underline_color: sm2_palette(1)},
-		{fg_color: sm2_rgb(1, 2, 3)},
-		{fg_color: sm2_rgb(1, 2, 4)},
-		{bg_color: sm2_rgb(1, 2, 3)},
+		{FgColor: sm2_rgb(1, 2, 3)},
+		{FgColor: sm2_rgb(1, 2, 4)},
+		{BgColor: sm2_rgb(1, 2, 3)},
 		{underline_color: sm2_rgb(1, 2, 3)},
-		{fg_color: sm2_palette(0)}, // palette 0 differs from none
+		{FgColor: sm2_palette(0)}, // palette 0 differs from none
 	}
 	for i, style := range styles {
 		expectEqual(t, uint16(i+1), f.add(style))
@@ -2342,17 +2342,17 @@ func TestRefCountedSet_term51_RefCountedSet_add_style_set_separates_styles_by_ev
 		expect(t, f.set.Get(uint16(i)).Eql(style), "f.set.get(f.buf, @intCast(i)).eql(style)")
 	}
 	expectEqual(t, uint(len(styles)), f.set.Count())
-	expectEqual(t, None[uint16](), f.set.Lookup(Style{flags: styleFlags{blink: true}}))
+	expectEqual(t, None[uint16](), f.set.Lookup(Style{Flags: StyleFlags{Blink: true}}))
 }
 
 // Zig: test "term51: RefCountedSet.release: style set entries stay until reused"
 func TestRefCountedSet_term51_RefCountedSet_release_style_set_entries_stay_until_reused(t *testing.T) {
 	f := sm2_newStyleSet(t, 16)
 
-	a := Style{flags: styleFlags{bold: true}}
-	b := Style{flags: styleFlags{italic: true}}
-	c := Style{flags: styleFlags{faint: true}}
-	d := Style{flags: styleFlags{inverse: true}}
+	a := Style{Flags: StyleFlags{Bold: true}}
+	b := Style{Flags: StyleFlags{Italic: true}}
+	c := Style{Flags: StyleFlags{Faint: true}}
+	d := Style{Flags: StyleFlags{Inverse: true}}
 	expectEqual(t, uint16(1), f.add(a))
 	expectEqual(t, uint16(2), f.add(b))
 	expectEqual(t, uint16(3), f.add(c))
@@ -2369,7 +2369,7 @@ func TestRefCountedSet_term51_RefCountedSet_release_style_set_entries_stay_until
 	// Releasing the tail style frees its id for the next new style.
 	f.set.Release(3)
 	expectEqual(t, uint16(3), f.add(d))
-	expect(t, f.set.Get(3).flags.inverse, "f.set.get(f.buf, 3).flags.inverse")
+	expect(t, f.set.Get(3).Flags.Inverse, "f.set.get(f.buf, 3).flags.inverse")
 	expectEqual(t, None[uint16](), f.set.Lookup(c))
 	expectEqual(t, uint16(4), f.set.next_id)
 }
@@ -2380,11 +2380,11 @@ func TestRefCountedSet_term51_RefCountedSet_add_style_set_holds_exactly_capacity
 	f := sm2_newStyleSet(t, 16)
 
 	for i := uint8(0); i < 12; i++ {
-		style := Style{fg_color: sm2_palette(i)}
+		style := Style{FgColor: sm2_palette(i)}
 		expectEqual(t, uint16(i)+1, f.add(style))
 	}
 	expectEqual(t, uint(12), f.set.Count())
-	extra := Style{fg_color: sm2_palette(12)}
+	extra := Style{FgColor: sm2_palette(12)}
 	sm2_expectError(t, ErrOutOfMemory, f.addErr(extra))
 	expectEqual(t, uint(12), f.set.Count())
 	expectEqual(t, None[uint16](), f.set.Lookup(extra))
@@ -2395,7 +2395,7 @@ func TestRefCountedSet_term51_RefCountedSet_add_style_set_holds_exactly_capacity
 	f.set.Release(2)
 	sm2_expectError(t, ErrNeedsRehash, f.addErr(extra))
 	// An existing style can still be added.
-	expectEqual(t, uint16(5), f.add(Style{fg_color: sm2_palette(4)}))
+	expectEqual(t, uint16(5), f.add(Style{FgColor: sm2_palette(4)}))
 }
 
 // Zig: test "term51: RefCountedSet.add: style set maximum number of styles for the page capacity"
@@ -2406,15 +2406,15 @@ func TestRefCountedSet_term51_RefCountedSet_add_style_set_maximum_number_of_styl
 
 	const max_items uint32 = 13311
 	for i := uint32(0); i < max_items; i++ {
-		style := Style{fg_color: sm2_rgb(uint8(i), uint8(i>>8), 9)}
+		style := Style{FgColor: sm2_rgb(uint8(i), uint8(i>>8), 9)}
 		expectEqual(t, uint16(i+1), f.add(style))
 	}
 	expectEqual(t, uint(max_items), f.set.Count())
 	expectEqual(t, uint16(13312), f.set.next_id)
-	extra := Style{fg_color: sm2_rgb(255, 255, 9)}
+	extra := Style{FgColor: sm2_rgb(255, 255, 9)}
 	sm2_expectError(t, ErrOutOfMemory, f.addErr(extra))
 	expectEqual(t, uint(max_items), f.set.Count())
 	// Lookups of the first and last style still work.
-	expectEqual(t, Some(uint16(1)), f.set.Lookup(Style{fg_color: sm2_rgb(0, 0, 9)}))
-	expectEqual(t, Some(uint16(13311)), f.set.Lookup(Style{fg_color: sm2_rgb(uint8(13310&0xff), uint8(13310>>8), 9)}))
+	expectEqual(t, Some(uint16(1)), f.set.Lookup(Style{FgColor: sm2_rgb(0, 0, 9)}))
+	expectEqual(t, Some(uint16(13311)), f.set.Lookup(Style{FgColor: sm2_rgb(uint8(13310&0xff), uint8(13310>>8), 9)}))
 }

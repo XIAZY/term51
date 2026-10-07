@@ -59,7 +59,7 @@ func oscB_kts_at(s []uint8, i int) uint8 {
 // oscB_kts_newOSC is Zig's `.{ .text = text }`: every field has its Zig
 // default, which for scale is 1.
 func oscB_kts_newOSC(text string) OSCParsersKittyTextSizingOSC {
-	return OSCParsersKittyTextSizingOSC{scale: 1, text: []uint8(text)}
+	return OSCParsersKittyTextSizingOSC{Scale: 1, Text: []uint8(text)}
 }
 
 // oscB_kts_term51ExpectFields is Zig's term51ExpectFields: check every field
@@ -75,12 +75,12 @@ func oscB_kts_term51ExpectFields(
 	halign OSCParsersKittyTextSizingHAlign,
 ) {
 	t.Helper()
-	expectEqual(t, scale, osc.scale)
-	expectEqual(t, width, osc.width)
-	expectEqual(t, numerator, osc.numerator)
-	expectEqual(t, denominator, osc.denominator)
-	expectEqual(t, valign, osc.valign)
-	expectEqual(t, halign, osc.halign)
+	expectEqual(t, scale, osc.Scale)
+	expectEqual(t, width, osc.Width)
+	expectEqual(t, numerator, osc.Numerator)
+	expectEqual(t, denominator, osc.Denominator)
+	expectEqual(t, valign, osc.Valign)
+	expectEqual(t, halign, osc.Halign)
 }
 
 // Zig: test "OSC 66: empty parameters"
@@ -94,8 +94,8 @@ func TestOSCParsersKittyTextSizing_OSC_66_empty_parameters(t *testing.T) {
 
 	cmd := oscB_kts_unwrap(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
-	expectEqual(t, uint8(1), cmd.KittyTextSizing.scale)
-	expectEqualStrings(t, "bobr", string(cmd.KittyTextSizing.text))
+	expectEqual(t, uint8(1), cmd.KittyTextSizing.Scale)
+	expectEqualStrings(t, "bobr", string(cmd.KittyTextSizing.Text))
 }
 
 // Zig: test "OSC 66: single parameter"
@@ -109,8 +109,8 @@ func TestOSCParsersKittyTextSizing_OSC_66_single_parameter(t *testing.T) {
 
 	cmd := oscB_kts_unwrap(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
-	expectEqual(t, uint8(2), cmd.KittyTextSizing.scale)
-	expectEqualStrings(t, "kurwa", string(cmd.KittyTextSizing.text))
+	expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
+	expectEqualStrings(t, "kurwa", string(cmd.KittyTextSizing.Text))
 }
 
 // Zig: test "OSC 66: multiple parameters"
@@ -124,13 +124,13 @@ func TestOSCParsersKittyTextSizing_OSC_66_multiple_parameters(t *testing.T) {
 
 	cmd := oscB_kts_unwrap(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
-	expectEqual(t, uint8(2), cmd.KittyTextSizing.scale)
-	expectEqual(t, uint8(7), cmd.KittyTextSizing.width)
-	expectEqual(t, uint8(13), cmd.KittyTextSizing.numerator)
-	expectEqual(t, uint8(15), cmd.KittyTextSizing.denominator)
-	expectEqual(t, OSCParsersKittyTextSizingVAlignBottom, cmd.KittyTextSizing.valign)
-	expectEqual(t, OSCParsersKittyTextSizingHAlignCenter, cmd.KittyTextSizing.halign)
-	expectEqualStrings(t, "long", string(cmd.KittyTextSizing.text))
+	expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
+	expectEqual(t, uint8(7), cmd.KittyTextSizing.Width)
+	expectEqual(t, uint8(13), cmd.KittyTextSizing.Numerator)
+	expectEqual(t, uint8(15), cmd.KittyTextSizing.Denominator)
+	expectEqual(t, OSCParsersKittyTextSizingVAlignBottom, cmd.KittyTextSizing.Valign)
+	expectEqual(t, OSCParsersKittyTextSizingHAlignCenter, cmd.KittyTextSizing.Halign)
+	expectEqualStrings(t, "long", string(cmd.KittyTextSizing.Text))
 }
 
 // Zig: test "OSC 66: scale is zero"
@@ -144,7 +144,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_scale_is_zero(t *testing.T) {
 	cmd := oscB_kts_unwrap(t, p.End(Some[uint8](0x1b)))
 
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
-	expectEqual(t, uint8(1), cmd.KittyTextSizing.scale)
+	expectEqual(t, uint8(1), cmd.KittyTextSizing.Scale)
 }
 
 // Zig: test "OSC 66: invalid parameters"
@@ -157,9 +157,9 @@ func TestOSCParsersKittyTextSizing_OSC_66_invalid_parameters(t *testing.T) {
 	cmd := oscB_kts_unwrap(t, p.End(Some[uint8](0x1b)))
 
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
-	expectEqual(t, uint8(0), cmd.KittyTextSizing.width)
-	expect(t, cmd.KittyTextSizing.valign == OSCParsersKittyTextSizingVAlignTop, "cmd.kitty_text_sizing.valign == .top")
-	expectEqual(t, uint8(0), cmd.KittyTextSizing.numerator)
+	expectEqual(t, uint8(0), cmd.KittyTextSizing.Width)
+	expect(t, cmd.KittyTextSizing.Valign == OSCParsersKittyTextSizingVAlignTop, "cmd.kitty_text_sizing.valign == .top")
+	expectEqual(t, uint8(0), cmd.KittyTextSizing.Numerator)
 }
 
 // Zig: test "OSC 66: UTF-8"
@@ -173,7 +173,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_UTF_8(t *testing.T) {
 
 	cmd := oscB_kts_unwrap(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
-	expectEqualStrings(t, "👻魑魅魍魉ゴースッティ", string(cmd.KittyTextSizing.text))
+	expectEqualStrings(t, "👻魑魅魍魉ゴースッティ", string(cmd.KittyTextSizing.Text))
 }
 
 // Zig: test "OSC 66: unsafe UTF-8"
@@ -210,16 +210,16 @@ func TestOSCParsersKittyTextSizing_term51_OSC_update_defaults_before_any_update(
 func TestOSCParsersKittyTextSizing_term51_OSC_update_scale_range_is_1_to_7(t *testing.T) {
 	osc := oscB_kts_newOSC("")
 	expectEqual(t, ErrInvalidValue, osc.update('s', []uint8("0")))
-	expectEqual(t, uint8(1), osc.scale)
+	expectEqual(t, uint8(1), osc.Scale)
 	zigTry(t, osc.update('s', []uint8("1")))
-	expectEqual(t, uint8(1), osc.scale)
+	expectEqual(t, uint8(1), osc.Scale)
 	zigTry(t, osc.update('s', []uint8("7")))
-	expectEqual(t, uint8(7), osc.scale)
+	expectEqual(t, uint8(7), osc.Scale)
 	// One past the limit leaves the previous value in place.
 	expectEqual(t, ErrInvalidValue, osc.update('s', []uint8("8")))
 	expectEqual(t, ErrInvalidValue, osc.update('s', []uint8("15")))
 	expectEqual(t, ErrInvalidValue, osc.update('s', []uint8("16")))
-	expectEqual(t, uint8(7), osc.scale)
+	expectEqual(t, uint8(7), osc.Scale)
 	oscB_kts_term51ExpectFields(t, osc, 7, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
 }
 
@@ -227,12 +227,12 @@ func TestOSCParsersKittyTextSizing_term51_OSC_update_scale_range_is_1_to_7(t *te
 func TestOSCParsersKittyTextSizing_term51_OSC_update_width_range_is_0_to_7(t *testing.T) {
 	osc := oscB_kts_newOSC("")
 	zigTry(t, osc.update('w', []uint8("7")))
-	expectEqual(t, uint8(7), osc.width)
+	expectEqual(t, uint8(7), osc.Width)
 	expectEqual(t, ErrInvalidValue, osc.update('w', []uint8("8")))
 	expectEqual(t, ErrInvalidValue, osc.update('w', []uint8("16")))
-	expectEqual(t, uint8(7), osc.width)
+	expectEqual(t, uint8(7), osc.Width)
 	zigTry(t, osc.update('w', []uint8("0")))
-	expectEqual(t, uint8(0), osc.width)
+	expectEqual(t, uint8(0), osc.Width)
 	oscB_kts_term51ExpectFields(t, osc, 1, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
 }
 
@@ -258,14 +258,14 @@ func TestOSCParsersKittyTextSizing_term51_OSC_update_numerator_and_denominator_r
 func TestOSCParsersKittyTextSizing_term51_OSC_update_vertical_alignment_range_is_0_to_2(t *testing.T) {
 	osc := oscB_kts_newOSC("")
 	zigTry(t, osc.update('v', []uint8("1")))
-	expectEqual(t, OSCParsersKittyTextSizingVAlignBottom, osc.valign)
+	expectEqual(t, OSCParsersKittyTextSizingVAlignBottom, osc.Valign)
 	zigTry(t, osc.update('v', []uint8("2")))
-	expectEqual(t, OSCParsersKittyTextSizingVAlignCenter, osc.valign)
+	expectEqual(t, OSCParsersKittyTextSizingVAlignCenter, osc.Valign)
 	expectEqual(t, ErrInvalidValue, osc.update('v', []uint8("3")))
 	expectEqual(t, ErrInvalidValue, osc.update('v', []uint8("15")))
-	expectEqual(t, OSCParsersKittyTextSizingVAlignCenter, osc.valign)
+	expectEqual(t, OSCParsersKittyTextSizingVAlignCenter, osc.Valign)
 	zigTry(t, osc.update('v', []uint8("0")))
-	expectEqual(t, OSCParsersKittyTextSizingVAlignTop, osc.valign)
+	expectEqual(t, OSCParsersKittyTextSizingVAlignTop, osc.Valign)
 	oscB_kts_term51ExpectFields(t, osc, 1, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
 }
 
@@ -273,14 +273,14 @@ func TestOSCParsersKittyTextSizing_term51_OSC_update_vertical_alignment_range_is
 func TestOSCParsersKittyTextSizing_term51_OSC_update_horizontal_alignment_range_is_0_to_2(t *testing.T) {
 	osc := oscB_kts_newOSC("")
 	zigTry(t, osc.update('h', []uint8("1")))
-	expectEqual(t, OSCParsersKittyTextSizingHAlignRight, osc.halign)
+	expectEqual(t, OSCParsersKittyTextSizingHAlignRight, osc.Halign)
 	zigTry(t, osc.update('h', []uint8("2")))
-	expectEqual(t, OSCParsersKittyTextSizingHAlignCenter, osc.halign)
+	expectEqual(t, OSCParsersKittyTextSizingHAlignCenter, osc.Halign)
 	expectEqual(t, ErrInvalidValue, osc.update('h', []uint8("3")))
 	expectEqual(t, ErrInvalidValue, osc.update('h', []uint8("15")))
-	expectEqual(t, OSCParsersKittyTextSizingHAlignCenter, osc.halign)
+	expectEqual(t, OSCParsersKittyTextSizingHAlignCenter, osc.Halign)
 	zigTry(t, osc.update('h', []uint8("0")))
-	expectEqual(t, OSCParsersKittyTextSizingHAlignLeft, osc.halign)
+	expectEqual(t, OSCParsersKittyTextSizingHAlignLeft, osc.Halign)
 	oscB_kts_term51ExpectFields(t, osc, 1, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
 }
 
@@ -347,8 +347,8 @@ func TestOSCParsersKittyTextSizing_term51_parse_empty_metadata_and_empty_text(t 
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
 		oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 1, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
-		expectEqual(t, 0, len(cmd.KittyTextSizing.text))
-		expectEqual(t, uint8(0), oscB_kts_at(cmd.KittyTextSizing.text, 0))
+		expectEqual(t, 0, len(cmd.KittyTextSizing.Text))
+		expectEqual(t, uint8(0), oscB_kts_at(cmd.KittyTextSizing.Text, 0))
 	}
 }
 
@@ -359,7 +359,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_every_parameter(t *testing.T) {
 		oscB_kts_term51Feed(&p, "66;s=7:w=7:n=15:d=15:v=2:h=2;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 7, 7, 15, 15, OSCParsersKittyTextSizingVAlignCenter, OSCParsersKittyTextSizingHAlignCenter)
-		expectEqualStrings(t, "x", string(cmd.KittyTextSizing.text))
+		expectEqualStrings(t, "x", string(cmd.KittyTextSizing.Text))
 	}
 	{
 		// The order of parameters does not matter.
@@ -377,7 +377,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_out_of_range_parameters_keep_the
 	cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
 	oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 1, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
-	expectEqualStrings(t, "x", string(cmd.KittyTextSizing.text))
+	expectEqualStrings(t, "x", string(cmd.KittyTextSizing.Text))
 }
 
 // Zig: test "term51: parse: malformed parameters are skipped"
@@ -406,7 +406,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_malformed_parameters_are_skipped
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
 		oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 1, 0, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
-		expectEqualStrings(t, "x", string(cmd.KittyTextSizing.text))
+		expectEqualStrings(t, "x", string(cmd.KittyTextSizing.Text))
 	}
 }
 
@@ -425,14 +425,14 @@ func TestOSCParsersKittyTextSizing_term51_parse_repeated_parameters(t *testing.T
 		p := OSCParserInit(nil)
 		oscB_kts_term51Feed(&p, "66;s=2:s=3;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
-		expectEqual(t, uint8(3), cmd.KittyTextSizing.scale)
+		expectEqual(t, uint8(3), cmd.KittyTextSizing.Scale)
 	}
 	{
 		// An invalid later value does not undo an earlier one.
 		p := OSCParserInit(nil)
 		oscB_kts_term51Feed(&p, "66;s=2:s=9:s=0:s=;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
-		expectEqual(t, uint8(2), cmd.KittyTextSizing.scale)
+		expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
 	}
 }
 
@@ -449,8 +449,8 @@ func TestOSCParsersKittyTextSizing_term51_parse_later_semicolons_belong_to_the_t
 	p := OSCParserInit(nil)
 	oscB_kts_term51Feed(&p, "66;s=2;a;b:c=d;")
 	cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
-	expectEqual(t, uint8(2), cmd.KittyTextSizing.scale)
-	expectEqualStrings(t, "a;b:c=d;", string(cmd.KittyTextSizing.text))
+	expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
+	expectEqualStrings(t, "a;b:c=d;", string(cmd.KittyTextSizing.Text))
 }
 
 // Zig: test "term51: parse: text must be escape code safe UTF-8"
@@ -461,7 +461,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_text_must_be_escape_code_safe_UT
 		p := OSCParserInit(nil)
 		oscB_kts_term51Feed(&p, "66;;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
-		expectEqualStrings(t, text, string(cmd.KittyTextSizing.text))
+		expectEqualStrings(t, text, string(cmd.KittyTextSizing.Text))
 	}
 
 	// Rejected: C0 controls (including NUL, tab and newline), DEL, C1
@@ -499,8 +499,8 @@ func TestOSCParsersKittyTextSizing_term51_parse_payload_length_limit_with_alloca
 		defer p.Deinit()
 		oscB_kts_term51Feed(&p, "66;s=2;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
-		expectEqual(t, uint8(2), cmd.KittyTextSizing.scale)
-		expectEqualStrings(t, text, string(cmd.KittyTextSizing.text))
+		expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
+		expectEqualStrings(t, text, string(cmd.KittyTextSizing.Text))
 	}
 	{
 		text := strings.Repeat("a", OSCParsersKittyTextSizingMaxPayloadLength+1)
@@ -521,7 +521,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_payload_length_limit_with_alloca
 		oscB_kts_term51Feed(&p, "66;"+strings.Repeat("s=2:", 100)+"w=3;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 2, 3, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
-		expectEqual(t, OSCParsersKittyTextSizingMaxPayloadLength, len(cmd.KittyTextSizing.text))
+		expectEqual(t, OSCParsersKittyTextSizingMaxPayloadLength, len(cmd.KittyTextSizing.Text))
 	}
 }
 
@@ -535,7 +535,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_buffer_limit_without_allocator(t
 		p := OSCParserInit(nil)
 		oscB_kts_term51Feed(&p, "66;;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
-		expectEqualStrings(t, text, string(cmd.KittyTextSizing.text))
+		expectEqualStrings(t, text, string(cmd.KittyTextSizing.Text))
 	}
 	{
 		text := strings.Repeat("a", OSCParserMAX_BUF-1)

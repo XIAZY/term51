@@ -420,25 +420,6 @@ func KeyModsAlias() []KeyModsAliasEntry { return terminal.InputKeyModsAlias }
 // KeyModsAliasEntry is [terminal.InputKeyModsAliasEntry].
 type KeyModsAliasEntry = terminal.InputKeyModsAliasEntry
 
-// KeyModsBacking is [terminal.InputKeyModsModsBacking].
-type KeyModsBacking = terminal.InputKeyModsModsBacking
-
-// KeyModsFromInt is [terminal.InputKeyModsModsFromInt].
-func KeyModsFromInt(v KeyModsBacking) terminal.InputKeyModsMods {
-	return terminal.InputKeyModsModsFromInt(v)
-}
-
-// KeyModsKeys is [terminal.InputKeyModsModsKeys].
-type KeyModsKeys = terminal.InputKeyModsModsKeys
-
-// KeyModsKeysBacking is [terminal.InputKeyModsModsKeysBacking].
-type KeyModsKeysBacking = terminal.InputKeyModsModsKeysBacking
-
-// KeyModsKeysFromInt is [terminal.InputKeyModsModsKeysFromInt].
-func KeyModsKeysFromInt(v KeyModsKeysBacking) KeyModsKeys {
-	return terminal.InputKeyModsModsKeysFromInt(v)
-}
-
 // KeyModsMod is [terminal.InputKeyModsMod].
 type KeyModsMod = terminal.InputKeyModsMod
 
@@ -471,20 +452,6 @@ func KeyModsRemapSetEmpty() KeyModsRemapSet { return terminal.InputKeyModsRemapS
 
 // KeyModsRemapSetMask is [terminal.InputKeyModsRemapSetMask].
 type KeyModsRemapSetMask = terminal.InputKeyModsRemapSetMask
-
-// KeyModsSide is [terminal.InputKeyModsModsSide].
-type KeyModsSide = terminal.InputKeyModsModsSide
-
-// KeyModsSideBacking is [terminal.InputKeyModsModsSideBacking].
-type KeyModsSideBacking = terminal.InputKeyModsModsSideBacking
-
-// KeyModsSideFromInt is [terminal.InputKeyModsModsSideFromInt].
-func KeyModsSideFromInt(v KeyModsSideBacking) KeyModsSide {
-	return terminal.InputKeyModsModsSideFromInt(v)
-}
-
-// KeyModsSideMask returns [terminal.InputKeyModsModsSideMask].
-func KeyModsSideMask() terminal.InputKeyModsMods { return terminal.InputKeyModsModsSideMask }
 
 // KeyNonConvert is [terminal.InputKeyKeyNonConvert].
 const KeyNonConvert = terminal.InputKeyKeyNonConvert
@@ -668,6 +635,36 @@ func KeyValues() []Key { return terminal.InputKeyKeyValues() }
 
 // KeyWakeUp is [terminal.InputKeyKeyWakeUp].
 const KeyWakeUp = terminal.InputKeyKeyWakeUp
+
+// Mods is [terminal.InputKeyModsMods].
+type Mods = terminal.InputKeyModsMods
+
+// ModsBacking is [terminal.InputKeyModsModsBacking].
+type ModsBacking = terminal.InputKeyModsModsBacking
+
+// ModsFromInt is [terminal.InputKeyModsModsFromInt].
+func ModsFromInt(v ModsBacking) Mods { return terminal.InputKeyModsModsFromInt(v) }
+
+// ModsKeys is [terminal.InputKeyModsModsKeys].
+type ModsKeys = terminal.InputKeyModsModsKeys
+
+// ModsKeysBacking is [terminal.InputKeyModsModsKeysBacking].
+type ModsKeysBacking = terminal.InputKeyModsModsKeysBacking
+
+// ModsKeysFromInt is [terminal.InputKeyModsModsKeysFromInt].
+func ModsKeysFromInt(v ModsKeysBacking) ModsKeys { return terminal.InputKeyModsModsKeysFromInt(v) }
+
+// ModsSide is [terminal.InputKeyModsModsSide].
+type ModsSide = terminal.InputKeyModsModsSide
+
+// ModsSideBacking is [terminal.InputKeyModsModsSideBacking].
+type ModsSideBacking = terminal.InputKeyModsModsSideBacking
+
+// ModsSideFromInt is [terminal.InputKeyModsModsSideFromInt].
+func ModsSideFromInt(v ModsSideBacking) ModsSide { return terminal.InputKeyModsModsSideFromInt(v) }
+
+// ModsSideMask returns [terminal.InputKeyModsModsSideMask].
+func ModsSideMask() Mods { return terminal.InputKeyModsModsSideMask }
 
 // PasteOptions is [terminal.InputPasteOptions].
 type PasteOptions = terminal.InputPasteOptions

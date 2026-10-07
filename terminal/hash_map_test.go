@@ -172,9 +172,9 @@ func hmLE32(off uint32) []byte {
 type (
 	hmCtxT = hashMapAutoContext[SizeOffsetInt]
 	hmGU   = hashMapUnmanaged[SizeOffsetInt, []uint32, hmCtxT]
-	hmHU   = hashMapUnmanaged[SizeOffsetInt, HyperlinkId, hmCtxT]
+	hmHU   = hashMapUnmanaged[SizeOffsetInt, HyperlinkID, hmCtxT]
 	hmGBox = hmBox[[]uint32]
-	hmHBox = hmBox[HyperlinkId]
+	hmHBox = hmBox[HyperlinkID]
 )
 
 // hmCtx is term51XCtx.
@@ -247,11 +247,11 @@ func hmGBoxInitAt(cap uint32, at uint) hmGBox {
 }
 
 func hmHBoxInit(cap uint32) hmHBox {
-	return hmBoxInit[HyperlinkId](hyperlinkMapEntrySizes, cap)
+	return hmBoxInit[HyperlinkID](hyperlinkMapEntrySizes, cap)
 }
 
 func hmHBoxInitAt(cap uint32, at uint) hmHBox {
-	return hmBoxInitAt[HyperlinkId](hyperlinkMapEntrySizes, cap, at)
+	return hmBoxInitAt[HyperlinkID](hyperlinkMapEntrySizes, cap, at)
 }
 
 // hmGLayout is term51XGMap.layout(cap) and hmHLayout is term51XHMap.layout(cap).
@@ -1156,7 +1156,7 @@ func TestHashMap_term51_AutoOffsetHashMap_instantiation_sizes_and_alignments(t *
 
 	expect(t, typeOf(G{}) == typeOf(HashMapOffsetHashMap[SizeOffsetInt, []uint32, Ctx]{}), "G == OffsetHashMap(term51XKey, term51XSlice, Ctx)")
 	expect(t, reflect.TypeOf(G.Map).Out(0) == typeOf(hashMapUnmanaged[SizeOffsetInt, []uint32, Ctx]{}), "G.Unmanaged == HashMapUnmanaged(term51XKey, term51XSlice, Ctx)")
-	expect(t, typeOf(H{}) == typeOf(HashMapAutoOffsetHashMap[SizeOffsetInt, HyperlinkId]{}), "H == AutoOffsetHashMap(term51XKey, u16)")
+	expect(t, typeOf(H{}) == typeOf(HashMapAutoOffsetHashMap[SizeOffsetInt, HyperlinkID]{}), "H == AutoOffsetHashMap(term51XKey, u16)")
 	expect(t, reflect.TypeOf(H.Map).Out(0) == typeOf(hashMapUnmanaged[SizeOffsetInt, uint16, Ctx]{}), "H.Unmanaged == HashMapUnmanaged(term51XKey, u16, Ctx)")
 	expect(t, typeOf(HashMapOffsetHashMapLayout{}) == typeOf(hashMapLayout{}), "G.Layout == G.Unmanaged.Layout")
 
@@ -1670,7 +1670,7 @@ func TestHashMap_term51_HashMapUnmanaged_count_number_of_live_entries(t *testing
 	m := box.map_()
 	expectEqual(t, uint32(0), m.Count())
 	for i := range 16 {
-		zigTry(t, m.Put(hmK(uint32(8*i)), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(uint32(8*i)), HyperlinkID(i)))
 		expectEqual(t, uint32(i+1), m.Count())
 	}
 	// Updating an existing key does not change the count.
@@ -1745,7 +1745,7 @@ func TestHashMap_term51_HashMapUnmanaged_keys_key_array_start_and_slot_storage(t
 	// Zig-only: const l = term51XHMap.layout(16);
 	// Zig-only: try term51XEq(@intFromPtr(box.buf.ptr) + 16 + l.keys_start, @intFromPtr(m.keys()));
 	for i, k := range hmChain5[0:3] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 		// The key is stored at the slot index of the key array.
 		slot := zigUnwrap(t, hmSlot(m, k))
 		expectEqual(t, uint(5+i), slot)
@@ -1875,7 +1875,7 @@ func TestHashMap_term51_HashMapUnmanaged_putAssumeCapacityNoClobberContext_probe
 		box := hmHBoxInit(16)
 		m := box.map_()
 		for i, k := range hmChain5[0:6] {
-			m.PutAssumeCapacityNoClobberContext(hmK(k), HyperlinkId(i), hmCtx)
+			m.PutAssumeCapacityNoClobberContext(hmK(k), HyperlinkID(i), hmCtx)
 			expectEqual(t, uint(5+i), zigUnwrap(t, hmSlot(m, k)))
 			expectEqual(t, hmUsedCtl(k), hmCtl(m, uint(5+i)))
 		}
@@ -1918,7 +1918,7 @@ func TestHashMap_term51_HashMapUnmanaged_putAssumeCapacityNoClobberContext_fills
 	box := hmHBoxInit(16)
 	m := box.map_()
 	for i, k := range hmChain5[0:6] {
-		m.PutAssumeCapacityNoClobber(hmK(k), HyperlinkId(i))
+		m.PutAssumeCapacityNoClobber(hmK(k), HyperlinkID(i))
 	}
 	_ = m.Remove(hmK(hmChain5[1]))
 	expectEqual(t, uint8(1), hmCtl(m, 6))
@@ -2028,7 +2028,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAssumeCapacityAdapted_a_new_key
 		expect(t, !gop.found_existing, "!gop.found_existing")
 		// The adapted variant leaves writing the key to the caller.
 		*gop.key_ptr = hmK(k)
-		*gop.value_ptr = HyperlinkId(i)
+		*gop.value_ptr = HyperlinkID(i)
 		expectEqual(t, uint(5+i), zigUnwrap(t, hmSlot(m, k)))
 		expect(t, &m.keys()[5+i] == gop.key_ptr, "@intFromPtr(&m.keys()[5 + i]) == @intFromPtr(gop.key_ptr)")
 		expect(t, &m.values()[5+i] == gop.value_ptr, "@intFromPtr(&m.values()[5 + i]) == @intFromPtr(gop.value_ptr)")
@@ -2208,7 +2208,7 @@ func TestHashMap_term51_HashMapUnmanaged_getIndex_hits_misses_and_termination_wi
 	expect(t, !hmSlot(m, 65536).Valid, "term51XSlot(m, 65536) == null")
 
 	for i, k := range hmFull16 {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	expectEqual(t, uint32(16), m.Count())
 	// Every slot used, slots and control bytes pinned.
@@ -2272,7 +2272,7 @@ func TestHashMap_term51_HashMapUnmanaged_getIndex_probing_sequence_under_collisi
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	// Lookup walks 5,6,7,...; found at its own slot.
 	for i, k := range c[0:6] {
@@ -2335,7 +2335,7 @@ func TestHashMap_term51_HashMapUnmanaged_getAdapted_lookup_by_an_adapted_key(t *
 	ctx := hmCtx
 	expect(t, !m.GetAdapted(5, ctx).Valid, "m.getAdapted(@as(u32, 5), ctx) == null")
 	for i, k := range hmChain5[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i+10)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i+10)))
 	}
 	for i, k := range hmChain5[0:4] {
 		expectEqual(t, uint16(i+10), zigUnwrap(t, m.GetAdapted(k, ctx)))
@@ -2509,7 +2509,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutContext_sets_the_key_and_report
 		gop, err := m.GetOrPutContext(hmK(uint32(4096+8*i)), hmCtx)
 		zigTry(t, err)
 		expect(t, !gop.found_existing, "!gop.found_existing")
-		*gop.value_ptr = HyperlinkId(i)
+		*gop.value_ptr = HyperlinkID(i)
 	}
 	expectEqual(t, uint32(4), m.Count())
 	// Full: existing found without error, new key is refused.
@@ -2542,7 +2542,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutContextAdapted_lookup_fallback_
 		zigTry(t, err)
 		expect(t, !gop.found_existing, "!gop.found_existing")
 		*gop.key_ptr = hmK(uint32(8 * i))
-		*gop.value_ptr = HyperlinkId(i + 1)
+		*gop.value_ptr = HyperlinkID(i + 1)
 	}
 	expectEqual(t, uint32(4), m.Count())
 	// Full: existing key still reported via the lookup fallback.
@@ -2570,7 +2570,7 @@ func TestHashMap_term51_HashMapUnmanaged_removeByIndex_slot_becomes_a_tombstone_
 	box := hmHBoxInit(16)
 	m := box.map_()
 	for i, k := range hmChain5[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	m.removeByIndex(6)
 	expectEqual(t, uint8(1), hmCtl(m, 6))
@@ -2650,7 +2650,7 @@ func TestHashMap_term51_HashMapUnmanaged_removeByPtr_the_slot_index_comes_from_t
 	box := hmHBoxInit(16)
 	m := box.map_()
 	for i, k := range hmFull16 {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	// Remove through getEntry's key pointer in key order; the removed slot is
 	// exactly the one the key occupied.
@@ -2719,7 +2719,7 @@ func TestHashMap_term51_HashMapUnmanaged_Iterator_next_entries_come_in_slot_orde
 	box := hmHBoxInit(16)
 	m := box.map_()
 	for i, k := range hmFull16 {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	// Slot order, not insertion order.
 	order := [...]uint32{65640, 65656, 65568, 65576, 65616, 65592, 65600, 65536, 65552, 65624, 65648, 65544, 65584, 65560, 65608, 65632}
@@ -2744,7 +2744,7 @@ func TestHashMap_term51_HashMapUnmanaged_Iterator_next_order_after_removals_and_
 	m := box.map_()
 	c := hmChain14
 	for _, k := range c[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(k)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(k)))
 	}
 	// Wrapped chain: slots 14,15,0,1 are visited 0,1,14,15.
 	{
@@ -2766,8 +2766,8 @@ func TestHashMap_term51_HashMapUnmanaged_Iterator_next_order_after_removals_and_
 	}
 	// Reinsertion recycles tombstones in probe order, which changes the
 	// iteration order: c[4] takes slot 15, c[5] takes slot 0.
-	zigTry(t, m.Put(hmK(c[4]), HyperlinkId(c[4])))
-	zigTry(t, m.Put(hmK(c[5]), HyperlinkId(c[5])))
+	zigTry(t, m.Put(hmK(c[4]), HyperlinkID(c[4])))
+	zigTry(t, m.Put(hmK(c[5]), HyperlinkID(c[5])))
 	{
 		it := m.Iterator()
 		want := [...]uint32{c[5], c[3], c[0], c[4]}
@@ -3023,10 +3023,10 @@ func TestHashMap_panic_Iterator_next_index_past_capacity(t *testing.T) {
 	// Zig: assert(it.index <= it.hm.capacity());
 	box := hmHBoxInit(8)
 	m := box.map_()
-	it := HashMapIterator[SizeOffsetInt, HyperlinkId, hmCtxT]{hm: &m, index: 9}
+	it := HashMapIterator[SizeOffsetInt, HyperlinkID, hmCtxT]{hm: &m, index: 9}
 	hmExpectPanic(t, func() { it.Next() })
 	// An index equal to the capacity is allowed.
-	ok := HashMapIterator[SizeOffsetInt, HyperlinkId, hmCtxT]{hm: &m, index: 8}
+	ok := HashMapIterator[SizeOffsetInt, HyperlinkID, hmCtxT]{hm: &m, index: 8}
 	expect(t, !ok.Next().Valid, "it.next() == null")
 }
 

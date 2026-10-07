@@ -45,7 +45,7 @@ func rsFragment(t *testing.T, page *Page, y uint) {
 // rsTrack is `try s.trackPin(.{ .node = node, .y = y, .x = x })`.
 func rsTrack(t *testing.T, s *PageList, node *PageListNode, y SizeCellCountInt, x SizeCellCountInt) *PageListPin {
 	t.Helper()
-	p, err := s.TrackPin(PageListPin{node: node, y: y, x: x})
+	p, err := s.TrackPin(PageListPin{Node: node, Y: y, X: x})
 	zigTry(t, err)
 	return p
 }
@@ -53,9 +53,9 @@ func rsTrack(t *testing.T, s *PageList, node *PageListNode, y SizeCellCountInt, 
 // rsExpectPin checks the node, row and column of a pin.
 func rsExpectPin(t *testing.T, p *PageListPin, node *PageListNode, y SizeCellCountInt, x SizeCellCountInt) {
 	t.Helper()
-	expect(t, p.node == node, "p.node == node")
-	expectEqual(t, y, p.y)
-	expectEqual(t, x, p.x)
+	expect(t, p.Node == node, "p.node == node")
+	expectEqual(t, y, p.Y)
+	expectEqual(t, x, p.X)
 }
 
 // rsMaxStylesNode grows the style capacity of the given page (which need not
@@ -83,12 +83,12 @@ func rsMaxStylesNode(s *Screen, node *PageListNode) *PageListNode {
 func rsChangeScene(t *testing.T, s *Screen, fill_styles bool, fill_links bool) *PageListNode {
 	t.Helper()
 	for y := uint32(1); y <= 2; y++ {
-		pin := zigUnwrap(t, s.pages.Pin(Point{Tag: PointTagActive, Active: PointCoordinate{x: 0, y: y}}))
-		zigTry(t, s.pages.Split(pin))
+		pin := zigUnwrap(t, s.Pages.Pin(Point{Tag: PointTagActive, Active: PointCoordinate{X: 0, Y: y}}))
+		zigTry(t, s.Pages.Split(pin))
 	}
-	expectEqual(t, uint(3), s.pages.TotalPages())
-	node := s.pages.pages.first.next
-	expect(t, s.cursor.page_pin.node == s.pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first")
+	expectEqual(t, uint(3), s.Pages.TotalPages())
+	node := s.Pages.pages.first.next
+	expect(t, s.Cursor.PagePin.Node == s.Pages.pages.first, "s.cursor.page_pin.node == s.pages.pages.first")
 
 	if fill_styles {
 		node = rsMaxStylesNode(s, node)
@@ -119,8 +119,8 @@ func rsChangeScene(t *testing.T, s *Screen, fill_styles bool, fill_links bool) *
 		rbFillStyles(&node.data)
 	}
 	// Moving the cursor one row down must go to this page and no other.
-	expect(t, s.pages.pages.first.next == node, "s.pages.pages.first.next == node")
-	expect(t, s.pages.pages.last == node.next, "s.pages.pages.last == node.next")
+	expect(t, s.Pages.pages.first.next == node, "s.pages.pages.first.next == node")
+	expect(t, s.Pages.pages.last == node.next, "s.pages.pages.last == node.next")
 	return node
 }
 
@@ -275,7 +275,7 @@ func TestRollbackSpec_PageList_split_clone_failure_returns_OutOfSpace_and_leaves
 	// GraphemeAllocOutOfMemory, the error is logged and OutOfSpace is
 	// returned ("we couldn't split and let our callers gracefully handle
 	// it"). The errdefer destroys the new node.
-	rbExpectError(t, ErrOutOfSpace, s.Split(PageListPin{node: last, y: 1}))
+	rbExpectError(t, ErrOutOfSpace, s.Split(PageListPin{Node: last, Y: 1}))
 
 	// Nothing was split: no new page, no rows moved, no pin moved.
 	expectEqual(t, uint(2), s.TotalPages())
@@ -310,7 +310,7 @@ func TestRollbackSpec_PageList_split_clone_failure_returns_OutOfSpace_and_leaves
 	// move to a new page after the old one and the pins follow.
 	page.ClearCells(page.GetRow(1), 3, 4)
 	expectEqual(t, uint(3), page.GraphemeCount())
-	zigTry(t, s.Split(PageListPin{node: last, y: 1}))
+	zigTry(t, s.Split(PageListPin{Node: last, Y: 1}))
 	expectEqual(t, uint(3), s.TotalPages())
 	target := last.next
 	expect(t, target != nil, "last.next != null")
@@ -334,7 +334,7 @@ func TestRollbackSpec_PageList_split_clone_failure_returns_OutOfSpace_and_leaves
 // rsCopyState is what rsCopyScene records about the page of the target screen.
 type rsCopyState struct {
 	node    *PageListNode
-	old_id  HyperlinkId
+	old_id  HyperlinkID
 	count   uint
 	strings uint64
 	cap     PageCapacity
@@ -351,23 +351,23 @@ func rsCopyScene(t *testing.T, s *Screen, other *Screen, implicit bool) rsCopySt
 	rbMaxLinkStores(t, s)
 	rbStartLink(t, s, "https://old/", None[[]uint8]())
 	rbWrite(t, s, "x")
-	node := s.cursor.page_pin.node
+	node := s.Cursor.PagePin.Node
 	page := &node.data
-	old_id := s.cursor.hyperlink_id
-	expectEqual(t, SizeOffsetInt(1), s.cursor.hyperlink_implicit_id)
+	old_id := s.Cursor.HyperlinkID
+	expectEqual(t, SizeOffsetInt(1), s.Cursor.HyperlinkImplicitID)
 	expectEqual(t, 2, page.hyperlink_set.RefCount(old_id))
 
 	if implicit {
 		rbStartLink(t, other, "https://skip/", None[[]uint8]())
 		rbStartLink(t, other, "https://other/", None[[]uint8]())
-		expectEqual(t, SizeOffsetInt(2), other.cursor.hyperlink_implicit_id)
+		expectEqual(t, SizeOffsetInt(2), other.Cursor.HyperlinkImplicitID)
 	} else {
 		rbStartLink(t, other, "https://other/", Some([]uint8("oid")))
-		expectEqual(t, SizeOffsetInt(0), other.cursor.hyperlink_implicit_id)
+		expectEqual(t, SizeOffsetInt(0), other.Cursor.HyperlinkImplicitID)
 	}
 	other.CursorAbsolute(4, 1)
-	other.cursor.pending_wrap = true
-	other.cursor.cursor_style = ScreenCursorStyleUnderline
+	other.Cursor.PendingWrap = true
+	other.Cursor.CursorStyle = ScreenCursorStyleUnderline
 
 	filled := rbFillLinks(t, page)
 	expect(t, filled.count > 100, "filled.count > 100")
@@ -387,19 +387,19 @@ func rsCopyScene(t *testing.T, s *Screen, other *Screen, implicit bool) rsCopySt
 func rsExpectCopyFailedLink(t *testing.T, s *Screen, other *Screen, st rsCopyState) {
 	t.Helper()
 	page := &st.node.data
-	expect(t, s.cursor.page_pin.node == st.node, "s.cursor.page_pin.node == node")
-	expectEqual(t, SizeCellCountInt(4), s.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), s.cursor.y)
-	expectEqual(t, SizeCellCountInt(4), s.cursor.page_pin.x)
-	expectEqual(t, SizeCellCountInt(1), s.cursor.page_pin.y)
-	expect(t, s.cursor.page_row == page.GetRow(1), "s.cursor.page_row == page.getRow(1)")
-	expect(t, s.cursor.page_cell == &page.GetCells(page.GetRow(1))[4], "s.cursor.page_cell == &page.getCells(page.getRow(1))[4]")
-	expect(t, s.cursor.pending_wrap, "s.cursor.pending_wrap")
-	expectEqual(t, ScreenCursorStyleUnderline, s.cursor.cursor_style)
+	expect(t, s.Cursor.PagePin.Node == st.node, "s.cursor.page_pin.node == node")
+	expectEqual(t, SizeCellCountInt(4), s.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(4), s.Cursor.PagePin.X)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.PagePin.Y)
+	expect(t, s.Cursor.PageRow == page.GetRow(1), "s.cursor.page_row == page.getRow(1)")
+	expect(t, s.Cursor.PageCell == &page.GetCells(page.GetRow(1))[4], "s.cursor.page_cell == &page.getCells(page.getRow(1))[4]")
+	expect(t, s.Cursor.PendingWrap, "s.cursor.pending_wrap")
+	expectEqual(t, ScreenCursorStyleUnderline, s.Cursor.CursorStyle)
 
 	// The hyperlink was not copied, and no half state is left.
-	expectEqual(t, HyperlinkId(0), s.cursor.hyperlink_id)
-	expect(t, s.cursor.hyperlink == nil, "s.cursor.hyperlink == null")
+	expectEqual(t, HyperlinkID(0), s.Cursor.HyperlinkID)
+	expect(t, s.Cursor.Hyperlink == nil, "s.cursor.hyperlink == null")
 	expectEqual(t, st.cap, page.capacity)
 	expectEqual(t, st.count, page.hyperlink_set.Count())
 	expectEqual(t, st.strings, page.string_alloc.UsedBytes())
@@ -408,8 +408,8 @@ func rsExpectCopyFailedLink(t *testing.T, s *Screen, other *Screen, st rsCopySta
 	expect(t, page.LookupHyperlink(&page.GetCells(page.GetRow(0))[0]).Valid, "page.lookupHyperlink(&page.getCells(page.getRow(0))[0]) != null")
 
 	// The other cursor and its page were not touched.
-	expect(t, other.cursor.hyperlink != nil, "other.cursor.hyperlink != null")
-	expectEqual(t, SizeCellCountInt(4), other.cursor.x)
+	expect(t, other.Cursor.Hyperlink != nil, "other.cursor.hyperlink != null")
+	expectEqual(t, SizeCellCountInt(4), other.Cursor.X)
 	s.AssertIntegrity()
 	page.AssertIntegrity()
 }
@@ -427,16 +427,16 @@ func TestRollbackSpec_Screen_cursorCopy_explicit_hyperlink_failure_is_swallowed_
 	// hyperlink of the other cursor (an explicit link "oid") cannot be added
 	// (the set is full and cannot grow: startHyperlink returns OutOfSpace),
 	// the error is logged and swallowed: cursorCopy returns no error.
-	zigTry(t, s.CursorCopy(other.cursor, screenCursorCopyOptionsDefault()))
+	zigTry(t, s.CursorCopy(other.Cursor, screenCursorCopyOptionsDefault()))
 
 	rsExpectCopyFailedLink(t, s, other, st)
 	// The default style of the other cursor was taken over.
-	expectEqual(t, StyleDefaultId, s.cursor.style_id)
-	expect(t, s.cursor.style.Default(), "s.cursor.style.default()")
+	expectEqual(t, StyleDefaultID, s.Cursor.StyleID)
+	expect(t, s.Cursor.Style.Default(), "s.cursor.style.default()")
 	// The cursor struct was copied wholesale, including the implicit id
 	// counter: it is the other cursor's (0), not this cursor's old one (1).
 	// An explicit link has no counter to restore.
-	expectEqual(t, SizeOffsetInt(0), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, SizeOffsetInt(0), s.Cursor.HyperlinkImplicitID)
 }
 
 // Go-only: rollback specification (not testable on upstream: Screen.cursorCopy logs an error at Screen.zig:1113). Follows Screen.zig:1059-1116 and startHyperlink at Screen.zig:2189-2238.
@@ -452,11 +452,11 @@ func TestRollbackSpec_Screen_cursorCopy_implicit_hyperlink_failure_restores_the_
 	// implicit id from this cursor's counter, which `self.cursor = other`
 	// has set to the other cursor's counter (2): it takes id 2, the counter
 	// becomes 3, the insert fails and the errdefer takes it back to 2.
-	zigTry(t, s.CursorCopy(other.cursor, screenCursorCopyOptionsDefault()))
+	zigTry(t, s.CursorCopy(other.Cursor, screenCursorCopyOptionsDefault()))
 
 	rsExpectCopyFailedLink(t, s, other, st)
-	expectEqual(t, StyleDefaultId, s.cursor.style_id)
-	expectEqual(t, SizeOffsetInt(2), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, StyleDefaultID, s.Cursor.StyleID)
+	expectEqual(t, SizeOffsetInt(2), s.Cursor.HyperlinkImplicitID)
 }
 
 // Go-only: rollback specification (not testable on upstream: Screen.cursorCopy logs an error at Screen.zig:1113). Follows Screen.zig:1059-1116: manualStyleUpdate at 1091 has succeeded when the hyperlink fails at 1109.
@@ -474,17 +474,17 @@ func TestRollbackSpec_Screen_cursorCopy_hyperlink_failure_keeps_the_copied_style
 	// The style update comes first and succeeds: it is not rolled back when
 	// the hyperlink then fails (the errdefer of cursorCopy only covers the
 	// style update itself).
-	zigTry(t, s.CursorCopy(other.cursor, screenCursorCopyOptionsDefault()))
+	zigTry(t, s.CursorCopy(other.Cursor, screenCursorCopyOptionsDefault()))
 
 	rsExpectCopyFailedLink(t, s, other, st)
-	expect(t, s.cursor.style.flags.bold, "s.cursor.style.flags.bold")
-	expect(t, s.cursor.style_id != StyleDefaultId, "s.cursor.style_id != style.default_id")
-	expectEqual(t, 1, page.styles.RefCount(s.cursor.style_id))
+	expect(t, s.Cursor.Style.Flags.Bold, "s.cursor.style.flags.bold")
+	expect(t, s.Cursor.StyleID != StyleDefaultID, "s.cursor.style_id != style.default_id")
+	expectEqual(t, 1, page.styles.RefCount(s.Cursor.StyleID))
 	expectEqual(t, uint(1), page.styles.Count())
-	expectEqual(t, SizeOffsetInt(0), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, SizeOffsetInt(0), s.Cursor.HyperlinkImplicitID)
 	// The other cursor keeps its own style on its own page.
-	opage := &other.cursor.page_pin.node.data
-	expectEqual(t, 1, opage.styles.RefCount(other.cursor.style_id))
+	opage := &other.Cursor.PagePin.Node.data
+	expectEqual(t, 1, opage.styles.RefCount(other.Cursor.StyleID))
 }
 
 // ---------------------------------------------------------------------------
@@ -495,8 +495,8 @@ func TestRollbackSpec_Screen_cursorCopy_hyperlink_failure_keeps_the_copied_style
 type rsChangeState struct {
 	node0     *PageListNode
 	node1     *PageListNode
-	old_style StyleId
-	old_link  HyperlinkId
+	old_style StyleID
+	old_link  HyperlinkID
 	old_row   *PageRow
 	new_row   *PageRow
 	cap1      PageCapacity
@@ -509,23 +509,23 @@ type rsChangeState struct {
 // and the row it enters, and returns the state before the move.
 func rsChangeStart(t *testing.T, s *Screen, node1 *PageListNode, uri string, id Optional[[]uint8]) rsChangeState {
 	t.Helper()
-	node0 := s.pages.pages.first
-	expect(t, s.cursor.page_pin.node == node0, "s.cursor.page_pin.node == node0")
+	node0 := s.Pages.pages.first
+	expect(t, s.Cursor.PagePin.Node == node0, "s.cursor.page_pin.node == node0")
 	zigTry(t, s.SetAttribute(rbAttr(SGRAttributeTagBold)))
 	rbStartLink(t, s, uri, id)
 	page0 := &node0.data
 	st := rsChangeState{
 		node0:     node0,
 		node1:     node1,
-		old_style: s.cursor.style_id,
-		old_link:  s.cursor.hyperlink_id,
-		old_row:   s.cursor.page_row,
-		new_row:   zigUnwrap(t, s.cursor.page_pin.Down(1)).RowAndCell().row,
+		old_style: s.Cursor.StyleID,
+		old_link:  s.Cursor.HyperlinkID,
+		old_row:   s.Cursor.PageRow,
+		new_row:   zigUnwrap(t, s.Cursor.PagePin.Down(1)).RowAndCell().row,
 		cap1:      node1.data.capacity,
-		serial:    s.pages.page_serial,
-		page_size: s.pages.page_size,
+		serial:    s.Pages.page_serial,
+		page_size: s.Pages.page_size,
 	}
-	expect(t, st.old_style != StyleDefaultId, "style_id != style.default_id")
+	expect(t, st.old_style != StyleDefaultID, "style_id != style.default_id")
 	expectEqual(t, 1, page0.styles.RefCount(st.old_style))
 	expectEqual(t, 1, page0.hyperlink_set.RefCount(st.old_link))
 	st.old_row.dirty = false
@@ -543,12 +543,12 @@ func rsExpectMoved(t *testing.T, s *Screen, st rsChangeState) {
 	t.Helper()
 	page0 := &st.node0.data
 	page1 := &st.node1.data
-	expect(t, s.cursor.page_pin.node == st.node1, "s.cursor.page_pin.node == node1")
-	expectEqual(t, SizeCellCountInt(0), s.cursor.x)
-	expectEqual(t, SizeCellCountInt(1), s.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), s.cursor.page_pin.y)
-	expect(t, s.cursor.page_row == st.new_row, "s.cursor.page_row == new_row")
-	expect(t, s.cursor.page_cell == &page1.GetCells(st.new_row)[0], "s.cursor.page_cell == &page1.getCells(new_row)[0]")
+	expect(t, s.Cursor.PagePin.Node == st.node1, "s.cursor.page_pin.node == node1")
+	expectEqual(t, SizeCellCountInt(0), s.Cursor.X)
+	expectEqual(t, SizeCellCountInt(1), s.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), s.Cursor.PagePin.Y)
+	expect(t, s.Cursor.PageRow == st.new_row, "s.cursor.page_row == new_row")
+	expect(t, s.Cursor.PageCell == &page1.GetCells(st.new_row)[0], "s.cursor.page_cell == &page1.getCells(new_row)[0]")
 
 	// The cursor's references on the old page are gone (the slots stay, as
 	// refcounted sets keep a zero-reference item around).
@@ -561,12 +561,12 @@ func rsExpectMoved(t *testing.T, s *Screen, st rsChangeState) {
 
 	// Nothing was split, grown or created: the three pages are as they
 	// were, the failed attempts did not use a serial or any page memory.
-	expectEqual(t, uint(3), s.pages.TotalPages())
-	expect(t, s.pages.pages.first == st.node0, "s.pages.pages.first.? == node0")
-	expect(t, s.pages.pages.first.next == st.node1, "s.pages.pages.first.?.next.? == node1")
+	expectEqual(t, uint(3), s.Pages.TotalPages())
+	expect(t, s.Pages.pages.first == st.node0, "s.pages.pages.first.? == node0")
+	expect(t, s.Pages.pages.first.next == st.node1, "s.pages.pages.first.?.next.? == node1")
 	expectEqual(t, st.cap1, page1.capacity)
-	expectEqual(t, st.serial, s.pages.page_serial)
-	expectEqual(t, st.page_size, s.pages.page_size)
+	expectEqual(t, st.serial, s.Pages.page_serial)
+	expectEqual(t, st.page_size, s.Pages.page_size)
 }
 
 // Go-only: rollback specification (not testable on upstream: Screen.cursorChangePin logs an error at Screen.zig:1177). Follows Screen.zig:1129-1204 (style at 1170-1181, hyperlink at 1184-1203) and manualStyleUpdate at Screen.zig:1995-2074.
@@ -578,7 +578,7 @@ func TestRollbackSpec_Screen_cursorChangePin_style_that_does_not_fit_degrades_to
 	st := rsChangeStart(t, s, node1, "https://example.com/", None[[]uint8]())
 	page0 := &st.node0.data
 	page1 := &node1.data
-	expectEqual(t, SizeOffsetInt(1), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, SizeOffsetInt(1), s.Cursor.HyperlinkImplicitID)
 	stcount := page1.styles.Count()
 	lcount := page1.hyperlink_set.Count()
 
@@ -590,21 +590,21 @@ func TestRollbackSpec_Screen_cursorChangePin_style_that_does_not_fit_degrades_to
 	s.CursorDown(1)
 	rsExpectMoved(t, s, st)
 
-	expectEqual(t, StyleDefaultId, s.cursor.style_id)
-	expect(t, s.cursor.style.Default(), "s.cursor.style.default()")
+	expectEqual(t, StyleDefaultID, s.Cursor.StyleID)
+	expect(t, s.Cursor.Style.Default(), "s.cursor.style.default()")
 	// Nothing was added to the new page's style set.
 	expectEqual(t, stcount, page1.styles.Count())
 
 	// The hyperlink is migrated on its own: a NEW implicit id is taken from
 	// the counter (1, the counter becomes 2) and the link is added to the new
 	// page with one reference; the old reference was released.
-	expect(t, s.cursor.hyperlink != nil, "s.cursor.hyperlink != null")
-	expect(t, s.cursor.hyperlink_id != 0, "s.cursor.hyperlink_id != 0")
-	expectEqualStrings(t, "https://example.com/", string(s.cursor.hyperlink.uri))
-	expect(t, s.cursor.hyperlink.id.Tag == HyperlinkHyperlinkIdImplicit, "s.cursor.hyperlink.?.id == .implicit")
-	expectEqual(t, SizeOffsetInt(1), s.cursor.hyperlink.id.Implicit)
-	expectEqual(t, SizeOffsetInt(2), s.cursor.hyperlink_implicit_id)
-	expectEqual(t, 1, page1.hyperlink_set.RefCount(s.cursor.hyperlink_id))
+	expect(t, s.Cursor.Hyperlink != nil, "s.cursor.hyperlink != null")
+	expect(t, s.Cursor.HyperlinkID != 0, "s.cursor.hyperlink_id != 0")
+	expectEqualStrings(t, "https://example.com/", string(s.Cursor.Hyperlink.URI))
+	expect(t, s.Cursor.Hyperlink.ID.Tag == HyperlinkHyperlinkIdImplicit, "s.cursor.hyperlink.?.id == .implicit")
+	expectEqual(t, SizeOffsetInt(1), s.Cursor.Hyperlink.ID.Implicit)
+	expectEqual(t, SizeOffsetInt(2), s.Cursor.HyperlinkImplicitID)
+	expectEqual(t, 1, page1.hyperlink_set.RefCount(s.Cursor.HyperlinkID))
 	expectEqual(t, lcount+1, page1.hyperlink_set.Count())
 	expectEqual(t, 0, page0.hyperlink_set.RefCount(st.old_link))
 	s.AssertIntegrity()
@@ -621,7 +621,7 @@ func TestRollbackSpec_Screen_cursorChangePin_hyperlink_that_does_not_fit_degrade
 	st := rsChangeStart(t, s, node1, "https://example.com/", None[[]uint8]())
 	page0 := &st.node0.data
 	page1 := &node1.data
-	expectEqual(t, SizeOffsetInt(1), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, SizeOffsetInt(1), s.Cursor.HyperlinkImplicitID)
 	lcount := page1.hyperlink_set.Count()
 	strings := page1.string_alloc.UsedBytes()
 
@@ -632,14 +632,14 @@ func TestRollbackSpec_Screen_cursorChangePin_hyperlink_that_does_not_fit_degrade
 	s.CursorDown(1)
 	rsExpectMoved(t, s, st)
 
-	expect(t, s.cursor.style.flags.bold, "s.cursor.style.flags.bold")
-	expect(t, s.cursor.style_id != StyleDefaultId, "s.cursor.style_id != style.default_id")
-	expectEqual(t, 1, page1.styles.RefCount(s.cursor.style_id))
+	expect(t, s.Cursor.Style.Flags.Bold, "s.cursor.style.flags.bold")
+	expect(t, s.Cursor.StyleID != StyleDefaultID, "s.cursor.style_id != style.default_id")
+	expectEqual(t, 1, page1.styles.RefCount(s.Cursor.StyleID))
 
-	expectEqual(t, HyperlinkId(0), s.cursor.hyperlink_id)
-	expect(t, s.cursor.hyperlink == nil, "s.cursor.hyperlink == null")
+	expectEqual(t, HyperlinkID(0), s.Cursor.HyperlinkID)
+	expect(t, s.Cursor.Hyperlink == nil, "s.cursor.hyperlink == null")
 	// The counter is where it was before the failed attempt.
-	expectEqual(t, SizeOffsetInt(1), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, SizeOffsetInt(1), s.Cursor.HyperlinkImplicitID)
 	// The failed insert left the new page's set and strings as they were.
 	expectEqual(t, lcount, page1.hyperlink_set.Count())
 	expectEqual(t, strings, page1.string_alloc.UsedBytes())
@@ -659,7 +659,7 @@ func TestRollbackSpec_Screen_cursorChangePin_style_and_hyperlink_that_do_not_fit
 	st := rsChangeStart(t, s, node1, "https://example.com/", Some([]uint8("id")))
 	page0 := &st.node0.data
 	page1 := &node1.data
-	expectEqual(t, SizeOffsetInt(0), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, SizeOffsetInt(0), s.Cursor.HyperlinkImplicitID)
 	stcount := page1.styles.Count()
 	lcount := page1.hyperlink_set.Count()
 	strings := page1.string_alloc.UsedBytes()
@@ -669,13 +669,13 @@ func TestRollbackSpec_Screen_cursorChangePin_style_and_hyperlink_that_do_not_fit
 	s.CursorDown(1)
 	rsExpectMoved(t, s, st)
 
-	expectEqual(t, StyleDefaultId, s.cursor.style_id)
-	expect(t, s.cursor.style.Default(), "s.cursor.style.default()")
+	expectEqual(t, StyleDefaultID, s.Cursor.StyleID)
+	expect(t, s.Cursor.Style.Default(), "s.cursor.style.default()")
 	expectEqual(t, stcount, page1.styles.Count())
 
-	expectEqual(t, HyperlinkId(0), s.cursor.hyperlink_id)
-	expect(t, s.cursor.hyperlink == nil, "s.cursor.hyperlink == null")
-	expectEqual(t, SizeOffsetInt(0), s.cursor.hyperlink_implicit_id)
+	expectEqual(t, HyperlinkID(0), s.Cursor.HyperlinkID)
+	expect(t, s.Cursor.Hyperlink == nil, "s.cursor.hyperlink == null")
+	expectEqual(t, SizeOffsetInt(0), s.Cursor.HyperlinkImplicitID)
 	expectEqual(t, lcount, page1.hyperlink_set.Count())
 	expectEqual(t, strings, page1.string_alloc.UsedBytes())
 	expectEqual(t, 0, page0.styles.RefCount(st.old_style))

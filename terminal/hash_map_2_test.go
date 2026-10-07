@@ -64,15 +64,15 @@ var hm2Loose = hm2LooseCtx{}
 
 // hm2LBox is term51AGLBox: a map of HyperlinkId values under hm2LooseCtx.
 type hm2LBox struct {
-	offset_map HashMapOffsetHashMap[SizeOffsetInt, HyperlinkId, hm2LooseCtx]
+	offset_map HashMapOffsetHashMap[SizeOffsetInt, HyperlinkID, hm2LooseCtx]
 }
 
 func hm2LBoxInit(cap uint32) hm2LBox {
 	l := HashMapOffsetHashMapLayoutOf(cap, hyperlinkMapEntrySizes)
-	return hm2LBox{offset_map: HashMapOffsetHashMapInit[SizeOffsetInt, HyperlinkId, hm2LooseCtx](l)}
+	return hm2LBox{offset_map: HashMapOffsetHashMapInit[SizeOffsetInt, HyperlinkID, hm2LooseCtx](l)}
 }
 
-func (self *hm2LBox) map_() hashMapUnmanaged[SizeOffsetInt, HyperlinkId, hm2LooseCtx] {
+func (self *hm2LBox) map_() hashMapUnmanaged[SizeOffsetInt, HyperlinkID, hm2LooseCtx] {
 	return self.offset_map.Map()
 }
 
@@ -83,7 +83,7 @@ var hm2Order16 = [16]uint32{65640, 65656, 65568, 65576, 65616, 65592, 65600, 655
 func hm2Fill16(t *testing.T, m hmHU) {
 	t.Helper()
 	for i, k := range hmFull16 {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 }
 
@@ -452,7 +452,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchPutContext_a_new_key_returns_null_
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		expect(t, !hm2FetchPut(t, m, hmK(k), HyperlinkId(i+10), hmCtx).Valid, "(try m.fetchPutContext(term51XK(k), @intCast(i + 10), term51XCtx)) == null")
+		expect(t, !hm2FetchPut(t, m, hmK(k), HyperlinkID(i+10), hmCtx).Valid, "(try m.fetchPutContext(term51XK(k), @intCast(i + 10), term51XCtx)) == null")
 		expectEqual(t, uint32(i+1), m.Count())
 		expectEqual(t, uint(5+i), zigUnwrap(t, hmSlot(m, k)))
 		expectEqual(t, k, m.keys()[5+i])
@@ -513,11 +513,11 @@ func TestHashMap_term51_HashMapUnmanaged_fetchPutContext_a_full_map_still_replac
 	m := box.map_()
 	keys := [...]uint32{8, 16, 24, 32}
 	for i, k := range keys {
-		expect(t, !hm2FetchPut(t, m, hmK(k), HyperlinkId(i+1), hmCtx).Valid, "(try m.fetchPutContext(term51XK(k), @intCast(i + 1), term51XCtx)) == null")
+		expect(t, !hm2FetchPut(t, m, hmK(k), HyperlinkID(i+1), hmCtx).Valid, "(try m.fetchPutContext(term51XK(k), @intCast(i + 1), term51XCtx)) == null")
 	}
 	expectEqual(t, uint32(4), m.Count())
 	for i, k := range keys {
-		old := zigUnwrap(t, hm2FetchPut(t, m, hmK(k), HyperlinkId(i+50), hmCtx))
+		old := zigUnwrap(t, hm2FetchPut(t, m, hmK(k), HyperlinkID(i+50), hmCtx))
 		expectEqual(t, k, old.key)
 		expectEqual(t, uint16(i+1), old.value)
 	}
@@ -557,7 +557,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchPutContext_tombstones_are_recycled
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	_ = m.Remove(hmK(c[1]))
 	_ = m.Remove(hmK(c[3]))
@@ -638,7 +638,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchPutAssumeCapacityContext_new_keys_
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		expect(t, !m.FetchPutAssumeCapacityContext(hmK(k), HyperlinkId(i+10), hmCtx).Valid, "m.fetchPutAssumeCapacityContext(term51XK(k), @intCast(i + 10), term51XCtx) == null")
+		expect(t, !m.FetchPutAssumeCapacityContext(hmK(k), HyperlinkID(i+10), hmCtx).Valid, "m.fetchPutAssumeCapacityContext(term51XK(k), @intCast(i + 10), term51XCtx) == null")
 		expectEqual(t, uint32(i+1), m.Count())
 		expectEqual(t, uint(5+i), zigUnwrap(t, hmSlot(m, k)))
 		expectEqual(t, k, m.keys()[5+i])
@@ -646,7 +646,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchPutAssumeCapacityContext_new_keys_
 		expectEqual(t, hmUsedCtl(k), hmCtl(m, uint(5+i)))
 	}
 	for i, k := range c[0:6] {
-		old := zigUnwrap(t, m.FetchPutAssumeCapacityContext(hmK(k), HyperlinkId(i+100), hmCtx))
+		old := zigUnwrap(t, m.FetchPutAssumeCapacityContext(hmK(k), HyperlinkID(i+100), hmCtx))
 		expectEqual(t, k, old.key)
 		expectEqual(t, uint16(i+10), old.value)
 		expectEqual(t, uint(5+i), zigUnwrap(t, hmSlot(m, k)))
@@ -689,7 +689,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchPutAssumeCapacityContext_tombstone
 	m := box.map_()
 	c := hmChain14
 	for i, k := range c[0:4] {
-		expect(t, !m.FetchPutAssumeCapacityContext(hmK(k), HyperlinkId(i), hmCtx).Valid, "m.fetchPutAssumeCapacityContext(term51XK(k), @intCast(i), term51XCtx) == null")
+		expect(t, !m.FetchPutAssumeCapacityContext(hmK(k), HyperlinkID(i), hmCtx).Valid, "m.fetchPutAssumeCapacityContext(term51XK(k), @intCast(i), term51XCtx) == null")
 	}
 	// Slots 14, 15, 0, 1.
 	_ = m.Remove(hmK(c[1]))
@@ -797,7 +797,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchRemoveContext_absent_keys_and_empt
 	m := box.map_()
 	c := hmChain7of8
 	for i, k := range c[0:3] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	// Slots 7, 0, 1.
 	before := hm2Snap(m)
@@ -873,7 +873,7 @@ func TestHashMap_term51_HashMapUnmanaged_fetchRemoveAdapted_remove_by_an_adapted
 	raw := hmCtx
 	c := hmChain5
 	for i, k := range c[0:6] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i+10)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i+10)))
 	}
 	kv := zigUnwrap(t, m.FetchRemoveAdapted(c[2], raw))
 	expectEqual(t, c[2], kv.key)
@@ -921,7 +921,7 @@ func TestHashMap_term51_HashMapUnmanaged_getKeyPtrContext_pointer_to_the_stored_
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	for i, k := range c[0:6] {
 		p := m.GetKeyPtrContext(hmK(k), hmCtx)
@@ -1011,7 +1011,7 @@ func TestHashMap_term51_HashMapUnmanaged_getKeyPtrAdapted_pointer_by_an_adapted_
 	c := hmChain5
 	expect(t, m.GetKeyPtrAdapted(c[0], raw) == nil, "m.getKeyPtrAdapted(c[0], raw) == null")
 	for i, k := range c[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	for i, k := range c[0:4] {
 		p := m.GetKeyPtrAdapted(k, raw)
@@ -1040,7 +1040,7 @@ func TestHashMap_term51_HashMapUnmanaged_getKey_a_copy_of_the_stored_key_null_wh
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	for _, k := range c[0:6] {
 		expectEqual(t, k, zigUnwrap(t, m.GetKey(hmK(k))))
@@ -1113,7 +1113,7 @@ func TestHashMap_term51_HashMapUnmanaged_getKeyAdapted_key_by_an_adapted_key(t *
 	c := hmChain5
 	expect(t, !m.GetKeyAdapted(c[0], raw).Valid, "m.getKeyAdapted(c[0], raw) == null")
 	for i, k := range c[0:5] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	for _, k := range c[0:5] {
 		expectEqual(t, k, zigUnwrap(t, m.GetKeyAdapted(k, raw)))
@@ -1145,7 +1145,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAdapted_a_new_key_reserves_a_sl
 		expectEqual(t, uint32(i+1), m.Count())
 		expectEqual(t, hmUsedCtl(k), hmCtl(m, uint(5+i)))
 		*gop.key_ptr = hmK(k)
-		*gop.value_ptr = HyperlinkId(i + 10)
+		*gop.value_ptr = HyperlinkID(i + 10)
 		expectEqual(t, uint(5+i), zigUnwrap(t, hmSlot(m, k)))
 		expectEqual(t, uint16(i+10), zigUnwrap(t, m.Get(hmK(k))))
 	}
@@ -1160,7 +1160,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAdapted_an_existing_key_is_foun
 	raw := hmCtx
 	c := hmChain5
 	for i, k := range c[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i+10)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i+10)))
 	}
 	for i, k := range c[0:4] {
 		gop, err := m.GetOrPutAdapted(k, raw)
@@ -1202,7 +1202,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAdapted_a_full_map_finds_existi
 		zigTry(t, err)
 		expect(t, !gop.found_existing, "!gop.found_existing")
 		*gop.key_ptr = hmK(k)
-		*gop.value_ptr = HyperlinkId(i + 1)
+		*gop.value_ptr = HyperlinkID(i + 1)
 	}
 	expectEqual(t, uint32(8), m.Count())
 	for i := range 8 {
@@ -1244,7 +1244,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAdapted_tombstones_are_recycled
 	raw := hmCtx
 	c := hmChain14
 	for i, k := range c[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	// Slots 14, 15, 0, 1; tombstones at 15 and 0.
 	_ = m.Remove(hmK(c[1]))
@@ -1276,7 +1276,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAdapted_tombstones_are_recycled
 	m4 := b4.map_()
 	keys := [...]uint32{8, 16, 24, 32}
 	for i, k := range keys {
-		zigTry(t, m4.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m4.Put(hmK(k), HyperlinkID(i)))
 	}
 	tomb := zigUnwrap(t, hmSlot(m4, 32))
 	_ = m4.Remove(hmK(32))
@@ -1305,7 +1305,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAssumeCapacity_a_new_key_is_sto
 		expectEqual(t, k, *gop.key_ptr)
 		expect(t, &m.keys()[5+i] == gop.key_ptr, "@intFromPtr(&m.keys()[5 + i]) == @intFromPtr(gop.key_ptr)")
 		expect(t, &m.values()[5+i] == gop.value_ptr, "@intFromPtr(&m.values()[5 + i]) == @intFromPtr(gop.value_ptr)")
-		*gop.value_ptr = HyperlinkId(i)
+		*gop.value_ptr = HyperlinkID(i)
 		expectEqual(t, uint32(i+1), m.Count())
 		expectEqual(t, hmUsedCtl(k), hmCtl(m, uint(5+i)))
 	}
@@ -1321,7 +1321,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAssumeCapacity_an_existing_key_
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:4] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i+10)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i+10)))
 	}
 	for i, k := range c[0:4] {
 		gop := m.GetOrPutAssumeCapacity(hmK(k))
@@ -1355,7 +1355,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAssumeCapacity_tombstones_are_r
 	m := box.map_()
 	c := hmChain14
 	for i, k := range c[0:4] {
-		*m.GetOrPutAssumeCapacity(hmK(k)).value_ptr = HyperlinkId(i)
+		*m.GetOrPutAssumeCapacity(hmK(k)).value_ptr = HyperlinkID(i)
 	}
 	_ = m.Remove(hmK(c[1]))
 	_ = m.Remove(hmK(c[2]))
@@ -1385,7 +1385,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutAssumeCapacity_fills_a_map_comp
 	for i, k := range hmFull16 {
 		gop := m.GetOrPutAssumeCapacity(hmK(k))
 		expect(t, !gop.found_existing, "!gop.found_existing")
-		*gop.value_ptr = HyperlinkId(i)
+		*gop.value_ptr = HyperlinkID(i)
 		expect(t, &m.keys()[hmFull16Slots[i]] == gop.key_ptr, "@intFromPtr(&m.keys()[term51XFull16Slots[i]]) == @intFromPtr(gop.key_ptr)")
 	}
 	expectEqual(t, uint32(16), m.Count())
@@ -1443,7 +1443,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutValueContext_a_new_key_is_inser
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		e := hm2GetOrPutValue(t, m, hmK(k), HyperlinkId(i+10), hmCtx)
+		e := hm2GetOrPutValue(t, m, hmK(k), HyperlinkID(i+10), hmCtx)
 		expect(t, &m.keys()[5+i] == e.key_ptr, "@intFromPtr(&m.keys()[5 + i]) == @intFromPtr(e.key_ptr)")
 		expect(t, &m.values()[5+i] == e.value_ptr, "@intFromPtr(&m.values()[5 + i]) == @intFromPtr(e.value_ptr)")
 		expectEqual(t, k, *e.key_ptr)
@@ -1492,7 +1492,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutValueContext_a_full_map_returns
 	m := box.map_()
 	keys := [...]uint32{8, 16, 24, 32}
 	for i, k := range keys {
-		hm2GetOrPutValue(t, m, hmK(k), HyperlinkId(i+1), hmCtx)
+		hm2GetOrPutValue(t, m, hmK(k), HyperlinkID(i+1), hmCtx)
 	}
 	expectEqual(t, uint32(4), m.Count())
 	for i, k := range keys {
@@ -1527,7 +1527,7 @@ func TestHashMap_term51_HashMapUnmanaged_getOrPutValueContext_tombstones_are_rec
 	m := box.map_()
 	c := hmChain5
 	for i, k := range c[0:6] {
-		zigTry(t, m.Put(hmK(k), HyperlinkId(i)))
+		zigTry(t, m.Put(hmK(k), HyperlinkID(i)))
 	}
 	_ = m.Remove(hmK(c[1]))
 	_ = m.Remove(hmK(c[3]))

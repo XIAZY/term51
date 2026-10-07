@@ -62,24 +62,24 @@ func (self *strC_recorder) Vt(action StreamActionKey, value *StreamAction) error
 	case StreamActionKeyModifyKeyFormat:
 		ev.a = uint32(value.ModifyKeyFormat)
 	case StreamActionKeyDeviceStatus:
-		ev.a = uint32(value.DeviceStatus.request)
+		ev.a = uint32(value.DeviceStatus.Request)
 	case StreamActionKeyRequestMode:
-		ev.a = uint32(value.RequestMode.mode)
+		ev.a = uint32(value.RequestMode.Mode)
 	case StreamActionKeySaveMode:
-		ev.a = uint32(value.SaveMode.mode)
+		ev.a = uint32(value.SaveMode.Mode)
 	case StreamActionKeyRestoreMode:
-		ev.a = uint32(value.RestoreMode.mode)
+		ev.a = uint32(value.RestoreMode.Mode)
 	case StreamActionKeyRequestModeUnknown:
-		ev.a = uint32(value.RequestModeUnknown.mode)
-		if value.RequestModeUnknown.ansi {
+		ev.a = uint32(value.RequestModeUnknown.Mode)
+		if value.RequestModeUnknown.Ansi {
 			ev.b = 1
 		}
 	case StreamActionKeyTopAndBottomMargin:
-		ev.a = uint32(value.TopAndBottomMargin.top_left)
-		ev.b = uint32(value.TopAndBottomMargin.bottom_right)
+		ev.a = uint32(value.TopAndBottomMargin.TopLeft)
+		ev.b = uint32(value.TopAndBottomMargin.BottomRight)
 	case StreamActionKeyLeftAndRightMargin:
-		ev.a = uint32(value.LeftAndRightMargin.top_left)
-		ev.b = uint32(value.LeftAndRightMargin.bottom_right)
+		ev.a = uint32(value.LeftAndRightMargin.TopLeft)
+		ev.b = uint32(value.LeftAndRightMargin.BottomRight)
 	case StreamActionKeyMouseShiftCapture:
 		if value.MouseShiftCapture {
 			ev.a = 1
@@ -93,13 +93,13 @@ func (self *strC_recorder) Vt(action StreamActionKey, value *StreamAction) error
 	case StreamActionKeyInsertBlanks:
 		ev.a = uint32(value.InsertBlanks)
 	case StreamActionKeyKittyKeyboardPush:
-		ev.a = uint32(value.KittyKeyboardPush.flags.Int())
+		ev.a = uint32(value.KittyKeyboardPush.Flags.Int())
 	case StreamActionKeyKittyKeyboardSet:
-		ev.a = uint32(value.KittyKeyboardSet.flags.Int())
+		ev.a = uint32(value.KittyKeyboardSet.Flags.Int())
 	case StreamActionKeyKittyKeyboardSetOr:
-		ev.a = uint32(value.KittyKeyboardSetOr.flags.Int())
+		ev.a = uint32(value.KittyKeyboardSetOr.Flags.Int())
 	case StreamActionKeyKittyKeyboardSetNot:
-		ev.a = uint32(value.KittyKeyboardSetNot.flags.Int())
+		ev.a = uint32(value.KittyKeyboardSetNot.Flags.Int())
 	}
 	if self.n >= uint(len(self.events)) {
 		return strC_errNoSpaceLeft
@@ -236,7 +236,7 @@ var strC_allModes = []ModesMode{
 // bits 0 to 14, ansi in bit 15). The wireframe has only ModesModeTag.Int, the
 // opposite direction.
 func strC_modeTag(v uint16) ModesModeTag {
-	return ModesModeTag{value: v & 0x7fff, ansi: v&0x8000 != 0}
+	return ModesModeTag{Value: v & 0x7fff, Ansi: v&0x8000 != 0}
 }
 
 // ---- CSI n -----------------------------------------------------------------
@@ -355,9 +355,9 @@ func TestStream_term51_Stream_csiDispatch_CSI_Ps_p_DECRQM_known_DEC_modes(t *tes
 	// Every DEC (non-ANSI) mode in the table produces request_mode.
 	for _, f := range strC_allModes {
 		tag := strC_modeTag(uint16(f))
-		if !tag.ansi {
+		if !tag.Ansi {
 			want := strC_ev(StreamActionKeyRequestMode, uint32(f), 0)
-			strC_check(t, "?$", []uint16{tag.value}, 'p', []strC_event{want})
+			strC_check(t, "?$", []uint16{tag.Value}, 'p', []strC_event{want})
 		}
 	}
 	strC_check(t, "?$", []uint16{1}, 'p', []strC_event{strC_ev(StreamActionKeyRequestMode, strC_mode(ModesModeCursorKeys), 0)})

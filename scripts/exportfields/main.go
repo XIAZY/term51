@@ -1,9 +1,18 @@
-// exportfields renames the unexported fields of exported struct types in a
-// package to exported names (snake_case -> CamelCase), updating every use,
-// tests included. Zig struct fields are always public; this gives the Go
-// port the same visibility.
+// exportfields renames the unexported fields of struct types in a package
+// to exported Go names (snake_case -> CamelCase, with Go's spelling of
+// common abbreviations: id -> ID, uri -> URI), updating every definition and
+// use, tests included. Zig struct fields are always public; this gives the
+// types a user of the library reads or fills in the same visibility.
 //
-// usage: exportfields [-w] <package dir>
+// Which types: the list given with -types (one name, or a prefix ending in
+// *, per line); see docs/public-api.md. Left alone: fields whose Go name a
+// method of the type already has, padding fields (leading underscore), and
+// fields whose type cannot be named outside the package.
+//
+// With -rename the tool renames the given declarations instead (types,
+// functions, constants, or Type.Method).
+//
+// usage: exportfields [-w] [-types list] [-rename a=b,...] <package dir>
 package main
 
 import (
@@ -27,6 +36,10 @@ func camel(s string) string {
 		if p == "" {
 			continue
 		}
+		if up, ok := initialisms[p]; ok {
+			b.WriteString(up)
+			continue
+		}
 		r := []rune(p)
 		r[0] = unicode.ToUpper(r[0])
 		b.WriteString(string(r))
@@ -36,12 +49,20 @@ func camel(s string) string {
 	return out
 }
 
-// snake is the inverse the corpus replayer uses (zigSnake).
+// initialisms are the words Go spells in capitals.
+var initialisms = map[string]string{"id": "ID", "uri": "URI", "url": "URL", "rgb": "RGB", "utf8": "UTF8", "html": "HTML"}
+
+// snake is the inverse the corpus replayer uses (zigSnake): a new word
+// starts at a capital that follows a lower-case letter or digit, or that is
+// followed by a lower-case letter; `StyleID` is `style_id`.
 func snake(name string) string {
+	r := []rune(name)
 	var sb strings.Builder
-	for i, c := range name {
+	for i, c := range r {
 		if c >= 'A' && c <= 'Z' {
-			if i > 0 {
+			prevLower := i > 0 && !(r[i-1] >= 'A' && r[i-1] <= 'Z')
+			nextLower := i+1 < len(r) && r[i+1] >= 'a' && r[i+1] <= 'z'
+			if i > 0 && (prevLower || nextLower) {
 				sb.WriteByte('_')
 			}
 			c += 'a' - 'A'
@@ -49,6 +70,40 @@ func snake(name string) string {
 		sb.WriteRune(c)
 	}
 	return sb.String()
+}
+
+// nameable reports whether t can be written outside package p.
+func nameable(t types.Type, p *types.Package, seen map[types.Type]bool) bool {
+	if seen[t] {
+		return true
+	}
+	seen[t] = true
+	switch t := t.(type) {
+	case *types.Named:
+		if o := t.Obj(); o.Pkg() == p && !o.Exported() {
+			return false
+		}
+		if ta := t.TypeArgs(); ta != nil {
+			for i := 0; i < ta.Len(); i++ {
+				if !nameable(ta.At(i), p, seen) {
+					return false
+				}
+			}
+		}
+	case *types.Alias:
+		if o := t.Obj(); o.Pkg() == p && !o.Exported() {
+			return false
+		}
+	case *types.Pointer:
+		return nameable(t.Elem(), p, seen)
+	case *types.Slice:
+		return nameable(t.Elem(), p, seen)
+	case *types.Array:
+		return nameable(t.Elem(), p, seen)
+	case *types.Map:
+		return nameable(t.Key(), p, seen) && nameable(t.Elem(), p, seen)
+	}
+	return true
 }
 
 type edit struct {
@@ -143,7 +198,9 @@ func main() {
 			if f.Pkg() != pkg.Types {
 				continue
 			}
-			if !f.Exported() && !f.Embedded() && !strings.HasPrefix(f.Name(), "_") {
+			if !f.Exported() && !f.Embedded() && !strings.HasPrefix(f.Name(), "_") && !nameable(f.Type(), pkg.Types, map[types.Type]bool{}) {
+				fmt.Printf("left unexported (its type is internal): %s.%s\n", path, f.Name())
+			} else if !f.Exported() && !f.Embedded() && !strings.HasPrefix(f.Name(), "_") {
 				n := camel(f.Name())
 				if snake(n) != strings.TrimSuffix(f.Name(), "_") {
 					fmt.Printf("no round trip: %s.%s -> %s -> %s\n", path, f.Name(), n, snake(n))
@@ -195,7 +252,7 @@ func main() {
 	}
 
 	// -rename: functions and methods by name, instead of fields.
-	funcRename := map[*types.Func]string{}
+	funcRename := map[types.Object]string{}
 	if *renames != "" {
 		rename = map[*types.Var]string{}
 		collisions = nil
@@ -214,19 +271,25 @@ func main() {
 			} else {
 				obj = scope.Lookup(old)
 			}
-			f, _ := obj.(*types.Func)
-			if f == nil {
-				panic("no function " + old)
+			if obj == nil {
+				panic("no declaration " + old)
 			}
-			funcRename[f.Origin()] = nn
+			if f, ok := obj.(*types.Func); ok {
+				obj = f.Origin()
+			}
+			funcRename[obj] = nn
 		}
 	}
 
 	// Every identifier that defines or uses one of those fields.
 	edits := map[string][]edit{}
 	add := func(id *ast.Ident, obj types.Object) {
-		if f, ok := obj.(*types.Func); ok {
-			if n, ok := funcRename[f.Origin()]; ok {
+		if len(funcRename) > 0 {
+			key := obj
+			if f, ok := obj.(*types.Func); ok {
+				key = f.Origin()
+			}
+			if n, ok := funcRename[key]; ok {
 				pos := fset.Position(id.Pos())
 				edits[pos.Filename] = append(edits[pos.Filename], edit{pos.Offset, id.Name, n})
 			}

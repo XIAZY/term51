@@ -1835,14 +1835,17 @@ const StyleColorRgb = terminal.StyleColorRgb
 // StyleColorTag is [terminal.StyleColorTag].
 type StyleColorTag = terminal.StyleColorTag
 
-// StyleDefaultId is [terminal.StyleDefaultId].
-const StyleDefaultId = terminal.StyleDefaultId
+// StyleDefaultID is [terminal.StyleDefaultID].
+const StyleDefaultID = terminal.StyleDefaultID
 
 // StyleFg is [terminal.StyleFg].
 type StyleFg = terminal.StyleFg
 
-// StyleId is [terminal.StyleId].
-type StyleId = terminal.StyleId
+// StyleFlags is [terminal.StyleFlags].
+type StyleFlags = terminal.StyleFlags
+
+// StyleID is [terminal.StyleID].
+type StyleID = terminal.StyleID
 
 // StyleSet is [terminal.StyleSet].
 type StyleSet = terminal.StyleSet

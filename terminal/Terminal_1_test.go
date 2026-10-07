@@ -65,7 +65,7 @@ func tm1Init(tt *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Termi
 func tm1InitScrollback(tt *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Terminal {
 	tt.Helper()
 	opts := terminalOptionsDefault(cols, rows)
-	opts.max_scrollback = max_scrollback
+	opts.MaxScrollback = max_scrollback
 	t, err := TerminalInit(opts)
 	zigTry(tt, err)
 	return &t
@@ -88,15 +88,15 @@ type tm1Int interface {
 // tm1Screen, tm1Active, tm1Viewport and tm1History are the Zig literals
 // `.{ .screen = .{ .x = x, .y = y } }` and so on.
 func tm1Screen[X, Y tm1Int](x X, y Y) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 func tm1Active[X, Y tm1Int](x X, y Y) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 func tm1Viewport[X, Y tm1Int](x X, y Y) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // tm1GlitchText is @embedFile("res/glitch.txt").
@@ -148,7 +148,7 @@ const tm1GlitchText = "" +
 // tm1FirstPage is `t.screens.active.pages.pages.first.?`.
 func tm1FirstPage(tt *testing.T, t *Terminal) *PageListNode {
 	tt.Helper()
-	node := t.screens.active.pages.pages.first
+	node := t.Screens.Active.Pages.pages.first
 	expect(tt, node != nil, "t.screens.active.pages.pages.first.?")
 	return node
 }
@@ -163,8 +163,8 @@ func TestTm1_Terminal_input_with_no_control_characters(t *testing.T) {
 	for _, c := range []uint8("hello") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 5, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 5, term.Screens.Active.Cursor.X)
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer alloc.free(str);
@@ -186,9 +186,9 @@ func TestTm1_Terminal_input_with_basic_wraparound(t *testing.T) {
 	for _, c := range []uint8("helloworldabc12") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expectEqual(t, 2, term.screens.active.cursor.y)
-	expectEqual(t, 4, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 2, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 4, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer alloc.free(str);
@@ -224,8 +224,8 @@ func TestTm1_Terminal_input_that_forces_scroll(t *testing.T) {
 	for _, c := range []uint8("abcdef") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expectEqual(t, 4, term.screens.active.cursor.y)
-	expectEqual(t, 0, term.screens.active.cursor.x)
+	expectEqual(t, 4, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer alloc.free(str);
@@ -239,10 +239,10 @@ func TestTm1_Terminal_input_unique_style_per_cell(t *testing.T) {
 	term := tm1Init(t, 30, 30)
 	defer term.Deinit()
 
-	for y := 0; y < int(term.rows); y++ {
-		for x := 0; x < int(term.cols); x++ {
+	for y := 0; y < int(term.Rows); y++ {
+		for x := 0; x < int(term.Cols); x++ {
 			term.SetCursorPos(uint(y), uint(x))
-			zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: uint8(x), g: uint8(y), b: 0}}))
+			zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: uint8(x), G: uint8(y), B: 0}}))
 			zigTry(t, term.Print('x'))
 		}
 	}
@@ -285,8 +285,8 @@ func TestTm1_Terminal_zero_width_character_at_start(t *testing.T) {
 	// just ignore it.
 	zigTry(t, term.Print(0x200D))
 
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 0, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
 
 	// Should not be dirty since we changed nothing.
 	expect(t, !term.isDirty(tm1Screen(0, 0)), "!t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -313,18 +313,18 @@ func TestTm1_Terminal_print_wide_char(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.Print(0x1F600)) // Smiley face
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F600, cell.content.codepoint)
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -339,23 +339,23 @@ func TestTm1_Terminal_print_wide_char_at_edge_creates_spacer_head(t *testing.T) 
 
 	term.SetCursorPos(1, 10)
 	zigTry(t, term.Print(0x1F600)) // Smiley face
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(9, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(9, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F600, cell.content.codepoint)
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 
@@ -386,13 +386,13 @@ func TestTm1_Terminal_print_wide_char_in_single_width_terminal(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.Print(0x1F600)) // Smiley face
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -410,18 +410,18 @@ func TestTm1_Terminal_print_over_wide_char_at_0_0(t *testing.T) {
 	term.SetCursorPos(0, 0)
 	zigTry(t, term.Print('A'))
 
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'A', cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -456,18 +456,18 @@ func TestTm1_Terminal_print_over_wide_char_at_col_0_corrupts_previous_row(t *tes
 
 	// Row 1, col 0 should be narrow (we just overwrote the wide char).
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		expectEqual(t, PageCellWideNarrow, list_cell.cell.wide)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		expectEqual(t, PageCellWideNarrow, list_cell.Cell.wide)
 	}
 	// Row 0, col 8 should still be .wide (the last wide char on the row).
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(8, 0)))
-		expectEqual(t, PageCellWideWide, list_cell.cell.wide)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(8, 0)))
+		expectEqual(t, PageCellWideWide, list_cell.Cell.wide)
 	}
 	// Row 0, col 9 must remain .spacer_tail to pair with the .wide at col 8.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(9, 0)))
-		expectEqual(t, PageCellWideSpacerTail, list_cell.cell.wide)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(9, 0)))
+		expectEqual(t, PageCellWideSpacerTail, list_cell.Cell.wide)
 	}
 }
 
@@ -482,14 +482,14 @@ func TestTm1_Terminal_print_over_wide_spacer_tail(t *testing.T) {
 	zigTry(t, term.Print('X'))
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'X', cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -513,7 +513,7 @@ func TestTm1_Terminal_print_over_wide_char_with_bold(t *testing.T) {
 	zigTry(t, term.Print(0x1F600)) // Smiley face
 	// verify we have styles in our style map
 	{
-		page := &term.screens.active.cursor.page_pin.node.data
+		page := &term.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, 1, page.styles.Count())
 	}
 
@@ -524,7 +524,7 @@ func TestTm1_Terminal_print_over_wide_char_with_bold(t *testing.T) {
 
 	// verify our style is gone
 	{
-		page := &term.screens.active.cursor.page_pin.node.data
+		page := &term.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, 0, page.styles.Count())
 	}
 
@@ -537,11 +537,11 @@ func TestTm1_Terminal_print_over_wide_char_with_bg_color(t *testing.T) {
 	term := tm1Init(t, 80, 80)
 	defer term.Deinit()
 
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	zigTry(t, term.Print(0x1F600)) // Smiley face
 	// verify we have styles in our style map
 	{
-		page := &term.screens.active.cursor.page_pin.node.data
+		page := &term.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, 1, page.styles.Count())
 	}
 
@@ -552,7 +552,7 @@ func TestTm1_Terminal_print_over_wide_char_with_bg_color(t *testing.T) {
 
 	// verify our style is gone
 	{
-		page := &term.screens.active.cursor.page_pin.node.data
+		page := &term.Screens.Active.Cursor.PagePin.Node.data
 		expectEqual(t, 0, page.styles.Count())
 	}
 
@@ -574,60 +574,60 @@ func TestTm1_Terminal_print_multicodepoint_grapheme_disabled_mode_2027(t *testin
 	zigTry(t, term.Print(0x1F467))
 
 	// We should have 6 cells taken up
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 6, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 6, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F468, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
-		expect(t, !list_cell.node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
+		expect(t, !list_cell.Node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F469, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(3, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(3, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
-		expect(t, !list_cell.node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
+		expect(t, !list_cell.Node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(4, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(4, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F467, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		expect(t, !list_cell.node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
+		expect(t, !list_cell.Node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(5, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(5, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
-		expect(t, !list_cell.node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
+		expect(t, !list_cell.Node.data.LookupGrapheme(cell).Valid, "list_cell.node.data.lookupGrapheme(cell) == null")
 	}
 
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -640,7 +640,7 @@ func TestTm1_Terminal_VS16_doesn_t_make_character_with_2027_disabled(t *testing.
 	defer term.Deinit()
 
 	// Disable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, false)
+	term.Modes.Set(ModesModeGraphemeCluster, false)
 
 	zigTry(t, term.Print(0x2764)) // Heart
 	zigTry(t, term.Print(0xFE0F)) // VS16 to make wide
@@ -652,12 +652,12 @@ func TestTm1_Terminal_VS16_doesn_t_make_character_with_2027_disabled(t *testing.
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x2764, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 }
@@ -669,7 +669,7 @@ func TestTm1_Terminal_ignored_VS16_doesn_t_mark_dirty(t *testing.T) {
 	defer term.Deinit()
 
 	// Disable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, false)
+	term.Modes.Set(ModesModeGraphemeCluster, false)
 
 	zigTry(t, term.Print(0x2764)) // Heart
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -690,21 +690,21 @@ func TestTm1_Terminal_print_invalid_VS16_non_grapheme(t *testing.T) {
 	zigTry(t, term.Print(0xFE0F))
 
 	// We should have 1 narrow cell.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'x', cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 	}
 }
@@ -716,7 +716,7 @@ func TestTm1_Terminal_invalid_VS16_doesn_t_mark_dirty(t *testing.T) {
 	defer term.Deinit()
 
 	// Disable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, false)
+	term.Modes.Set(ModesModeGraphemeCluster, false)
 
 	zigTry(t, term.Print('x'))
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -733,7 +733,7 @@ func TestTm1_Terminal_print_multicodepoint_grapheme_mode_2027(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/289
 	// This is: 👨‍👩‍👧 (which may or may not render correctly)
@@ -744,8 +744,8 @@ func TestTm1_Terminal_print_multicodepoint_grapheme_mode_2027(t *testing.T) {
 	zigTry(t, term.Print(0x1F467))
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Row should be dirty
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -753,17 +753,17 @@ func TestTm1_Terminal_print_multicodepoint_grapheme_mode_2027(t *testing.T) {
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F468, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 4, len(cps))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
@@ -777,7 +777,7 @@ func TestTm1_Terminal_keypad_sequence_VS15(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// This is: "#︎" (number sign with text presentation selector)
 	zigTry(t, term.Print(0x23))   // # Number sign (valid base)
@@ -785,16 +785,16 @@ func TestTm1_Terminal_keypad_sequence_VS15(t *testing.T) {
 
 	// VS15 should combine with the base character into a single grapheme cluster,
 	// taking 1 cell (narrow character).
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	// Row should be dirty
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 
 	// The base emoji should be in cell 0 with the skin tone as a grapheme
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x23, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
@@ -808,7 +808,7 @@ func TestTm1_Terminal_keypad_sequence_VS16(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// This is: "#️" (number sign with emoji presentation selector)
 	zigTry(t, term.Print(0x23))   // # Number sign (valid base)
@@ -816,16 +816,16 @@ func TestTm1_Terminal_keypad_sequence_VS16(t *testing.T) {
 
 	// VS16 should combine with the base character into a single grapheme cluster,
 	// taking 2 cells (wide character).
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Row should be dirty
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 
 	// The base emoji should be in cell 0 with the skin tone as a grapheme
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x23, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
@@ -839,7 +839,7 @@ func TestTm1_Terminal_Fitzpatrick_skin_tone_next_valid_base(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// This is: "👋🏿" (waving hand with dark skin tone)
 	zigTry(t, term.Print(0x1F44B)) // 👋 Waving hand (valid base)
@@ -847,16 +847,16 @@ func TestTm1_Terminal_Fitzpatrick_skin_tone_next_valid_base(t *testing.T) {
 
 	// The skin tone should combine with the base emoji into a single grapheme cluster,
 	// taking 2 cells (wide character).
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Row should be dirty
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 
 	// The base emoji should be in cell 0 with the skin tone as a grapheme
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F44B, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
@@ -870,7 +870,7 @@ func TestTm1_Terminal_Fitzpatrick_skin_tone_next_to_non_base(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// This is: "🏿" (which may not render correctly in your editor!)
 	zigTry(t, term.Print(0x22))    // "
@@ -879,8 +879,8 @@ func TestTm1_Terminal_Fitzpatrick_skin_tone_next_to_non_base(t *testing.T) {
 
 	// We should have 4 cells taken up. Importantly, the skin tone
 	// should not join with the quotes.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 4, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 4, term.Screens.Active.Cursor.X)
 
 	// Row should be dirty
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -888,22 +888,22 @@ func TestTm1_Terminal_Fitzpatrick_skin_tone_next_to_non_base(t *testing.T) {
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x22, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F3FF, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(3, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(3, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x22, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
@@ -917,7 +917,7 @@ func TestTm1_Terminal_multicodepoint_grapheme_marks_dirty_on_every_codepoint(t *
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/289
 	// This is: 👨‍👩‍👧 (which may or may not render correctly)
@@ -937,8 +937,8 @@ func TestTm1_Terminal_multicodepoint_grapheme_marks_dirty_on_every_codepoint(t *
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "Terminal: VS15 to make narrow character"
@@ -948,23 +948,23 @@ func TestTm1_Terminal_VS15_to_make_narrow_character(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print(0x2614)) // Umbrella with rain drops, width=2
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 	term.clearDirty()
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	zigTry(t, term.Print(0xFE0E)) // VS15 to make narrow
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 	term.clearDirty()
 
 	// VS15 should send us back a cell since our char is no longer wide.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	{
 		str := tm1PlainString(t, term)
@@ -973,12 +973,12 @@ func TestTm1_Terminal_VS15_to_make_narrow_character(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x2614, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 }
@@ -990,7 +990,7 @@ func TestTm1_Terminal_VS15_on_already_narrow_emoji(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print(0x26C8)) // Thunder cloud and rain, width=1
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -1000,8 +1000,8 @@ func TestTm1_Terminal_VS15_on_already_narrow_emoji(t *testing.T) {
 	term.clearDirty()
 
 	// Character takes up one cell
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	{
 		str := tm1PlainString(t, term)
@@ -1010,12 +1010,12 @@ func TestTm1_Terminal_VS15_on_already_narrow_emoji(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x26C8, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 }
@@ -1027,27 +1027,27 @@ func TestTm1_Terminal_print_invalid_VS15_following_emoji_is_wide(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('\U0001f9e0')) // 🧠
 	zigTry(t, term.Print(0xFE0E))       // not valid with U+1F9E0 as base
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, '\U0001f9e0', cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
@@ -1060,7 +1060,7 @@ func TestTm1_Terminal_print_invalid_VS15_in_emoji_ZWJ_sequence(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('\U0001f469')) // 👩
 	zigTry(t, term.Print(0xFE0E))       // not valid with U+1F469 as base
@@ -1068,22 +1068,22 @@ func TestTm1_Terminal_print_invalid_VS15_in_emoji_ZWJ_sequence(t *testing.T) {
 	zigTry(t, term.Print('\U0001f466')) // 👦
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, '\U0001f469', cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{'\U0000200d', '\U0001f466'}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{'\U0000200d', '\U0001f466'}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
@@ -1096,9 +1096,9 @@ func TestTm1_Terminal_VS15_to_make_narrow_character_with_pending_wrap(t *testing
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
-	expect(t, term.modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
+	expect(t, term.Modes.Get(ModesModeWraparound), "t.modes.get(.wraparound)")
 
 	zigTry(t, term.Print(0x1F34B)) // Lemon, width=2
 	zigTry(t, term.Print(0x2614))  // Umbrella with rain drops, width=2
@@ -1107,18 +1107,18 @@ func TestTm1_Terminal_VS15_to_make_narrow_character_with_pending_wrap(t *testing
 
 	// We only move to the end of the line because we're in a pending wrap
 	// state.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 3, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 3, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	zigTry(t, term.Print(0xFE0E)) // VS15 to make narrow
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 	term.clearDirty()
 
 	// VS15 should clear the pending wrap state
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 3, term.screens.active.cursor.x)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 3, term.Screens.Active.Cursor.X)
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	{
 		str := tm1PlainString(t, term)
@@ -1127,21 +1127,21 @@ func TestTm1_Terminal_VS15_to_make_narrow_character_with_pending_wrap(t *testing
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x2614, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 
 	// VS15 should not affect the previous grapheme
 	{
-		lemon_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0))).cell
+		lemon_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0))).Cell
 		expectEqual(t, 0x1F34B, lemon_cell.content.codepoint)
 		expectEqual(t, PageCellWideWide, lemon_cell.wide)
-		spacer_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0))).cell
+		spacer_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0))).Cell
 		expectEqual(t, 0, spacer_cell.content.codepoint)
 		expectEqual(t, PageCellWideSpacerTail, spacer_cell.wide)
 	}
@@ -1154,12 +1154,12 @@ func TestTm1_Terminal_VS16_to_make_wide_character_on_next_line(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.CursorRight(2)
 	zigTry(t, term.Print('#'))
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	expect(t, term.isDirty(tm1Screen(2, 0)), "t.isDirty(.{ .screen = .{ .x = 2, .y = 0 } })")
 	term.clearDirty()
 
@@ -1167,31 +1167,31 @@ func TestTm1_Terminal_VS16_to_make_wide_character_on_next_line(t *testing.T) {
 
 	expect(t, term.isDirty(tm1Screen(2, 0)), "t.isDirty(.{ .screen = .{ .x = 2, .y = 0 } })")
 	term.clearDirty()
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	{
 		// Previous cell turns into spacer_head
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
 		// '#' cell is wide
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, '#', cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0xFE0F}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0xFE0F}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
 		// spacer_tail
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
@@ -1208,44 +1208,44 @@ func TestTm1_Terminal_VS16_to_make_wide_character_on_next_line_with_hyperlink(t 
 
 	// Enable grapheme clustering and activate a hyperlink so printCell
 	// calls cursorSetHyperlink (which runs page integrity checks).
-	term.modes.Set(ModesModeGraphemeCluster, true)
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	term.Modes.Set(ModesModeGraphemeCluster, true)
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 
 	term.CursorRight(2)
 	zigTry(t, term.Print('#'))
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	// Without the fix, this panicked with UnwrappedSpacerHead.
 	zigTry(t, term.Print(0xFE0F)) // VS16 to make wide
 
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	{
 		// Previous cell turns into spacer_head and remains hyperlinked.
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		expect(t, list_cell.row.wrap, "list_cell.row.wrap")
+		expect(t, list_cell.Row.wrap, "list_cell.row.wrap")
 	}
 	{
 		// '#' cell is now wide and still hyperlinked.
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, '#', cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0xFE0F}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0xFE0F}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 		expect(t, cell.hyperlink, "cell.hyperlink")
 	}
 	{
 		// spacer_tail inherits hyperlink as part of the same grapheme cell.
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 		expect(t, cell.hyperlink, "cell.hyperlink")
@@ -1259,32 +1259,32 @@ func TestTm1_Terminal_VS16_to_make_wide_character_with_pending_wrap(t *testing.T
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.CursorRight(1)
 	zigTry(t, term.Print('#'))
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	zigTry(t, term.Print(0xFE0F)) // VS16 to make wide
 
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	{
 		// '#' cell is wide
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, '#', cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0xFE0F}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0xFE0F}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
 		// spacer_tail
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
@@ -1298,7 +1298,7 @@ func TestTm1_Terminal_VS16_to_make_wide_character_with_mode_2027(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print(0x2764)) // Heart
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
@@ -1314,12 +1314,12 @@ func TestTm1_Terminal_VS16_to_make_wide_character_with_mode_2027(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x2764, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 }
@@ -1331,7 +1331,7 @@ func TestTm1_Terminal_VS16_repeated_with_mode_2027(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print(0x2764)) // Heart
 	zigTry(t, term.Print(0xFE0F)) // VS16 to make wide
@@ -1347,21 +1347,21 @@ func TestTm1_Terminal_VS16_repeated_with_mode_2027(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x2764, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x2764, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
 		expectEqual(t, PageCellWideWide, cell.wide)
-		cps := zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell))
+		cps := zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell))
 		expectEqual(t, 1, len(cps))
 	}
 }
@@ -1373,28 +1373,28 @@ func TestTm1_Terminal_print_invalid_VS16_grapheme(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/1482
 	zigTry(t, term.Print('x'))
 	zigTry(t, term.Print(0xFE0F)) // invalid VS16
 
 	// We should have 1 cells taken up, and narrow.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'x', cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -1407,7 +1407,7 @@ func TestTm1_Terminal_print_invalid_VS16_with_second_char(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/1482
 	zigTry(t, term.Print('x'))
@@ -1415,22 +1415,22 @@ func TestTm1_Terminal_print_invalid_VS16_with_second_char(t *testing.T) {
 	zigTry(t, term.Print('y'))
 
 	// We should have 2 cells taken up, from two separate narrow characters.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'x', cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'y', cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
@@ -1444,23 +1444,23 @@ func TestTm1_Terminal_print_grapheme_o_o_with_nonspacing_mark_should_be_narrow(t
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print('o'))
 	zigTry(t, term.Print(0x0300)) // combining grave accent
 
 	// We should have 1 cell taken up.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'o', cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0x0300}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0x0300}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 }
@@ -1472,7 +1472,7 @@ func TestTm1_Terminal_print_Devanagari_grapheme_should_be_wide(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// क्‍ष
 	zigTry(t, term.Print(0x0915))
@@ -1481,22 +1481,22 @@ func TestTm1_Terminal_print_Devanagari_grapheme_should_be_wide(t *testing.T) {
 	zigTry(t, term.Print(0x0937))
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x0915, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0x094D, 0x200D, 0x0937}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0x094D, 0x200D, 0x0937}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -1508,7 +1508,7 @@ func TestTm1_Terminal_print_Devanagari_grapheme_should_be_wide_on_next_line(t *t
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.CursorRight(2)
 
@@ -1516,37 +1516,37 @@ func TestTm1_Terminal_print_Devanagari_grapheme_should_be_wide_on_next_line(t *t
 	zigTry(t, term.Print(0x0915))
 	zigTry(t, term.Print(0x094D))
 	zigTry(t, term.Print(0x200D))
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	// This one increases the width to wide
 	zigTry(t, term.Print(0x0937))
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	{
 		// Previous cell turns into spacer_head
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
 		// Devanagari grapheme is wide
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x0915, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0x094D, 0x200D, 0x0937}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0x094D, 0x200D, 0x0937}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -1560,7 +1560,7 @@ func TestTm1_Terminal_print_Devanagari_grapheme_should_be_wide_on_next_page(t *t
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	term.CursorDown(uint(rows - 1))
 
@@ -1570,44 +1570,44 @@ func TestTm1_Terminal_print_Devanagari_grapheme_should_be_wide_on_next_page(t *t
 
 	term.CursorRight(uint(cols - 1))
 
-	expectEqual(t, cols-1, term.screens.active.cursor.x)
-	expectEqual(t, rows-1, term.screens.active.cursor.y)
+	expectEqual(t, cols-1, term.Screens.Active.Cursor.X)
+	expectEqual(t, rows-1, term.Screens.Active.Cursor.Y)
 
 	// क्‍ष
 	zigTry(t, term.Print(0x0915))
 	zigTry(t, term.Print(0x094D))
 	zigTry(t, term.Print(0x200D))
-	expectEqual(t, cols-1, term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, cols-1, term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	// This one increases the width to wide
 	zigTry(t, term.Print(0x0937))
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, rows-1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expectEqual(t, rows-1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	{
 		// Previous cell turns into spacer_head
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Active(cols-1, rows-2)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Active(cols-1, rows-2)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideSpacerHead, cell.wide)
 	}
 	{
 		// Devanagari grapheme is wide
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Active(0, rows-1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Active(0, rows-1)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x0915, cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{0x094D, 0x200D, 0x0937}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{0x094D, 0x200D, 0x0937}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Active(1, rows-1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Active(1, rows-1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -1619,7 +1619,7 @@ func TestTm1_Terminal_print_invalid_VS16_with_second_char_combining(t *testing.T
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/1482
 	zigTry(t, term.Print('n'))
@@ -1627,22 +1627,22 @@ func TestTm1_Terminal_print_invalid_VS16_with_second_char_combining(t *testing.T
 	zigTry(t, term.Print(0x0303)) // combining tilde
 
 	// We should have 1 cells taken up, and narrow.
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'n', cell.content.codepoint)
 		expect(t, cell.HasGrapheme(), "cell.hasGrapheme()")
-		expectEqualSlices(t, []uint32{'\U00000303'}, zigUnwrap(t, list_cell.node.data.LookupGrapheme(cell)))
+		expectEqualSlices(t, []uint32{'\U00000303'}, zigUnwrap(t, list_cell.Node.data.LookupGrapheme(cell)))
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -1655,7 +1655,7 @@ func TestTm1_Terminal_overwrite_grapheme_should_clear_grapheme_data(t *testing.T
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.Print(0x26C8)) // Thunder cloud and rain
 	zigTry(t, term.Print(0xFE0E)) // VS15 to make narrow
@@ -1673,8 +1673,8 @@ func TestTm1_Terminal_overwrite_grapheme_should_clear_grapheme_data(t *testing.T
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'A', cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		expectEqual(t, PageCellWideNarrow, cell.wide)
@@ -1688,7 +1688,7 @@ func TestTm1_Terminal_overwrite_multicodepoint_grapheme_clears_grapheme_data(t *
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/289
 	// This is: 👨‍👩‍👧 (which may or may not render correctly)
@@ -1699,11 +1699,11 @@ func TestTm1_Terminal_overwrite_multicodepoint_grapheme_clears_grapheme_data(t *
 	zigTry(t, term.Print(0x1F467))
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// We should have one cell with graphemes
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, 1, page.GraphemeCount())
 
 	// Move back and overwrite wide
@@ -1712,8 +1712,8 @@ func TestTm1_Terminal_overwrite_multicodepoint_grapheme_clears_grapheme_data(t *
 	zigTry(t, term.Print('X'))
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 1, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 1, term.Screens.Active.Cursor.X)
 	expectEqual(t, 0, page.GraphemeCount())
 
 	{
@@ -1730,7 +1730,7 @@ func TestTm1_Terminal_overwrite_multicodepoint_grapheme_tail_clears_grapheme_dat
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// https://github.com/mitchellh/ghostty/issues/289
 	// This is: 👨‍👩‍👧 (which may or may not render correctly)
@@ -1741,11 +1741,11 @@ func TestTm1_Terminal_overwrite_multicodepoint_grapheme_tail_clears_grapheme_dat
 	zigTry(t, term.Print(0x1F467))
 
 	// We should have 2 cells taken up. It is one character but "wide".
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// We should have one cell with graphemes
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, 1, page.GraphemeCount())
 
 	// Move back and overwrite wide
@@ -1758,8 +1758,8 @@ func TestTm1_Terminal_overwrite_multicodepoint_grapheme_tail_clears_grapheme_dat
 		expectEqualStrings(t, " X", str)
 	}
 
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 	expectEqual(t, 0, page.GraphemeCount())
 }
 
@@ -1768,7 +1768,7 @@ func TestTm1_Terminal_print_breaks_valid_grapheme_cluster_with_Prepend_ASCII_for
 	testStdCapacity(t)
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	// Make sure we're not at cursor.x == 0 for the next char.
 	zigTry(t, term.Print('_'))
@@ -1783,16 +1783,16 @@ func TestTm1_Terminal_print_breaks_valid_grapheme_cluster_with_Prepend_ASCII_for
 	// optimization we assume a grapheme break when c <= 255, and note that
 	// this deviation only affects these very uncommon scenarios (e.g. the
 	// Arabic number sign should precede Arabic-script digits).
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 3, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 3, term.Screens.Active.Cursor.X)
 	// This is what we'd expect if we did break correctly:
 	//try testing.expectEqual(@as(usize, 2), t.screens.active.cursor.x);
 
 	// Assert various properties about our screen to verify
 	// we have all expected cells.
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x0600, cell.content.codepoint)
 		expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 		// This is what we'd expect if we did break correctly:
@@ -1801,8 +1801,8 @@ func TestTm1_Terminal_print_breaks_valid_grapheme_cluster_with_Prepend_ASCII_for
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, '1', cell.content.codepoint)
 		// This is what we'd expect if we did break correctly:
 		//try testing.expectEqual(@as(u21, 0), cell.content.codepoint);
@@ -1835,7 +1835,7 @@ func TestTm1_Terminal_print_writes_to_bottom_if_scrolled(t *testing.T) {
 	}
 
 	// Scroll to the top
-	term.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
+	term.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer testing.allocator.free(str);
@@ -1844,14 +1844,14 @@ func TestTm1_Terminal_print_writes_to_bottom_if_scrolled(t *testing.T) {
 
 	// Type
 	zigTry(t, term.Print('A'))
-	term.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollActive})
+	term.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollActive})
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "\nA", str)
 	}
 
-	expect(t, term.isDirty(tm1Active(term.screens.active.cursor.x, term.screens.active.cursor.y)), "t.isDirty(.{ .active = .{ .x = t.screens.active.cursor.x, .y = t.screens.active.cursor.y } })")
+	expect(t, term.isDirty(tm1Active(term.Screens.Active.Cursor.X, term.Screens.Active.Cursor.Y)), "t.isDirty(.{ .active = .{ .x = t.screens.active.cursor.x, .y = t.screens.active.cursor.y } })")
 }
 
 // Zig: test "Terminal: print charset"
@@ -1968,8 +1968,8 @@ func TestTm1_Terminal_soft_wrap(t *testing.T) {
 	for _, c := range []uint8("hello") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer testing.allocator.free(str);
@@ -1993,12 +1993,12 @@ func TestTm1_Terminal_soft_wrap_with_semantic_prompt(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 0)))
-		expectEqual(t, PageRowSemanticPromptPrompt, list_cell.row.semantic_prompt)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 0)))
+		expectEqual(t, PageRowSemanticPromptPrompt, list_cell.Row.semantic_prompt)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.row.semantic_prompt)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		expectEqual(t, PageRowSemanticPromptPromptContinuation, list_cell.Row.semantic_prompt)
 	}
 }
 
@@ -2008,15 +2008,15 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_char_and_one_space(t *testin
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	// This puts our cursor at the end and there is NO SPACE for a
 	// wide character.
 	zigTry(t, term.PrintString([]uint8("AAAA")))
 	term.clearDirty()
 	zigTry(t, term.Print(0x1F6A8)) // Police car light
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 4, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 4, term.Screens.Active.Cursor.X)
 
 	{
 		str := tm1PlainString(t, term)
@@ -2026,8 +2026,8 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_char_and_one_space(t *testin
 
 	// Make sure we printed nothing
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(4, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(4, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -2042,15 +2042,15 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_char_and_no_space(t *testing
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	// This puts our cursor at the end and there is NO SPACE for a
 	// wide character.
 	zigTry(t, term.PrintString([]uint8("AAAAA")))
 	term.clearDirty()
 	zigTry(t, term.Print(0x1F6A8)) // Police car light
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 4, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 4, term.Screens.Active.Cursor.X)
 
 	{
 		str := tm1PlainString(t, term)
@@ -2059,8 +2059,8 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_char_and_no_space(t *testing
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(4, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(4, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 'A', cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -2075,8 +2075,8 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_grapheme_and_half_space(t *t
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeGraphemeCluster, true)
-	term.modes.Set(ModesModeWraparound, false)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeWraparound, false)
 
 	// This puts our cursor at the end and there is NO SPACE for a
 	// wide character.
@@ -2084,8 +2084,8 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_grapheme_and_half_space(t *t
 	zigTry(t, term.Print(0x2764)) // Heart
 	term.clearDirty()
 	zigTry(t, term.Print(0xFE0F)) // VS16 to make wide
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 4, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 4, term.Screens.Active.Cursor.X)
 
 	{
 		str := tm1PlainString(t, term)
@@ -2094,8 +2094,8 @@ func TestTm1_Terminal_disabled_wraparound_with_wide_grapheme_and_half_space(t *t
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(4, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(4, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, '❤', cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -2111,7 +2111,7 @@ func TestTm1_Terminal_print_right_margin_wrap(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("123456789")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 5)
 	zigTry(t, term.PrintString([]uint8("XY")))
@@ -2123,8 +2123,8 @@ func TestTm1_Terminal_print_right_margin_wrap(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Active(0, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Active(0, 0)))
+		row := list_cell.Row
 		expect(t, !row.wrap, "!row.wrap")
 	}
 }
@@ -2136,7 +2136,7 @@ func TestTm1_Terminal_print_right_margin_wrap_dirty_tracking(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("123456789")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 5)
 
@@ -2167,7 +2167,7 @@ func TestTm1_Terminal_print_right_margin_outside(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("123456789")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 6)
 	term.clearDirty()
@@ -2189,7 +2189,7 @@ func TestTm1_Terminal_print_right_margin_outside_wrap(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("123456789")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 10)
 	zigTry(t, term.PrintString([]uint8("XY")))
@@ -2207,35 +2207,35 @@ func TestTm1_Terminal_print_wide_char_at_right_margin_does_not_create_spacer_hea
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 5)
 	zigTry(t, term.Print(0x1F600)) // Smiley face
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 4, term.screens.active.cursor.x)
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 4, term.Screens.Active.Cursor.X)
 
 	// Both rows dirty because the cursor moved
 	expect(t, term.isDirty(tm1Screen(4, 0)), "t.isDirty(.{ .screen = .{ .x = 4, .y = 0 } })")
 	expect(t, term.isDirty(tm1Screen(4, 1)), "t.isDirty(.{ .screen = .{ .x = 4, .y = 1 } })")
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(4, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(4, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, 0, cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 
-		row := list_cell.row
+		row := list_cell.Row
 		expect(t, !row.wrap, "!row.wrap")
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(2, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(2, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, 0x1F600, cell.content.codepoint)
 		expectEqual(t, PageCellWideWide, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(3, 1)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(3, 1)))
+		cell := list_cell.Cell
 		expectEqual(t, PageCellWideSpacerTail, cell.wide)
 	}
 }
@@ -2247,17 +2247,17 @@ func TestTm1_Terminal_print_with_hyperlink(t *testing.T) {
 	defer term.Deinit()
 
 	// Setup our hyperlink and print
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("123456")))
 
 	// Verify all our cells have a hyperlink
 	for x := 0; x < 6; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 1, id)
 	}
 
@@ -2271,19 +2271,19 @@ func TestTm1_Terminal_print_over_cell_with_same_hyperlink(t *testing.T) {
 	defer term.Deinit()
 
 	// Setup our hyperlink and print
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("123456")))
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.PrintString([]uint8("123456")))
 
 	// Verify all our cells have a hyperlink
 	for x := 0; x < 6; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 1, id)
 	}
 
@@ -2297,26 +2297,26 @@ func TestTm1_Terminal_print_and_end_hyperlink(t *testing.T) {
 	defer term.Deinit()
 
 	// Setup our hyperlink and print
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("123")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	zigTry(t, term.PrintString([]uint8("456")))
 
 	// Verify all our cells have a hyperlink
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 1, id)
 	}
 	for x := 3; x < 6; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
 	}
 
@@ -2330,24 +2330,24 @@ func TestTm1_Terminal_print_and_change_hyperlink(t *testing.T) {
 	defer term.Deinit()
 
 	// Setup our hyperlink and print
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://one.example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://one.example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("123")))
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://two.example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://two.example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("456")))
 
 	// Verify all our cells have a hyperlink
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 1, id)
 	}
 	for x := 3; x < 6; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 2, id)
 	}
 
@@ -2361,19 +2361,19 @@ func TestTm1_Terminal_overwrite_hyperlink(t *testing.T) {
 	defer term.Deinit()
 
 	// Setup our hyperlink and print
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://one.example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://one.example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("123")))
 	term.SetCursorPos(1, 1)
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	zigTry(t, term.PrintString([]uint8("456")))
 
 	// Verify all our cells have a hyperlink
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(x, 0)))
-		page := &list_cell.node.data
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(x, 0)))
+		page := &list_cell.Node.data
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
 		expect(t, !page.LookupHyperlink(cell).Valid, "page.lookupHyperlink(cell) == null")
 		expectEqual(t, 0, page.hyperlink_set.Count())
@@ -2392,7 +2392,7 @@ func TestTm1_Terminal_print_wide_char_at_right_edge_with_hyperlink(t *testing.T)
 	term := tm1Init(t, 10, 5)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 
 	// Move cursor to the last column (1-indexed)
 	term.SetCursorPos(1, 10)
@@ -2403,28 +2403,28 @@ func TestTm1_Terminal_print_wide_char_at_right_edge_with_hyperlink(t *testing.T)
 	zigTry(t, term.Print(0x4E2D)) // U+4E2D '中'
 
 	// Cursor wraps to row 2, after the wide char + spacer tail
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 
 	// Row 0, col 9: spacer head with hyperlink
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(9, 0)))
-		expectEqual(t, PageCellWideSpacerHead, list_cell.cell.wide)
-		expect(t, list_cell.cell.hyperlink, "list_cell.cell.hyperlink")
-		expect(t, list_cell.row.wrap, "list_cell.row.wrap")
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(9, 0)))
+		expectEqual(t, PageCellWideSpacerHead, list_cell.Cell.wide)
+		expect(t, list_cell.Cell.hyperlink, "list_cell.cell.hyperlink")
+		expect(t, list_cell.Row.wrap, "list_cell.row.wrap")
 	}
 	// Row 1, col 0: the wide char with hyperlink
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(0, 1)))
-		expectEqual(t, 0x4E2D, list_cell.cell.content.codepoint)
-		expectEqual(t, PageCellWideWide, list_cell.cell.wide)
-		expect(t, list_cell.cell.hyperlink, "list_cell.cell.hyperlink")
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(0, 1)))
+		expectEqual(t, 0x4E2D, list_cell.Cell.content.codepoint)
+		expectEqual(t, PageCellWideWide, list_cell.Cell.wide)
+		expect(t, list_cell.Cell.hyperlink, "list_cell.cell.hyperlink")
 	}
 	// Row 1, col 1: spacer tail with hyperlink
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Screen(1, 1)))
-		expectEqual(t, PageCellWideSpacerTail, list_cell.cell.wide)
-		expect(t, list_cell.cell.hyperlink, "list_cell.cell.hyperlink")
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Screen(1, 1)))
+		expectEqual(t, PageCellWideSpacerTail, list_cell.Cell.wide)
+		expect(t, list_cell.Cell.hyperlink, "list_cell.cell.hyperlink")
 	}
 }
 
@@ -2453,8 +2453,8 @@ func TestTm1_Terminal_linefeed_and_carriage_return(t *testing.T) {
 	for _, c := range []uint8("world") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expectEqual(t, 1, term.screens.active.cursor.y)
-	expectEqual(t, 5, term.screens.active.cursor.x)
+	expectEqual(t, 1, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 5, term.Screens.Active.Cursor.X)
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer testing.allocator.free(str);
@@ -2472,12 +2472,12 @@ func TestTm1_Terminal_linefeed_unsets_pending_wrap(t *testing.T) {
 	for _, c := range []uint8("hello") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap == true, "t.screens.active.cursor.pending_wrap == true")
+	expect(t, term.Screens.Active.Cursor.PendingWrap == true, "t.screens.active.cursor.pending_wrap == true")
 	term.clearDirty()
 	zigTry(t, term.Linefeed())
 	expect(t, term.isDirty(tm1Screen(0, 0)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 0 } })")
 	expect(t, term.isDirty(tm1Screen(0, 1)), "t.isDirty(.{ .screen = .{ .x = 0, .y = 1 } })")
-	expect(t, term.screens.active.cursor.pending_wrap == false, "t.screens.active.cursor.pending_wrap == false")
+	expect(t, term.Screens.Active.Cursor.PendingWrap == false, "t.screens.active.cursor.pending_wrap == false")
 }
 
 // Zig: test "Terminal: linefeed mode automatic carriage return"
@@ -2487,7 +2487,7 @@ func TestTm1_Terminal_linefeed_mode_automatic_carriage_return(t *testing.T) {
 	defer term.Deinit()
 
 	// Basic grid writing
-	term.modes.Set(ModesModeLinefeed, true)
+	term.Modes.Set(ModesModeLinefeed, true)
 	zigTry(t, term.PrintString([]uint8("123456")))
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.Print('X'))
@@ -2508,9 +2508,9 @@ func TestTm1_Terminal_carriage_return_unsets_pending_wrap(t *testing.T) {
 	for _, c := range []uint8("hello") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap == true, "t.screens.active.cursor.pending_wrap == true")
+	expect(t, term.Screens.Active.Cursor.PendingWrap == true, "t.screens.active.cursor.pending_wrap == true")
 	term.CarriageReturn()
-	expect(t, term.screens.active.cursor.pending_wrap == false, "t.screens.active.cursor.pending_wrap == false")
+	expect(t, term.Screens.Active.Cursor.PendingWrap == false, "t.screens.active.cursor.pending_wrap == false")
 }
 
 // Zig: test "Terminal: carriage return origin mode moves to left margin"
@@ -2519,11 +2519,11 @@ func TestTm1_Terminal_carriage_return_origin_mode_moves_to_left_margin(t *testin
 	term := tm1Init(t, 5, 80)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeOrigin, true)
-	term.screens.active.cursor.x = 0
-	term.scrolling_region.left = 2
+	term.Modes.Set(ModesModeOrigin, true)
+	term.Screens.Active.Cursor.X = 0
+	term.ScrollingRegion.Left = 2
 	term.CarriageReturn()
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "Terminal: carriage return left of left margin moves to zero"
@@ -2532,10 +2532,10 @@ func TestTm1_Terminal_carriage_return_left_of_left_margin_moves_to_zero(t *testi
 	term := tm1Init(t, 5, 80)
 	defer term.Deinit()
 
-	term.screens.active.cursor.x = 1
-	term.scrolling_region.left = 2
+	term.Screens.Active.Cursor.X = 1
+	term.ScrollingRegion.Left = 2
 	term.CarriageReturn()
-	expectEqual(t, 0, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "Terminal: carriage return right of left margin moves to left margin"
@@ -2544,10 +2544,10 @@ func TestTm1_Terminal_carriage_return_right_of_left_margin_moves_to_left_margin(
 	term := tm1Init(t, 5, 80)
 	defer term.Deinit()
 
-	term.screens.active.cursor.x = 3
-	term.scrolling_region.left = 2
+	term.Screens.Active.Cursor.X = 3
+	term.ScrollingRegion.Left = 2
 	term.CarriageReturn()
-	expectEqual(t, 2, term.screens.active.cursor.x)
+	expectEqual(t, 2, term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "Terminal: backspace"
@@ -2562,8 +2562,8 @@ func TestTm1_Terminal_backspace(t *testing.T) {
 	}
 	term.Backspace()
 	zigTry(t, term.Print('y'))
-	expectEqual(t, 0, term.screens.active.cursor.y)
-	expectEqual(t, 5, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
+	expectEqual(t, 5, term.Screens.Active.Cursor.X)
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer testing.allocator.free(str);
@@ -2580,17 +2580,17 @@ func TestTm1_Terminal_horizontal_tabs(t *testing.T) {
 	// HT
 	zigTry(t, term.Print('1'))
 	term.HorizontalTab()
-	expectEqual(t, 8, term.screens.active.cursor.x)
+	expectEqual(t, 8, term.Screens.Active.Cursor.X)
 
 	// HT
 	term.HorizontalTab()
-	expectEqual(t, 16, term.screens.active.cursor.x)
+	expectEqual(t, 16, term.Screens.Active.Cursor.X)
 
 	// HT at the end
 	term.HorizontalTab()
-	expectEqual(t, 19, term.screens.active.cursor.x)
+	expectEqual(t, 19, term.Screens.Active.Cursor.X)
 	term.HorizontalTab()
-	expectEqual(t, 19, term.screens.active.cursor.x)
+	expectEqual(t, 19, term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "Terminal: horizontal tabs starting on tabstop"
@@ -2599,9 +2599,9 @@ func TestTm1_Terminal_horizontal_tabs_starting_on_tabstop(t *testing.T) {
 	term := tm1Init(t, 20, 5)
 	defer term.Deinit()
 
-	term.SetCursorPos(uint(term.screens.active.cursor.y), 9)
+	term.SetCursorPos(uint(term.Screens.Active.Cursor.Y), 9)
 	zigTry(t, term.Print('X'))
-	term.SetCursorPos(uint(term.screens.active.cursor.y), 9)
+	term.SetCursorPos(uint(term.Screens.Active.Cursor.Y), 9)
 	term.HorizontalTab()
 	zigTry(t, term.Print('A'))
 
@@ -2618,9 +2618,9 @@ func TestTm1_Terminal_horizontal_tabs_with_right_margin(t *testing.T) {
 	term := tm1Init(t, 20, 5)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	term.SetCursorPos(uint(term.screens.active.cursor.y), 1)
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	term.SetCursorPos(uint(term.Screens.Active.Cursor.Y), 1)
 	zigTry(t, term.Print('X'))
 	term.HorizontalTab()
 	zigTry(t, term.Print('A'))
@@ -2639,21 +2639,21 @@ func TestTm1_Terminal_horizontal_tabs_back(t *testing.T) {
 	defer term.Deinit()
 
 	// Edge of screen
-	term.SetCursorPos(uint(term.screens.active.cursor.y), 20)
+	term.SetCursorPos(uint(term.Screens.Active.Cursor.Y), 20)
 
 	// HT
 	term.HorizontalTabBack()
-	expectEqual(t, 16, term.screens.active.cursor.x)
+	expectEqual(t, 16, term.Screens.Active.Cursor.X)
 
 	// HT
 	term.HorizontalTabBack()
-	expectEqual(t, 8, term.screens.active.cursor.x)
+	expectEqual(t, 8, term.Screens.Active.Cursor.X)
 
 	// HT
 	term.HorizontalTabBack()
-	expectEqual(t, 0, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
 	term.HorizontalTabBack()
-	expectEqual(t, 0, term.screens.active.cursor.x)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
 }
 
 // Zig: test "Terminal: horizontal tabs back starting on tabstop"
@@ -2662,9 +2662,9 @@ func TestTm1_Terminal_horizontal_tabs_back_starting_on_tabstop(t *testing.T) {
 	term := tm1Init(t, 20, 5)
 	defer term.Deinit()
 
-	term.SetCursorPos(uint(term.screens.active.cursor.y), 9)
+	term.SetCursorPos(uint(term.Screens.Active.Cursor.Y), 9)
 	zigTry(t, term.Print('X'))
-	term.SetCursorPos(uint(term.screens.active.cursor.y), 9)
+	term.SetCursorPos(uint(term.Screens.Active.Cursor.Y), 9)
 	term.HorizontalTabBack()
 	zigTry(t, term.Print('A'))
 
@@ -2681,9 +2681,9 @@ func TestTm1_Terminal_horizontal_tabs_with_left_margin_in_origin_mode(t *testing
 	term := tm1Init(t, 20, 5)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeOrigin, true)
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.Modes.Set(ModesModeOrigin, true)
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(1, 2)
 	zigTry(t, term.Print('X'))
 	term.HorizontalTabBack()
@@ -2702,9 +2702,9 @@ func TestTm1_Terminal_horizontal_tab_back_with_cursor_before_left_margin(t *test
 	term := tm1Init(t, 20, 5)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeOrigin, true)
+	term.Modes.Set(ModesModeOrigin, true)
 	term.SaveCursor()
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(5, 0)
 	term.RestoreCursor()
 	term.HorizontalTabBack()
@@ -2726,9 +2726,9 @@ func TestTm1_Terminal_cursorPos_resets_wrap(t *testing.T) {
 	for _, c := range []uint8("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.SetCursorPos(1, 1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -2760,9 +2760,9 @@ func TestTm1_Terminal_cursorPos_relative_to_origin(t *testing.T) {
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 3
-	term.modes.Set(ModesModeOrigin, true)
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 3
+	term.Modes.Set(ModesModeOrigin, true)
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('X'))
 
@@ -2779,11 +2779,11 @@ func TestTm1_Terminal_cursorPos_relative_to_origin_with_left_right(t *testing.T)
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 3
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 4
-	term.modes.Set(ModesModeOrigin, true)
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 3
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 4
+	term.Modes.Set(ModesModeOrigin, true)
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('X'))
 
@@ -2800,11 +2800,11 @@ func TestTm1_Terminal_cursorPos_limits_with_full_scroll_region(t *testing.T) {
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	term.scrolling_region.top = 2
-	term.scrolling_region.bottom = 3
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 4
-	term.modes.Set(ModesModeOrigin, true)
+	term.ScrollingRegion.Top = 2
+	term.ScrollingRegion.Bottom = 3
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 4
+	term.Modes.Set(ModesModeOrigin, true)
 	term.SetCursorPos(500, 500)
 	zigTry(t, term.Print('X'))
 
@@ -2822,52 +2822,52 @@ func TestTm1_Terminal_setCursorPos_original_test(t *testing.T) {
 	term := tm1Init(t, 80, 80)
 	defer term.Deinit()
 
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expectEqual(t, 0, term.screens.active.cursor.y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
 
 	// Setting it to 0 should keep it zero (1 based)
 	term.SetCursorPos(0, 0)
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expectEqual(t, 0, term.screens.active.cursor.y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expectEqual(t, 0, term.Screens.Active.Cursor.Y)
 
 	// Should clamp to size
 	term.SetCursorPos(81, 81)
-	expectEqual(t, 79, term.screens.active.cursor.x)
-	expectEqual(t, 79, term.screens.active.cursor.y)
+	expectEqual(t, 79, term.Screens.Active.Cursor.X)
+	expectEqual(t, 79, term.Screens.Active.Cursor.Y)
 
 	// Should reset pending wrap
 	term.SetCursorPos(0, 80)
 	zigTry(t, term.Print('c'))
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.SetCursorPos(0, 80)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 
 	// Origin mode
-	term.modes.Set(ModesModeOrigin, true)
+	term.Modes.Set(ModesModeOrigin, true)
 
 	// No change without a scroll region
 	term.SetCursorPos(81, 81)
-	expectEqual(t, 79, term.screens.active.cursor.x)
-	expectEqual(t, 79, term.screens.active.cursor.y)
+	expectEqual(t, 79, term.Screens.Active.Cursor.X)
+	expectEqual(t, 79, term.Screens.Active.Cursor.Y)
 
 	// Set the scroll region
-	term.SetTopAndBottomMargin(10, uint(term.rows))
+	term.SetTopAndBottomMargin(10, uint(term.Rows))
 	term.SetCursorPos(0, 0)
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expectEqual(t, 9, term.screens.active.cursor.y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expectEqual(t, 9, term.Screens.Active.Cursor.Y)
 
 	term.SetCursorPos(1, 1)
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expectEqual(t, 9, term.screens.active.cursor.y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expectEqual(t, 9, term.Screens.Active.Cursor.Y)
 
 	term.SetCursorPos(100, 0)
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expectEqual(t, 79, term.screens.active.cursor.y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expectEqual(t, 79, term.Screens.Active.Cursor.Y)
 
 	term.SetTopAndBottomMargin(10, 11)
 	term.SetCursorPos(2, 0)
-	expectEqual(t, 0, term.screens.active.cursor.x)
-	expectEqual(t, 10, term.screens.active.cursor.y)
+	expectEqual(t, 0, term.Screens.Active.Cursor.X)
+	expectEqual(t, 10, term.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "Terminal: setTopAndBottomMargin simple"
@@ -3004,7 +3004,7 @@ func TestTm1_Terminal_setLeftAndRightMargin_simple(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(0, 0)
 
 	term.clearDirty()
@@ -3033,10 +3033,10 @@ func TestTm1_Terminal_setLeftAndRightMargin_left_only(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(2, 0)
-	expectEqual(t, 1, term.scrolling_region.left)
-	expectEqual(t, term.cols-1, term.scrolling_region.right)
+	expectEqual(t, 1, term.ScrollingRegion.Left)
+	expectEqual(t, term.Cols-1, term.ScrollingRegion.Right)
 	term.SetCursorPos(1, 2)
 
 	term.clearDirty()
@@ -3067,7 +3067,7 @@ func TestTm1_Terminal_setLeftAndRightMargin_left_and_right(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(1, 2)
 	term.SetCursorPos(1, 2)
 
@@ -3099,7 +3099,7 @@ func TestTm1_Terminal_setLeftAndRightMargin_left_equal_right(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(2, 2)
 	term.SetCursorPos(1, 2)
 
@@ -3131,7 +3131,7 @@ func TestTm1_Terminal_setLeftAndRightMargin_mode_69_unset(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, false)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, false)
 	term.SetLeftAndRightMargin(1, 2)
 	term.SetCursorPos(1, 2)
 
@@ -3195,7 +3195,7 @@ func TestTm1_Terminal_insertLines_colors_with_bg_color(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("GHI")))
 	term.SetCursorPos(2, 2)
 
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	term.InsertLines(1)
 
 	{
@@ -3204,10 +3204,10 @@ func TestTm1_Terminal_insertLines_colors_with_bg_color(t *testing.T) {
 		expectEqualStrings(t, "ABC\n\nDEF\nGHI", str)
 	}
 
-	for x := 0; x < int(term.cols); x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Active(x, 1)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+	for x := 0; x < int(term.Cols); x++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Active(x, 1)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -3230,7 +3230,7 @@ func TestTm1_Terminal_insertLines_handles_style_refs(t *testing.T) {
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
 
 	// verify we have styles in our style map
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, 1, page.styles.Count())
 
 	term.SetCursorPos(2, 2)
@@ -3492,9 +3492,9 @@ func TestTm1_Terminal_insertLines_resets_pending_wrap(t *testing.T) {
 	for _, c := range []uint8("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.InsertLines(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('B'))
 
 	{
@@ -3527,8 +3527,8 @@ func TestTm1_Terminal_insertLines_resets_wrap(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Active(0, 2)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Active(0, 2)))
+		row := list_cell.Row
 		expect(t, !row.wrap, "!row.wrap")
 	}
 }
@@ -3540,7 +3540,7 @@ func TestTm1_Terminal_insertLines_multi_codepoint_graphemes(t *testing.T) {
 	defer term.Deinit()
 
 	// Disable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.PrintString([]uint8("ABC")))
 	term.CarriageReturn()
@@ -3579,8 +3579,8 @@ func TestTm1_Terminal_insertLines_left_right_scroll_region(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 
 	term.clearDirty()
@@ -3613,16 +3613,16 @@ func TestTm1_Terminal_scrollUp_simple(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("GHI")))
 	term.SetCursorPos(2, 2)
 
-	cursor := term.screens.active.cursor
-	viewport_before := term.screens.active.pages.GetTopLeft(PointTagViewport)
+	cursor := term.Screens.Active.Cursor
+	viewport_before := term.Screens.Active.Pages.GetTopLeft(PointTagViewport)
 	zigTry(t, term.ScrollUp(1))
-	expectEqual(t, cursor.x, term.screens.active.cursor.x)
-	expectEqual(t, cursor.y, term.screens.active.cursor.y)
+	expectEqual(t, cursor.X, term.Screens.Active.Cursor.X)
+	expectEqual(t, cursor.Y, term.Screens.Active.Cursor.Y)
 
 	// Viewport should have moved. Our entire page should've scrolled!
 	// The viewport moving will cause our render state to make the full
 	// frame as dirty.
-	viewport_after := term.screens.active.pages.GetTopLeft(PointTagViewport)
+	viewport_after := term.Screens.Active.Pages.GetTopLeft(PointTagViewport)
 	expect(t, !viewport_before.Eql(viewport_after), "!viewport_before.eql(viewport_after)")
 
 	{
@@ -3641,9 +3641,9 @@ func TestTm1_Terminal_scrollUp_moves_hyperlink(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("ABC")))
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("DEF")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI")))
@@ -3657,23 +3657,23 @@ func TestTm1_Terminal_scrollUp_moves_hyperlink(t *testing.T) {
 	}
 
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 1, id)
-		page := &list_cell.node.data
+		page := &list_cell.Node.data
 		expectEqual(t, 1, page.hyperlink_set.Count())
 	}
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -3684,9 +3684,9 @@ func TestTm1_Terminal_scrollUp_clears_hyperlink(t *testing.T) {
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("ABC")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("DEF")))
@@ -3703,12 +3703,12 @@ func TestTm1_Terminal_scrollUp_clears_hyperlink(t *testing.T) {
 	}
 
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -3757,15 +3757,15 @@ func TestTm1_Terminal_scrollUp_left_right_scroll_region(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 
-	cursor := term.screens.active.cursor
+	cursor := term.Screens.Active.Cursor
 	term.clearDirty()
 	zigTry(t, term.ScrollUp(1))
-	expectEqual(t, cursor.x, term.screens.active.cursor.x)
-	expectEqual(t, cursor.y, term.screens.active.cursor.y)
+	expectEqual(t, cursor.X, term.Screens.Active.Cursor.X)
+	expectEqual(t, cursor.Y, term.Screens.Active.Cursor.Y)
 
 	expect(t, term.isDirty(tm1Active(0, 0)), "t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 	expect(t, term.isDirty(tm1Active(0, 1)), "t.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
@@ -3787,14 +3787,14 @@ func TestTm1_Terminal_scrollUp_left_right_scroll_region_hyperlink(t *testing.T) 
 	zigTry(t, term.PrintString([]uint8("ABC123")))
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("DEF456")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 	zigTry(t, term.ScrollUp(1))
 
@@ -3807,28 +3807,28 @@ func TestTm1_Terminal_scrollUp_left_right_scroll_region_hyperlink(t *testing.T) 
 	// First row gets some hyperlinks
 	{
 		for x := 0; x < 1; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-			cell := list_cell.cell
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+			cell := list_cell.Cell
 			expect(t, !cell.hyperlink, "!cell.hyperlink")
-			id := list_cell.node.data.LookupHyperlink(cell)
+			id := list_cell.Node.data.LookupHyperlink(cell)
 			expect(t, !id.Valid, "id == null")
 		}
 		for x := 1; x < 4; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-			row := list_cell.row
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+			row := list_cell.Row
 			expect(t, row.hyperlink, "row.hyperlink")
-			cell := list_cell.cell
+			cell := list_cell.Cell
 			expect(t, cell.hyperlink, "cell.hyperlink")
-			id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+			id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 			expectEqual(t, 1, id)
-			page := &list_cell.node.data
+			page := &list_cell.Node.data
 			expectEqual(t, 1, page.hyperlink_set.Count())
 		}
 		for x := 4; x < 6; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-			cell := list_cell.cell
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+			cell := list_cell.Cell
 			expect(t, !cell.hyperlink, "!cell.hyperlink")
-			id := list_cell.node.data.LookupHyperlink(cell)
+			id := list_cell.Node.data.LookupHyperlink(cell)
 			expect(t, !id.Valid, "id == null")
 		}
 	}
@@ -3836,32 +3836,32 @@ func TestTm1_Terminal_scrollUp_left_right_scroll_region_hyperlink(t *testing.T) 
 	// Second row preserves hyperlink where we didn't scroll
 	{
 		for x := 0; x < 1; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-			row := list_cell.row
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+			row := list_cell.Row
 			expect(t, row.hyperlink, "row.hyperlink")
-			cell := list_cell.cell
+			cell := list_cell.Cell
 			expect(t, cell.hyperlink, "cell.hyperlink")
-			id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+			id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 			expectEqual(t, 1, id)
-			page := &list_cell.node.data
+			page := &list_cell.Node.data
 			expectEqual(t, 1, page.hyperlink_set.Count())
 		}
 		for x := 1; x < 4; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-			cell := list_cell.cell
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+			cell := list_cell.Cell
 			expect(t, !cell.hyperlink, "!cell.hyperlink")
-			id := list_cell.node.data.LookupHyperlink(cell)
+			id := list_cell.Node.data.LookupHyperlink(cell)
 			expect(t, !id.Valid, "id == null")
 		}
 		for x := 4; x < 6; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-			row := list_cell.row
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+			row := list_cell.Row
 			expect(t, row.hyperlink, "row.hyperlink")
-			cell := list_cell.cell
+			cell := list_cell.Cell
 			expect(t, cell.hyperlink, "cell.hyperlink")
-			id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+			id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 			expectEqual(t, 1, id)
-			page := &list_cell.node.data
+			page := &list_cell.Node.data
 			expectEqual(t, 1, page.hyperlink_set.Count())
 		}
 	}
@@ -3923,7 +3923,7 @@ func TestTm1_Terminal_scrollUp_full_top_bottomleft_right_scroll_region(t *testin
 	zigTry(t, term.PrintString([]uint8("top")))
 	term.SetCursorPos(5, 1)
 	zigTry(t, term.PrintString([]uint8("ABCDE")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetTopAndBottomMargin(2, 5)
 	term.SetLeftAndRightMargin(2, 4)
 
@@ -3972,7 +3972,7 @@ func TestTm1_Terminal_scrollUp_creates_scrollback_in_primary_screen(t *testing.T
 	zigTry(t, term.ScrollUp(1))
 
 	// The cursor row (new empty row) should be dirty
-	expect(t, term.screens.active.cursor.page_row.dirty, "t.screens.active.cursor.page_row.dirty")
+	expect(t, term.Screens.Active.Cursor.PageRow.dirty, "t.screens.active.cursor.page_row.dirty")
 
 	// The active screen should now show BBBBB through EEEEE plus one blank line
 	{
@@ -3982,7 +3982,7 @@ func TestTm1_Terminal_scrollUp_creates_scrollback_in_primary_screen(t *testing.T
 	}
 
 	// Now scroll to the top to see scrollback - AAAAA should be there
-	term.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
+	term.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer alloc.free(str);
@@ -4016,7 +4016,7 @@ func TestTm1_Terminal_scrollUp_with_max_scrollback_zero(t *testing.T) {
 	}
 
 	// Scroll to top - should be same as active since no scrollback
-	term.screens.active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
+	term.Screens.Active.Scroll(ScreenScroll{Tag: ScreenScrollTop})
 	{
 		str := tm1PlainString(t, term)
 		// Zig-only: defer alloc.free(str);
@@ -4071,7 +4071,7 @@ func TestTm1_Terminal_scrollUp_with_max_scrollback_zero_and_left_right_margin(t 
 	zigTry(t, term.PrintString([]uint8("EEEEEFFFFF")))
 
 	// Set left/right margins (columns 2-6, 1-indexed = indices 1-5)
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(2, 6)
 
 	zigTry(t, term.ScrollUp(1))
@@ -4099,11 +4099,11 @@ func TestTm1_Terminal_scrollDown_simple(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("GHI")))
 	term.SetCursorPos(2, 2)
 
-	cursor := term.screens.active.cursor
+	cursor := term.Screens.Active.Cursor
 	term.clearDirty()
 	term.ScrollDown(1)
-	expectEqual(t, cursor.x, term.screens.active.cursor.x)
-	expectEqual(t, cursor.y, term.screens.active.cursor.y)
+	expectEqual(t, cursor.X, term.Screens.Active.Cursor.X)
+	expectEqual(t, cursor.Y, term.Screens.Active.Cursor.Y)
 
 	for y := 0; y < 5; y++ {
 		expect(t, term.isDirty(tm1Active(0, y)), "t.isDirty(.{ .active = .{ .x = 0, .y = @intCast(y) } })")
@@ -4122,9 +4122,9 @@ func TestTm1_Terminal_scrollDown_hyperlink_moves(t *testing.T) {
 	term := tm1Init(t, 5, 5)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("ABC")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("DEF")))
@@ -4141,23 +4141,23 @@ func TestTm1_Terminal_scrollDown_hyperlink_moves(t *testing.T) {
 	}
 
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 		expectEqual(t, 1, id)
-		page := &list_cell.node.data
+		page := &list_cell.Node.data
 		expectEqual(t, 1, page.hyperlink_set.Count())
 	}
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -4178,11 +4178,11 @@ func TestTm1_Terminal_scrollDown_outside_of_scroll_region(t *testing.T) {
 	term.SetTopAndBottomMargin(3, 4)
 	term.SetCursorPos(2, 2)
 
-	cursor := term.screens.active.cursor
+	cursor := term.Screens.Active.Cursor
 	term.clearDirty()
 	term.ScrollDown(1)
-	expectEqual(t, cursor.x, term.screens.active.cursor.x)
-	expectEqual(t, cursor.y, term.screens.active.cursor.y)
+	expectEqual(t, cursor.X, term.Screens.Active.Cursor.X)
+	expectEqual(t, cursor.Y, term.Screens.Active.Cursor.Y)
 
 	expect(t, !term.isDirty(tm1Active(0, 0)), "!t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
 
@@ -4211,15 +4211,15 @@ func TestTm1_Terminal_scrollDown_left_right_scroll_region(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 
-	cursor := term.screens.active.cursor
+	cursor := term.Screens.Active.Cursor
 	term.clearDirty()
 	term.ScrollDown(1)
-	expectEqual(t, cursor.x, term.screens.active.cursor.x)
-	expectEqual(t, cursor.y, term.screens.active.cursor.y)
+	expectEqual(t, cursor.X, term.Screens.Active.Cursor.X)
+	expectEqual(t, cursor.Y, term.Screens.Active.Cursor.Y)
 
 	for y := 0; y < 4; y++ {
 		expect(t, term.isDirty(tm1Active(0, y)), "t.isDirty(.{ .active = .{ .x = 0, .y = @intCast(y) } })")
@@ -4238,17 +4238,17 @@ func TestTm1_Terminal_scrollDown_left_right_scroll_region_hyperlink(t *testing.T
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("ABC123")))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("DEF456")))
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 	term.ScrollDown(1)
 
@@ -4261,32 +4261,32 @@ func TestTm1_Terminal_scrollDown_left_right_scroll_region_hyperlink(t *testing.T
 	// First row preserves hyperlink where we didn't scroll
 	{
 		for x := 0; x < 1; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-			row := list_cell.row
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+			row := list_cell.Row
 			expect(t, row.hyperlink, "row.hyperlink")
-			cell := list_cell.cell
+			cell := list_cell.Cell
 			expect(t, cell.hyperlink, "cell.hyperlink")
-			id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+			id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 			expectEqual(t, 1, id)
-			page := &list_cell.node.data
+			page := &list_cell.Node.data
 			expectEqual(t, 1, page.hyperlink_set.Count())
 		}
 		for x := 1; x < 4; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-			cell := list_cell.cell
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+			cell := list_cell.Cell
 			expect(t, !cell.hyperlink, "!cell.hyperlink")
-			id := list_cell.node.data.LookupHyperlink(cell)
+			id := list_cell.Node.data.LookupHyperlink(cell)
 			expect(t, !id.Valid, "id == null")
 		}
 		for x := 4; x < 6; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 0)))
-			row := list_cell.row
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 0)))
+			row := list_cell.Row
 			expect(t, row.hyperlink, "row.hyperlink")
-			cell := list_cell.cell
+			cell := list_cell.Cell
 			expect(t, cell.hyperlink, "cell.hyperlink")
-			id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+			id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 			expectEqual(t, 1, id)
-			page := &list_cell.node.data
+			page := &list_cell.Node.data
 			expectEqual(t, 1, page.hyperlink_set.Count())
 		}
 	}
@@ -4294,28 +4294,28 @@ func TestTm1_Terminal_scrollDown_left_right_scroll_region_hyperlink(t *testing.T
 	// Second row gets some hyperlinks
 	{
 		for x := 0; x < 1; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-			cell := list_cell.cell
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+			cell := list_cell.Cell
 			expect(t, !cell.hyperlink, "!cell.hyperlink")
-			id := list_cell.node.data.LookupHyperlink(cell)
+			id := list_cell.Node.data.LookupHyperlink(cell)
 			expect(t, !id.Valid, "id == null")
 		}
 		for x := 1; x < 4; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-			row := list_cell.row
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+			row := list_cell.Row
 			expect(t, row.hyperlink, "row.hyperlink")
-			cell := list_cell.cell
+			cell := list_cell.Cell
 			expect(t, cell.hyperlink, "cell.hyperlink")
-			id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
+			id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
 			expectEqual(t, 1, id)
-			page := &list_cell.node.data
+			page := &list_cell.Node.data
 			expectEqual(t, 1, page.hyperlink_set.Count())
 		}
 		for x := 4; x < 6; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm1Viewport(x, 1)))
-			cell := list_cell.cell
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm1Viewport(x, 1)))
+			cell := list_cell.Cell
 			expect(t, !cell.hyperlink, "!cell.hyperlink")
-			id := list_cell.node.data.LookupHyperlink(cell)
+			id := list_cell.Node.data.LookupHyperlink(cell)
 			expect(t, !id.Valid, "id == null")
 		}
 	}
@@ -4338,8 +4338,8 @@ func TestTm1_panic_index_clear_eol_in_output_mode(t *testing.T) {
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	term.screens.active.cursor.semantic_content = PageCellSemanticContentOutput
-	term.screens.active.cursor.semantic_content_clear_eol = true
+	term.Screens.Active.Cursor.SemanticContent = PageCellSemanticContentOutput
+	term.Screens.Active.Cursor.SemanticContentClearEol = true
 	tm1ExpectPanic(t, func() {
 		_ = term.Index()
 	})
@@ -4351,7 +4351,7 @@ func TestTm1_panic_printCell_spacer_tail_at_column_zero(t *testing.T) {
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	term.screens.active.cursor.page_cell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
 	tm1ExpectPanic(t, func() {
 		term.printCell('A', PageCellWideNarrow)
 	})
@@ -4363,7 +4363,7 @@ func TestTm1_panic_printCell_styled_cell_in_unstyled_row(t *testing.T) {
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	term.screens.active.cursor.page_cell.style_id = 1
+	term.Screens.Active.Cursor.PageCell.style_id = 1
 	tm1ExpectPanic(t, func() {
 		term.printCell('A', PageCellWideNarrow)
 	})
@@ -4375,10 +4375,10 @@ func TestTm1_panic_print_previous_grapheme_has_a_break(t *testing.T) {
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 	zigTry(t, term.Print('a'))
-	page := &term.screens.active.cursor.page_pin.node.data
-	rac := page.GetRowAndCell(0, uint(term.screens.active.cursor.y))
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
+	rac := page.GetRowAndCell(0, uint(term.Screens.Active.Cursor.Y))
 	// 'a' followed by 'b' is a grapheme break, which print never stores.
 	zigTry(t, page.AppendGrapheme(rac.row, rac.cell, 'b'))
 	tm1ExpectPanic(t, func() {
@@ -4392,7 +4392,7 @@ func TestTm1_panic_rowWillBeShifted_spacer_tail_at_left_zero(t *testing.T) {
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	rac := page.GetRowAndCell(0, 0)
 	rac.cell.wide = PageCellWideSpacerTail
 	tm1ExpectPanic(t, func() {
@@ -4406,7 +4406,7 @@ func TestTm1_panic_insertLines_scrolling_region_bottom_past_screen(t *testing.T)
 	term := tm1Init(t, 10, 10)
 	defer term.Deinit()
 
-	term.scrolling_region.bottom = 100
+	term.ScrollingRegion.Bottom = 100
 	tm1ExpectPanic(t, func() {
 		term.InsertLines(1)
 	})

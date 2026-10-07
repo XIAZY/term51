@@ -119,13 +119,13 @@ func pg2Grapheme(t *testing.T, page *Page, x uint, y uint, cp uint32, extra []ui
 
 // pg2PaletteStyle is `Style{ .fg_color = .{ .palette = n } }`.
 func pg2PaletteStyle(n uint8) Style {
-	return Style{fg_color: StyleColor{Tag: StyleColorPalette, Palette: n}}
+	return Style{FgColor: StyleColor{Tag: StyleColorPalette, Palette: n}}
 }
 
 // pg2StyleCells is term51HStyleCells: add a style (distinguished by palette
 // fg n) and put it on the cells. After this the style's reference count is
 // exactly len(cells).
-func pg2StyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleId {
+func pg2StyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleID {
 	t.Helper()
 	id, err := page.styles.Add(pg2PaletteStyle(n))
 	zigTry(t, err)
@@ -141,7 +141,7 @@ func pg2StyleCells(t *testing.T, page *Page, n uint8, cells [][2]uint) StyleId {
 
 // pg2LinkCells is term51HLinkCells: insert a hyperlink and put it on the
 // cells. After this the link's reference count is exactly len(cells).
-func pg2LinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) HyperlinkId {
+func pg2LinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) HyperlinkID {
 	t.Helper()
 	id, err := page.InsertHyperlink(link)
 	zigTry(t, err)
@@ -157,24 +157,24 @@ func pg2LinkCells(t *testing.T, page *Page, link Hyperlink, cells [][2]uint) Hyp
 // pg2Link is term51HLink: `.{ .id = .{ .implicit = 0 }, .uri = uri }`.
 func pg2Link(uri string) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
-		uri: []uint8(uri),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
+		URI: []uint8(uri),
 	}
 }
 
 // pg2LinkImplicit is `.{ .id = .{ .implicit = id }, .uri = uri }`.
 func pg2LinkImplicit(id SizeOffsetInt, uri string) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: id},
-		uri: []uint8(uri),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: id},
+		URI: []uint8(uri),
 	}
 }
 
 // pg2LinkExplicit is `.{ .id = .{ .explicit = id }, .uri = uri }`.
 func pg2LinkExplicit(id string, uri string) Hyperlink {
 	return Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8(id)},
-		uri: []uint8(uri),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8(id)},
+		URI: []uint8(uri),
 	}
 }
 
@@ -247,7 +247,7 @@ func pg2Repeat(cp uint32, n int) []uint32 {
 }
 
 // pg2FillLinkMap is term51HFillLinkMap.
-func pg2FillLinkMap(t *testing.T, page *Page, uri string) HyperlinkId {
+func pg2FillLinkMap(t *testing.T, page *Page, uri string) HyperlinkID {
 	t.Helper()
 	id, err := page.InsertHyperlink(pg2Link(uri))
 	zigTry(t, err)
@@ -806,11 +806,11 @@ func TestPg2_term51_Page_cloneFrom_an_error_stops_the_copy_but_keeps_earlier_row
 
 	pg2ExpectError(t, ErrStyleSetOutOfMemory, dst.CloneFrom(src, 0, 3))
 
-	expectEqual(t, StyleId(1), dst.GetRowAndCell(0, 0).cell.style_id)
-	expectEqual(t, StyleId(2), dst.GetRowAndCell(0, 1).cell.style_id)
+	expectEqual(t, StyleID(1), dst.GetRowAndCell(0, 0).cell.style_id)
+	expectEqual(t, StyleID(2), dst.GetRowAndCell(0, 1).cell.style_id)
 	// The failing cell keeps the text but not the style.
 	expectEqual(t, src.GetRowAndCell(0, 2).cell.Codepoint(), dst.GetRowAndCell(0, 2).cell.Codepoint())
-	expectEqual(t, StyleId(0), dst.GetRowAndCell(0, 2).cell.style_id)
+	expectEqual(t, StyleID(0), dst.GetRowAndCell(0, 2).cell.style_id)
 	expect(t, dst.GetRow(2).styled, "dst.getRow(2).styled")
 	expectEqual(t, uint(2), dst.styles.Count())
 	zigTry(t, dst.VerifyIntegrity())
@@ -909,7 +909,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_plain_cells_are_copied_bit_for_bit_
 	src.GetRowAndCell(3, 0).cell.semantic_content = PageCellSemanticContentPrompt
 	src.GetRowAndCell(4, 0).cell.semantic_content = PageCellSemanticContentInput
 	*src.GetRowAndCell(5, 0).cell = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 77}}
-	*src.GetRowAndCell(6, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 9, g: 8, b: 7}}}
+	*src.GetRowAndCell(6, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 9, G: 8, B: 7}}}
 	src.GetRowAndCell(7, 0).cell.wide = PageCellWideWide
 	src.GetRowAndCell(8, 0).cell.wide = PageCellWideSpacerTail
 	dst := pg2New(t, 10, 1)
@@ -1168,7 +1168,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_partial_copy_clears_destination_man
 	expect(t, drow.grapheme, "drow.grapheme")
 	expectEqual(t, uint16(1), dst.styles.RefCount(sid))
 	expectEqual(t, sid, dst.GetRowAndCell(1, 0).cell.style_id)
-	expectEqual(t, StyleId(0), dst.GetRowAndCell(4, 0).cell.style_id)
+	expectEqual(t, StyleID(0), dst.GetRowAndCell(4, 0).cell.style_id)
 	expect(t, drow.styled, "drow.styled")
 	expectEqual(t, uint16(1), dst.hyperlink_set.RefCount(hid))
 	expectEqual(t, uint(1), dst.HyperlinkCount())
@@ -1286,7 +1286,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_styles_are_copied_by_id_within_one_
 	pg2FillAll(page)
 	sid := pg2StyleCells(t, page, 4, [][2]uint{{1, 0}, {2, 0}, {3, 0}})
 	zigTry(t, page.ClonePartialRowFrom(page, page.GetRow(1), page.GetRow(0), 2, 4))
-	expectEqual(t, StyleId(0), page.GetRowAndCell(1, 1).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(1, 1).cell.style_id)
 	expectEqual(t, sid, page.GetRowAndCell(2, 1).cell.style_id)
 	expectEqual(t, sid, page.GetRowAndCell(3, 1).cell.style_id)
 	expectEqual(t, uint16(5), page.styles.RefCount(sid))
@@ -1321,17 +1321,17 @@ func TestPg2_term51_Page_clonePartialRowFrom_styles_are_remapped_when_the_id_is_
 	src := pg2New(t, 10, 1)
 	defer src.Deinit()
 	sid := pg2StyleCells(t, src, 5, [][2]uint{{1, 0}})
-	expectEqual(t, StyleId(1), sid)
+	expectEqual(t, StyleID(1), sid)
 	dst := pg2New(t, 10, 2)
 	defer dst.Deinit()
 	// Occupy id 1 in the destination with a different style.
 	other := pg2StyleCells(t, dst, 9, [][2]uint{{0, 1}})
-	expectEqual(t, StyleId(1), other)
+	expectEqual(t, StyleID(1), other)
 
 	zigTry(t, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 0, 10))
 
 	got := dst.GetRowAndCell(1, 0).cell.style_id
-	expectEqual(t, StyleId(2), got)
+	expectEqual(t, StyleID(2), got)
 	expect(t, pg2PaletteStyle(5).Eql(*dst.styles.Get(got)), "(Style{ .fg_color = .{ .palette = 5 } }).eql(dst.styles.get(dst.memory, got).*)")
 	expect(t, pg2PaletteStyle(9).Eql(*dst.styles.Get(other)), "(Style{ .fg_color = .{ .palette = 9 } }).eql(dst.styles.get(dst.memory, other).*)")
 	expectEqual(t, uint16(1), dst.styles.RefCount(got))
@@ -1346,12 +1346,12 @@ func TestPg2_term51_Page_clonePartialRowFrom_an_equal_existing_style_is_reused_a
 	// Burn id 1 so the style under test has id 2 in the source.
 	pg2StyleCells(t, src, 3, [][2]uint{{0, 0}})
 	s2 := pg2StyleCells(t, src, 5, [][2]uint{{1, 0}})
-	expectEqual(t, StyleId(2), s2)
+	expectEqual(t, StyleID(2), s2)
 	dst := pg2New(t, 10, 2)
 	defer dst.Deinit()
 	// The destination has the same style, but at id 1.
 	d1 := pg2StyleCells(t, dst, 5, [][2]uint{{0, 1}})
-	expectEqual(t, StyleId(1), d1)
+	expectEqual(t, StyleID(1), d1)
 
 	zigTry(t, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 1, 2))
 
@@ -1365,7 +1365,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_an_equal_existing_style_is_reused_a
 	defer dst2.Deinit()
 	pg2StyleCells(t, dst2, 3, [][2]uint{{0, 1}})
 	e2 := pg2StyleCells(t, dst2, 5, [][2]uint{{1, 1}})
-	expectEqual(t, StyleId(2), e2)
+	expectEqual(t, StyleID(2), e2)
 	zigTry(t, dst2.ClonePartialRowFrom(src, dst2.GetRow(0), src.GetRow(0), 1, 2))
 	expectEqual(t, e2, dst2.GetRowAndCell(1, 0).cell.style_id)
 	expectEqual(t, uint16(2), dst2.styles.RefCount(e2))
@@ -1475,11 +1475,11 @@ func TestPg2_term51_Page_clonePartialRowFrom_an_equal_destination_hyperlink_is_r
 	defer src.Deinit()
 	pg2LinkCells(t, src, pg2Link("https://other"), [][2]uint{{8, 0}})
 	sid := pg2LinkCells(t, src, pg2Link("https://a"), [][2]uint{{2, 0}})
-	expectEqual(t, HyperlinkId(2), sid)
+	expectEqual(t, HyperlinkID(2), sid)
 	dst := pg2New(t, 10, 2)
 	defer dst.Deinit()
 	did := pg2LinkCells(t, dst, pg2Link("https://a"), [][2]uint{{0, 1}})
-	expectEqual(t, HyperlinkId(1), did)
+	expectEqual(t, HyperlinkID(1), did)
 	strings_before := dst.string_alloc.UsedBytes()
 
 	zigTry(t, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 0, 5))
@@ -1499,16 +1499,16 @@ func TestPg2_term51_Page_clonePartialRowFrom_hyperlink_ids_are_remapped_when_the
 	src := pg2New(t, 10, 1)
 	defer src.Deinit()
 	sid := pg2LinkCells(t, src, pg2Link("https://a"), [][2]uint{{1, 0}})
-	expectEqual(t, HyperlinkId(1), sid)
+	expectEqual(t, HyperlinkID(1), sid)
 	dst := pg2New(t, 10, 2)
 	defer dst.Deinit()
 	other := pg2LinkCells(t, dst, pg2Link("https://other"), [][2]uint{{0, 1}})
-	expectEqual(t, HyperlinkId(1), other)
+	expectEqual(t, HyperlinkID(1), other)
 
 	zigTry(t, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 0, 10))
 
 	got := zigUnwrap(t, dst.LookupHyperlink(dst.GetRowAndCell(1, 0).cell))
-	expectEqual(t, HyperlinkId(2), got)
+	expectEqual(t, HyperlinkID(2), got)
 	expectEqualStrings(t, "https://a", string(dst.hyperlink_set.Get(got).uri))
 	expectEqualStrings(t, "https://other", string(dst.hyperlink_set.Get(other).uri))
 	expectEqual(t, uint16(1), dst.hyperlink_set.RefCount(got))
@@ -1685,7 +1685,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_StyleSetOutOfMemory_when_the_style_
 	zigTry(t, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 0, 5))
 	expectEqual(t, uint(5), dst.styles.Count())
 	pg2ExpectError(t, ErrStyleSetOutOfMemory, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 5, 6))
-	expectEqual(t, StyleId(0), dst.GetRowAndCell(5, 0).cell.style_id)
+	expectEqual(t, StyleID(0), dst.GetRowAndCell(5, 0).cell.style_id)
 	expectEqual(t, uint(5), dst.styles.Count())
 }
 
@@ -1708,7 +1708,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_StyleSetNeedsRehash_when_dead_ids_b
 	expectEqual(t, uint(4), dst.styles.Count())
 
 	pg2ExpectError(t, ErrStyleSetNeedsRehash, dst.ClonePartialRowFrom(src, dst.GetRow(0), src.GetRow(0), 5, 6))
-	expectEqual(t, StyleId(0), dst.GetRowAndCell(5, 0).cell.style_id)
+	expectEqual(t, StyleID(0), dst.GetRowAndCell(5, 0).cell.style_id)
 	expect(t, dst.GetRow(0).styled, "dst.getRow(0).styled")
 }
 
@@ -1822,7 +1822,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_HyperlinkSetNeedsRehash(t *testing.
 	pg2LinkCells(t, src, pg2Link("https://1"), [][2]uint{{0, 0}})
 	pg2LinkCells(t, src, pg2Link("https://2"), [][2]uint{{1, 0}})
 	third := pg2LinkCells(t, src, pg2Link("https://3"), [][2]uint{{2, 0}})
-	expectEqual(t, HyperlinkId(3), third)
+	expectEqual(t, HyperlinkID(3), third)
 
 	// Capacity for two links (ids 1 and 2).
 	capacity := PageCapacityInit(10, 2)
@@ -1857,7 +1857,7 @@ func TestPg2_term51_Page_clonePartialRowFrom_GraphemeAllocOutOfMemory_leaves_no_
 	expect(t, !cell.HasGrapheme(), "!cell.hasGrapheme()")
 	expectEqual(t, uint32('e'), cell.Codepoint())
 	// The grapheme step fails before the style step.
-	expectEqual(t, StyleId(0), cell.style_id)
+	expectEqual(t, StyleID(0), cell.style_id)
 	expectEqual(t, uint(0), dst.styles.Count())
 	expectEqual(t, uint(0), dst.GraphemeCount())
 	expectEqual(t, all, dst.grapheme_alloc.UsedBytes())
@@ -2154,7 +2154,7 @@ func TestPg2_term51_Page_moveCells_clears_the_destination_range_first(t *testing
 	expect(t, page.GetRowAndCell(8, 1).cell.HasGrapheme(), "page.getRowAndCell(8, 1).cell.hasGrapheme()")
 	expect(t, page.GetRowAndCell(9, 1).cell.hyperlink, "page.getRowAndCell(9, 1).cell.hyperlink")
 	expectEqual(t, sid, page.GetRowAndCell(8, 1).cell.style_id)
-	expectEqual(t, StyleId(0), page.GetRowAndCell(3, 1).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(3, 1).cell.style_id)
 	expectEqual(t, uint32(0x100), page.GetRowAndCell(2, 1).cell.Codepoint())
 	zigTry(t, page.VerifyIntegrity())
 }
@@ -2229,7 +2229,7 @@ func TestPg2_term51_Page_moveCells_destination_styled_flag_is_recomputed_from_th
 	// zeroes the cells, so the flag stays set (stale) here.
 	expect(t, page.GetRow(1).styled, "page.getRow(1).styled")
 	expectEqual(t, uint16(0), page.styles.RefCount(sid))
-	expectEqual(t, StyleId(0), page.GetRowAndCell(3, 1).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(3, 1).cell.style_id)
 	zigTry(t, page.VerifyIntegrity())
 }
 
@@ -2270,7 +2270,7 @@ func TestPg2_term51_Page_moveCells_cell_attributes_move_with_the_cell(t *testing
 	page := pg2New(t, 6, 2)
 	defer page.Deinit()
 	*page.GetRowAndCell(0, 0).cell = PageCell{content_tag: PageCellContentTagBgColorPalette, content: PageCellContent{color_palette: 12}}
-	*page.GetRowAndCell(1, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 1, g: 2, b: 3}}}
+	*page.GetRowAndCell(1, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 1, G: 2, B: 3}}}
 	*page.GetRowAndCell(2, 0).cell = PageCellInit('p')
 	page.GetRowAndCell(2, 0).cell.protected = true
 	page.GetRowAndCell(2, 0).cell.semantic_content = PageCellSemanticContentPrompt
@@ -2355,7 +2355,7 @@ func TestPg2_term51_Page_swapCells_swaps_plain_cells(t *testing.T) {
 	defer page.Deinit()
 	*page.GetRowAndCell(1, 0).cell = PageCellInit('a')
 	page.GetRowAndCell(1, 0).cell.protected = true
-	*page.GetRowAndCell(4, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{r: 5, g: 6, b: 7}}}
+	*page.GetRowAndCell(4, 0).cell = PageCell{content_tag: PageCellContentTagBgColorRgb, content: PageCellContent{color_rgb: PageCellRGB{R: 5, G: 6, B: 7}}}
 	a := pg2Bits(*page.GetRowAndCell(1, 0).cell)
 	b := pg2Bits(*page.GetRowAndCell(4, 0).cell)
 
@@ -2492,7 +2492,7 @@ func TestPg2_term51_Page_swapCells_styles_swap_by_id_without_touching_reference_
 	// Swap with an unstyled cell.
 	page.SwapCells(page.GetRowAndCell(0, 0).cell, page.GetRowAndCell(4, 0).cell)
 	expectEqual(t, a, page.GetRowAndCell(0, 0).cell.style_id)
-	expectEqual(t, StyleId(0), page.GetRowAndCell(4, 0).cell.style_id)
+	expectEqual(t, StyleID(0), page.GetRowAndCell(4, 0).cell.style_id)
 	zigTry(t, page.VerifyIntegrity())
 }
 

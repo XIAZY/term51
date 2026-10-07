@@ -136,11 +136,11 @@ func hmNewGraphemeRun(cap uint32) hmRunner {
 
 func hmNewHyperlinkRun(cap uint32) hmRunner {
 	return hmNewRun(hyperlinkMapEntrySizes, cap,
-		func(s string) (HyperlinkId, error) {
+		func(s string) (HyperlinkID, error) {
 			v, err := strconv.ParseUint(s, 10, 16)
-			return HyperlinkId(v), err
+			return HyperlinkID(v), err
 		},
-		func(v HyperlinkId) string { return strconv.FormatUint(uint64(v), 10) })
+		func(v HyperlinkID) string { return strconv.FormatUint(uint64(v), 10) })
 }
 
 func TestHashMap_corpus_hashmap_data(t *testing.T) {

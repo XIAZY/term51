@@ -386,14 +386,14 @@ type StreamActionTag = StreamActionKey
 // StreamActionPrint is stream.Action.Print.
 type StreamActionPrint struct {
 	// Zig: u21.
-	cp uint32
+	Cp uint32
 }
 
 // StreamActionInvokeCharset is stream.Action.InvokeCharset.
 type StreamActionInvokeCharset struct {
-	bank    CharsetsActiveSlot
-	charset CharsetsSlots
-	locking bool
+	Bank    CharsetsActiveSlot
+	Charset CharsetsSlots
+	Locking bool
 }
 
 // StreamActionCursorMovement is stream.Action.CursorMovement.
@@ -401,86 +401,86 @@ type StreamActionCursorMovement struct {
 	// The value of the cursor movement. Depending on the tag of this union
 	// this may be an absolute value or it may be a relative value. For
 	// example, `cursor_up` is relative, but `cursor_row` is absolute.
-	value uint16
+	Value uint16
 }
 
 // StreamActionCursorPos is stream.Action.CursorPos.
 type StreamActionCursorPos struct {
-	row uint16
-	col uint16
+	Row uint16
+	Col uint16
 }
 
 // StreamActionDeviceStatus is stream.Action.DeviceStatus.
 type StreamActionDeviceStatus struct {
-	request DeviceStatusRequest
+	Request DeviceStatusRequest
 }
 
 // StreamActionMode is stream.Action.Mode.
 type StreamActionMode struct {
-	mode ModesMode
+	Mode ModesMode
 }
 
 // StreamActionRawMode is stream.Action.RawMode.
 type StreamActionRawMode struct {
-	mode uint16
-	ansi bool
+	Mode uint16
+	Ansi bool
 }
 
 // StreamActionMargin is stream.Action.Margin.
 type StreamActionMargin struct {
-	top_left     uint16
-	bottom_right uint16
+	TopLeft     uint16
+	BottomRight uint16
 }
 
 // StreamActionKittyKeyboardFlags is stream.Action.KittyKeyboardFlags.
 type StreamActionKittyKeyboardFlags struct {
 	// Zig: kitty.KeyFlags, which is kitty/key.zig's Flags.
-	flags KittyKeyFlags
+	Flags KittyKeyFlags
 }
 
 // StreamActionWindowTitle is stream.Action.WindowTitle.
 type StreamActionWindowTitle struct {
-	title []uint8
+	Title []uint8
 }
 
 // StreamActionReportPwd is stream.Action.ReportPwd.
 type StreamActionReportPwd struct {
-	url []uint8
+	URL []uint8
 }
 
 // StreamActionShowDesktopNotification is
 // stream.Action.ShowDesktopNotification.
 type StreamActionShowDesktopNotification struct {
-	title []uint8
-	body  []uint8
+	Title []uint8
+	Body  []uint8
 }
 
 // StreamActionStartHyperlink is stream.Action.StartHyperlink.
 type StreamActionStartHyperlink struct {
-	uri []uint8
+	URI []uint8
 	// Zig: ?[]const u8.
-	id Optional[[]uint8]
+	ID Optional[[]uint8]
 }
 
 // StreamActionClipboardContents is stream.Action.ClipboardContents.
 type StreamActionClipboardContents struct {
-	kind uint8
-	data []uint8
+	Kind uint8
+	Data []uint8
 }
 
 // StreamActionConfigureCharset is stream.Action.ConfigureCharset.
 type StreamActionConfigureCharset struct {
-	slot    CharsetsSlots
-	charset CharsetsCharset
+	Slot    CharsetsSlots
+	Charset CharsetsCharset
 }
 
 // StreamActionColorOperation is stream.Action.ColorOperation.
 type StreamActionColorOperation struct {
 	// Zig: osc.color.Operation.
-	op OSCParsersColorOperation
+	Op OSCParsersColorOperation
 	// Zig: osc.color.List.
-	requests   OSCParsersColorList
-	terminator OSCTerminator
+	Requests   OSCParsersColorList
+	Terminator OSCTerminator
 }
 
 // StreamActionSemanticPrompt is stream.Action.SemanticPrompt:
@@ -1307,7 +1307,7 @@ func streamActionClear(a *StreamAction) {
 // Zig: c is u21.
 func (self *Stream[H]) Print(c uint32) error {
 	if self.action_depth != 0 {
-		self.streamAction(StreamActionKeyPrint).Print = StreamActionPrint{cp: c}
+		self.streamAction(StreamActionKeyPrint).Print = StreamActionPrint{Cp: c}
 		return self.vt(StreamActionKeyPrint)
 	}
 	// Go: streamAction and vt written out, for the hottest action: the two
@@ -1317,7 +1317,7 @@ func (self *Stream[H]) Print(c uint32) error {
 		streamActionClear(a)
 		a.Tag = StreamActionKeyPrint
 	}
-	a.Print = StreamActionPrint{cp: c}
+	a.Print = StreamActionPrint{Cp: c}
 	self.action_depth = 1
 	err := self.handler.Vt(StreamActionKeyPrint, a)
 	self.action_depth = 0
@@ -1373,12 +1373,12 @@ func (self *Stream[H]) Execute(c uint8) error {
 			return err
 		}
 	case ANSIC0SO:
-		self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{bank: CharsetsActiveSlotGL, charset: CharsetsSlotsG1, locking: false}
+		self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{Bank: CharsetsActiveSlotGL, Charset: CharsetsSlotsG1, Locking: false}
 		if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 			return err
 		}
 	case ANSIC0SI:
-		self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{bank: CharsetsActiveSlotGL, charset: CharsetsSlotsG0, locking: false}
+		self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{Bank: CharsetsActiveSlotGL, Charset: CharsetsSlotsG0, Locking: false}
 		if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 			return err
 		}
@@ -1431,7 +1431,7 @@ prong:
 				warn("stream", "invalid cursor up command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorUp).CursorUp = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorUp).CursorUp = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorUp); err != nil {
 				return err
 			}
@@ -1457,7 +1457,7 @@ prong:
 				warn("stream", "invalid cursor down command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorDown).CursorDown = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorDown).CursorDown = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorDown); err != nil {
 				return err
 			}
@@ -1483,7 +1483,7 @@ prong:
 				warn("stream", "invalid cursor right command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorRight).CursorRight = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorRight).CursorRight = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorRight); err != nil {
 				return err
 			}
@@ -1509,7 +1509,7 @@ prong:
 				warn("stream", "invalid cursor left command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorLeft).CursorLeft = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorLeft).CursorLeft = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorLeft); err != nil {
 				return err
 			}
@@ -1535,7 +1535,7 @@ prong:
 				warn("stream", "invalid cursor up command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorDown).CursorDown = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorDown).CursorDown = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorDown); err != nil {
 				return err
 			}
@@ -1565,7 +1565,7 @@ prong:
 				warn("stream", "invalid cursor down command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorUp).CursorUp = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorUp).CursorUp = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorUp); err != nil {
 				return err
 			}
@@ -1596,7 +1596,7 @@ prong:
 				warn("stream", "invalid HPA command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorCol).CursorCol = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorCol).CursorCol = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorCol); err != nil {
 				return err
 			}
@@ -1616,11 +1616,11 @@ prong:
 			var pos StreamActionCursorPos
 			switch len(input.Params) {
 			case 0:
-				pos = StreamActionCursorPos{row: 1, col: 1}
+				pos = StreamActionCursorPos{Row: 1, Col: 1}
 			case 1:
-				pos = StreamActionCursorPos{row: input.Params[0], col: 1}
+				pos = StreamActionCursorPos{Row: input.Params[0], Col: 1}
 			case 2:
-				pos = StreamActionCursorPos{row: input.Params[0], col: input.Params[1]}
+				pos = StreamActionCursorPos{Row: input.Params[0], Col: input.Params[1]}
 			default:
 				warn("stream", "invalid CUP command: %s", input.Format())
 				return nil
@@ -2073,7 +2073,7 @@ prong:
 				warn("stream", "invalid HPR command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorColRelative).CursorColRelative = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorColRelative).CursorColRelative = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorColRelative); err != nil {
 				return err
 			}
@@ -2155,7 +2155,7 @@ prong:
 				warn("stream", "invalid VPA command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorRow).CursorRow = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorRow).CursorRow = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorRow); err != nil {
 				return err
 			}
@@ -2181,7 +2181,7 @@ prong:
 				warn("stream", "invalid VPR command: %s", input.Format())
 				return nil
 			}
-			self.streamAction(StreamActionKeyCursorRowRelative).CursorRowRelative = StreamActionCursorMovement{value: value}
+			self.streamAction(StreamActionKeyCursorRowRelative).CursorRowRelative = StreamActionCursorMovement{Value: value}
 			if err := self.vt(StreamActionKeyCursorRowRelative); err != nil {
 				return err
 			}
@@ -2253,7 +2253,7 @@ prong:
 
 		for _, mode_int := range input.Params {
 			if mode := ModesModeFromInt(mode_int, ansi_mode); mode.Valid {
-				self.streamAction(StreamActionKeySetMode).SetMode = StreamActionMode{mode: mode.Value}
+				self.streamAction(StreamActionKeySetMode).SetMode = StreamActionMode{Mode: mode.Value}
 				if err := self.vt(StreamActionKeySetMode); err != nil {
 					return err
 				}
@@ -2279,7 +2279,7 @@ prong:
 
 		for _, mode_int := range input.Params {
 			if mode := ModesModeFromInt(mode_int, ansi_mode); mode.Valid {
-				self.streamAction(StreamActionKeyResetMode).ResetMode = StreamActionMode{mode: mode.Value}
+				self.streamAction(StreamActionKeyResetMode).ResetMode = StreamActionMode{Mode: mode.Value}
 				if err := self.vt(StreamActionKeyResetMode); err != nil {
 					return err
 				}
@@ -2417,7 +2417,7 @@ prong:
 			}
 			req := req_.Value
 
-			self.streamAction(StreamActionKeyDeviceStatus).DeviceStatus = StreamActionDeviceStatus{request: req}
+			self.streamAction(StreamActionKeyDeviceStatus).DeviceStatus = StreamActionDeviceStatus{Request: req}
 			if err := self.vt(StreamActionKeyDeviceStatus); err != nil {
 				return err
 			}
@@ -2495,14 +2495,14 @@ prong:
 			mode := ModesModeFromInt(mode_raw, ansi_mode)
 			if mode.Valid {
 				m := mode.Value
-				self.streamAction(StreamActionKeyRequestMode).RequestMode = StreamActionMode{mode: m}
+				self.streamAction(StreamActionKeyRequestMode).RequestMode = StreamActionMode{Mode: m}
 				if err := self.vt(StreamActionKeyRequestMode); err != nil {
 					return err
 				}
 			} else {
 				self.streamAction(StreamActionKeyRequestModeUnknown).RequestModeUnknown = StreamActionRawMode{
-					mode: mode_raw,
-					ansi: ansi_mode,
+					Mode: mode_raw,
+					Ansi: ansi_mode,
 				}
 				if err := self.vt(StreamActionKeyRequestModeUnknown); err != nil {
 					return err
@@ -2627,17 +2627,17 @@ prong:
 		case 0:
 			switch len(input.Params) {
 			case 0:
-				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{top_left: 0, bottom_right: 0}
+				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{TopLeft: 0, BottomRight: 0}
 				if err := self.vt(StreamActionKeyTopAndBottomMargin); err != nil {
 					return err
 				}
 			case 1:
-				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: 0}
+				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{TopLeft: input.Params[0], BottomRight: 0}
 				if err := self.vt(StreamActionKeyTopAndBottomMargin); err != nil {
 					return err
 				}
 			case 2:
-				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: input.Params[1]}
+				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{TopLeft: input.Params[0], BottomRight: input.Params[1]}
 				if err := self.vt(StreamActionKeyTopAndBottomMargin); err != nil {
 					return err
 				}
@@ -2651,7 +2651,7 @@ prong:
 			case '?':
 				for _, mode_int := range input.Params {
 					if mode := ModesModeFromInt(mode_int, false); mode.Valid {
-						self.streamAction(StreamActionKeyRestoreMode).RestoreMode = StreamActionMode{mode: mode.Value}
+						self.streamAction(StreamActionKeyRestoreMode).RestoreMode = StreamActionMode{Mode: mode.Value}
 						if err := self.vt(StreamActionKeyRestoreMode); err != nil {
 							return err
 						}
@@ -2692,12 +2692,12 @@ prong:
 					return err
 				}
 			case 1:
-				self.streamAction(StreamActionKeyLeftAndRightMargin).LeftAndRightMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: 0}
+				self.streamAction(StreamActionKeyLeftAndRightMargin).LeftAndRightMargin = StreamActionMargin{TopLeft: input.Params[0], BottomRight: 0}
 				if err := self.vt(StreamActionKeyLeftAndRightMargin); err != nil {
 					return err
 				}
 			case 2:
-				self.streamAction(StreamActionKeyLeftAndRightMargin).LeftAndRightMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: input.Params[1]}
+				self.streamAction(StreamActionKeyLeftAndRightMargin).LeftAndRightMargin = StreamActionMargin{TopLeft: input.Params[0], BottomRight: input.Params[1]}
 				if err := self.vt(StreamActionKeyLeftAndRightMargin); err != nil {
 					return err
 				}
@@ -2710,7 +2710,7 @@ prong:
 			case '?':
 				for _, mode_int := range input.Params {
 					if mode := ModesModeFromInt(mode_int, false); mode.Valid {
-						self.streamAction(StreamActionKeySaveMode).SaveMode = StreamActionMode{mode: mode.Value}
+						self.streamAction(StreamActionKeySaveMode).SaveMode = StreamActionMode{Mode: mode.Value}
 						if err := self.vt(StreamActionKeySaveMode); err != nil {
 							return err
 						}
@@ -2909,7 +2909,7 @@ prong:
 					flags = 0
 				}
 
-				self.streamAction(StreamActionKeyKittyKeyboardPush).KittyKeyboardPush = StreamActionKittyKeyboardFlags{flags: KittyKeyFlagsFromInt(flags)}
+				self.streamAction(StreamActionKeyKittyKeyboardPush).KittyKeyboardPush = StreamActionKittyKeyboardFlags{Flags: KittyKeyFlagsFromInt(flags)}
 				if err := self.vt(StreamActionKeyKittyKeyboardPush); err != nil {
 					return err
 				}
@@ -2962,7 +2962,7 @@ prong:
 					break prong // break :set
 				}
 
-				kitty_flags := StreamActionKittyKeyboardFlags{flags: KittyKeyFlagsFromInt(flags)}
+				kitty_flags := StreamActionKittyKeyboardFlags{Flags: KittyKeyFlagsFromInt(flags)}
 				switch action_tag {
 				case StreamActionKeyKittyKeyboardSet:
 					self.streamAction(StreamActionKeyKittyKeyboardSet).KittyKeyboardSet = kitty_flags
@@ -3099,7 +3099,7 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 			return nil
 		}
 
-		self.streamAction(StreamActionKeyWindowTitle).WindowTitle = StreamActionWindowTitle{title: title}
+		self.streamAction(StreamActionKeyWindowTitle).WindowTitle = StreamActionWindowTitle{Title: title}
 		if err := self.vt(StreamActionKeyWindowTitle); err != nil {
 			return err
 		}
@@ -3110,8 +3110,8 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 	case OSCCommandKeyClipboardContents:
 		clip := cmd.ClipboardContents
 		self.streamAction(StreamActionKeyClipboardContents).ClipboardContents = StreamActionClipboardContents{
-			kind: clip.kind,
-			data: clip.data,
+			Kind: clip.Kind,
+			Data: clip.Data,
 		}
 		if err := self.vt(StreamActionKeyClipboardContents); err != nil {
 			return err
@@ -3119,16 +3119,16 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 
 	case OSCCommandKeyReportPwd:
 		v := cmd.ReportPwd
-		self.streamAction(StreamActionKeyReportPwd).ReportPwd = StreamActionReportPwd{url: v.value}
+		self.streamAction(StreamActionKeyReportPwd).ReportPwd = StreamActionReportPwd{URL: v.Value}
 		if err := self.vt(StreamActionKeyReportPwd); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyMouseShape:
 		v := cmd.MouseShape
-		shape_ := MouseShapeFromString(v.value)
+		shape_ := MouseShapeFromString(v.Value)
 		if !shape_.Valid {
-			warn("stream", "unknown cursor shape: %s", v.value)
+			warn("stream", "unknown cursor shape: %s", v.Value)
 			return nil
 		}
 		shape := shape_.Value
@@ -3141,9 +3141,9 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 	case OSCCommandKeyColorOperation:
 		v := cmd.ColorOperation
 		self.streamAction(StreamActionKeyColorOperation).ColorOperation = StreamActionColorOperation{
-			op:         v.op,
-			requests:   v.requests,
-			terminator: v.terminator,
+			Op:         v.Op,
+			Requests:   v.Requests,
+			Terminator: v.Terminator,
 		}
 		if err := self.vt(StreamActionKeyColorOperation); err != nil {
 			return err
@@ -3159,8 +3159,8 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 	case OSCCommandKeyShowDesktopNotification:
 		v := cmd.ShowDesktopNotification
 		self.streamAction(StreamActionKeyShowDesktopNotification).ShowDesktopNotification = StreamActionShowDesktopNotification{
-			title: v.title,
-			body:  v.body,
+			Title: v.Title,
+			Body:  v.Body,
 		}
 		if err := self.vt(StreamActionKeyShowDesktopNotification); err != nil {
 			return err
@@ -3169,8 +3169,8 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 	case OSCCommandKeyHyperlinkStart:
 		v := cmd.HyperlinkStart
 		self.streamAction(StreamActionKeyStartHyperlink).StartHyperlink = StreamActionStartHyperlink{
-			uri: v.uri,
-			id:  v.id,
+			URI: v.URI,
+			ID:  v.ID,
 		}
 		if err := self.vt(StreamActionKeyStartHyperlink); err != nil {
 			return err
@@ -3239,8 +3239,8 @@ func (self *Stream[H]) configureCharset(intermediates []uint8, set CharsetsChars
 	}
 
 	self.streamAction(StreamActionKeyConfigureCharset).ConfigureCharset = StreamActionConfigureCharset{
-		slot:    slot,
-		charset: set,
+		Slot:    slot,
+		Charset: set,
 	}
 	return self.vt(StreamActionKeyConfigureCharset)
 }
@@ -3385,9 +3385,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGL,
-				charset: CharsetsSlotsG2,
-				locking: true,
+				Bank:    CharsetsActiveSlotGL,
+				Charset: CharsetsSlotsG2,
+				Locking: true,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3402,9 +3402,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGL,
-				charset: CharsetsSlotsG3,
-				locking: true,
+				Bank:    CharsetsActiveSlotGL,
+				Charset: CharsetsSlotsG3,
+				Locking: true,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3467,9 +3467,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGL,
-				charset: CharsetsSlotsG2,
-				locking: false,
+				Bank:    CharsetsActiveSlotGL,
+				Charset: CharsetsSlotsG2,
+				Locking: false,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3484,9 +3484,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGL,
-				charset: CharsetsSlotsG3,
-				locking: false,
+				Bank:    CharsetsActiveSlotGL,
+				Charset: CharsetsSlotsG3,
+				Locking: false,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3501,9 +3501,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGR,
-				charset: CharsetsSlotsG1,
-				locking: false,
+				Bank:    CharsetsActiveSlotGR,
+				Charset: CharsetsSlotsG1,
+				Locking: false,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3518,9 +3518,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGR,
-				charset: CharsetsSlotsG2,
-				locking: false,
+				Bank:    CharsetsActiveSlotGR,
+				Charset: CharsetsSlotsG2,
+				Locking: false,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3535,9 +3535,9 @@ prong:
 		switch len(action.Intermediates) {
 		case 0:
 			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
-				bank:    CharsetsActiveSlotGR,
-				charset: CharsetsSlotsG3,
-				locking: false,
+				Bank:    CharsetsActiveSlotGR,
+				Charset: CharsetsSlotsG3,
+				Locking: false,
 			}
 			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
@@ -3551,7 +3551,7 @@ prong:
 	case '=':
 		switch len(action.Intermediates) {
 		case 0:
-			self.streamAction(StreamActionKeySetMode).SetMode = StreamActionMode{mode: ModesModeKeypadKeys}
+			self.streamAction(StreamActionKeySetMode).SetMode = StreamActionMode{Mode: ModesModeKeypadKeys}
 			if err := self.vt(StreamActionKeySetMode); err != nil {
 				return err
 			}
@@ -3563,7 +3563,7 @@ prong:
 	case '>':
 		switch len(action.Intermediates) {
 		case 0:
-			self.streamAction(StreamActionKeyResetMode).ResetMode = StreamActionMode{mode: ModesModeKeypadKeys}
+			self.streamAction(StreamActionKeyResetMode).ResetMode = StreamActionMode{Mode: ModesModeKeypadKeys}
 			if err := self.vt(StreamActionKeyResetMode); err != nil {
 				return err
 			}

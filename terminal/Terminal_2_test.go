@@ -74,19 +74,19 @@ func tm2DumpStringAlloc(t *testing.T, s *Screen, tl Point) string {
 // tm2Active, tm2Screen, tm2Viewport and tm2History are the Zig literals
 // `.{ .active = .{ .x = x, .y = y } }` and so on.
 func tm2Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 func tm2Screen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 func tm2Viewport(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: x, Y: y}}
 }
 
 func tm2History(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: x, Y: y}}
 }
 
 // tm2ExpectPanic runs f, which must panic. A panic with the wireframe's
@@ -121,15 +121,15 @@ func TestTm2_Terminal_scrollDown_outside_of_left_right_scroll_region(t *testing.
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(1, 1)
 
-	cursor := term.screens.active.cursor
+	cursor := term.Screens.Active.Cursor
 	term.clearDirty()
 	term.ScrollDown(1)
-	expectEqual(t, cursor.x, term.screens.active.cursor.x)
-	expectEqual(t, cursor.y, term.screens.active.cursor.y)
+	expectEqual(t, cursor.X, term.Screens.Active.Cursor.X)
+	expectEqual(t, cursor.Y, term.Screens.Active.Cursor.Y)
 
 	for y := 0; y < 4; y++ {
 		expect(t, term.isDirty(tm2Active(0, uint32(y))), "t.isDirty(.{ .active = .{ .x = 0, .y = @intCast(y) } })")
@@ -265,9 +265,9 @@ func TestTm2_Terminal_eraseChars_resets_pending_wrap(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.EraseChars(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -288,8 +288,8 @@ func TestTm2_Terminal_eraseChars_resets_wrap(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+		row := list_cell.Row
 		expect(t, row.wrap, "row.wrap")
 	}
 
@@ -297,8 +297,8 @@ func TestTm2_Terminal_eraseChars_resets_wrap(t *testing.T) {
 	term.EraseChars(1)
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+		row := list_cell.Row
 		expect(t, !row.wrap, "!row.wrap")
 	}
 
@@ -322,7 +322,7 @@ func TestTm2_Terminal_eraseChars_preserves_background_sgr(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.SetCursorPos(1, 1)
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	term.EraseChars(2)
 
 	{
@@ -330,14 +330,14 @@ func TestTm2_Terminal_eraseChars_preserves_background_sgr(t *testing.T) {
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "  C", str)
 		{
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-			expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-			expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+			expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 		}
 		{
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(1, 0)))
-			expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-			expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(1, 0)))
+			expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 		}
 	}
 }
@@ -356,7 +356,7 @@ func TestTm2_Terminal_eraseChars_handles_refcounted_styles(t *testing.T) {
 	zigTry(t, term.Print('C'))
 
 	// verify we have styles in our style map
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, uint(1), page.styles.Count())
 
 	term.SetCursorPos(1, 1)
@@ -447,7 +447,7 @@ func TestTm2_Terminal_eraseChars_wide_char_boundary_conditions(t *testing.T) {
 
 	term.SetCursorPos(1, 2)
 	term.EraseChars(3)
-	term.screens.active.cursor.page_pin.node.data.AssertIntegrity()
+	term.Screens.Active.Cursor.PagePin.Node.data.AssertIntegrity()
 
 	{
 		str := tm2PlainString(t, term)
@@ -479,7 +479,7 @@ func TestTm2_Terminal_eraseChars_wide_char_splits_proper_cell_boundaries(t *test
 
 	term.SetCursorPos(1, 6) // At: て
 	term.EraseChars(4)      // Delete: て下
-	term.screens.active.cursor.page_pin.node.data.AssertIntegrity()
+	term.Screens.Active.Cursor.PagePin.Node.data.AssertIntegrity()
 
 	{
 		str := tm2PlainString(t, term)
@@ -508,7 +508,7 @@ func TestTm2_Terminal_eraseChars_wide_char_wrap_boundary_conditions(t *testing.T
 
 	term.SetCursorPos(2, 2)
 	term.EraseChars(3)
-	term.screens.active.cursor.page_pin.node.data.AssertIntegrity()
+	term.Screens.Active.Cursor.PagePin.Node.data.AssertIntegrity()
 
 	{
 		str := tm2PlainString(t, term)
@@ -724,7 +724,7 @@ func TestTm2_Terminal_reverseIndex_left_right_margins(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("DEF")))
 	term.SetCursorPos(3, 1)
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(2, 3)
 	term.SetCursorPos(1, 2)
 	term.ReverseIndex()
@@ -748,7 +748,7 @@ func TestTm2_Terminal_reverseIndex_outside_left_right_margins(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("DEF")))
 	term.SetCursorPos(3, 1)
 	zigTry(t, term.PrintString([]uint8("GHI")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(2, 3)
 	term.SetCursorPos(1, 1)
 	term.ReverseIndex()
@@ -813,9 +813,9 @@ func TestTm2_Terminal_index_scrolling_with_hyperlink(t *testing.T) {
 	defer term.Deinit()
 
 	term.SetCursorPos(5, 1)
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.Print('A'))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	term.CursorLeft(1) // undo moving right from 'A'
 	zigTry(t, term.Index())
 	zigTry(t, term.Print('B'))
@@ -827,21 +827,21 @@ func TestTm2_Terminal_index_scrolling_with_hyperlink(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Viewport(0, 3)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Viewport(0, 3)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
-		expectEqual(t, HyperlinkId(1), id)
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
+		expectEqual(t, HyperlinkID(1), id)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Viewport(0, 4)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Viewport(0, 4)))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -853,10 +853,10 @@ func TestTm2_Terminal_index_outside_of_scrolling_region(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(2, 5))
 	defer term.Deinit()
 
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.Y)
 	term.SetTopAndBottomMargin(2, 5)
 	zigTry(t, term.Index())
-	expectEqual(t, SizeCellCountInt(1), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(1), term.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "Terminal: index from the bottom outside of scroll region"
@@ -935,7 +935,7 @@ func TestTm2_Terminal_index_bottom_of_primary_screen_background_sgr(t *testing.T
 
 	term.SetCursorPos(5, 1)
 	zigTry(t, term.Print('A'))
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	zigTry(t, term.Index())
 
 	{
@@ -943,9 +943,9 @@ func TestTm2_Terminal_index_bottom_of_primary_screen_background_sgr(t *testing.T
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "\n\n\nA", str)
 		for x := 0; x < 5; x++ {
-			list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(SizeCellCountInt(x), 4)))
-			expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-			expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+			list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 4)))
+			expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+			expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 		}
 	}
 }
@@ -984,9 +984,9 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_hyperlinks(t *testing.T
 	zigTry(t, term.Print('A'))
 	zigTry(t, term.Index())
 	term.CarriageReturn()
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.Print('B'))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	zigTry(t, term.Index())
 	term.CarriageReturn()
 	zigTry(t, term.Print('C'))
@@ -998,21 +998,21 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_hyperlinks(t *testing.T
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Viewport(0, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Viewport(0, 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
-		expectEqual(t, HyperlinkId(1), id)
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
+		expectEqual(t, HyperlinkID(1), id)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Viewport(0, 1)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Viewport(0, 1)))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -1022,15 +1022,15 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_clear_hyperlinks(t *testing.
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(5, 5)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term := tm2Init(t, opts)
 	defer term.Deinit()
 
 	term.SetTopAndBottomMargin(2, 3)
 	term.SetCursorPos(2, 1)
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.Print('A'))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	zigTry(t, term.Index())
 	term.CarriageReturn()
 	zigTry(t, term.Print('B'))
@@ -1045,14 +1045,14 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_clear_hyperlinks(t *testing.
 	}
 
 	for y := 1; y < 3; y++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Viewport(0, uint32(y))))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Viewport(0, uint32(y))))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
-		page := &list_cell.node.data
+		page := &list_cell.Node.data
 		expectEqual(t, uint(0), page.hyperlink_set.Count())
 	}
 }
@@ -1069,7 +1069,7 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_background_SGR(t *testi
 	zigTry(t, term.Print('B'))
 	term.SetCursorPos(3, 1)
 	zigTry(t, term.Print('A'))
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	zigTry(t, term.Index())
 
 	{
@@ -1078,10 +1078,10 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_with_background_SGR(t *testi
 		expectEqualStrings(t, "\nA\n\nB", str)
 	}
 
-	for x := 0; x < int(term.cols); x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(SizeCellCountInt(x), 2)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+	for x := 0; x < int(term.Cols); x++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 2)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -1122,8 +1122,8 @@ func TestTm2_Terminal_index_outside_left_right_margin(t *testing.T) {
 	defer term.Deinit()
 
 	term.SetTopAndBottomMargin(1, 3)
-	term.scrolling_region.left = 3
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 3
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(3, 3)
 	zigTry(t, term.Print('A'))
 	term.SetCursorPos(3, 1)
@@ -1154,7 +1154,7 @@ func TestTm2_Terminal_index_inside_left_right_margin(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("AAAAAA")))
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetTopAndBottomMargin(1, 3)
 	term.SetLeftAndRightMargin(1, 3)
 	term.SetCursorPos(3, 1)
@@ -1166,8 +1166,8 @@ func TestTm2_Terminal_index_inside_left_right_margin(t *testing.T) {
 	expect(t, term.isDirty(tm2Active(0, 1)), "t.isDirty(.{ .active = .{ .x = 0, .y = 1 } })")
 	expect(t, term.isDirty(tm2Active(0, 2)), "t.isDirty(.{ .active = .{ .x = 0, .y = 2 } })")
 
-	expectEqual(t, SizeCellCountInt(2), term.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(2), term.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.X)
 
 	{
 		str := tm2PlainString(t, term)
@@ -1192,12 +1192,12 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_creates_scrollback(t *testin
 	zigTry(t, term.Print('Y'))
 
 	{
-		str := tm2DumpStringAlloc(t, term.screens.active, Point{Tag: PointTagViewport})
+		str := tm2DumpStringAlloc(t, term.Screens.Active, Point{Tag: PointTagViewport})
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "2\n3\nY\nX", str)
 	}
 	{
-		str := tm2DumpStringAlloc(t, term.screens.active, Point{Tag: PointTagScreen})
+		str := tm2DumpStringAlloc(t, term.Screens.Active, Point{Tag: PointTagScreen})
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "1\n2\n3\nY\nX", str)
 	}
@@ -1208,7 +1208,7 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_no_scrollback(t *testing.T) 
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(5, 5)
-	opts.max_scrollback = 0
+	opts.MaxScrollback = 0
 	term := tm2Init(t, opts)
 	defer term.Deinit()
 
@@ -1240,23 +1240,23 @@ func TestTm2_Terminal_index_bottom_of_scroll_region_blank_line_preserves_SGR(t *
 	term.SetCursorPos(4, 1)
 	zigTry(t, term.Print('X'))
 	term.SetCursorPos(3, 1)
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	zigTry(t, term.Index())
 
 	{
-		str := tm2DumpStringAlloc(t, term.screens.active, Point{Tag: PointTagViewport})
+		str := tm2DumpStringAlloc(t, term.Screens.Active, Point{Tag: PointTagViewport})
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "2\n3\n\nX", str)
 	}
 	{
-		str := tm2DumpStringAlloc(t, term.screens.active, Point{Tag: PointTagScreen})
+		str := tm2DumpStringAlloc(t, term.Screens.Active, Point{Tag: PointTagScreen})
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "1\n2\n3\n\nX", str)
 	}
-	for x := 0; x < int(term.cols); x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(SizeCellCountInt(x), 2)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+	for x := 0; x < int(term.Cols); x++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 2)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -1330,9 +1330,9 @@ func TestTm2_Terminal_cursorUp_resets_wrap(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorUp(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1372,9 +1372,9 @@ func TestTm2_Terminal_cursorLeft_unsets_pending_wrap_state(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorLeft(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1394,9 +1394,9 @@ func TestTm2_Terminal_cursorLeft_unsets_pending_wrap_state_with_longer_jump(t *t
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorLeft(3)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1413,15 +1413,15 @@ func TestTm2_Terminal_cursorLeft_reverse_wrap_with_pending_wrap_state(t *testing
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorLeft(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1438,15 +1438,15 @@ func TestTm2_Terminal_cursorLeft_reverse_wrap_extended_with_pending_wrap_state(t
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrapExtended, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrapExtended, true)
 
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorLeft(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1463,15 +1463,15 @@ func TestTm2_Terminal_cursorLeft_reverse_wrap(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 
 	for _, c := range []byte("ABCDE1") {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.CursorLeft(2)
 	zigTry(t, term.Print('X'))
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	{
 		str := tm2PlainString(t, term)
@@ -1487,8 +1487,8 @@ func TestTm2_Terminal_cursorLeft_reverse_wrap_with_no_soft_wrap(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
@@ -1513,8 +1513,8 @@ func TestTm2_Terminal_cursorLeft_reverse_wrap_before_left_margin(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 	term.SetTopAndBottomMargin(3, 0)
 	term.CursorLeft(1)
 	zigTry(t, term.Print('X'))
@@ -1533,8 +1533,8 @@ func TestTm2_Terminal_cursorLeft_extended_reverse_wrap(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrapExtended, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrapExtended, true)
 
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
@@ -1559,8 +1559,8 @@ func TestTm2_Terminal_cursorLeft_extended_reverse_wrap_bottom_wraparound(t *test
 	term := tm2Init(t, terminalOptionsDefault(5, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrapExtended, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrapExtended, true)
 
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
@@ -1568,7 +1568,7 @@ func TestTm2_Terminal_cursorLeft_extended_reverse_wrap_bottom_wraparound(t *test
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.Print('1'))
-	term.CursorLeft(uint(1 + term.cols + 1))
+	term.CursorLeft(uint(1 + term.Cols + 1))
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1585,9 +1585,9 @@ func TestTm2_Terminal_cursorLeft_extended_reverse_wrap_is_priority_if_both_set(t
 	term := tm2Init(t, terminalOptionsDefault(5, 3))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrap, true)
-	term.modes.Set(ModesModeReverseWrapExtended, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeReverseWrapExtended, true)
 
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
@@ -1595,7 +1595,7 @@ func TestTm2_Terminal_cursorLeft_extended_reverse_wrap_is_priority_if_both_set(t
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.Print('1'))
-	term.CursorLeft(uint(1 + term.cols + 1))
+	term.CursorLeft(uint(1 + term.Cols + 1))
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1612,15 +1612,15 @@ func TestTm2_Terminal_cursorLeft_extended_reverse_wrap_above_top_scroll_region(t
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrapExtended, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrapExtended, true)
 
 	term.SetTopAndBottomMargin(3, 0)
 	term.SetCursorPos(2, 1)
 	term.CursorLeft(1000)
 
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "Terminal: cursorLeft reverse wrap on first row"
@@ -1630,15 +1630,15 @@ func TestTm2_Terminal_cursorLeft_reverse_wrap_on_first_row(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeWraparound, true)
-	term.modes.Set(ModesModeReverseWrap, true)
+	term.Modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeReverseWrap, true)
 
 	term.SetTopAndBottomMargin(3, 0)
 	term.SetCursorPos(1, 2)
 	term.CursorLeft(1000)
 
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "Terminal: cursorDown basic"
@@ -1708,9 +1708,9 @@ func TestTm2_Terminal_cursorDown_resets_wrap(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorDown(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1730,9 +1730,9 @@ func TestTm2_Terminal_cursorRight_resets_wrap(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.CursorRight(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -1766,7 +1766,7 @@ func TestTm2_Terminal_cursorRight_left_of_right_margin(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.scrolling_region.right = 2
+	term.ScrollingRegion.Right = 2
 	term.CursorRight(100)
 	zigTry(t, term.Print('X'))
 
@@ -1784,7 +1784,7 @@ func TestTm2_Terminal_cursorRight_right_of_right_margin(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(5, 5))
 	defer term.Deinit()
 
-	term.scrolling_region.right = 2
+	term.ScrollingRegion.Right = 2
 	term.SetCursorPos(1, 4)
 	term.CursorRight(100)
 	zigTry(t, term.Print('X'))
@@ -1843,7 +1843,7 @@ func TestTm2_Terminal_deleteLines_colors_with_bg_color(t *testing.T) {
 	zigTry(t, term.PrintString([]uint8("GHI")))
 	term.SetCursorPos(2, 2)
 
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	term.DeleteLines(1)
 
 	{
@@ -1852,10 +1852,10 @@ func TestTm2_Terminal_deleteLines_colors_with_bg_color(t *testing.T) {
 		expectEqualStrings(t, "ABC\nGHI", str)
 	}
 
-	for x := 0; x < int(term.cols); x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(SizeCellCountInt(x), 4)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+	for x := 0; x < int(term.Cols); x++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 4)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -1864,11 +1864,11 @@ func TestTm2_Terminal_deleteLines_across_page_boundary_marks_all_shifted_rows_di
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(10, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm2Init(t, opts)
 	defer term.Deinit()
 
-	first_page := term.screens.active.pages.pages.first
+	first_page := term.Screens.Active.Pages.pages.first
 	expect(t, first_page != nil, "t.screens.active.pages.pages.first.?")
 	first_page_nrows := first_page.data.capacity.rows
 
@@ -1939,8 +1939,8 @@ func TestTm2_Terminal_deleteLines_legacy(t *testing.T) {
 	zigTry(t, term.Linefeed())
 
 	// We should be
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(2), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(2), term.Screens.Active.Cursor.Y)
 
 	{
 		str := tm2PlainString(t, term)
@@ -2085,9 +2085,9 @@ func TestTm2_Terminal_deleteLines_resets_pending_wrap(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.DeleteLines(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('B'))
 
 	{
@@ -2122,9 +2122,9 @@ func TestTm2_Terminal_deleteLines_resets_wrap(t *testing.T) {
 		expectEqualStrings(t, "XBC\n\nDEF", str)
 	}
 
-	for y := 0; y < int(term.rows); y++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, uint32(y))))
-		row := list_cell.row
+	for y := 0; y < int(term.Rows); y++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, uint32(y))))
+		row := list_cell.Row
 		expect(t, !row.wrap, "!row.wrap")
 	}
 }
@@ -2143,8 +2143,8 @@ func TestTm2_Terminal_deleteLines_left_right_scroll_region(t *testing.T) {
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 
 	term.clearDirty()
@@ -2176,8 +2176,8 @@ func TestTm2_Terminal_deleteLines_left_right_scroll_region_from_top(t *testing.T
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(1, 2)
 
 	term.clearDirty()
@@ -2208,8 +2208,8 @@ func TestTm2_Terminal_deleteLines_left_right_scroll_region_high_count(t *testing
 	term.CarriageReturn()
 	zigTry(t, term.Linefeed())
 	zigTry(t, term.PrintString([]uint8("GHI789")))
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 
 	term.clearDirty()
@@ -2282,7 +2282,7 @@ func TestTm2_Terminal_deleteLines_wide_character_spacer_head_left_scroll_margin(
 	// and WW is the wide character.
 	zigTry(t, term.PrintString([]uint8("AAAAABBBB\U0001F600CCC")))
 
-	term.scrolling_region.left = 2
+	term.ScrollingRegion.Left = 2
 
 	// Delete the top line
 	//    ###  <- scrolling region
@@ -2325,7 +2325,7 @@ func TestTm2_Terminal_deleteLines_wide_character_spacer_head_right_scroll_margin
 	// and WW is the wide character.
 	zigTry(t, term.PrintString([]uint8("AAAAABBBB\U0001F600CCC")))
 
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Right = 3
 
 	// Delete the top line
 	//  ####   <- scrolling region
@@ -2368,8 +2368,8 @@ func TestTm2_Terminal_deleteLines_wide_character_spacer_head_left_and_right_scro
 	// and WW is the wide character.
 	zigTry(t, term.PrintString([]uint8("AAAAABBBB\U0001F600CCC")))
 
-	term.scrolling_region.right = 3
-	term.scrolling_region.left = 2
+	term.ScrollingRegion.Right = 3
+	term.ScrollingRegion.Left = 2
 
 	// Delete the top line
 	//    ##   <- scrolling region
@@ -2412,8 +2412,8 @@ func TestTm2_Terminal_deleteLines_wide_character_spacer_head_left_2_and_right_sc
 	// and WW is the wide character.
 	zigTry(t, term.PrintString([]uint8("AAAAABBBB\U0001F600CCC")))
 
-	term.scrolling_region.right = 3
-	term.scrolling_region.left = 1
+	term.ScrollingRegion.Right = 3
+	term.ScrollingRegion.Left = 1
 
 	// Delete the top line
 	//   ###   <- scrolling region
@@ -2454,8 +2454,8 @@ func TestTm2_Terminal_deleteLines_wide_characters_split_by_left_right_scroll_reg
 	// where WW represents a wide character
 	zigTry(t, term.PrintString([]uint8("AAAAA\n\U0001F600B\U0001F600")))
 
-	term.scrolling_region.right = 3
-	term.scrolling_region.left = 1
+	term.ScrollingRegion.Right = 3
+	term.ScrollingRegion.Left = 1
 
 	// Delete the top line
 	//   ###   <- scrolling region
@@ -2498,10 +2498,10 @@ func TestTm2_Terminal_default_style_is_empty(t *testing.T) {
 	zigTry(t, term.Print('A'))
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('A'), cell.content.codepoint)
-		expectEqual(t, StyleId(0), cell.style_id)
+		expectEqual(t, StyleID(0), cell.style_id)
 	}
 }
 
@@ -2516,12 +2516,12 @@ func TestTm2_Terminal_bold_style(t *testing.T) {
 	zigTry(t, term.Print('A'))
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('A'), cell.content.codepoint)
 		expect(t, cell.style_id != 0, "cell.style_id != 0")
-		page := &term.screens.active.cursor.page_pin.node.data
-		expect(t, page.styles.RefCount(term.screens.active.cursor.style_id) > 1, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 1")
+		page := &term.Screens.Active.Cursor.PagePin.Node.data
+		expect(t, page.styles.RefCount(term.Screens.Active.Cursor.StyleID) > 1, "page.styles.refCount(page.memory, t.screens.active.cursor.style_id) > 1")
 	}
 }
 
@@ -2539,14 +2539,14 @@ func TestTm2_Terminal_garbage_collect_overwritten(t *testing.T) {
 	zigTry(t, term.Print('B'))
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('B'), cell.content.codepoint)
 		expect(t, cell.style_id == 0, "cell.style_id == 0")
 	}
 
 	// verify we have no styles in our style map
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, uint(0), page.styles.Count())
 }
 
@@ -2563,14 +2563,14 @@ func TestTm2_Terminal_do_not_garbage_collect_old_styles_in_use(t *testing.T) {
 	zigTry(t, term.Print('B'))
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('B'), cell.content.codepoint)
 		expect(t, cell.style_id == 0, "cell.style_id == 0")
 	}
 
 	// verify we have no styles in our style map
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, uint(1), page.styles.Count())
 }
 
@@ -2587,8 +2587,8 @@ func TestTm2_Terminal_print_with_style_marks_the_row_as_styled(t *testing.T) {
 	zigTry(t, term.Print('B'))
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(0, 0)))
-		expect(t, list_cell.row.styled, "list_cell.row.styled")
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
+		expect(t, list_cell.Row.styled, "list_cell.row.styled")
 	}
 }
 
@@ -2606,10 +2606,10 @@ func TestTm2_Terminal_DECALN(t *testing.T) {
 	zigTry(t, term.Print('B'))
 	zigTry(t, term.Decaln())
 
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.x)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.X)
 
-	for y := 0; y < int(term.rows); y++ {
+	for y := 0; y < int(term.Rows); y++ {
 		expect(t, term.isDirty(tm2Active(0, uint32(y))), "t.isDirty(.{ .active = .{ .x = 0, .y = @intCast(y) } })")
 	}
 
@@ -2628,7 +2628,7 @@ func TestTm2_Terminal_decaln_reset_margins(t *testing.T) {
 	defer term.Deinit()
 
 	// Initial value
-	term.modes.Set(ModesModeOrigin, true)
+	term.Modes.Set(ModesModeOrigin, true)
 	term.SetTopAndBottomMargin(2, 3)
 	zigTry(t, term.Decaln())
 	term.ScrollDown(1)
@@ -2648,8 +2648,8 @@ func TestTm2_Terminal_decaln_preserves_color(t *testing.T) {
 	defer term.Deinit()
 
 	// Initial value
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
-	term.modes.Set(ModesModeOrigin, true)
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
+	term.Modes.Set(ModesModeOrigin, true)
 	term.SetTopAndBottomMargin(2, 3)
 	zigTry(t, term.Decaln())
 	term.ScrollDown(1)
@@ -2661,9 +2661,9 @@ func TestTm2_Terminal_decaln_preserves_color(t *testing.T) {
 	}
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -2679,7 +2679,7 @@ func TestTm2_Terminal_DECALN_resets_graphemes_with_protected_mode(t *testing.T) 
 	term.SetProtectedMode(ANSIProtectedModeIso)
 
 	// This is: 👨‍👩‍👧 (which may or may not render correctly)
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 	zigTry(t, term.Print(0x1F468))
 	zigTry(t, term.Print(0x200D))
 	zigTry(t, term.Print(0x1F469))
@@ -2688,12 +2688,12 @@ func TestTm2_Terminal_DECALN_resets_graphemes_with_protected_mode(t *testing.T) 
 
 	zigTry(t, term.Decaln())
 
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.y)
-	expectEqual(t, SizeCellCountInt(0), term.screens.active.cursor.x)
-	expect(t, term.screens.active.cursor.protected, "t.screens.active.cursor.protected")
-	expect(t, term.screens.active.protected_mode == ANSIProtectedModeIso, "t.screens.active.protected_mode == .iso")
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.Y)
+	expectEqual(t, SizeCellCountInt(0), term.Screens.Active.Cursor.X)
+	expect(t, term.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
+	expect(t, term.Screens.Active.ProtectedMode == ANSIProtectedModeIso, "t.screens.active.protected_mode == .iso")
 
-	for y := 0; y < int(term.rows); y++ {
+	for y := 0; y < int(term.Rows); y++ {
 		expect(t, term.isDirty(tm2Active(0, uint32(y))), "t.isDirty(.{ .active = .{ .x = 0, .y = @intCast(y) } })")
 	}
 
@@ -2835,7 +2835,7 @@ func TestTm2_Terminal_insertBlanks_preserves_background_sgr(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.SetCursorPos(1, 1)
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	term.InsertBlanks(2)
 
 	{
@@ -2844,9 +2844,9 @@ func TestTm2_Terminal_insertBlanks_preserves_background_sgr(t *testing.T) {
 		expectEqualStrings(t, "  ABC", str)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -2903,8 +2903,8 @@ func TestTm2_Terminal_insertBlanks_inside_left_right_scroll_region(t *testing.T)
 	term := tm2Init(t, terminalOptionsDefault(10, 10))
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 3)
 	for _, c := range []byte("ABC") {
 		zigTry(t, term.Print(uint32(c)))
@@ -2934,13 +2934,13 @@ func TestTm2_Terminal_insertBlanks_outside_left_right_scroll_region(t *testing.T
 	for _, c := range []byte("ABC") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 4
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 4
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.clearDirty()
 	term.InsertBlanks(2)
 	expect(t, !term.isDirty(tm2Active(0, 0)), "!t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -2957,8 +2957,8 @@ func TestTm2_Terminal_insertBlanks_left_right_scroll_region_large_count(t *testi
 	term := tm2Init(t, terminalOptionsDefault(10, 10))
 	defer term.Deinit()
 
-	term.modes.Set(ModesModeOrigin, true)
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeOrigin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(3, 5)
 	term.SetCursorPos(1, 1)
 	term.clearDirty()
@@ -2981,7 +2981,7 @@ func TestTm2_Terminal_insertBlanks_deleting_graphemes(t *testing.T) {
 	defer term.Deinit()
 
 	// Disable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.PrintString([]uint8("ABC")))
 
@@ -2993,7 +2993,7 @@ func TestTm2_Terminal_insertBlanks_deleting_graphemes(t *testing.T) {
 	zigTry(t, term.Print(0x1F467))
 
 	// We should have one cell with graphemes
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, uint(1), page.GraphemeCount())
 
 	term.SetCursorPos(1, 1)
@@ -3019,7 +3019,7 @@ func TestTm2_Terminal_insertBlanks_shift_graphemes(t *testing.T) {
 	defer term.Deinit()
 
 	// Enable grapheme clustering
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 
 	zigTry(t, term.PrintString([]uint8("A")))
 
@@ -3031,7 +3031,7 @@ func TestTm2_Terminal_insertBlanks_shift_graphemes(t *testing.T) {
 	zigTry(t, term.Print(0x1F467))
 
 	// We should have one cell with graphemes
-	page := &term.screens.active.cursor.page_pin.node.data
+	page := &term.Screens.Active.Cursor.PagePin.Node.data
 	expectEqual(t, uint(1), page.GraphemeCount())
 
 	term.SetCursorPos(1, 1)
@@ -3082,7 +3082,7 @@ func TestTm2_Terminal_insertBlanks_shifts_hyperlinks(t *testing.T) {
 	term := tm2Init(t, terminalOptionsDefault(10, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("ABC")))
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(2)
@@ -3095,19 +3095,19 @@ func TestTm2_Terminal_insertBlanks_shifts_hyperlinks(t *testing.T) {
 
 	// Verify all our cells have a hyperlink
 	for x := 2; x < 5; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
+		row := list_cell.Row
 		expect(t, row.hyperlink, "row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, cell.hyperlink, "cell.hyperlink")
-		id := zigUnwrap(t, list_cell.node.data.LookupHyperlink(cell))
-		expectEqual(t, HyperlinkId(1), id)
+		id := zigUnwrap(t, list_cell.Node.data.LookupHyperlink(cell))
+		expectEqual(t, HyperlinkID(1), id)
 	}
 	for x := 0; x < 2; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -3119,7 +3119,7 @@ func TestTm2_Terminal_insertBlanks_pushes_hyperlink_off_end_completely(t *testin
 	term := tm2Init(t, terminalOptionsDefault(3, 2))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://example.com"), None[[]uint8]()))
 	zigTry(t, term.PrintString([]uint8("ABC")))
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(3)
@@ -3131,12 +3131,12 @@ func TestTm2_Terminal_insertBlanks_pushes_hyperlink_off_end_completely(t *testin
 	}
 
 	for x := 0; x < 3; x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(SizeCellCountInt(x), 0)))
+		row := list_cell.Row
 		expect(t, !row.hyperlink, "!row.hyperlink")
-		cell := list_cell.cell
+		cell := list_cell.Cell
 		expect(t, !cell.hyperlink, "!cell.hyperlink")
-		id := list_cell.node.data.LookupHyperlink(cell)
+		id := list_cell.Node.data.LookupHyperlink(cell)
 		expect(t, !id.Valid, "id == null")
 	}
 }
@@ -3164,7 +3164,7 @@ func TestTm2_Terminal_insertBlanks_wide_char_straddling_right_margin(t *testing.
 
 	// Set right margin so the wide head is AT the boundary and the
 	// spacer_tail is just outside it.
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 
 	// Position cursor at x=2 (1-indexed col 3) and insert one blank.
 	// This triggers the swap loop which displaces the wide head at
@@ -3201,7 +3201,7 @@ func TestTm2_Terminal_insertBlanks_wide_char_spacer_tail_orphaned_beyond_right_m
 
 	// Set left/right margins so that the last wide char (cols 8–9)
 	// straddles the boundary: head at col 8 (inside), tail at col 9 (outside).
-	term.modes.Set(ModesModeEnableLeftAndRightMargin, true)
+	term.Modes.Set(ModesModeEnableLeftAndRightMargin, true)
 	term.SetLeftAndRightMargin(1, 9) // 1-indexed: left=0, right=8
 
 	// Cursor is now at (0, 0) after DECSLRM.  Print a narrow char to
@@ -3231,7 +3231,7 @@ func TestTm2_Terminal_insert_mode_with_space(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.SetCursorPos(1, 2)
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	zigTry(t, term.Print('X'))
 
 	{
@@ -3252,7 +3252,7 @@ func TestTm2_Terminal_insert_mode_doesn_t_wrap_pushed_characters(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.SetCursorPos(1, 2)
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	zigTry(t, term.Print('X'))
 
 	{
@@ -3272,7 +3272,7 @@ func TestTm2_Terminal_insert_mode_does_nothing_at_the_end_of_the_line(t *testing
 	for _, c := range []byte("hello") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	zigTry(t, term.Print('X'))
 
 	{
@@ -3293,7 +3293,7 @@ func TestTm2_Terminal_insert_mode_with_wide_characters(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.SetCursorPos(1, 2)
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	zigTry(t, term.Print('😀')) // 0x1F600
 
 	{
@@ -3313,7 +3313,7 @@ func TestTm2_Terminal_insert_mode_with_wide_characters_at_end(t *testing.T) {
 	for _, c := range []byte("well") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	zigTry(t, term.Print('😀')) // 0x1F600
 
 	{
@@ -3334,7 +3334,7 @@ func TestTm2_Terminal_insert_mode_pushing_off_wide_character(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	zigTry(t, term.Print('😀')) // 0x1F600
-	term.modes.Set(ModesModeInsert, true)
+	term.Modes.Set(ModesModeInsert, true)
 	term.SetCursorPos(1, 1)
 	zigTry(t, term.Print('X'))
 
@@ -3470,9 +3470,9 @@ func TestTm2_Terminal_deleteChars_resets_pending_wrap(t *testing.T) {
 	for _, c := range []byte("ABCDE") {
 		zigTry(t, term.Print(uint32(c)))
 	}
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.DeleteChars(1)
-	expect(t, !term.screens.active.cursor.pending_wrap, "!t.screens.active.cursor.pending_wrap")
+	expect(t, !term.Screens.Active.Cursor.PendingWrap, "!t.screens.active.cursor.pending_wrap")
 	zigTry(t, term.Print('X'))
 
 	{
@@ -3493,16 +3493,16 @@ func TestTm2_Terminal_deleteChars_resets_wrap(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+		row := list_cell.Row
 		expect(t, row.wrap, "row.wrap")
 	}
 	term.SetCursorPos(1, 1)
 	term.DeleteChars(1)
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-		row := list_cell.row
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+		row := list_cell.Row
 		expect(t, !row.wrap, "!row.wrap")
 	}
 
@@ -3547,7 +3547,7 @@ func TestTm2_Terminal_deleteChars_preserves_background_sgr(t *testing.T) {
 		zigTry(t, term.Print(uint32(c)))
 	}
 	term.SetCursorPos(1, 3)
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 0xFF, g: 0, b: 0}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 0xFF, G: 0, B: 0}}))
 	term.DeleteChars(2)
 
 	{
@@ -3555,10 +3555,10 @@ func TestTm2_Terminal_deleteChars_preserves_background_sgr(t *testing.T) {
 		// Zig-only: defer testing.allocator.free(str);
 		expectEqualStrings(t, "AB23", str)
 	}
-	for x := int(term.cols) - 2; x < int(term.cols); x++ {
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(SizeCellCountInt(x), 0)))
-		expect(t, list_cell.cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
-		expectEqual(t, PageCellRGB{r: 0xFF, g: 0, b: 0}, list_cell.cell.content.color_rgb)
+	for x := int(term.Cols) - 2; x < int(term.Cols); x++ {
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(SizeCellCountInt(x), 0)))
+		expect(t, list_cell.Cell.content_tag == PageCellContentTagBgColorRgb, "list_cell.cell.content_tag == .bg_color_rgb")
+		expectEqual(t, PageCellRGB{R: 0xFF, G: 0, B: 0}, list_cell.Cell.content.color_rgb)
 	}
 }
 
@@ -3570,13 +3570,13 @@ func TestTm2_Terminal_deleteChars_outside_scroll_region(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("ABC123")))
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 4
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 4
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	term.clearDirty()
 	term.DeleteChars(2)
 	expect(t, !term.isDirty(tm2Active(0, 0)), "!t.isDirty(.{ .active = .{ .x = 0, .y = 0 } })")
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 
 	{
 		str := tm2PlainString(t, term)
@@ -3593,8 +3593,8 @@ func TestTm2_Terminal_deleteChars_inside_scroll_region(t *testing.T) {
 	defer term.Deinit()
 
 	zigTry(t, term.PrintString([]uint8("ABC123")))
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 4)
 
 	term.clearDirty()
@@ -3638,14 +3638,14 @@ func TestTm2_Terminal_deleteChars_split_wide_character_from_wide(t *testing.T) {
 	term.DeleteChars(1)
 
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(0, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(0, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, uint32(0), cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
 	{
-		list_cell := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Screen(1, 0)))
-		cell := list_cell.cell
+		list_cell := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Screen(1, 0)))
+		cell := list_cell.Cell
 		expectEqual(t, uint32('1'), cell.content.codepoint)
 		expectEqual(t, PageCellWideNarrow, cell.wide)
 	}
@@ -3659,7 +3659,7 @@ func TestTm2_panic_index_clear_eol_while_output(t *testing.T) {
 
 	// Zig: assert(!screen.cursor.semantic_content_clear_eol), in the
 	// `else` branch taken when semantic_content == .output.
-	term.screens.active.cursor.semantic_content_clear_eol = true
+	term.Screens.Active.Cursor.SemanticContentClearEol = true
 	tm2ExpectPanic(t, func() { _ = term.Index() })
 }
 
@@ -3671,7 +3671,7 @@ func TestTm2_panic_insertBlanks_spacer_tail_at_column_zero(t *testing.T) {
 
 	// Zig: assert(self.screens.active.cursor.x > 0), when the cursor cell
 	// is a spacer tail.
-	term.screens.active.cursor.page_cell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
 	tm2ExpectPanic(t, func() { term.InsertBlanks(1) })
 }
 
@@ -3683,8 +3683,8 @@ func TestTm2_panic_insertBlanks_wide_without_spacer_tail(t *testing.T) {
 
 	// Zig: assert(end_multi[1].wide == .spacer_tail). With the cursor at
 	// x = 0 and count 1, the last shifted cell is x = 8.
-	lc := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(8, 0)))
-	lc.cell.wide = PageCellWideWide
+	lc := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(8, 0)))
+	lc.Cell.wide = PageCellWideWide
 	tm2ExpectPanic(t, func() { term.InsertBlanks(1) })
 }
 
@@ -3697,7 +3697,7 @@ func TestTm2_panic_deleteLines_spacer_tail_at_left_margin_zero(t *testing.T) {
 	// Zig: rowWillBeShifted reads `cells[self.scrolling_region.left - 1]`
 	// when the left margin cell is a spacer tail; with left = 0 the u16
 	// subtraction overflows, which traps.
-	lc := zigUnwrap(t, term.screens.active.pages.GetCell(tm2Active(0, 0)))
-	lc.cell.wide = PageCellWideSpacerTail
+	lc := zigUnwrap(t, term.Screens.Active.Pages.GetCell(tm2Active(0, 0)))
+	lc.Cell.wide = PageCellWideSpacerTail
 	tm2ExpectPanic(t, func() { term.DeleteLines(1) })
 }

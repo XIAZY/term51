@@ -220,8 +220,8 @@ func TestOSCParsersIterm2_OSC_1337_test_Copy_with_non_empty_value_that_is_valid_
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-	expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-	expectEqualStrings(t, "YWJjMTIz", string(cmd.ClipboardContents.data))
+	expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+	expectEqualStrings(t, "YWJjMTIz", string(cmd.ClipboardContents.Data))
 }
 
 // Zig: test "OSC: 1337: test CurrentDir with no value"
@@ -262,7 +262,7 @@ func TestOSCParsersIterm2_OSC_1337_test_CurrentDir_with_non_empty_value(t *testi
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-	expectEqualStrings(t, "abc123", string(cmd.ReportPwd.value))
+	expectEqualStrings(t, "abc123", string(cmd.ReportPwd.Value))
 }
 
 // Zig: test "term51: parse: missing separator after 1337 is invalid"
@@ -324,9 +324,9 @@ func TestOSCParsersIterm2_term51_parse_Copy(t *testing.T) {
 		oscA_term51Feed(&p, "1337;Copy=:YWJj")
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-		expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-		expectEqualStrings(t, "YWJj", string(cmd.ClipboardContents.data))
-		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ClipboardContents.data, 4))
+		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+		expectEqualStrings(t, "YWJj", string(cmd.ClipboardContents.Data))
+		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ClipboardContents.Data, 4))
 	}
 }
 
@@ -337,14 +337,14 @@ func TestOSCParsersIterm2_term51_parse_keys_are_ASCII_case_insensitive(t *testin
 		oscA_term51Feed(&p, "1337;"+key+"=:YQ==")
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-		expectEqualStrings(t, "YQ==", string(cmd.ClipboardContents.data))
+		expectEqualStrings(t, "YQ==", string(cmd.ClipboardContents.Data))
 	}
 	for _, key := range []string{"CurrentDir", "currentdir", "CURRENTDIR"} {
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "1337;"+key+"=/tmp")
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-		expectEqualStrings(t, "/tmp", string(cmd.ReportPwd.value))
+		expectEqualStrings(t, "/tmp", string(cmd.ReportPwd.Value))
 	}
 }
 
@@ -382,8 +382,8 @@ func TestOSCParsersIterm2_term51_parse_Copy_value_is_not_validated_beyond_the_co
 		oscA_term51Feed(&p, c.input)
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
-		expectEqual(t, uint8('c'), cmd.ClipboardContents.kind)
-		expectEqualSlices(t, []uint8(c.want), cmd.ClipboardContents.data)
+		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
+		expectEqualSlices(t, []uint8(c.want), cmd.ClipboardContents.Data)
 	}
 }
 
@@ -399,8 +399,8 @@ func TestOSCParsersIterm2_term51_parse_CurrentDir(t *testing.T) {
 		oscA_term51Feed(&p, c.input)
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, Some[uint8](0x07)))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-		expectEqualSlices(t, []uint8(c.want), cmd.ReportPwd.value)
-		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ReportPwd.value, len(cmd.ReportPwd.value)))
+		expectEqualSlices(t, []uint8(c.want), cmd.ReportPwd.Value)
+		expectEqual(t, uint8(0), oscA_ptrAt(cmd.ReportPwd.Value, len(cmd.ReportPwd.Value)))
 	}
 	for _, input := range []string{"1337;CurrentDir", "1337;CurrentDir="} {
 		p := OSCParserInit(nil)
@@ -422,7 +422,7 @@ func TestOSCParsersIterm2_term51_parse_buffer_limit(t *testing.T) {
 		oscA_term51Feed(&p, "1337;"+prefix+value)
 		cmd := *oscA_unwrapPtr(t, OSCParsersIterm2Parse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyReportPwd, "cmd == .report_pwd")
-		expectEqualStrings(t, value, string(cmd.ReportPwd.value))
+		expectEqualStrings(t, value, string(cmd.ReportPwd.Value))
 	}
 	{
 		value := strings.Repeat("d", OSCParserMAX_BUF-len(prefix))

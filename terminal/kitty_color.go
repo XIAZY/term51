@@ -11,13 +11,13 @@ type KittyColorOSC struct {
 	// list of requests
 	//
 	// Zig: std.ArrayList(Request).
-	list []KittyColorOSCRequest
+	List []KittyColorOSCRequest
 
 	// We must reply with the same string terminator (ST) as used in the
 	// request.
 	//
 	// Zig: osc.Terminator, default .st (the zero value).
-	terminator OSCTerminator
+	Terminator OSCTerminator
 }
 
 // KittyColorOSCRequestTag is the tag of kitty.color.OSC.Request.
@@ -54,8 +54,8 @@ type KittyColorOSCRequest struct {
 // KittyColorOSCRequestSetPayload is the payload of Request.set:
 // struct { key: Kind, color: RGB }.
 type KittyColorOSCRequestSetPayload struct {
-	key   KittyColorKind
-	color ColorRGB
+	Key   KittyColorKind
+	Color ColorRGB
 }
 
 // Deinit is kitty.color.OSC.deinit. Zig frees the list; the allocator
@@ -64,7 +64,7 @@ type KittyColorOSCRequestSetPayload struct {
 // Zig's ArrayList.deinit leaves the list undefined; Go sets it to its zero
 // value (docs/mapping.md: `undefined` memory is the Go zero value).
 func (self *KittyColorOSC) Deinit() {
-	self.list = nil
+	self.List = nil
 }
 
 // KittyColorSpecial is kitty.color.Special.

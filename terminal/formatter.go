@@ -287,13 +287,13 @@ type FormatterOptions struct {
 	// The format to emit.
 	//
 	// Zig: no default (required).
-	emit FormatterFormat
+	Emit FormatterFormat
 
 	// Whether to unwrap soft-wrapped lines. If false, this will emit the
 	// screen contents as it is rendered on the page in the given size.
 	//
 	// Zig default: false.
-	unwrap bool
+	Unwrap bool
 
 	// Trim trailing whitespace on lines with other text. Trailing blank
 	// lines are always trimmed. This only affects trailing whitespace
@@ -301,7 +301,7 @@ type FormatterOptions struct {
 	// is currently only space characters (0x20).
 	//
 	// Zig default: TRUE, which is NOT the Go zero value.
-	trim bool
+	Trim bool
 
 	// Replace matching Unicode codepoints with some other values.
 	// This will use the last matching range found in the list.
@@ -309,15 +309,15 @@ type FormatterOptions struct {
 	// Zig: ?std.MultiArrayList(CodepointMap), default `.{}` (an empty,
 	// non-null list), which is NOT the Go zero value (null). Go: a slice of
 	// the struct; see the file header.
-	codepoint_map Optional[[]FormatterCodepointMap]
+	CodepointMap Optional[[]FormatterCodepointMap]
 
 	// Set a background and foreground color to use for the "screen".
 	// For styled formats, this will emit the proper sequences or styles.
 	//
 	// Zig: ?color.RGB, default null.
-	background Optional[ColorRGB]
+	Background Optional[ColorRGB]
 	// Zig: ?color.RGB, default null.
-	foreground Optional[ColorRGB]
+	Foreground Optional[ColorRGB]
 
 	// If set, then styled formats in `emit` will use this palette to
 	// emit colors directly as RGB. If this is null, styled formats will
@@ -325,34 +325,34 @@ type FormatterOptions struct {
 	// for HTML or the actual palette indexes for VT).
 	//
 	// Zig: ?*const color.Palette, default null. nil is null.
-	palette *ColorPalette
+	Palette *ColorPalette
 }
 
 // FormatterOptionsPlain is formatter.Options.plain: `.{ .emit = .plain }`,
 // with the other fields at their Zig defaults (written out: `trim` true,
 // `codepoint_map` empty and non-null).
 var FormatterOptionsPlain = FormatterOptions{
-	emit:          FormatterFormatPlain,
-	trim:          true,
-	codepoint_map: Optional[[]FormatterCodepointMap]{Valid: true},
+	Emit:         FormatterFormatPlain,
+	Trim:         true,
+	CodepointMap: Optional[[]FormatterCodepointMap]{Valid: true},
 }
 
 // FormatterOptionsVt is formatter.Options.vt: `.{ .emit = .vt }`, with the
 // other fields at their Zig defaults (written out as for
 // FormatterOptionsPlain).
 var FormatterOptionsVt = FormatterOptions{
-	emit:          FormatterFormatVt,
-	trim:          true,
-	codepoint_map: Optional[[]FormatterCodepointMap]{Valid: true},
+	Emit:         FormatterFormatVt,
+	Trim:         true,
+	CodepointMap: Optional[[]FormatterCodepointMap]{Valid: true},
 }
 
 // FormatterOptionsHtml is formatter.Options.html: `.{ .emit = .html }`,
 // with the other fields at their Zig defaults (written out as for
 // FormatterOptionsPlain).
 var FormatterOptionsHtml = FormatterOptions{
-	emit:          FormatterFormatHtml,
-	trim:          true,
-	codepoint_map: Optional[[]FormatterCodepointMap]{Valid: true},
+	Emit:         FormatterFormatHtml,
+	Trim:         true,
+	CodepointMap: Optional[[]FormatterCodepointMap]{Valid: true},
 }
 
 // FormatterPinMap is formatter.PinMap.
@@ -425,34 +425,34 @@ type FormatterTerminalFormatter struct {
 // see the file header.
 type FormatterTerminalFormatterExtra struct {
 	// Emit the palette using OSC 4 sequences.
-	palette bool
+	Palette bool
 
 	// Emit terminal modes that differ from their defaults using CSI h/l
 	// sequences. Defaults are according to the Ghostty defaults which
 	// are generally match most terminal defaults. This will include
 	// things like current screen, bracketed mode, mouse event reporting,
 	// etc.
-	modes bool
+	Modes bool
 
 	// Emit scrolling region state using DECSTBM and DECSLRM sequences.
-	scrolling_region bool
+	ScrollingRegion bool
 
 	// Emit tabstop positions by clearing all tabs (CSI 3 g) and setting
 	// each configured tabstop with HTS.
-	tabstops bool
+	Tabstops bool
 
 	// Emit the present working directory using OSC 7.
-	pwd bool
+	Pwd bool
 
 	// Emit keyboard modes such as ModifyOtherKeys using CSI > 4 m
 	// sequences.
-	keyboard bool
+	Keyboard bool
 
 	// The screen extras to emit. TerminalFormatter always only
 	// emits data for the currently active screen. If you want to emit
 	// data for all screens, you should manually construct a no-content
 	// terminal formatter, followed by screen formatters.
-	screen FormatterScreenFormatterExtra
+	Screen FormatterScreenFormatterExtra
 }
 
 // FormatterTerminalFormatterExtraNone is
@@ -460,19 +460,19 @@ type FormatterTerminalFormatterExtra struct {
 //
 // Emit nothing.
 var FormatterTerminalFormatterExtraNone = FormatterTerminalFormatterExtra{
-	palette:          false,
-	modes:            false,
-	scrolling_region: false,
-	tabstops:         false,
-	pwd:              false,
-	keyboard:         false,
-	screen: FormatterScreenFormatterExtra{
-		cursor:         false,
-		style:          false,
-		hyperlink:      false,
-		protection:     false,
-		kitty_keyboard: false,
-		charsets:       false,
+	Palette:         false,
+	Modes:           false,
+	ScrollingRegion: false,
+	Tabstops:        false,
+	Pwd:             false,
+	Keyboard:        false,
+	Screen: FormatterScreenFormatterExtra{
+		Cursor:        false,
+		Style:         false,
+		Hyperlink:     false,
+		Protection:    false,
+		KittyKeyboard: false,
+		Charsets:      false,
 	},
 }
 
@@ -481,19 +481,19 @@ var FormatterTerminalFormatterExtraNone = FormatterTerminalFormatterExtra{
 //
 // Emit style-relevant information only such as palettes.
 var FormatterTerminalFormatterExtraStyles = FormatterTerminalFormatterExtra{
-	palette:          true,
-	modes:            false,
-	scrolling_region: false,
-	tabstops:         false,
-	pwd:              false,
-	keyboard:         false,
-	screen: FormatterScreenFormatterExtra{
-		cursor:         false,
-		style:          true,
-		hyperlink:      true,
-		protection:     false,
-		kitty_keyboard: false,
-		charsets:       false,
+	Palette:         true,
+	Modes:           false,
+	ScrollingRegion: false,
+	Tabstops:        false,
+	Pwd:             false,
+	Keyboard:        false,
+	Screen: FormatterScreenFormatterExtra{
+		Cursor:        false,
+		Style:         true,
+		Hyperlink:     true,
+		Protection:    false,
+		KittyKeyboard: false,
+		Charsets:      false,
 	},
 }
 
@@ -503,19 +503,19 @@ var FormatterTerminalFormatterExtraStyles = FormatterTerminalFormatterExtra{
 // Emit everything. This reconstructs the terminal state as closely
 // as possible.
 var FormatterTerminalFormatterExtraAll = FormatterTerminalFormatterExtra{
-	palette:          true,
-	modes:            true,
-	scrolling_region: true,
-	tabstops:         true,
-	pwd:              true,
-	keyboard:         true,
-	screen: FormatterScreenFormatterExtra{
-		cursor:         true,
-		style:          true,
-		hyperlink:      true,
-		protection:     true,
-		kitty_keyboard: true,
-		charsets:       true,
+	Palette:         true,
+	Modes:           true,
+	ScrollingRegion: true,
+	Tabstops:        true,
+	Pwd:             true,
+	Keyboard:        true,
+	Screen: FormatterScreenFormatterExtra{
+		Cursor:        true,
+		Style:         true,
+		Hyperlink:     true,
+		Protection:    true,
+		KittyKeyboard: true,
+		Charsets:      true,
 	},
 }
 
@@ -547,19 +547,19 @@ func (self FormatterTerminalFormatter) format(writer *oscWriter) error {
 	// Emit palette before screen content if using VT format. Technically
 	// we could do this after but this way if replay is slow for whatever
 	// reason the colors will be right right away.
-	if self.extra.palette {
-		switch self.opts.emit {
+	if self.extra.Palette {
+		switch self.opts.Emit {
 		case FormatterFormatPlain:
 			goto palette // break :palette
 
 		case FormatterFormatVt:
-			for i, rgb := range &self.terminal.colors.palette.current {
+			for i, rgb := range &self.terminal.Colors.Palette.Current {
 				// writer.print(
 				//     "\x1b]4;{d};rgb:{x:0>2}/{x:0>2}/{x:0>2}\x1b\\",
 				//     .{ i, rgb.r, rgb.g, rgb.b },
 				// )
 				if err := writer.writeAll([]uint8("\x1b]4;" + itoa(uint64(i)) + ";rgb:" +
-					formatterHex2(rgb.r) + "/" + formatterHex2(rgb.g) + "/" + formatterHex2(rgb.b) +
+					formatterHex2(rgb.R) + "/" + formatterHex2(rgb.G) + "/" + formatterHex2(rgb.B) +
 					"\x1b\\")); err != nil {
 					return err
 				}
@@ -570,13 +570,13 @@ func (self FormatterTerminalFormatter) format(writer *oscWriter) error {
 			if err := writer.writeAll([]uint8("<style>:root{")); err != nil {
 				return err
 			}
-			for i, rgb := range &self.terminal.colors.palette.current {
+			for i, rgb := range &self.terminal.Colors.Palette.Current {
 				// writer.print(
 				//     "--vt-palette-{d}: #{x:0>2}{x:0>2}{x:0>2};",
 				//     .{ i, rgb.r, rgb.g, rgb.b },
 				// )
 				if err := writer.writeAll([]uint8("--vt-palette-" + itoa(uint64(i)) + ": #" +
-					formatterHex2(rgb.r) + formatterHex2(rgb.g) + formatterHex2(rgb.b) + ";")); err != nil {
+					formatterHex2(rgb.R) + formatterHex2(rgb.G) + formatterHex2(rgb.B) + ";")); err != nil {
 					return err
 				}
 			}
@@ -596,7 +596,7 @@ func (self FormatterTerminalFormatter) format(writer *oscWriter) error {
 			extra_formatter.content = FormatterScreenFormatterContent{Tag: FormatterScreenFormatterContentNone}
 			extra_formatter.pin_map = None[FormatterPinMap]()
 			extra_formatter.extra = FormatterTerminalFormatterExtraNone
-			extra_formatter.extra.palette = true
+			extra_formatter.extra.Palette = true
 			if err := extra_formatter.format(&discarding.writer); err != nil {
 				return err
 			}
@@ -605,7 +605,7 @@ func (self FormatterTerminalFormatter) format(writer *oscWriter) error {
 			// the node pointer is always properly initialized.
 			formatterAppendNTimes(
 				m.map_,
-				self.terminal.screens.active.pages.GetTopLeft(PointTagScreen),
+				self.terminal.Screens.Active.Pages.GetTopLeft(PointTagScreen),
 				discarding.writer.count,
 			)
 		}
@@ -616,19 +616,19 @@ palette:
 	// some modes we want to emit before and some after, but for now for
 	// simplicity we just emit them all before. If we make this more complex
 	// later we should add test cases for it.
-	if self.opts.emit == FormatterFormatVt && self.extra.modes {
+	if self.opts.Emit == FormatterFormatVt && self.extra.Modes {
 		// inline for (@typeInfo(modespkg.Mode).@"enum".fields): the fields
 		// built once at start-up (modes.go); field i is entry i, so
 		// `@field(default, field.name)` is modesModePackedFields[i].
 		for i, field := range modesModeFields {
 			mode := ModesMode(field.value)
-			current := self.terminal.modes.Get(mode)
-			default_val := *modesModePackedFields[i](&self.terminal.modes.default_)
+			current := self.terminal.Modes.Get(mode)
+			default_val := *modesModePackedFields[i](&self.terminal.Modes.Default)
 
 			if current != default_val {
 				tag := ModesModeTagFromInt(ModesModeTagBacking(mode))
 				prefix := "?"
-				if tag.ansi {
+				if tag.Ansi {
 					prefix = ""
 				}
 				suffix := "l"
@@ -636,7 +636,7 @@ palette:
 					suffix = "h"
 				}
 				// writer.print("\x1b[{s}{d}{s}", .{ prefix, tag.value, suffix })
-				if err := writer.writeAll([]uint8("\x1b[" + prefix + itoa(uint64(tag.value)) + suffix)); err != nil {
+				if err := writer.writeAll([]uint8("\x1b[" + prefix + itoa(uint64(tag.Value)) + suffix)); err != nil {
 					return err
 				}
 			}
@@ -650,7 +650,7 @@ palette:
 			extra_formatter.content = FormatterScreenFormatterContent{Tag: FormatterScreenFormatterContentNone}
 			extra_formatter.pin_map = None[FormatterPinMap]()
 			extra_formatter.extra = FormatterTerminalFormatterExtraNone
-			extra_formatter.extra.modes = true
+			extra_formatter.extra.Modes = true
 			if err := extra_formatter.format(&discarding.writer); err != nil {
 				return err
 			}
@@ -659,15 +659,15 @@ palette:
 			// the node pointer is always properly initialized.
 			formatterAppendNTimes(
 				m.map_,
-				self.terminal.screens.active.pages.GetTopLeft(PointTagScreen),
+				self.terminal.Screens.Active.Pages.GetTopLeft(PointTagScreen),
 				discarding.writer.count,
 			)
 		}
 	}
 
-	screen_formatter := FormatterScreenFormatterInit(self.terminal.screens.active, self.opts)
+	screen_formatter := FormatterScreenFormatterInit(self.terminal.Screens.Active, self.opts)
 	screen_formatter.content = self.content
-	screen_formatter.extra = self.extra.screen
+	screen_formatter.extra = self.extra.Screen
 	screen_formatter.pin_map = self.pin_map
 	if err := screen_formatter.format(writer); err != nil {
 		return err
@@ -675,44 +675,44 @@ palette:
 
 	// Extra terminal state to emit after the screen contents so that
 	// it doesn't impact the emitted contents.
-	if self.opts.emit == FormatterFormatVt {
+	if self.opts.Emit == FormatterFormatVt {
 		// Emit scrolling region using DECSTBM and DECSLRM
-		if self.extra.scrolling_region {
-			region := &self.terminal.scrolling_region
+		if self.extra.ScrollingRegion {
+			region := &self.terminal.ScrollingRegion
 
 			// DECSTBM: top and bottom margins (1-indexed)
 			// Only emit if not the full screen
-			assert(self.terminal.rows > 0) // Zig: `rows - 1` traps on 0
-			if region.top != 0 || region.bottom != self.terminal.rows-1 {
+			assert(self.terminal.Rows > 0) // Zig: `rows - 1` traps on 0
+			if region.Top != 0 || region.Bottom != self.terminal.Rows-1 {
 				// writer.print("\x1b[{d};{d}r", .{ region.top + 1, region.bottom + 1 })
-				if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(formatterAddOneU16(region.top))) + ";" +
-					itoa(uint64(formatterAddOneU16(region.bottom))) + "r")); err != nil {
+				if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(formatterAddOneU16(region.Top))) + ";" +
+					itoa(uint64(formatterAddOneU16(region.Bottom))) + "r")); err != nil {
 					return err
 				}
 			}
 
 			// DECSLRM: left and right margins (1-indexed)
 			// Only emit if not the full width
-			assert(self.terminal.cols > 0) // Zig: `cols - 1` traps on 0
-			if region.left != 0 || region.right != self.terminal.cols-1 {
+			assert(self.terminal.Cols > 0) // Zig: `cols - 1` traps on 0
+			if region.Left != 0 || region.Right != self.terminal.Cols-1 {
 				// writer.print("\x1b[{d};{d}s", .{ region.left + 1, region.right + 1 })
-				if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(formatterAddOneU16(region.left))) + ";" +
-					itoa(uint64(formatterAddOneU16(region.right))) + "s")); err != nil {
+				if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(formatterAddOneU16(region.Left))) + ";" +
+					itoa(uint64(formatterAddOneU16(region.Right))) + "s")); err != nil {
 					return err
 				}
 			}
 		}
 
 		// Emit tabstop positions
-		if self.extra.tabstops {
+		if self.extra.Tabstops {
 			// Clear all tabs (CSI 3 g)
 			if err := writer.writeAll([]uint8("\x1b[3g")); err != nil {
 				return err
 			}
 
 			// Set each configured tabstop by moving cursor and using HTS
-			for col := uint(0); col < uint(self.terminal.cols); col++ {
-				if self.terminal.tabstops.Get(col) {
+			for col := uint(0); col < uint(self.terminal.Cols); col++ {
+				if self.terminal.Tabstops.Get(col) {
 					// Move cursor to the column (1-indexed)
 					// writer.print("\x1b[{d}G", .{col + 1})
 					if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(col+1)) + "G")); err != nil {
@@ -727,9 +727,9 @@ palette:
 		}
 
 		// Emit keyboard modes such as ModifyOtherKeys
-		if self.extra.keyboard {
+		if self.extra.Keyboard {
 			// Only emit if modify_other_keys_2 is true
-			if self.terminal.flags.modify_other_keys_2 {
+			if self.terminal.Flags.ModifyOtherKeys2 {
 				if err := writer.writeAll([]uint8("\x1b[>4;2m")); err != nil {
 					return err
 				}
@@ -737,8 +737,8 @@ palette:
 		}
 
 		// Emit present working directory using OSC 7
-		if self.extra.pwd {
-			pwd := self.terminal.pwd
+		if self.extra.Pwd {
+			pwd := self.terminal.Pwd
 			if len(pwd) > 0 {
 				// writer.print("\x1b]7;{s}\x1b\\", .{pwd})
 				if err := writer.writeAll([]uint8("\x1b]7;" + string(pwd) + "\x1b\\")); err != nil {
@@ -755,10 +755,10 @@ palette:
 			extra_formatter.content = FormatterScreenFormatterContent{Tag: FormatterScreenFormatterContentNone}
 			extra_formatter.pin_map = None[FormatterPinMap]()
 			extra_formatter.extra = FormatterTerminalFormatterExtraNone
-			extra_formatter.extra.scrolling_region = self.extra.scrolling_region
-			extra_formatter.extra.tabstops = self.extra.tabstops
-			extra_formatter.extra.keyboard = self.extra.keyboard
-			extra_formatter.extra.pwd = self.extra.pwd
+			extra_formatter.extra.ScrollingRegion = self.extra.ScrollingRegion
+			extra_formatter.extra.Tabstops = self.extra.Tabstops
+			extra_formatter.extra.Keyboard = self.extra.Keyboard
+			extra_formatter.extra.Pwd = self.extra.Pwd
 			if err := extra_formatter.format(&discarding.writer); err != nil {
 				return err
 			}
@@ -767,12 +767,12 @@ palette:
 			if len(*m.map_) > 0 {
 				last := (*m.map_)[len(*m.map_)-1]
 				pin = PageListPin{
-					node: last.node,
-					x:    last.x,
-					y:    last.y,
+					Node: last.Node,
+					X:    last.X,
+					Y:    last.Y,
 				}
 			} else {
-				pin = self.terminal.screens.active.pages.GetTopLeft(PointTagScreen)
+				pin = self.terminal.Screens.Active.Pages.GetTopLeft(PointTagScreen)
 			}
 			formatterAppendNTimes(m.map_, pin, discarding.writer.count)
 		}
@@ -861,38 +861,38 @@ func (self FormatterScreenFormatterContentTag) String() string {
 // see the file header.
 type FormatterScreenFormatterExtra struct {
 	// Emit cursor position using CUP (CSI H).
-	cursor bool
+	Cursor bool
 
 	// Emit current SGR style state based on the cursor's active style_id.
 	// This reconstructs the SGR attributes (bold, italic, colors, etc.) at
 	// the cursor position.
-	style bool
+	Style bool
 
 	// Emit current hyperlink state using OSC 8 sequences.
 	// This sets the active hyperlink based on cursor.hyperlink_id.
-	hyperlink bool
+	Hyperlink bool
 
 	// Emit character protection mode using DECSCA.
-	protection bool
+	Protection bool
 
 	// Emit Kitty keyboard protocol state using CSI > u and CSI = sequences.
-	kitty_keyboard bool
+	KittyKeyboard bool
 
 	// Emit character set designations and invocations.
 	// This includes G0-G3 designations (ESC ( ) * +) and GL/GR invocations.
-	charsets bool
+	Charsets bool
 }
 
 // FormatterScreenFormatterExtraNone is formatter.ScreenFormatter.Extra.none.
 //
 // Emit nothing.
 var FormatterScreenFormatterExtraNone = FormatterScreenFormatterExtra{
-	cursor:         false,
-	style:          false,
-	hyperlink:      false,
-	protection:     false,
-	kitty_keyboard: false,
-	charsets:       false,
+	Cursor:        false,
+	Style:         false,
+	Hyperlink:     false,
+	Protection:    false,
+	KittyKeyboard: false,
+	Charsets:      false,
 }
 
 // FormatterScreenFormatterExtraStyles is
@@ -900,12 +900,12 @@ var FormatterScreenFormatterExtraNone = FormatterScreenFormatterExtra{
 //
 // Emit style-relevant information only.
 var FormatterScreenFormatterExtraStyles = FormatterScreenFormatterExtra{
-	cursor:         false,
-	style:          true,
-	hyperlink:      true,
-	protection:     false,
-	kitty_keyboard: false,
-	charsets:       false,
+	Cursor:        false,
+	Style:         true,
+	Hyperlink:     true,
+	Protection:    false,
+	KittyKeyboard: false,
+	Charsets:      false,
 }
 
 // FormatterScreenFormatterExtraAll is formatter.ScreenFormatter.Extra.all.
@@ -913,12 +913,12 @@ var FormatterScreenFormatterExtraStyles = FormatterScreenFormatterExtra{
 // Emit everything. This reconstructs the screen state as closely
 // as possible.
 var FormatterScreenFormatterExtraAll = FormatterScreenFormatterExtra{
-	cursor:         true,
-	style:          true,
-	hyperlink:      true,
-	protection:     true,
-	kitty_keyboard: true,
-	charsets:       true,
+	Cursor:        true,
+	Style:         true,
+	Hyperlink:     true,
+	Protection:    true,
+	KittyKeyboard: true,
+	Charsets:      true,
 }
 
 // isSet is formatter.ScreenFormatter.Extra.isSet (private in Zig).
@@ -930,8 +930,8 @@ func (self FormatterScreenFormatterExtra) isSet() bool {
 	// const Int = @typeInfo(Extra).@"struct".backing_integer.?;
 	// const v: Int = @bitCast(self);
 	// return v != 0;
-	return self.cursor || self.style || self.hyperlink || self.protection ||
-		self.kitty_keyboard || self.charsets
+	return self.Cursor || self.Style || self.Hyperlink || self.Protection ||
+		self.KittyKeyboard || self.Charsets
 }
 
 // FormatterScreenFormatterInit is formatter.ScreenFormatter.init.
@@ -965,13 +965,13 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	case FormatterScreenFormatterContentSelection:
 		selection_ := self.content.Selection
 		// Emit our pagelist contents according to our selection.
-		list_formatter := FormatterPageListFormatterInit(&self.screen.pages, self.opts)
+		list_formatter := FormatterPageListFormatterInit(&self.screen.Pages, self.opts)
 		list_formatter.pin_map = self.pin_map
 		if selection_.Valid {
 			sel := selection_.Value
 			list_formatter.top_left = Some(sel.TopLeft(self.screen))
 			list_formatter.bottom_right = Some(sel.BottomRight(self.screen))
-			list_formatter.rectangle = sel.rectangle
+			list_formatter.rectangle = sel.Rectangle
 		}
 		if err := list_formatter.format(writer); err != nil {
 			return err
@@ -984,7 +984,7 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	// Emit extra screen state after content if we care. The state has
 	// to be emitted after since some state such as cursor position and
 	// style are impacted by content rendering.
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatPlain:
 		return nil
 	case FormatterFormatVt:
@@ -1002,27 +1002,27 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	}
 
 	// Emit current SGR style state
-	if self.extra.style {
-		cursor := &self.screen.cursor
+	if self.extra.Style {
+		cursor := &self.screen.Cursor
 		// writer.print("{f}", .{cursor.style.formatterVt()})
-		if err := writer.writeAll([]uint8(cursor.style.FormatterVt().Format())); err != nil {
+		if err := writer.writeAll([]uint8(cursor.Style.FormatterVt().Format())); err != nil {
 			return err
 		}
 	}
 
 	// Emit current hyperlink state using OSC 8
-	if self.extra.hyperlink {
-		cursor := &self.screen.cursor
-		if link := cursor.hyperlink; link != nil {
+	if self.extra.Hyperlink {
+		cursor := &self.screen.Cursor
+		if link := cursor.Hyperlink; link != nil {
 			// Start hyperlink with uri (and explicit id if present)
-			switch link.id.Tag {
+			switch link.ID.Tag {
 			case HyperlinkHyperlinkIdExplicit:
-				id := link.id.Explicit
+				id := link.ID.Explicit
 				// writer.print(
 				//     "\x1b]8;id={s};{s}\x1b\\",
 				//     .{ id, link.uri },
 				// )
-				if err := writer.writeAll([]uint8("\x1b]8;id=" + string(id) + ";" + string(link.uri) + "\x1b\\")); err != nil {
+				if err := writer.writeAll([]uint8("\x1b]8;id=" + string(id) + ";" + string(link.URI) + "\x1b\\")); err != nil {
 					return err
 				}
 			case HyperlinkHyperlinkIdImplicit:
@@ -1030,7 +1030,7 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 				//     "\x1b]8;;{s}\x1b\\",
 				//     .{link.uri},
 				// )
-				if err := writer.writeAll([]uint8("\x1b]8;;" + string(link.uri) + "\x1b\\")); err != nil {
+				if err := writer.writeAll([]uint8("\x1b]8;;" + string(link.URI) + "\x1b\\")); err != nil {
 					return err
 				}
 			default:
@@ -1040,9 +1040,9 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	}
 
 	// Emit character protection mode using DECSCA
-	if self.extra.protection {
-		cursor := &self.screen.cursor
-		if cursor.protected {
+	if self.extra.Protection {
+		cursor := &self.screen.Cursor
+		if cursor.Protected {
 			// DEC protected mode
 			if err := writer.writeAll([]uint8("\x1b[1\"q")); err != nil {
 				return err
@@ -1051,8 +1051,8 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	}
 
 	// Emit Kitty keyboard protocol state using CSI = u
-	if self.extra.kitty_keyboard {
-		current_flags := self.screen.kitty_keyboard.Current()
+	if self.extra.KittyKeyboard {
+		current_flags := self.screen.KittyKeyboard.Current()
 		if current_flags.Int() != KittyKeyFlagsDisabled.Int() {
 			flags := current_flags.Int()
 			// writer.print("\x1b[={d};1u", .{flags})
@@ -1063,8 +1063,8 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	}
 
 	// Emit character set designations and invocations
-	if self.extra.charsets {
-		charset := &self.screen.charset
+	if self.extra.Charsets {
+		charset := &self.screen.Charset
 
 		// Emit G0-G3 designations
 		for _, slot := range formatterCharsetsSlotsValues {
@@ -1102,9 +1102,9 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 		}
 
 		// Emit GL invocation if not G0
-		if charset.gl != CharsetsSlotsG0 {
+		if charset.Gl != CharsetsSlotsG0 {
 			var seq string
-			switch charset.gl {
+			switch charset.Gl {
 			case CharsetsSlotsG0:
 				panic("unreachable")
 			case CharsetsSlotsG1:
@@ -1123,9 +1123,9 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 		}
 
 		// Emit GR invocation if not G2
-		if charset.gr != CharsetsSlotsG2 {
+		if charset.Gr != CharsetsSlotsG2 {
 			var seq string
-			switch charset.gr {
+			switch charset.Gr {
 			case CharsetsSlotsG0:
 				panic("unreachable") // GR can't be G0
 			case CharsetsSlotsG1:
@@ -1145,12 +1145,12 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 	}
 
 	// Emit cursor position using CUP (CSI H)
-	if self.extra.cursor {
-		cursor := &self.screen.cursor
+	if self.extra.Cursor {
+		cursor := &self.screen.Cursor
 		// CUP is 1-indexed
 		// writer.print("\x1b[{d};{d}H", .{ cursor.y + 1, cursor.x + 1 })
-		if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(formatterAddOneU16(cursor.y))) + ";" +
-			itoa(uint64(formatterAddOneU16(cursor.x))) + "H")); err != nil {
+		if err := writer.writeAll([]uint8("\x1b[" + itoa(uint64(formatterAddOneU16(cursor.Y))) + ";" +
+			itoa(uint64(formatterAddOneU16(cursor.X))) + "H")); err != nil {
 			return err
 		}
 	}
@@ -1179,12 +1179,12 @@ func (self FormatterScreenFormatter) format(writer *oscWriter) error {
 			// not.
 			last := (*m.map_)[len(*m.map_)-1]
 			pin = PageListPin{
-				node: last.node,
-				x:    last.x,
-				y:    last.y,
+				Node: last.Node,
+				X:    last.X,
+				Y:    last.Y,
 			}
 		} else {
-			pin = self.screen.pages.GetTopLeft(PointTagScreen)
+			pin = self.screen.Pages.GetTopLeft(PointTagScreen)
 		}
 		formatterAppendNTimes(m.map_, pin, discarding.writer.count)
 	}
@@ -1287,15 +1287,15 @@ func (self FormatterPageListFormatter) format(writer *oscWriter) error {
 
 		// For rectangle selection, apply start_x and end_x to all chunks
 		if self.rectangle {
-			formatter.start_x = tl.x
-			formatter.end_x = Some(br.x)
+			formatter.start_x = tl.X
+			formatter.end_x = Some(br.X)
 		} else {
 			// Otherwise only on the first/last, respectively.
-			if chunk.node == tl.node {
-				formatter.start_x = tl.x
+			if chunk.node == tl.Node {
+				formatter.start_x = tl.X
 			}
-			if chunk.node == br.node {
-				formatter.end_x = Some(br.x)
+			if chunk.node == br.Node {
+				formatter.end_x = Some(br.X)
 			}
 		}
 
@@ -1318,11 +1318,11 @@ func (self FormatterPageListFormatter) format(writer *oscWriter) error {
 		if self.pin_map.Valid {
 			m := &self.pin_map.Value
 			for _, coord := range point_map {
-				assert(coord.y <= 0xFFFF) // Zig: @intCast(coord.y) to u16 traps
+				assert(coord.Y <= 0xFFFF) // Zig: @intCast(coord.y) to u16 traps
 				*m.map_ = append(*m.map_, PageListPin{
-					node: chunk.node,
-					x:    coord.x,
-					y:    SizeCellCountInt(coord.y),
+					Node: chunk.node,
+					X:    coord.X,
+					Y:    SizeCellCountInt(coord.Y),
 				})
 			}
 		}
@@ -1512,7 +1512,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 
 	// Edge case: if our end x/y falls on a spacer head AND we're unwrapping,
 	// then we move the x/y to the start of the next row (if available).
-	if self.opts.unwrap && !self.rectangle {
+	if self.opts.Unwrap && !self.rectangle {
 		final_row := self.page.GetRow(uint(end_y))
 		cells := self.page.GetCells(final_row)
 		switch cells[end_x].wide {
@@ -1538,7 +1538,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 	}
 
 	// Wrap HTML output in monospace font styling
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatPlain:
 
 	case FormatterFormatHtml:
@@ -1554,25 +1554,25 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 		}
 
 		// Background/foreground colors
-		if self.opts.background.Valid {
-			bg := self.opts.background.Value
+		if self.opts.Background.Valid {
+			bg := self.opts.Background.Value
 			// buf_writer.print(
 			//     "background-color: #{x:0>2}{x:0>2}{x:0>2};",
 			//     .{ bg.r, bg.g, bg.b },
 			// )
 			if err := buf_writer.writeAll([]uint8("background-color: #" +
-				formatterHex2(bg.r) + formatterHex2(bg.g) + formatterHex2(bg.b) + ";")); err != nil {
+				formatterHex2(bg.R) + formatterHex2(bg.G) + formatterHex2(bg.B) + ";")); err != nil {
 				return FormatterPageFormatterTrailingState{}, ErrWriteFailed
 			}
 		}
-		if self.opts.foreground.Valid {
-			fg := self.opts.foreground.Value
+		if self.opts.Foreground.Valid {
+			fg := self.opts.Foreground.Value
 			// buf_writer.print(
 			//     "color: #{x:0>2}{x:0>2}{x:0>2};",
 			//     .{ fg.r, fg.g, fg.b },
 			// )
 			if err := buf_writer.writeAll([]uint8("color: #" +
-				formatterHex2(fg.r) + formatterHex2(fg.g) + formatterHex2(fg.b) + ";")); err != nil {
+				formatterHex2(fg.R) + formatterHex2(fg.G) + formatterHex2(fg.B) + ";")); err != nil {
 				return FormatterPageFormatterTrailingState{}, ErrWriteFailed
 			}
 		}
@@ -1589,7 +1589,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 			map_ := &self.point_map.Value
 			formatterAppendNTimes(
 				map_.map_,
-				PointCoordinate{x: 0, y: 0},
+				PointCoordinate{X: 0, Y: 0},
 				uint64(len(header)),
 			)
 		}
@@ -1599,26 +1599,26 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 		var buf [512]uint8
 		stream := oscWriterFixed(buf[:]) // std.io.fixedBufferStream(&buf)
 		buf_writer := &stream
-		if self.opts.foreground.Valid {
-			fg := self.opts.foreground.Value
+		if self.opts.Foreground.Valid {
+			fg := self.opts.Foreground.Value
 			// buf_writer.print(
 			//     "\x1b]10;rgb:{x:0>2}/{x:0>2}/{x:0>2}\x1b\\",
 			//     .{ fg.r, fg.g, fg.b },
 			// )
 			if err := buf_writer.writeAll([]uint8("\x1b]10;rgb:" +
-				formatterHex2(fg.r) + "/" + formatterHex2(fg.g) + "/" + formatterHex2(fg.b) +
+				formatterHex2(fg.R) + "/" + formatterHex2(fg.G) + "/" + formatterHex2(fg.B) +
 				"\x1b\\")); err != nil {
 				return FormatterPageFormatterTrailingState{}, ErrWriteFailed
 			}
 		}
-		if self.opts.background.Valid {
-			bg := self.opts.background.Value
+		if self.opts.Background.Valid {
+			bg := self.opts.Background.Value
 			// buf_writer.print(
 			//     "\x1b]11;rgb:{x:0>2}/{x:0>2}/{x:0>2}\x1b\\",
 			//     .{ bg.r, bg.g, bg.b },
 			// )
 			if err := buf_writer.writeAll([]uint8("\x1b]11;rgb:" +
-				formatterHex2(bg.r) + "/" + formatterHex2(bg.g) + "/" + formatterHex2(bg.b) +
+				formatterHex2(bg.R) + "/" + formatterHex2(bg.G) + "/" + formatterHex2(bg.B) +
 				"\x1b\\")); err != nil {
 				return FormatterPageFormatterTrailingState{}, ErrWriteFailed
 			}
@@ -1632,7 +1632,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 			map_ := &self.point_map.Value
 			formatterAppendNTimes(
 				map_.map_,
-				PointCoordinate{x: 0, y: 0},
+				PointCoordinate{X: 0, Y: 0},
 				uint64(len(header)),
 			)
 		}
@@ -1646,7 +1646,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 
 	// Track hyperlink state for HTML output. We need to close </a> tags
 	// when the hyperlink changes or ends.
-	current_hyperlink_id := None[HyperlinkId]()
+	current_hyperlink_id := None[HyperlinkID]()
 
 	// end_y < rows <= maxInt(u16), so `end_y + 1` cannot overflow.
 	for y_usize := uint(start_y); y_usize < uint(end_y+1); y_usize++ {
@@ -1719,7 +1719,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 			}
 
 			var sequence string
-			switch self.opts.emit {
+			switch self.opts.Emit {
 			// Plaintext just uses standard newlines because newlines
 			// on their own usually move the cursor back in anywhere
 			// you type plaintext.
@@ -1757,13 +1757,13 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 				if len(*map_.map_) > 0 {
 					start = (*map_.map_)[len(*map_.map_)-1]
 				} else {
-					start = PointCoordinate{x: 0, y: 0}
+					start = PointCoordinate{X: 0, Y: 0}
 				}
 
 				// The first one inherits the x value.
 				formatterAppendNTimes(
 					map_.map_,
-					PointCoordinate{x: start.x, y: start.y},
+					PointCoordinate{X: start.X, Y: start.Y},
 					uint64(len(sequence)),
 				)
 
@@ -1774,10 +1774,10 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 					y_offset := SizeCellCountInt(y_offset_usize)
 					// Zig: `start.y + y_offset` is a u32 addition that traps
 					// on overflow.
-					assert(uint64(start.y)+uint64(y_offset) <= 0xFFFFFFFF)
+					assert(uint64(start.Y)+uint64(y_offset) <= 0xFFFFFFFF)
 					formatterAppendNTimes(
 						map_.map_,
-						PointCoordinate{x: 0, y: start.y + uint32(y_offset)},
+						PointCoordinate{X: 0, Y: start.Y + uint32(y_offset)},
 						uint64(len(sequence)),
 					)
 				}
@@ -1788,13 +1788,13 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 
 		// If we're not wrapped, we always add a newline so after
 		// the row is printed we can add a newline.
-		if !row.wrap || !self.opts.unwrap {
+		if !row.wrap || !self.opts.Unwrap {
 			blank_rows += 1
 		}
 
 		// If the row doesn't continue a wrap then we need to reset
 		// our blank cell count.
-		if !row.wrap_continuation || !self.opts.unwrap {
+		if !row.wrap_continuation || !self.opts.Unwrap {
 			blank_cells = 0
 		}
 
@@ -1821,7 +1821,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 				// If we're emitting styled output (not plaintext) and
 				// the cell has some kind of styling or is not empty
 				// then this isn't blank.
-				if self.opts.emit.Styled() &&
+				if self.opts.Emit.Styled() &&
 					(!cell.IsEmpty() || cell.HasStyling()) {
 					goto blank // break :blank
 				}
@@ -1835,7 +1835,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 				// Trailing spaces are blank. We know it is trailing
 				// because if we get a non-empty cell later we'll
 				// fill the blanks.
-				if cell.Codepoint() == ' ' && self.opts.trim {
+				if cell.Codepoint() == ' ' && self.opts.Trim {
 					blank_cells += 1
 					continue
 				}
@@ -1872,7 +1872,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 
 						*map_.map_ = append(
 							*map_.map_,
-							PointCoordinate{x: blank_x, y: uint32(blank_y)},
+							PointCoordinate{X: blank_x, Y: uint32(blank_y)},
 						)
 					}
 				}
@@ -1883,7 +1883,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 			{
 				// If we aren't emitting styled output then we don't
 				// have to worry about styles.
-				if !self.opts.emit.Styled() {
+				if !self.opts.Emit.Styled() {
 					goto style // break :style
 				}
 
@@ -1899,7 +1899,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 				// because we've confirmed we have some new style
 				// (which is maybe default).
 				if !style.Default() {
-					switch self.opts.emit {
+					switch self.opts.Emit {
 					case FormatterFormatHtml:
 						if err := self.formatStyleClose(writer); err != nil {
 							return FormatterPageFormatterTrailingState{}, err
@@ -1954,8 +1954,8 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 					}
 					for j := uint64(0); j < discarding.writer.count; j++ {
 						*map_.map_ = append(*map_.map_, PointCoordinate{
-							x: x,
-							y: uint32(y),
+							X: x,
+							Y: uint32(y),
 						})
 					}
 				}
@@ -1967,17 +1967,17 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 				// We currently only emit hyperlinks for HTML. In the
 				// future we can support emitting OSC 8 hyperlinks for
 				// VT output as well.
-				if self.opts.emit != FormatterFormatHtml {
+				if self.opts.Emit != FormatterFormatHtml {
 					goto hyperlink // break :hyperlink
 				}
 
 				// Get the hyperlink ID. This ID is our internal ID,
 				// not necessarily the OSC8 ID.
-				var link_id_ Optional[HyperlinkId]
+				var link_id_ Optional[HyperlinkID]
 				if cell.hyperlink {
 					link_id_ = self.page.LookupHyperlink(cell)
 				} else {
-					link_id_ = None[HyperlinkId]()
+					link_id_ = None[HyperlinkID]()
 				}
 
 				// If our hyperlink IDs match (even null) then we have
@@ -1993,7 +1993,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 					if err := self.formatHyperlinkClose(writer); err != nil {
 						return FormatterPageFormatterTrailingState{}, err
 					}
-					current_hyperlink_id = None[HyperlinkId]()
+					current_hyperlink_id = None[HyperlinkID]()
 				}
 
 				// Set our current hyperlink ID
@@ -2027,8 +2027,8 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 					}
 					for j := uint64(0); j < discarding.writer.count; j++ {
 						*map_.map_ = append(*map_.map_, PointCoordinate{
-							x: x,
-							y: uint32(y),
+							X: x,
+							Y: uint32(y),
 						})
 					}
 				}
@@ -2054,8 +2054,8 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 					}
 					for j := uint64(0); j < discarding.writer.count; j++ {
 						*map_.map_ = append(*map_.map_, PointCoordinate{
-							x: x,
-							y: uint32(y),
+							X: x,
+							Y: uint32(y),
 						})
 					}
 				}
@@ -2070,7 +2070,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 					map_ := &self.point_map.Value
 					*map_.map_ = append(
 						*map_.map_,
-						PointCoordinate{x: x, y: uint32(y)},
+						PointCoordinate{X: x, Y: uint32(y)},
 					)
 				}
 
@@ -2095,7 +2095,7 @@ func (self FormatterPageFormatter) formatWithState(writer *oscWriter) (Formatter
 	}
 
 	// Close the monospace wrapper for HTML output
-	if self.opts.emit == FormatterFormatHtml {
+	if self.opts.Emit == FormatterFormatHtml {
 		const closing = "</div>"
 		if err := writer.writeAll([]uint8(closing)); err != nil {
 			return FormatterPageFormatterTrailingState{}, err
@@ -2157,8 +2157,8 @@ func (self FormatterPageFormatter) writeCodepointWithReplacement(writer *oscWrit
 	// replacement: (labeled block; each `break :replacement` sets r_ and
 	// leaves the search)
 	r_ := None[FormatterCodepointMapReplacement]()
-	if self.opts.codepoint_map.Valid {
-		map_ := self.opts.codepoint_map.Value
+	if self.opts.CodepointMap.Valid {
+		map_ := self.opts.CodepointMap.Value
 		for forward_i := 0; forward_i < len(map_); forward_i++ {
 			i := len(map_) - forward_i - 1
 			range_ := map_[i].range_
@@ -2215,7 +2215,7 @@ func (self FormatterPageFormatter) writeCodepointWithReplacement(writer *oscWrit
 // codepoint: u21) !void. The inferred error set is ErrWriteFailed
 // (osc.go).
 func (self FormatterPageFormatter) writeCodepoint(writer *oscWriter, codepoint uint32) error {
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatPlain, FormatterFormatVt:
 		// writer.print("{u}", .{codepoint})
 		return writer.printUnicodeCodepoint(codepoint)
@@ -2267,7 +2267,7 @@ func (self *FormatterPageFormatter) cellStyle(cell *PageCell) Style {
 
 	case PageCellContentTagBgColorPalette:
 		return Style{
-			bg_color: StyleColor{
+			BgColor: StyleColor{
 				Tag:     StyleColorPalette,
 				Palette: cell.content.color_palette,
 			},
@@ -2275,12 +2275,12 @@ func (self *FormatterPageFormatter) cellStyle(cell *PageCell) Style {
 
 	case PageCellContentTagBgColorRgb:
 		return Style{
-			bg_color: StyleColor{
+			BgColor: StyleColor{
 				Tag: StyleColorRgb,
 				Rgb: ColorRGB{
-					r: cell.content.color_rgb.r,
-					g: cell.content.color_rgb.g,
-					b: cell.content.color_rgb.b,
+					R: cell.content.color_rgb.R,
+					G: cell.content.color_rgb.G,
+					B: cell.content.color_rgb.B,
 				},
 			},
 		}
@@ -2297,13 +2297,13 @@ func (self *FormatterPageFormatter) cellStyle(cell *PageCell) Style {
 // style: *const Style) std.Io.Writer.Error!void. The error is
 // ErrWriteFailed (osc.go). Zig traps (`unreachable`) for `.plain`.
 func (self FormatterPageFormatter) formatStyleOpen(writer *oscWriter, style *Style) error {
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatPlain:
 		panic("unreachable")
 
 	case FormatterFormatVt:
 		formatter := style.FormatterVt()
-		formatter.palette = self.opts.palette
+		formatter.palette = self.opts.Palette
 		// writer.print("{f}", .{formatter})
 		return writer.writeAll([]uint8(formatter.Format()))
 
@@ -2311,7 +2311,7 @@ func (self FormatterPageFormatter) formatStyleOpen(writer *oscWriter, style *Sty
 	// layout since we're primarily using it as a CSS wrapper.
 	case FormatterFormatHtml:
 		formatter := style.FormatterHtml()
-		formatter.palette = self.opts.palette
+		formatter.palette = self.opts.Palette
 		// writer.print(
 		//     "<div style=\"display: inline;{f}\">",
 		//     .{formatter},
@@ -2328,7 +2328,7 @@ func (self FormatterPageFormatter) formatStyleOpen(writer *oscWriter, style *Sty
 // returned when appending to the point map fails.
 func (self FormatterPageFormatter) formatStyleClose(writer *oscWriter) error {
 	var str string
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatPlain:
 		return nil
 	case FormatterFormatVt:
@@ -2361,7 +2361,7 @@ func (self FormatterPageFormatter) formatStyleClose(writer *oscWriter) error {
 // uri: []const u8) std.Io.Writer.Error!void. The error is ErrWriteFailed
 // (osc.go). Zig traps (`unreachable`) for `.plain` and `.vt`.
 func (self FormatterPageFormatter) formatHyperlinkOpen(writer *oscWriter, uri []uint8) error {
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatPlain, FormatterFormatVt:
 		panic("unreachable")
 
@@ -2390,7 +2390,7 @@ func (self FormatterPageFormatter) formatHyperlinkOpen(writer *oscWriter, uri []
 // returned when appending to the point map fails.
 func (self FormatterPageFormatter) formatHyperlinkClose(writer *oscWriter) error {
 	var str string
-	switch self.opts.emit {
+	switch self.opts.Emit {
 	case FormatterFormatHtml:
 		str = "</a>"
 	case FormatterFormatPlain, FormatterFormatVt:

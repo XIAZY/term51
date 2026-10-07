@@ -27,7 +27,6 @@ ScreenCharsetState
 ScreenSemanticPrompt
 ScreenPromptClickMove
 ModesModeState
-ModesModePacked
 ModesModeTag
 KittyKeyFlags
 DeviceStatusTag
@@ -39,11 +38,9 @@ RenderStateRow
 RenderStateCell
 RenderStateHighlight
 RenderStateStringMapParam
-PageRow
-PageCell
-PageCellContent
 PageCellRGB
 Style
+StyleFlags
 StyleFg
 ConfigColor
 ColorRGB

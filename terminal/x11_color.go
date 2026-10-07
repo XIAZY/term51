@@ -71,7 +71,7 @@ func colorMap() X11ColorColorMap {
 		g := x11ColorParseIntU8(colorStdMemTrim([]uint8(line[4:7]), " "))
 		b := x11ColorParseIntU8(colorStdMemTrim([]uint8(line[8:11]), " "))
 		name := colorStdMemTrim([]uint8(line[12:]), " \t\n")
-		kvs[x11ColorAsciiLower(name)] = ColorRGB{r: r, g: g, b: b}
+		kvs[x11ColorAsciiLower(name)] = ColorRGB{R: r, G: g, B: b}
 		i += 1
 	}
 	assert(i == len_)

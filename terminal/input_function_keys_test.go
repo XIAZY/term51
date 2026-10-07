@@ -44,7 +44,7 @@ func kpFKEntry(mods InputKeyMods, mok InputFunctionKeysModifyKeys, seq string) I
 
 // kpFKMods is term51AEMods.
 func kpFKMods(shift bool, ctrl bool, alt bool, super bool) InputKeyMods {
-	return InputKeyMods{shift: shift, ctrl: ctrl, alt: alt, super: super}
+	return InputKeyMods{Shift: shift, Ctrl: ctrl, Alt: alt, Super: super}
 }
 
 // kpFKBits is the xterm bit mask of the four standard modifiers (shift=1,
@@ -56,7 +56,7 @@ func kpFKBits(m InputKeyMods) int {
 		}
 		return 0
 	}
-	return b(m.shift) + 2*b(m.alt) + 4*b(m.ctrl) + 8*b(m.super)
+	return b(m.Shift) + 2*b(m.Alt) + 4*b(m.Ctrl) + 8*b(m.Super)
 }
 
 // kpFKExpectEntry is term51AEExpectEntry.
@@ -151,97 +151,97 @@ func kpFKByte(c uint8) string { return string([]uint8{c}) }
 
 // kpFKBackspace is term51AEBackspace.
 var kpFKBackspace = []InputFunctionKeysEntry{
-	kpFKEntry(InputKeyMods{shift: true}, InputFunctionKeysModifyKeysSet, "\x7f"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
-	kpFKEntry(InputKeyMods{alt: true, shift: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
-	kpFKEntry(InputKeyMods{ctrl: true, shift: true}, InputFunctionKeysModifyKeysSet, "\x08"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true}, InputFunctionKeysModifyKeysSet, "\x1b\x08"),
-	kpFKEntry(InputKeyMods{super: true}, InputFunctionKeysModifyKeysSet, "\x7f"),
-	kpFKEntry(InputKeyMods{super: true, shift: true}, InputFunctionKeysModifyKeysSet, "\x7f"),
-	kpFKEntry(InputKeyMods{alt: true, super: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, shift: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true}, InputFunctionKeysModifyKeysSet, "\x08"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysSet, "\x08"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true}, InputFunctionKeysModifyKeysSet, "\x1b\x08"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysSet, "\x1b\x08"),
-	kpFKEntry(InputKeyMods{shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;127~"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;127~"),
-	kpFKEntry(InputKeyMods{alt: true, shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;4;127~"),
-	kpFKEntry(InputKeyMods{ctrl: true, shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;6;127~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;7;127~"),
-	kpFKEntry(InputKeyMods{alt: true, shift: true, ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;8;127~"),
-	kpFKEntry(InputKeyMods{super: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;9;127~"),
-	kpFKEntry(InputKeyMods{super: true, shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;10;127~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;11;127~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;12;127~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;13;127~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;14;127~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;15;127~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;16;127~"),
-	kpFKEntry(InputKeyMods{ctrl: true}, InputFunctionKeysModifyKeysAny, "\x08"),
+	kpFKEntry(InputKeyMods{Shift: true}, InputFunctionKeysModifyKeysSet, "\x7f"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
+	kpFKEntry(InputKeyMods{Alt: true, Shift: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
+	kpFKEntry(InputKeyMods{Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysSet, "\x08"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true}, InputFunctionKeysModifyKeysSet, "\x1b\x08"),
+	kpFKEntry(InputKeyMods{Super: true}, InputFunctionKeysModifyKeysSet, "\x7f"),
+	kpFKEntry(InputKeyMods{Super: true, Shift: true}, InputFunctionKeysModifyKeysSet, "\x7f"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Shift: true}, InputFunctionKeysModifyKeysSet, "\x1b\x7f"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true}, InputFunctionKeysModifyKeysSet, "\x08"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysSet, "\x08"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true}, InputFunctionKeysModifyKeysSet, "\x1b\x08"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysSet, "\x1b\x08"),
+	kpFKEntry(InputKeyMods{Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;127~"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;4;127~"),
+	kpFKEntry(InputKeyMods{Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;6;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;7;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Shift: true, Ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;8;127~"),
+	kpFKEntry(InputKeyMods{Super: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;9;127~"),
+	kpFKEntry(InputKeyMods{Super: true, Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;10;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;11;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;12;127~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;13;127~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;14;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;15;127~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;16;127~"),
+	kpFKEntry(InputKeyMods{Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x08"),
 	kpFKEntry(InputKeyMods{}, InputFunctionKeysModifyKeysAny, "\x7f"),
 }
 
 // kpFKTab is term51AETab.
 var kpFKTab = []InputFunctionKeysEntry{
-	kpFKEntry(InputKeyMods{shift: true}, InputFunctionKeysModifyKeysSet, "\x1b[Z"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysSet, "\x1b\t"),
-	kpFKEntry(InputKeyMods{shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;9~"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;9~"),
-	kpFKEntry(InputKeyMods{alt: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;4;9~"),
-	kpFKEntry(InputKeyMods{ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;5;9~"),
-	kpFKEntry(InputKeyMods{ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;6;9~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;7;9~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;8;9~"),
-	kpFKEntry(InputKeyMods{super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;9;9~"),
-	kpFKEntry(InputKeyMods{super: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;10;9~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;11;9~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;12;9~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;13;9~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;14;9~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;15;9~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;16;9~"),
+	kpFKEntry(InputKeyMods{Shift: true}, InputFunctionKeysModifyKeysSet, "\x1b[Z"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysSet, "\x1b\t"),
+	kpFKEntry(InputKeyMods{Shift: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;9~"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;4;9~"),
+	kpFKEntry(InputKeyMods{Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;5;9~"),
+	kpFKEntry(InputKeyMods{Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;6;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;7;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;8;9~"),
+	kpFKEntry(InputKeyMods{Super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;9;9~"),
+	kpFKEntry(InputKeyMods{Super: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;10;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;11;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;12;9~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;13;9~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;14;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;15;9~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;16;9~"),
 	kpFKEntry(InputKeyMods{}, InputFunctionKeysModifyKeysAny, "\t"),
 }
 
 // kpFKEnter is term51AEEnter.
 var kpFKEnter = []InputFunctionKeysEntry{
-	kpFKEntry(InputKeyMods{shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;2;13~"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysSet, "\x1b\r"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;13~"),
-	kpFKEntry(InputKeyMods{alt: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;4;13~"),
-	kpFKEntry(InputKeyMods{ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;5;13~"),
-	kpFKEntry(InputKeyMods{ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;6;13~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;7;13~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;8;13~"),
-	kpFKEntry(InputKeyMods{super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;9;13~"),
-	kpFKEntry(InputKeyMods{super: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;10;13~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;11;13~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;12;13~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;13;13~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;14;13~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;15;13~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;16;13~"),
+	kpFKEntry(InputKeyMods{Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;2;13~"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysSet, "\x1b\r"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;4;13~"),
+	kpFKEntry(InputKeyMods{Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;5;13~"),
+	kpFKEntry(InputKeyMods{Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;6;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;7;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;8;13~"),
+	kpFKEntry(InputKeyMods{Super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;9;13~"),
+	kpFKEntry(InputKeyMods{Super: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;10;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;11;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;12;13~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;13;13~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;14;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;15;13~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;16;13~"),
 	kpFKEntry(InputKeyMods{}, InputFunctionKeysModifyKeysAny, "\r"),
 }
 
 // kpFKEscape is term51AEEscape.
 var kpFKEscape = []InputFunctionKeysEntry{
-	kpFKEntry(InputKeyMods{shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;2;27~"),
-	kpFKEntry(InputKeyMods{alt: true}, InputFunctionKeysModifyKeysAny, "\x1b\x1b"),
-	kpFKEntry(InputKeyMods{alt: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;4;27~"),
-	kpFKEntry(InputKeyMods{ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;5;27~"),
-	kpFKEntry(InputKeyMods{ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;6;27~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;7;27~"),
-	kpFKEntry(InputKeyMods{alt: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;8;27~"),
-	kpFKEntry(InputKeyMods{super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;9;27~"),
-	kpFKEntry(InputKeyMods{super: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;10;27~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;11;27~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;12;27~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;13;27~"),
-	kpFKEntry(InputKeyMods{super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;14;27~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;15;27~"),
-	kpFKEntry(InputKeyMods{alt: true, super: true, ctrl: true, shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;16;27~"),
+	kpFKEntry(InputKeyMods{Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;2;27~"),
+	kpFKEntry(InputKeyMods{Alt: true}, InputFunctionKeysModifyKeysAny, "\x1b\x1b"),
+	kpFKEntry(InputKeyMods{Alt: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;4;27~"),
+	kpFKEntry(InputKeyMods{Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;5;27~"),
+	kpFKEntry(InputKeyMods{Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;6;27~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;7;27~"),
+	kpFKEntry(InputKeyMods{Alt: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;8;27~"),
+	kpFKEntry(InputKeyMods{Super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;9;27~"),
+	kpFKEntry(InputKeyMods{Super: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;10;27~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;11;27~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;12;27~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;13;27~"),
+	kpFKEntry(InputKeyMods{Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;14;27~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;15;27~"),
+	kpFKEntry(InputKeyMods{Alt: true, Super: true, Ctrl: true, Shift: true}, InputFunctionKeysModifyKeysAny, "\x1b[27;16;27~"),
 	kpFKEntry(InputKeyMods{}, InputFunctionKeysModifyKeysAny, "\x1b"),
 }
 
@@ -283,11 +283,11 @@ func TestKpFunctionKeys_modifiers_every_entry_of_the_modifier_table(t *testing.T
 	}
 
 	// Spot check the literal table.
-	expect(t, InputFunctionKeysModifiers[0].Equal(InputKeyMods{shift: true}), "modifiers[0].equal(.{ .shift = true })")
-	expect(t, InputFunctionKeysModifiers[1].Equal(InputKeyMods{alt: true}), "modifiers[1].equal(.{ .alt = true })")
-	expect(t, InputFunctionKeysModifiers[3].Equal(InputKeyMods{ctrl: true}), "modifiers[3].equal(.{ .ctrl = true })")
-	expect(t, InputFunctionKeysModifiers[7].Equal(InputKeyMods{super: true}), "modifiers[7].equal(.{ .super = true })")
-	expect(t, InputFunctionKeysModifiers[14].Equal(InputKeyMods{shift: true, alt: true, ctrl: true, super: true}), "modifiers[14].equal(.{ .shift = true, .alt = true, .ctrl = true, .super = true })")
+	expect(t, InputFunctionKeysModifiers[0].Equal(InputKeyMods{Shift: true}), "modifiers[0].equal(.{ .shift = true })")
+	expect(t, InputFunctionKeysModifiers[1].Equal(InputKeyMods{Alt: true}), "modifiers[1].equal(.{ .alt = true })")
+	expect(t, InputFunctionKeysModifiers[3].Equal(InputKeyMods{Ctrl: true}), "modifiers[3].equal(.{ .ctrl = true })")
+	expect(t, InputFunctionKeysModifiers[7].Equal(InputKeyMods{Super: true}), "modifiers[7].equal(.{ .super = true })")
+	expect(t, InputFunctionKeysModifiers[14].Equal(InputKeyMods{Shift: true, Alt: true, Ctrl: true, Super: true}), "modifiers[14].equal(.{ .shift = true, .alt = true, .ctrl = true, .super = true })")
 }
 
 // Zig: test "term51: keys: cursor keys (arrows, home, end, keypad cursor keys)"
@@ -523,11 +523,11 @@ func TestKpFunctionKeys_keys_backspace_entries(t *testing.T) {
 	kpFKExpectEntries(t, kpFKBackspace, InputFunctionKeysKeys.Get(InputKeyKeyBackspace))
 	// Spot checks against explicit values.
 	e := InputFunctionKeysKeys.Get(InputKeyKeyBackspace)
-	kpFKExpectEntry(t, e[0], InputKeyMods{shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x7f")
+	kpFKExpectEntry(t, e[0], InputKeyMods{Shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x7f")
 	kpFKExpectEntry(t, e[3], kpFKMods(true, true, false, false), true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x08")
-	kpFKExpectEntry(t, e[13], InputKeyMods{shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;127~")
+	kpFKExpectEntry(t, e[13], InputKeyMods{Shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;127~")
 	kpFKExpectEntry(t, e[26], kpFKMods(true, true, true, true), true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;16;127~")
-	kpFKExpectEntry(t, e[27], InputKeyMods{ctrl: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x08")
+	kpFKExpectEntry(t, e[27], InputKeyMods{Ctrl: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x08")
 	kpFKExpectEntry(t, e[28], InputKeyMods{}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x7f")
 }
 
@@ -558,7 +558,7 @@ func TestKpFunctionKeys_keys_backspace_modify_other_keys_structure(t *testing.T)
 	}
 	// Plain ctrl (code 5) has no set_other entry; it uses the fallback.
 	for _, x := range e[13:27] {
-		expect(t, !x.mods.Equal(InputKeyMods{ctrl: true}), "!x.mods.equal(.{ .ctrl = true })")
+		expect(t, !x.mods.Equal(InputKeyMods{Ctrl: true}), "!x.mods.equal(.{ .ctrl = true })")
 	}
 
 	// No entry in the whole backspace table sets lock/side bits.
@@ -577,10 +577,10 @@ func TestKpFunctionKeys_keys_backspace_modify_other_keys_structure(t *testing.T)
 func TestKpFunctionKeys_keys_tab_entries(t *testing.T) {
 	kpFKExpectEntries(t, kpFKTab, InputFunctionKeysKeys.Get(InputKeyKeyTab))
 	e := InputFunctionKeysKeys.Get(InputKeyKeyTab)
-	kpFKExpectEntry(t, e[0], InputKeyMods{shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x1b[Z")
-	kpFKExpectEntry(t, e[1], InputKeyMods{alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x1b\t")
-	kpFKExpectEntry(t, e[2], InputKeyMods{shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;9~")
-	kpFKExpectEntry(t, e[3], InputKeyMods{alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;9~")
+	kpFKExpectEntry(t, e[0], InputKeyMods{Shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x1b[Z")
+	kpFKExpectEntry(t, e[1], InputKeyMods{Alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x1b\t")
+	kpFKExpectEntry(t, e[2], InputKeyMods{Shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;2;9~")
+	kpFKExpectEntry(t, e[3], InputKeyMods{Alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;9~")
 	kpFKExpectEntry(t, e[4], kpFKMods(true, false, true, false), true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x1b[27;4;9~")
 	kpFKExpectEntry(t, e[17], InputKeyMods{}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\t")
 
@@ -597,9 +597,9 @@ func TestKpFunctionKeys_keys_tab_entries(t *testing.T) {
 func TestKpFunctionKeys_keys_enter_entries(t *testing.T) {
 	kpFKExpectEntries(t, kpFKEnter, InputFunctionKeysKeys.Get(InputKeyKeyEnter))
 	e := InputFunctionKeysKeys.Get(InputKeyKeyEnter)
-	kpFKExpectEntry(t, e[0], InputKeyMods{shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x1b[27;2;13~")
-	kpFKExpectEntry(t, e[1], InputKeyMods{alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x1b\r")
-	kpFKExpectEntry(t, e[2], InputKeyMods{alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;13~")
+	kpFKExpectEntry(t, e[0], InputKeyMods{Shift: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x1b[27;2;13~")
+	kpFKExpectEntry(t, e[1], InputKeyMods{Alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSet, "\x1b\r")
+	kpFKExpectEntry(t, e[2], InputKeyMods{Alt: true}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysSetOther, "\x1b[27;3;13~")
 	kpFKExpectEntry(t, e[3], kpFKMods(true, false, true, false), true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x1b[27;4;13~")
 	kpFKExpectEntry(t, e[15], kpFKMods(true, true, true, true), true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\x1b[27;16;13~")
 	kpFKExpectEntry(t, e[16], InputKeyMods{}, true, InputFunctionKeysCursorModeAny, InputFunctionKeysKeypadModeAny, InputFunctionKeysModifyKeysAny, "\r")

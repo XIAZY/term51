@@ -38,7 +38,7 @@ func tablesParseTable(w *bytes.Buffer) {
 // The default 256-colour palette: "<index> <rrggbb>".
 func tablesDefaultPalette(w *bytes.Buffer) {
 	for i, rgb := range ColorDefault {
-		fmt.Fprintf(w, "%d %02x%02x%02x\n", i, rgb.r, rgb.g, rgb.b)
+		fmt.Fprintf(w, "%d %02x%02x%02x\n", i, rgb.R, rgb.G, rgb.B)
 	}
 }
 
@@ -53,12 +53,12 @@ func tablesModes(w *bytes.Buffer) {
 	for _, mode := range ModesModeValues() {
 		tag := ModesModeTagFromInt(uint16(mode))
 		kind := "dec"
-		if tag.ansi {
+		if tag.Ansi {
 			kind = "ansi"
 		}
 		defaults := ModesModePackedInit()
 		def := tablesModeDefault(&defaults, mode.String())
-		fmt.Fprintf(w, "%s %d %s default=%d\n", mode, tag.value, kind, boolInt(def))
+		fmt.Fprintf(w, "%s %d %s default=%d\n", mode, tag.Value, kind, boolInt(def))
 	}
 }
 

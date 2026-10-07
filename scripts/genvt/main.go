@@ -82,7 +82,7 @@ var namespaces = map[string][]entry{
 	"x11color":     {{"X11Color", ""}},
 	"input": {
 		{"InputPasteOptions", "PasteOptions"}, {"InputKeyKey", "Key"}, {"InputKeyAction", "KeyAction"},
-		{"InputKeyKeyEvent", "KeyEvent"}, {"InputKeyMods", "KeyMods"}, {"InputKeyModsMods", "KeyMods"},
+		{"InputKeyKeyEvent", "KeyEvent"}, {"InputKeyMods", "KeyMods"}, {"InputKeyModsMods", "Mods"},
 		{"InputKeyEncodeOptions", "KeyEncodeOptions"},
 		{"InputKeyEncodeEncode", "EncodeKey"}, {"InputPasteIsSafe", "IsSafePaste"}, {"InputPasteEncode", "EncodePaste"},
 	},

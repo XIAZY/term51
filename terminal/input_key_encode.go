@@ -171,40 +171,40 @@ type InputKeyEncodeOptions struct {
 	// Terminal DEC mode 1
 	//
 	// Zig default: false.
-	cursor_key_application bool
+	CursorKeyApplication bool
 
 	// Terminal DEC mode 66
 	//
 	// Zig default: false.
-	keypad_key_application bool
+	KeypadKeyApplication bool
 
 	// Terminal DEC mode 1035
 	//
 	// Zig default: false.
-	ignore_keypad_with_numlock bool
+	IgnoreKeypadWithNumlock bool
 
 	// Terminal DEC mode 1036
 	//
 	// Zig default: false.
-	alt_esc_prefix bool
+	AltEscPrefix bool
 
 	// xterm "modifyOtherKeys mode 2". Details here:
 	// https://invisible-island.net/xterm/modified-keys.html
 	//
 	// Zig default: false.
-	modify_other_keys_state_2 bool
+	ModifyOtherKeysState2 bool
 
 	// Kitty keyboard protocol flags.
 	//
 	// Zig default: .disabled (the zero value).
-	kitty_flags KittyKeyFlags
+	KittyFlags KittyKeyFlags
 
 	// Determines whether the "option" key on macOS is treated
 	// as "alt" or not. See the Ghostty `macos_option-as-alt` config
 	// docs for a more detailed description of why this is needed.
 	//
 	// Zig default: .false (the zero value).
-	macos_option_as_alt InputConfigOptionAsAlt
+	MacosOptionAsAlt InputConfigOptionAsAlt
 }
 
 // InputKeyEncodeOptionsDefault is key_encode.Options.default: every field
@@ -219,15 +219,15 @@ var InputKeyEncodeOptionsDefault = InputKeyEncodeOptions{}
 // terminal state so it must be set manually after this call.
 func InputKeyEncodeOptionsFromTerminal(t *Terminal) InputKeyEncodeOptions {
 	return InputKeyEncodeOptions{
-		alt_esc_prefix:             t.modes.Get(ModesModeAltEscPrefix),
-		cursor_key_application:     t.modes.Get(ModesModeCursorKeys),
-		keypad_key_application:     t.modes.Get(ModesModeKeypadKeys),
-		ignore_keypad_with_numlock: t.modes.Get(ModesModeIgnoreKeypadWithNumlock),
-		modify_other_keys_state_2:  t.flags.modify_other_keys_2,
-		kitty_flags:                t.screens.active.kitty_keyboard.Current(),
+		AltEscPrefix:            t.Modes.Get(ModesModeAltEscPrefix),
+		CursorKeyApplication:    t.Modes.Get(ModesModeCursorKeys),
+		KeypadKeyApplication:    t.Modes.Get(ModesModeKeypadKeys),
+		IgnoreKeypadWithNumlock: t.Modes.Get(ModesModeIgnoreKeypadWithNumlock),
+		ModifyOtherKeysState2:   t.Flags.ModifyOtherKeys2,
+		KittyFlags:              t.Screens.Active.KittyKeyboard.Current(),
 
 		// These can't be known from the terminal state.
-		macos_option_as_alt: InputConfigOptionAsAltFalse,
+		MacosOptionAsAlt: InputConfigOptionAsAltFalse,
 	}
 }
 
@@ -243,7 +243,7 @@ func InputKeyEncodeOptionsFromTerminal(t *Terminal) InputKeyEncodeOptions {
 // Zig: std.Io.Writer.Error!void. The error is ErrWriteFailed (osc.go).
 func inputKeyEncodeEncode(writer *oscWriter, event InputKeyKeyEvent, opts InputKeyEncodeOptions) error {
 	//std.log.warn("KEYENCODER event={} opts={}", .{ event, opts });
-	if opts.kitty_flags.Int() != 0 {
+	if opts.KittyFlags.Int() != 0 {
 		return inputKeyEncodeKitty(
 			writer,
 			event,
@@ -264,7 +264,7 @@ func inputKeyEncodeEncode(writer *oscWriter, event InputKeyKeyEvent, opts InputK
 // Darwin: see the file header (report_associated).
 func inputKeyEncodeKitty(writer *oscWriter, event InputKeyKeyEvent, opts InputKeyEncodeOptions) error {
 	// This should never happen but we'll check anyway.
-	if opts.kitty_flags.Int() == 0 {
+	if opts.KittyFlags.Int() == 0 {
 		return inputKeyEncodeLegacy(
 			writer,
 			event,
@@ -273,15 +273,15 @@ func inputKeyEncodeKitty(writer *oscWriter, event InputKeyKeyEvent, opts InputKe
 	}
 
 	// We only processed "press" events unless report events is active
-	if event.action == InputKeyActionRelease {
-		if !opts.kitty_flags.report_events {
+	if event.Action == InputKeyActionRelease {
+		if !opts.KittyFlags.ReportEvents {
 			return nil
 		}
 
 		// Enter, backspace, and tab do not report release events unless "report
 		// all" is set
-		if !opts.kitty_flags.report_all {
-			switch event.key {
+		if !opts.KittyFlags.ReportAll {
+			switch event.Key {
 			case InputKeyKeyEnter, InputKeyKeyBackspace, InputKeyKeyTab:
 				return nil
 			default:
@@ -289,7 +289,7 @@ func inputKeyEncodeKitty(writer *oscWriter, event InputKeyKeyEvent, opts InputKe
 		}
 	}
 
-	all_mods := event.mods
+	all_mods := event.Mods
 	effective_mods := event.EffectiveMods()
 	binding_mods := effective_mods.Binding()
 
@@ -298,7 +298,7 @@ func inputKeyEncodeKitty(writer *oscWriter, event InputKeyKeyEvent, opts InputKe
 	{ // entry:
 		// Functional or predefined keys
 		for _, entry := range InputKittyEntries {
-			if entry.key == event.key {
+			if entry.key == event.Key {
 				entry_ = Some(entry)
 				goto entry // break :entry entry
 			}
@@ -306,10 +306,10 @@ func inputKeyEncodeKitty(writer *oscWriter, event InputKeyKeyEvent, opts InputKe
 
 		// Otherwise, we use our unicode codepoint from UTF8. We
 		// always use the unshifted value.
-		if event.unshifted_codepoint > 0 {
+		if event.UnshiftedCodepoint > 0 {
 			entry_ = Some(InputKittyEntry{
-				key:      event.key,
-				code:     event.unshifted_codepoint,
+				key:      event.Key,
+				code:     event.UnshiftedCodepoint,
 				final:    'u',
 				modifier: false,
 			})
@@ -322,7 +322,7 @@ entry:
 
 	{ // preprocessing:
 		// When composing, the only keys sent are plain modifiers.
-		if event.composing {
+		if event.Composing {
 			if entry_.Valid {
 				entry := entry_.Value
 				if entry.modifier {
@@ -337,24 +337,24 @@ entry:
 		// and UTF8 text we just send it directly since we assume that is
 		// what's happening. See legacy()'s similar logic for more details
 		// on how to verify this.
-		if len(event.utf8) > 0 { // utf8:
-			switch event.key {
+		if len(event.UTF8) > 0 { // utf8:
+			switch event.Key {
 			default:
 			case InputKeyKeyEnter, InputKeyKeyBackspace: // inline ... => |tag|
-				tag := event.key
+				tag := event.Key
 				// See legacy for why we handle this this way.
-				if inputKeyEncodeIsControlUtf8(event.utf8) {
+				if inputKeyEncodeIsControlUtf8(event.UTF8) {
 					break // break :utf8
 				}
 				if tag == InputKeyKeyBackspace {
 					return nil
 				}
-				return writer.writeAll(event.utf8)
+				return writer.writeAll(event.UTF8)
 			}
 		}
 
 		// If we're reporting all then we always send CSI sequences.
-		if !opts.kitty_flags.report_all {
+		if !opts.KittyFlags.ReportAll {
 			// Quote:
 			// The only exceptions are the Enter, Tab and Backspace keys which
 			// still generate the same bytes as in legacy mode this is to allow the
@@ -365,7 +365,7 @@ entry:
 			// Note that all keys are reported as escape codes, including Enter,
 			// Tab, Backspace etc.
 			if binding_mods.Empty() {
-				switch event.key {
+				switch event.Key {
 				case InputKeyKeyEnter:
 					return writer.writeByte('\r')
 				case InputKeyKeyTab:
@@ -378,13 +378,13 @@ entry:
 
 			// Send plain-text non-modified text directly to the terminal.
 			// We don't send release events because those are specially encoded.
-			if len(event.utf8) > 0 &&
+			if len(event.UTF8) > 0 &&
 				binding_mods.Empty() &&
-				event.action != InputKeyActionRelease { // plain_text:
+				event.Action != InputKeyActionRelease { // plain_text:
 				// We only do this for printable characters. We should
 				// inspect the real unicode codepoint properties here but
 				// the real world issue is usually control characters.
-				if !utf8.Valid(event.utf8) {
+				if !utf8.Valid(event.UTF8) {
 					// Invalid UTF-8 so let's fallback to encoding the
 					// key press as if it didn't produce UTF-8 text. I'm
 					// not sure what should happen here according to the spec,
@@ -392,14 +392,14 @@ entry:
 					// this is a caller bug.
 					goto plain_text // break :plain_text
 				}
-				it := inputKeyEncodeUtf8Iterator{bytes: event.utf8}
+				it := inputKeyEncodeUtf8Iterator{bytes: event.UTF8}
 				for cp := it.nextCodepoint(); cp.Valid; cp = it.nextCodepoint() {
 					if inputKeyEncodeIsControl(cp.Value) {
 						goto plain_text // break :plain_text
 					}
 				}
 
-				return writer.writeAll(event.utf8)
+				return writer.writeAll(event.UTF8)
 			}
 		plain_text:
 		}
@@ -410,15 +410,15 @@ preprocessing:
 		// No entry found. If we have UTF-8 text this is a pure text event
 		// (e.g. composed/IME text), so send it as-is so programs can
 		// still receive it.
-		if len(event.utf8) > 0 {
-			return writer.writeAll(event.utf8)
+		if len(event.UTF8) > 0 {
+			return writer.writeAll(event.UTF8)
 		}
 		return nil
 	}
 	entry := entry_.Value
 
 	// If this is just a modifier we require "report all" to send the sequence.
-	if entry.modifier && !opts.kitty_flags.report_all {
+	if entry.modifier && !opts.KittyFlags.ReportAll {
 		return nil
 	}
 
@@ -428,14 +428,14 @@ preprocessing:
 			key:   entry.code,
 			final: entry.final,
 			mods: inputKeyEncodeKittyModsFromInput(
-				event.action,
-				event.key,
+				event.Action,
+				event.Key,
 				all_mods,
 			),
 		}
 
-		if opts.kitty_flags.report_events {
-			switch event.action {
+		if opts.KittyFlags.ReportEvents {
+			switch event.Action {
 			case InputKeyActionPress:
 				seq.event = inputKeyEncodeKittySequenceEventPress
 			case InputKeyActionRelease:
@@ -447,17 +447,17 @@ preprocessing:
 			}
 		}
 
-		if opts.kitty_flags.report_alternates { // alternates:
+		if opts.KittyFlags.ReportAlternates { // alternates:
 			// Break early if this is a control key
 			if inputKeyEncodeIsControl(seq.key) {
 				goto alternates // break :alternates
 			}
 
-			if !utf8.Valid(event.utf8) {
+			if !utf8.Valid(event.UTF8) {
 				// Assume invalid UTF-8 means no UTF-8.
 				goto alternates // break :alternates
 			}
-			it := inputKeyEncodeUtf8Iterator{bytes: event.utf8}
+			it := inputKeyEncodeUtf8Iterator{bytes: event.UTF8}
 
 			// If we have a codepoint in our UTF-8 sequence, then we can
 			// report the shifted version.
@@ -474,7 +474,7 @@ preprocessing:
 
 				// Set the base layout key. We only report this if this codepoint
 				// differs from our pressed key.
-				if base_ := event.key.Codepoint(); base_.Valid {
+				if base_ := event.Key.Codepoint(); base_.Valid {
 					base := base_.Value
 					if base != seq.key &&
 						(cp1 != base && !has_cp2) {
@@ -484,7 +484,7 @@ preprocessing:
 			} else {
 				// No UTF-8 so we can't report a shifted key but we can still
 				// report a base layout key.
-				if base_ := event.key.Codepoint(); base_.Valid {
+				if base_ := event.Key.Codepoint(); base_.Valid {
 					base := base_.Value
 					if base != seq.key {
 						seq.alternates[1] = Some(base)
@@ -494,18 +494,18 @@ preprocessing:
 		}
 	alternates:
 
-		if opts.kitty_flags.report_associated &&
+		if opts.KittyFlags.ReportAssociated &&
 			seq.event != inputKeyEncodeKittySequenceEventRelease { // associated:
 			// Determine if the Alt modifier should be treated as an actual
 			// modifier (in which case it prevents associated text) or as
 			// the macOS Option key, which does not prevent associated text.
 			var alt_prevents_text bool
 			if inputKeyEncodeIsMacos() { // comptime builtin.os.tag == .macos
-				switch opts.macos_option_as_alt {
+				switch opts.MacosOptionAsAlt {
 				case InputConfigOptionAsAltLeft:
-					alt_prevents_text = all_mods.sides.alt == InputKeyModsModSideLeft
+					alt_prevents_text = all_mods.Sides.Alt == InputKeyModsModSideLeft
 				case InputConfigOptionAsAltRight:
-					alt_prevents_text = all_mods.sides.alt == InputKeyModsModSideRight
+					alt_prevents_text = all_mods.Sides.Alt == InputKeyModsModSideRight
 				case InputConfigOptionAsAltTrue:
 					alt_prevents_text = true
 				case InputConfigOptionAsAltFalse:
@@ -521,7 +521,7 @@ preprocessing:
 				goto associated // break :associated
 			}
 
-			seq.text = event.utf8
+			seq.text = event.UTF8
 		}
 	associated:
 
@@ -544,28 +544,28 @@ preprocessing:
 // Zig's local `const utf8 = event.utf8` is `utf8_`: the name `utf8` is the
 // unicode/utf8 package, which the modify_other block needs.
 func inputKeyEncodeLegacy(writer *oscWriter, event InputKeyKeyEvent, opts InputKeyEncodeOptions) error {
-	all_mods := event.mods
+	all_mods := event.Mods
 	effective_mods := event.EffectiveMods()
 	binding_mods := effective_mods.Binding()
 
 	// Legacy encoding only does press/repeat
-	if event.action != InputKeyActionPress && event.action != InputKeyActionRepeat {
+	if event.Action != InputKeyActionPress && event.Action != InputKeyActionRepeat {
 		return nil
 	}
 
 	// If we're in a dead key state then we never emit a sequence.
-	if event.composing {
+	if event.Composing {
 		return nil
 	}
 
 	// If we match a PC style function key then that is our result.
 	if sequence_ := inputKeyEncodePcStyleFunctionKey(
-		event.key,
+		event.Key,
 		all_mods,
-		opts.cursor_key_application,
-		opts.keypad_key_application,
-		opts.ignore_keypad_with_numlock,
-		opts.modify_other_keys_state_2,
+		opts.CursorKeyApplication,
+		opts.KeypadKeyApplication,
+		opts.IgnoreKeypadWithNumlock,
+		opts.ModifyOtherKeysState2,
 	); sequence_.Valid { // pc_style:
 		sequence := sequence_.Value
 		// If we have UTF-8 text, then we never emit PC style function
@@ -577,15 +577,15 @@ func inputKeyEncodeLegacy(writer *oscWriter, event InputKeyKeyEvent, opts InputK
 		//   - Korean: escape commits the dead key state
 		//   - Korean: backspace should delete a single preedit char
 		//
-		if len(event.utf8) > 0 { // utf8:
-			switch event.key {
+		if len(event.UTF8) > 0 { // utf8:
+			switch event.Key {
 			default:
 			case InputKeyKeyBackspace, InputKeyKeyEnter, InputKeyKeyEscape: // inline ... => |tag|
-				tag := event.key
+				tag := event.Key
 				// We want to ignore control characters. This is because
 				// some apprts (macOS) will send control characters as
 				// UTF-8 encodings and we handle that manually.
-				if inputKeyEncodeIsControlUtf8(event.utf8) {
+				if inputKeyEncodeIsControlUtf8(event.UTF8) {
 					break // break :utf8
 				}
 
@@ -607,14 +607,14 @@ pc_style:
 	// ctrlSeq we have to use all mods because we want it to only
 	// match ctrl+<char>.
 	if char_ := inputKeyEncodeCtrlSeq(
-		event.key,
-		event.utf8,
-		event.unshifted_codepoint,
+		event.Key,
+		event.UTF8,
+		event.UnshiftedCodepoint,
 		all_mods,
 	); char_.Valid {
 		char := char_.Value
 		// C0 sequences support alt-as-esc prefixing.
-		if binding_mods.alt {
+		if binding_mods.Alt {
 			if err := writer.writeByte(0x1B); err != nil {
 				return err
 			}
@@ -632,7 +632,7 @@ pc_style:
 
 	// If we have no UTF8 text then the only possibility is the
 	// alt-prefix handling of unshifted codepoints... so we process that.
-	utf8_ := event.utf8
+	utf8_ := event.UTF8
 	if len(utf8_) == 0 {
 		byte_, err := inputKeyEncodeLegacyAltPrefix(
 			event,
@@ -655,7 +655,7 @@ pc_style:
 	// In modify other keys state 2, we send the CSI 27 sequence
 	// for any char with a modifier. Ctrl sequences like Ctrl+a
 	// are already handled above.
-	if opts.modify_other_keys_state_2 { // modify_other:
+	if opts.ModifyOtherKeysState2 { // modify_other:
 		if !utf8.Valid(utf8_) {
 			// Assume invalid UTF-8 means we no UTF-8.
 			goto modify_other // break :modify_other
@@ -677,24 +677,24 @@ pc_style:
 		// super, alt unless it is actually option).
 		var mods InputKeyMods
 		{ // mods:
-			mods_binding := event.mods.Binding()
+			mods_binding := event.Mods.Binding()
 			if inputKeyEncodeIsDarwin() { // comptime builtin.target.os.tag.isDarwin(); alt:
-				switch opts.macos_option_as_alt {
+				switch opts.MacosOptionAsAlt {
 				case InputConfigOptionAsAltFalse:
 				case InputConfigOptionAsAltTrue:
 					goto alt // break :alt
 				case InputConfigOptionAsAltLeft:
-					if event.mods.sides.alt == InputKeyModsModSideLeft {
+					if event.Mods.Sides.Alt == InputKeyModsModSideLeft {
 						goto alt // break :alt
 					}
 				case InputConfigOptionAsAltRight:
-					if event.mods.sides.alt == InputKeyModsModSideRight {
+					if event.Mods.Sides.Alt == InputKeyModsModSideRight {
 						goto alt // break :alt
 					}
 				default:
 					panic("unreachable")
 				}
-				mods_binding.alt = false
+				mods_binding.Alt = false
 			}
 		alt:
 			mods = mods_binding // break :mods mods_binding
@@ -713,7 +713,7 @@ pc_style:
 
 			// If we have anything other than shift pressed, encode.
 			mods_no_shift := mods
-			mods_no_shift.shift = false
+			mods_no_shift.Shift = false
 			if !mods_no_shift.Empty() {
 				should_modify = true
 				goto should_modify // break :should_modify true
@@ -751,7 +751,7 @@ modify_other:
 	// Let's see if we should apply fixterms to this codepoint.
 	// At this stage of key processing, we only need to apply fixterms
 	// to unicode codepoints if we have ctrl set.
-	if event.mods.ctrl { // csiu:
+	if event.Mods.Ctrl { // csiu:
 		// Important: we want to use the original mods here, not the
 		// effective mods. The fixterms spec states the shifted chars
 		// should be sent uppercase but Kitty changes that behavior
@@ -759,14 +759,14 @@ modify_other:
 		var csi_u_mods inputKeyEncodeCsiUMods
 		var char uint32
 		{ // mods:
-			mods := inputKeyEncodeCsiUModsFromInput(event.mods)
+			mods := inputKeyEncodeCsiUModsFromInput(event.Mods)
 
 			// Get our codepoint. If we have more than one codepoint this
 			// can't be valid CSIu.
-			if !utf8.Valid(event.utf8) {
+			if !utf8.Valid(event.UTF8) {
 				goto csiu // catch break :csiu
 			}
-			it := inputKeyEncodeUtf8Iterator{bytes: event.utf8}
+			it := inputKeyEncodeUtf8Iterator{bytes: event.UTF8}
 			char_ := it.nextCodepoint()
 			if !char_.Valid {
 				goto csiu // orelse break :csiu
@@ -797,7 +797,7 @@ modify_other:
 			// then we consider shift. Otherwise, we do not because the
 			// shift key was used to obtain the character. This is specified
 			// by fixterms.
-			if event.unshifted_codepoint != char {
+			if event.UnshiftedCodepoint != char {
 				mods.shift = false
 			}
 
@@ -836,7 +836,7 @@ csiu:
 	// For Linux, we continue to encode text because it is typical.
 	// For example on Gnome Console Super+b will encode a "b" character
 	// with legacy encoding.
-	if inputKeyEncodeIsMacos() && all_mods.super { // comptime builtin.os.tag == .macos
+	if inputKeyEncodeIsMacos() && all_mods.Super { // comptime builtin.os.tag == .macos
 		return nil
 	}
 
@@ -856,7 +856,7 @@ func inputKeyEncodeLegacyAltPrefix(
 	opts InputKeyEncodeOptions,
 ) (Optional[uint8], error) {
 	// This only takes effect with alt pressed
-	if !binding_mods.alt || !opts.alt_esc_prefix {
+	if !binding_mods.Alt || !opts.AltEscPrefix {
 		return Optional[uint8]{}, nil
 	}
 
@@ -864,15 +864,15 @@ func inputKeyEncodeLegacyAltPrefix(
 	// circumstances. Otherwise, macOS does a unicode translation
 	// and we allow that to happen.
 	if inputKeyEncodeIsMacos() { // comptime builtin.os.tag == .macos
-		switch opts.macos_option_as_alt {
+		switch opts.MacosOptionAsAlt {
 		case InputConfigOptionAsAltFalse:
 			return Optional[uint8]{}, nil
 		case InputConfigOptionAsAltLeft:
-			if mods.sides.alt == InputKeyModsModSideRight {
+			if mods.Sides.Alt == InputKeyModsModSideRight {
 				return Optional[uint8]{}, nil
 			}
 		case InputConfigOptionAsAltRight:
-			if mods.sides.alt == InputKeyModsModSideLeft {
+			if mods.Sides.Alt == InputKeyModsModSideLeft {
 				return Optional[uint8]{}, nil
 			}
 		case InputConfigOptionAsAltTrue:
@@ -882,7 +882,7 @@ func inputKeyEncodeLegacyAltPrefix(
 	}
 
 	// Otherwise, we require utf8 to already have the byte represented.
-	utf8 := event.utf8
+	utf8 := event.UTF8
 	if len(utf8) == 1 {
 		// std.math.cast(u8, utf8[0]) always succeeds: utf8[0] is a u8.
 		byte_ := utf8[0]
@@ -890,10 +890,10 @@ func inputKeyEncodeLegacyAltPrefix(
 	}
 
 	// If UTF8 isn't set, we will allow unshifted codepoints through.
-	if event.unshifted_codepoint > 0 {
+	if event.UnshiftedCodepoint > 0 {
 		// std.math.cast(u8, event.unshifted_codepoint)
-		if event.unshifted_codepoint <= 0xFF {
-			byte_ := uint8(event.unshifted_codepoint)
+		if event.UnshiftedCodepoint <= 0xFF {
+			byte_ := uint8(event.UnshiftedCodepoint)
 			return Some(byte_), nil
 		}
 	}
@@ -1050,7 +1050,7 @@ func inputKeyEncodePcStyleFunctionKey(
 // inputKeyEncodeCtrlSeqCtrlOnly is ctrlSeq's
 // `const ctrl_only = comptime (key.Mods{ .ctrl = true }).int();`, computed
 // once at start-up.
-var inputKeyEncodeCtrlSeqCtrlOnly = InputKeyMods{ctrl: true}.Int()
+var inputKeyEncodeCtrlSeqCtrlOnly = InputKeyMods{Ctrl: true}.Int()
 
 // inputKeyEncodeCtrlSeq is key_encode.ctrlSeq: returns the C0 byte for the
 // key event if it should be used. This converts a key event into the
@@ -1069,7 +1069,7 @@ func inputKeyEncodeCtrlSeq(
 	ctrl_only := inputKeyEncodeCtrlSeqCtrlOnly
 
 	// If ctrl is not pressed then we never do anything.
-	if !mods.ctrl {
+	if !mods.Ctrl {
 		return Optional[uint8]{}
 	}
 
@@ -1083,7 +1083,7 @@ func inputKeyEncodeCtrlSeq(
 		// Remove alt from our modifiers because it does not impact whether
 		// we are generating a ctrl sequence and we handle the ESC-prefix
 		// logic separately.
-		unset_mods.alt = false
+		unset_mods.Alt = false
 
 		{ // char:
 			// If we have exactly one UTF8 byte, we assume that is the
@@ -1125,12 +1125,12 @@ func inputKeyEncodeCtrlSeq(
 		// Remove shift if we have something outside of the US letter
 		// range. This is so that characters such as `ctrl+shift+-`
 		// generate the correct ctrl-seq (used by emacs).
-		if unset_mods.shift && (char < 'A' || char > 'Z') { // shift:
+		if unset_mods.Shift && (char < 'A' || char > 'Z') { // shift:
 			// Special case for fixterms awkward case as specified.
 			if char == '@' {
 				goto shift // break :shift
 			}
-			unset_mods.shift = false
+			unset_mods.Shift = false
 		}
 	shift:
 
@@ -1300,9 +1300,9 @@ type inputKeyEncodeCsiUMods struct {
 // an input mods value into the CSI u mods value.
 func inputKeyEncodeCsiUModsFromInput(mods InputKeyMods) inputKeyEncodeCsiUMods {
 	return inputKeyEncodeCsiUMods{
-		shift: mods.shift,
-		alt:   mods.alt,
-		ctrl:  mods.ctrl,
+		shift: mods.Shift,
+		alt:   mods.Alt,
+		ctrl:  mods.Ctrl,
 	}
 }
 
@@ -1369,12 +1369,12 @@ func inputKeyEncodeKittyModsFromInput(action InputKeyAction, k InputKeyKey, mods
 	_ = action
 	_ = k
 	return inputKeyEncodeKittyMods{
-		shift:     mods.shift,
-		alt:       mods.alt,
-		ctrl:      mods.ctrl,
-		super:     mods.super,
-		caps_lock: mods.caps_lock,
-		num_lock:  mods.num_lock,
+		shift:     mods.Shift,
+		alt:       mods.Alt,
+		ctrl:      mods.Ctrl,
+		super:     mods.Super,
+		caps_lock: mods.CapsLock,
+		num_lock:  mods.NumLock,
 	}
 }
 

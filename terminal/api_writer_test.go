@@ -11,7 +11,7 @@ import (
 
 func apiWriterTerminal(t *testing.T) *Terminal {
 	t.Helper()
-	term, err := TerminalInit(TerminalOptions{cols: 20, rows: 4, max_scrollback: 10_000, colors: TerminalColorsDefault, default_modes: ModesModePackedInit()})
+	term, err := TerminalInit(TerminalOptions{Cols: 20, Rows: 4, MaxScrollback: 10_000, Colors: TerminalColorsDefault, DefaultModes: ModesModePackedInit()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,10 +36,10 @@ func TestApiWriter_formatters_match_the_internal_writer(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(buf.Bytes(), aw.written()) || buf.Len() == 0 {
-			t.Errorf("emit %v: got %q, want %q", opts.emit, buf.Bytes(), aw.written())
+			t.Errorf("emit %v: got %q, want %q", opts.Emit, buf.Bytes(), aw.written())
 		}
 
-		sf := FormatterScreenFormatterInit(term.screens.active, opts)
+		sf := FormatterScreenFormatterInit(term.Screens.Active, opts)
 		aw = oscWriterAllocatingInit()
 		if err := sf.format(&aw.writer); err != nil {
 			t.Fatal(err)
@@ -49,7 +49,7 @@ func TestApiWriter_formatters_match_the_internal_writer(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(buf.Bytes(), aw.written()) {
-			t.Errorf("screen, emit %v: got %q, want %q", opts.emit, buf.Bytes(), aw.written())
+			t.Errorf("screen, emit %v: got %q, want %q", opts.Emit, buf.Bytes(), aw.written())
 		}
 	}
 }
@@ -58,7 +58,7 @@ func TestApiWriter_DumpString(t *testing.T) {
 	term := apiWriterTerminal(t)
 	defer term.Deinit()
 	var buf bytes.Buffer
-	if err := term.screens.active.DumpString(&buf, ScreenDumpStringOptions{tl: term.screens.active.pages.Pin(Point{Tag: PointTagScreen}).Value}); err != nil {
+	if err := term.Screens.Active.DumpString(&buf, ScreenDumpStringOptions{Tl: term.Screens.Active.Pages.Pin(Point{Tag: PointTagScreen}).Value}); err != nil {
 		t.Fatal(err)
 	}
 	if want := "hello world\nline 2 中文"; buf.String() != want {
@@ -68,7 +68,7 @@ func TestApiWriter_DumpString(t *testing.T) {
 
 func TestApiWriter_InputKeyEncodeEncode(t *testing.T) {
 	var buf bytes.Buffer
-	if err := InputKeyEncodeEncode(&buf, InputKeyKeyEvent{action: InputKeyActionPress, key: InputKeyKeyEscape}, InputKeyEncodeOptionsDefault); err != nil {
+	if err := InputKeyEncodeEncode(&buf, InputKeyKeyEvent{Action: InputKeyActionPress, Key: InputKeyKeyEscape}, InputKeyEncodeOptionsDefault); err != nil {
 		t.Fatal(err)
 	}
 	if buf.String() != "\x1b" {

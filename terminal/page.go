@@ -483,7 +483,7 @@ func pageInitBuf(rows []PageRow, cells []PageCell, l PageLayout) Page {
 		}
 	}
 
-	self.styles = RefCountedSetInit[Style, StyleId, SizeCellCountInt, StyleSetContext](
+	self.styles = RefCountedSetInit[Style, StyleID, SizeCellCountInt, StyleSetContext](
 		l.styles_layout,
 		StyleSetContext{},
 	)
@@ -498,10 +498,10 @@ func pageInitBuf(rows []PageRow, cells []PageCell, l PageLayout) Page {
 	self.grapheme_map = HashMapOffsetHashMapInit[SizeOffsetInt, []uint32, hashMapAutoContext[SizeOffsetInt]](
 		l.grapheme_map_layout,
 	)
-	self.hyperlink_map = HashMapOffsetHashMapInit[SizeOffsetInt, HyperlinkId, hashMapAutoContext[SizeOffsetInt]](
+	self.hyperlink_map = HashMapOffsetHashMapInit[SizeOffsetInt, HyperlinkID, hashMapAutoContext[SizeOffsetInt]](
 		l.hyperlink_map_layout,
 	)
-	self.hyperlink_set = RefCountedSetInit[HyperlinkPageEntry, HyperlinkId, SizeCellCountInt, HyperlinkSetContext](
+	self.hyperlink_set = RefCountedSetInit[HyperlinkPageEntry, HyperlinkID, SizeCellCountInt, HyperlinkSetContext](
 		l.hyperlink_set_layout,
 		HyperlinkSetContext{},
 	)
@@ -645,8 +645,8 @@ func (self *Page) VerifyIntegrity() error {
 	// Zig: std.AutoHashMap(StyleId, usize) and std.AutoHashMap(hyperlink.Id,
 	// usize). Go maps: only the order of the ref count checks below
 	// differs, which decides nothing but which mismatch is logged.
-	styles_seen := map[StyleId]uint{}
-	hyperlinks_seen := map[HyperlinkId]uint{}
+	styles_seen := map[StyleID]uint{}
+	hyperlinks_seen := map[HyperlinkID]uint{}
 
 	grapheme_count := self.GraphemeCount()
 
@@ -684,7 +684,7 @@ func (self *Page) VerifyIntegrity() error {
 				}
 			}
 
-			if cell.style_id != StyleDefaultId {
+			if cell.style_id != StyleDefaultID {
 				// If a cell has a style, it must be present in the styles
 				// set. Accessing it with `get` asserts that.
 				_ = self.styles.Get(
@@ -931,7 +931,7 @@ func (self *Page) Clone() (Page, error) {
 		return pageRebase(v, self.grapheme_alloc.chunks, result.grapheme_alloc.chunks, pageGraphemeChunk/4)
 	})
 	result.styles = pageCloneRefCountedSet(self.styles, func(v Style) Style { return v })
-	result.hyperlink_map = pageCloneHashMap(self.hyperlink_map, func(v HyperlinkId) HyperlinkId { return v })
+	result.hyperlink_map = pageCloneHashMap(self.hyperlink_map, func(v HyperlinkID) HyperlinkID { return v })
 	result.hyperlink_set = pageCloneRefCountedSet(self.hyperlink_set, func(v HyperlinkPageEntry) HyperlinkPageEntry {
 		v.uri = pageRebase(v.uri, self.string_alloc.chunks, result.string_alloc.chunks, pageStringChunk)
 		if v.id.Tag == HyperlinkPageEntryIdExplicit {
@@ -1115,7 +1115,7 @@ func (self *Page) exactRowCapacityOrError(y_start uint, y_end uint) (PageCapacit
 		cells := self.rowCells(row)[0:self.size.cols]
 		for j := range cells {
 			cell := &cells[j]
-			if cell.style_id != StyleDefaultId {
+			if cell.style_id != StyleDefaultID {
 				id_set.set(cell.style_id)
 			}
 
@@ -1313,7 +1313,7 @@ func (self *Page) ClonePartialRowFrom(
 			for _, cell := range other_cells {
 				assert(!cell.HasGrapheme())
 				assert(!cell.hyperlink)
-				assert(cell.style_id == StyleDefaultId)
+				assert(cell.style_id == StyleDefaultID)
 			}
 		}
 
@@ -1330,7 +1330,7 @@ func (self *Page) ClonePartialRowFrom(
 			// hit an integrity check if we have to return an error because
 			// the page can't fit the new memory.
 			dst_cell.hyperlink = false
-			dst_cell.style_id = StyleDefaultId
+			dst_cell.style_id = StyleDefaultID
 			if dst_cell.content_tag == PageCellContentTagCodepointGrapheme {
 				dst_cell.content_tag = PageCellContentTagCodepoint
 			}
@@ -1374,7 +1374,7 @@ func (self *Page) ClonePartialRowFrom(
 
 				{
 					other_link := other.hyperlink_set.Get(id)
-					var dst_id HyperlinkId
+					var dst_id HyperlinkID
 					{ // dst_id:
 						// First check if the link already exists in our page,
 						// and increment its refcount if so, since we're about
@@ -1439,7 +1439,7 @@ func (self *Page) ClonePartialRowFrom(
 				}
 			}
 		hyperlink:
-			if src_cell.style_id != StyleDefaultId {
+			if src_cell.style_id != StyleDefaultID {
 				// style:
 				dst_row.styled = true
 
@@ -1591,7 +1591,7 @@ func (self *Page) MoveCells(
 	if !dst_row.styled {
 		styled := false // styled: for (dst_cells) |c| { ... } else false
 		for _, c := range dst_cells {
-			if c.style_id != StyleDefaultId {
+			if c.style_id != StyleDefaultID {
 				styled = true // break :styled true
 				break
 			}
@@ -1755,7 +1755,7 @@ func (self *Page) ClearCells(row *PageRow, left uint, end uint) {
 // for the given cell.
 //
 // Zig: self is *const Page, cell is *const Cell; returns ?hyperlink.Id.
-func (self *Page) LookupHyperlink(cell *PageCell) Optional[HyperlinkId] {
+func (self *Page) LookupHyperlink(cell *PageCell) Optional[HyperlinkID] {
 	cell_offset := self.cellOffset(cell)
 	m := self.hyperlink_map.Map()
 	return m.Get(cell_offset)
@@ -1824,13 +1824,13 @@ var (
 // memory.
 //
 // Zig: InsertHyperlinkError!hyperlink.Id.
-func (self *Page) InsertHyperlink(link Hyperlink) (HyperlinkId, error) {
+func (self *Page) InsertHyperlink(link Hyperlink) (HyperlinkID, error) {
 	// Insert our URI into the page strings table.
 	// Zig: Offset(u8).Slice
 	var page_uri []uint8
 	{ // uri:
 		buf, err := self.string_alloc.Alloc(
-			uint(len(link.uri)),
+			uint(len(link.URI)),
 		)
 		if err != nil {
 			switch err {
@@ -1842,11 +1842,11 @@ func (self *Page) InsertHyperlink(link Hyperlink) (HyperlinkId, error) {
 		}
 		// Zig: errdefer self.string_alloc.free(self.memory, buf): nothing
 		// in this block fails after it.
-		copy(buf, link.uri) // @memcpy(buf, link.uri)
+		copy(buf, link.URI) // @memcpy(buf, link.uri)
 
 		// Zig: .{ .offset = size.getOffset(u8, self.memory, &buf[0]),
 		// .len = link.uri.len }: the allocation from its first byte.
-		page_uri = buf[0:len(link.uri)] // break :uri
+		page_uri = buf[0:len(link.URI)] // break :uri
 	}
 	// Zig: errdefer self.string_alloc.free(self.memory,
 	// page_uri.slice(self.memory)): written out before the error returns
@@ -1854,10 +1854,10 @@ func (self *Page) InsertHyperlink(link Hyperlink) (HyperlinkId, error) {
 
 	// Allocate an ID for our page memory if we have to.
 	var page_id HyperlinkPageEntryId
-	switch link.id.Tag {
+	switch link.ID.Tag {
 	case HyperlinkHyperlinkIdExplicit:
 		// explicit:
-		id := link.id.Explicit
+		id := link.ID.Explicit
 		buf, err := self.string_alloc.Alloc(
 			uint(len(id)),
 		)
@@ -1881,7 +1881,7 @@ func (self *Page) InsertHyperlink(link Hyperlink) (HyperlinkId, error) {
 		}
 
 	case HyperlinkHyperlinkIdImplicit:
-		page_id = HyperlinkPageEntryId{Tag: HyperlinkPageEntryIdImplicit, Implicit: link.id.Implicit}
+		page_id = HyperlinkPageEntryId{Tag: HyperlinkPageEntryIdImplicit, Implicit: link.ID.Implicit}
 
 	default:
 		panic("unreachable")
@@ -1940,7 +1940,7 @@ func (self *Page) InsertHyperlink(link Hyperlink) (HyperlinkId, error) {
 // `add`.
 //
 // Zig: error{HyperlinkMapOutOfMemory}!void.
-func (self *Page) SetHyperlink(row *PageRow, cell *PageCell, id HyperlinkId) error {
+func (self *Page) SetHyperlink(row *PageRow, cell *PageCell, id HyperlinkID) error {
 	defer self.AssertIntegrity()
 
 	cell_offset := self.cellOffset(cell)
@@ -2362,7 +2362,7 @@ type PageLayout struct {
 	cells_start           uint64
 	cells_size            uint64
 	styles_start          uint64
-	styles_layout         RefCountedSetLayout[StyleId]
+	styles_layout         RefCountedSetLayout[StyleID]
 	grapheme_alloc_start  uint64
 	grapheme_alloc_layout BitmapAllocatorLayout
 	grapheme_map_start    uint64
@@ -2372,7 +2372,7 @@ type PageLayout struct {
 	hyperlink_map_start   uint64
 	hyperlink_map_layout  HashMapOffsetHashMapLayout
 	hyperlink_set_start   uint64
-	hyperlink_set_layout  RefCountedSetLayout[HyperlinkId]
+	hyperlink_set_layout  RefCountedSetLayout[HyperlinkID]
 	capacity              PageCapacity
 }
 
@@ -2397,7 +2397,7 @@ func PageLayoutOf(cap PageCapacity) PageLayout {
 	cells_start := pageAlignForward(rows_end, pageAlignOfCell)
 	cells_end := cells_start + (cells_count * pageSizeOfCell)
 
-	styles_layout := RefCountedSetLayoutInit[StyleId](uint(cap.styles), styleSetItemSizes)
+	styles_layout := RefCountedSetLayoutInit[StyleID](uint(cap.styles), styleSetItemSizes)
 	styles_start := pageAlignForward(cells_end, pageStyleSetBaseAlign)
 	styles_end := styles_start + styles_layout.total_size
 
@@ -2432,7 +2432,7 @@ func PageLayoutOf(cap PageCapacity) PageLayout {
 
 	// Zig: @divFloor of the u16 by @sizeOf(hyperlink.Set.Item): a u16.
 	hyperlink_count := cap.hyperlink_bytes / hyperlinkSetItemSizeOf
-	hyperlink_set_layout := RefCountedSetLayoutInit[HyperlinkId](uint(hyperlink_count), hyperlinkSetItemSizes)
+	hyperlink_set_layout := RefCountedSetLayoutInit[HyperlinkID](uint(hyperlink_count), hyperlinkSetItemSizes)
 	hyperlink_set_start := pageAlignForward(string_end, pageHyperlinkSetBaseAlign)
 	hyperlink_set_end := hyperlink_set_start + hyperlink_set_layout.total_size
 
@@ -2851,7 +2851,7 @@ type PageCell struct {
 
 	// The style ID to use for this cell within the style map. Zero
 	// is always the default style so no lookup is required.
-	style_id StyleId
+	style_id StyleID
 
 	// The wide property of this cell, for wide characters. Characters in
 	// a terminal grid can only be 1 or 2 cells wide. A wide character
@@ -2937,9 +2937,9 @@ func (self PageCellContentTag) String() string {
 //
 // Zig: packed struct (24 bits): r is bits 0..7, g 8..15, b 16..23.
 type PageCellRGB struct {
-	r uint8
-	g uint8
-	b uint8
+	R uint8
+	G uint8
+	B uint8
 }
 
 // PageCellWide is page.Cell.Wide.
@@ -3024,9 +3024,9 @@ func (self PageCell) bitCast() uint64 {
 	// bits; the bits above that view come from color_rgb, the one view
 	// that covers all 24 (see PageCellContent).
 	var content uint64
-	rgb := uint64(self.content.color_rgb.r) |
-		uint64(self.content.color_rgb.g)<<8 |
-		uint64(self.content.color_rgb.b)<<16
+	rgb := uint64(self.content.color_rgb.R) |
+		uint64(self.content.color_rgb.G)<<8 |
+		uint64(self.content.color_rgb.B)<<16
 	switch self.content_tag & 0x3 {
 	case PageCellContentTagCodepoint, PageCellContentTagCodepointGrapheme:
 		content = uint64(self.content.codepoint)&0x1FFFFF | rgb&^0x1FFFFF
@@ -3063,12 +3063,12 @@ func pageCellFromBits(bits uint64) PageCell {
 			codepoint:     content & 0x1FFFFF,
 			color_palette: uint8(content),
 			color_rgb: PageCellRGB{
-				r: uint8(content),
-				g: uint8(content >> 8),
-				b: uint8(content >> 16),
+				R: uint8(content),
+				G: uint8(content >> 8),
+				B: uint8(content >> 16),
 			},
 		},
-		style_id:         StyleId(bits >> 26 & 0xFFFF),
+		style_id:         StyleID(bits >> 26 & 0xFFFF),
 		wide:             PageCellWide(bits >> 42 & 0x3),
 		protected:        bits>>44&1 != 0,
 		hyperlink:        bits>>45&1 != 0,
@@ -3140,7 +3140,7 @@ func (self PageCell) GridWidth() uint8 {
 
 // HasStyling is page.Cell.hasStyling.
 func (self PageCell) HasStyling() bool {
-	return self.style_id != StyleDefaultId
+	return self.style_id != StyleDefaultID
 }
 
 // IsEmpty is page.Cell.isEmpty: returns true if the cell has no text or

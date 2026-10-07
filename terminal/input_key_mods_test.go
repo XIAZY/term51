@@ -134,7 +134,7 @@ func TestKm_unnamed_key_mods_zig_160(t *testing.T) {
 	testPlatform(t, "linux")
 	// For our own understanding
 	expectEqual(t, uint16(0b0), (kmMods{}).Int())
-	expectEqual(t, uint16(0b0000_0001), (kmMods{shift: true}).Int())
+	expectEqual(t, uint16(0b0000_0001), (kmMods{Shift: true}).Int())
 }
 
 // Zig: test "translation macos-option-as-alt"
@@ -155,35 +155,35 @@ func TestKm_translation_macos_option_as_alt(t *testing.T) {
 
 			// Set
 			{
-				mods := kmMods{alt: true}
+				mods := kmMods{Alt: true}
 				result := mods.Translation(InputConfigOptionAsAltTrue)
 				expectEqual(t, kmMods{}, result)
 			}
 
 			// Set but disabled
 			{
-				mods := kmMods{alt: true}
+				mods := kmMods{Alt: true}
 				result := mods.Translation(InputConfigOptionAsAltFalse)
 				expectEqual(t, result, mods)
 			}
 
 			// Set wrong side
 			{
-				mods := kmMods{alt: true, sides: kmSides{alt: kmRight}}
+				mods := kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}
 				result := mods.Translation(InputConfigOptionAsAltLeft)
 				expectEqual(t, result, mods)
 			}
 			{
-				mods := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
+				mods := kmMods{Alt: true, Sides: kmSides{Alt: kmLeft}}
 				result := mods.Translation(InputConfigOptionAsAltRight)
 				expectEqual(t, result, mods)
 			}
 
 			// Set with other mods
 			{
-				mods := kmMods{alt: true, shift: true}
+				mods := kmMods{Alt: true, Shift: true}
 				result := mods.Translation(InputConfigOptionAsAltTrue)
-				expectEqual(t, kmMods{shift: true}, result)
+				expectEqual(t, kmMods{Shift: true}, result)
 			}
 		})
 	}
@@ -198,22 +198,22 @@ func TestKm_RemapSet_unsided_remap_creates_both_left_and_right_mappings(t *testi
 	set.Finalize()
 	expectEqual(t,
 		kmMods{
-			super: true,
-			sides: kmSides{super: kmLeft},
+			Super: true,
+			Sides: kmSides{Super: kmLeft},
 		},
 		set.Apply(kmMods{
-			ctrl:  true,
-			sides: kmSides{ctrl: kmLeft},
+			Ctrl:  true,
+			Sides: kmSides{Ctrl: kmLeft},
 		}),
 	)
 	expectEqual(t,
 		kmMods{
-			super: true,
-			sides: kmSides{super: kmLeft},
+			Super: true,
+			Sides: kmSides{Super: kmLeft},
 		},
 		set.Apply(kmMods{
-			ctrl:  true,
-			sides: kmSides{ctrl: kmRight},
+			Ctrl:  true,
+			Sides: kmSides{Ctrl: kmRight},
 		}),
 	)
 }
@@ -227,11 +227,11 @@ func TestKm_RemapSet_sided_from_only_maps_that_side(t *testing.T) {
 	kmParse(t, &set, "left_alt=ctrl")
 	set.Finalize()
 
-	left_alt := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
-	left_ctrl := kmMods{ctrl: true, sides: kmSides{ctrl: kmLeft}}
+	left_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmLeft}}
+	left_ctrl := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmLeft}}
 	expectEqual(t, left_ctrl, set.Apply(left_alt))
 
-	right_alt := kmMods{alt: true, sides: kmSides{alt: kmRight}}
+	right_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}
 	expectEqual(t, right_alt, set.Apply(right_alt))
 }
 
@@ -244,8 +244,8 @@ func TestKm_RemapSet_sided_to(t *testing.T) {
 	kmParse(t, &set, "ctrl=right_super")
 	set.Finalize()
 
-	left_ctrl := kmMods{ctrl: true, sides: kmSides{ctrl: kmLeft}}
-	right_super := kmMods{super: true, sides: kmSides{super: kmRight}}
+	left_ctrl := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmLeft}}
+	right_super := kmMods{Super: true, Sides: kmSides{Super: kmRight}}
 	expectEqual(t, right_super, set.Apply(left_ctrl))
 }
 
@@ -258,8 +258,8 @@ func TestKm_RemapSet_both_sides_specified(t *testing.T) {
 	kmParse(t, &set, "left_shift=right_ctrl")
 	set.Finalize()
 
-	left_shift := kmMods{shift: true, sides: kmSides{shift: kmLeft}}
-	right_ctrl := kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}
+	left_shift := kmMods{Shift: true, Sides: kmSides{Shift: kmLeft}}
+	right_ctrl := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}
 	expectEqual(t, right_ctrl, set.Apply(left_shift))
 }
 
@@ -273,12 +273,12 @@ func TestKm_RemapSet_multiple_parses_accumulate(t *testing.T) {
 	kmParse(t, &set, "left_alt=ctrl")
 	set.Finalize()
 
-	left_ctrl := kmMods{ctrl: true, sides: kmSides{ctrl: kmLeft}}
-	left_super := kmMods{super: true, sides: kmSides{super: kmLeft}}
+	left_ctrl := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmLeft}}
+	left_super := kmMods{Super: true, Sides: kmSides{Super: kmLeft}}
 	expectEqual(t, left_super, set.Apply(left_ctrl))
 
-	left_alt := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
-	left_ctrl_result := kmMods{ctrl: true, sides: kmSides{ctrl: kmLeft}}
+	left_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmLeft}}
+	left_ctrl_result := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmLeft}}
 	expectEqual(t, left_ctrl_result, set.Apply(left_alt))
 }
 
@@ -312,9 +312,9 @@ func TestKm_RemapSet_isRemapped_checks_mask(t *testing.T) {
 	kmParse(t, &set, "ctrl=super")
 	set.Finalize()
 
-	expect(t, set.IsRemapped(kmMods{ctrl: true}), "set.isRemapped(.{ .ctrl = true })")
-	expect(t, !set.IsRemapped(kmMods{alt: true}), "!set.isRemapped(.{ .alt = true })")
-	expect(t, !set.IsRemapped(kmMods{shift: true}), "!set.isRemapped(.{ .shift = true })")
+	expect(t, set.IsRemapped(kmMods{Ctrl: true}), "set.isRemapped(.{ .ctrl = true })")
+	expect(t, !set.IsRemapped(kmMods{Alt: true}), "!set.isRemapped(.{ .alt = true })")
+	expect(t, !set.IsRemapped(kmMods{Shift: true}), "!set.isRemapped(.{ .shift = true })")
 }
 
 // Zig: test "RemapSet: clone creates independent copy"
@@ -331,7 +331,7 @@ func TestKm_RemapSet_clone_creates_independent_copy(t *testing.T) {
 	defer cloned.Deinit()
 
 	expect(t, set.Equal(cloned), "set.equal(cloned)")
-	expect(t, cloned.IsRemapped(kmMods{ctrl: true}), "cloned.isRemapped(.{ .ctrl = true })")
+	expect(t, cloned.IsRemapped(kmMods{Ctrl: true}), "cloned.isRemapped(.{ .ctrl = true })")
 }
 
 // Zig: test "RemapSet: equal compares correctly"
@@ -397,8 +397,8 @@ func TestKm_RemapSet_parse_aliased_modifiers(t *testing.T) {
 	kmParse(t, &set, "cmd=ctrl")
 	set.Finalize()
 
-	left_super := kmMods{super: true, sides: kmSides{super: kmLeft}}
-	left_ctrl := kmMods{ctrl: true, sides: kmSides{ctrl: kmLeft}}
+	left_super := kmMods{Super: true, Sides: kmSides{Super: kmLeft}}
+	left_ctrl := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmLeft}}
 	expectEqual(t, left_ctrl, set.Apply(left_super))
 }
 
@@ -411,8 +411,8 @@ func TestKm_RemapSet_parse_aliased_modifiers_command(t *testing.T) {
 	kmParse(t, &set, "command=alt")
 	set.Finalize()
 
-	left_super := kmMods{super: true, sides: kmSides{super: kmLeft}}
-	left_alt := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
+	left_super := kmMods{Super: true, Sides: kmSides{Super: kmLeft}}
+	left_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmLeft}}
 	expectEqual(t, left_alt, set.Apply(left_super))
 }
 
@@ -425,8 +425,8 @@ func TestKm_RemapSet_parse_aliased_modifiers_opt_and_option(t *testing.T) {
 	kmParse(t, &set, "opt=super")
 	set.Finalize()
 
-	left_alt := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
-	left_super := kmMods{super: true, sides: kmSides{super: kmLeft}}
+	left_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmLeft}}
+	left_super := kmMods{Super: true, Sides: kmSides{Super: kmLeft}}
 	expectEqual(t, left_super, set.Apply(left_alt))
 
 	set.Deinit()
@@ -435,7 +435,7 @@ func TestKm_RemapSet_parse_aliased_modifiers_opt_and_option(t *testing.T) {
 	kmParse(t, &set, "option=shift")
 	set.Finalize()
 
-	left_shift := kmMods{shift: true, sides: kmSides{shift: kmLeft}}
+	left_shift := kmMods{Shift: true, Sides: kmSides{Shift: kmLeft}}
 	expectEqual(t, left_shift, set.Apply(left_alt))
 }
 
@@ -448,8 +448,8 @@ func TestKm_RemapSet_parse_aliased_modifiers_control(t *testing.T) {
 	kmParse(t, &set, "control=super")
 	set.Finalize()
 
-	left_ctrl := kmMods{ctrl: true, sides: kmSides{ctrl: kmLeft}}
-	left_super := kmMods{super: true, sides: kmSides{super: kmLeft}}
+	left_ctrl := kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmLeft}}
+	left_super := kmMods{Super: true, Sides: kmSides{Super: kmLeft}}
 	expectEqual(t, left_super, set.Apply(left_ctrl))
 }
 
@@ -462,8 +462,8 @@ func TestKm_RemapSet_parse_aliased_modifiers_on_target_side(t *testing.T) {
 	kmParse(t, &set, "alt=cmd")
 	set.Finalize()
 
-	left_alt := kmMods{alt: true, sides: kmSides{alt: kmLeft}}
-	left_super := kmMods{super: true, sides: kmSides{super: kmLeft}}
+	left_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmLeft}}
+	left_super := kmMods{Super: true, Sides: kmSides{Super: kmLeft}}
 	expectEqual(t, left_super, set.Apply(left_alt))
 }
 
@@ -520,12 +520,12 @@ func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
 		name string
 		set  func(m *kmMods)
 	}{
-		{"shift", func(m *kmMods) { m.shift = true }},
-		{"ctrl", func(m *kmMods) { m.ctrl = true }},
-		{"alt", func(m *kmMods) { m.alt = true }},
-		{"super", func(m *kmMods) { m.super = true }},
-		{"caps_lock", func(m *kmMods) { m.caps_lock = true }},
-		{"num_lock", func(m *kmMods) { m.num_lock = true }},
+		{"shift", func(m *kmMods) { m.Shift = true }},
+		{"ctrl", func(m *kmMods) { m.Ctrl = true }},
+		{"alt", func(m *kmMods) { m.Alt = true }},
+		{"super", func(m *kmMods) { m.Super = true }},
+		{"caps_lock", func(m *kmMods) { m.CapsLock = true }},
+		{"num_lock", func(m *kmMods) { m.NumLock = true }},
 	}
 	for i, f := range fields {
 		var m kmMods
@@ -534,10 +534,10 @@ func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
 	}
 
 	// Side bits sit at 6 through 9.
-	expectEqual(t, uint16(1<<6), (kmMods{sides: kmSides{shift: kmRight}}).Int())
-	expectEqual(t, uint16(1<<7), (kmMods{sides: kmSides{ctrl: kmRight}}).Int())
-	expectEqual(t, uint16(1<<8), (kmMods{sides: kmSides{alt: kmRight}}).Int())
-	expectEqual(t, uint16(1<<9), (kmMods{sides: kmSides{super: kmRight}}).Int())
+	expectEqual(t, uint16(1<<6), (kmMods{Sides: kmSides{Shift: kmRight}}).Int())
+	expectEqual(t, uint16(1<<7), (kmMods{Sides: kmSides{Ctrl: kmRight}}).Int())
+	expectEqual(t, uint16(1<<8), (kmMods{Sides: kmSides{Alt: kmRight}}).Int())
+	expectEqual(t, uint16(1<<9), (kmMods{Sides: kmSides{Super: kmRight}}).Int())
 
 	// Padding sits at 10 through 15.
 	expectEqual(t, uint16(1<<10), (kmMods{_padding: 1}).Int())
@@ -545,14 +545,14 @@ func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
 
 	// Everything set.
 	all := kmMods{
-		shift:     true,
-		ctrl:      true,
-		alt:       true,
-		super:     true,
-		caps_lock: true,
-		num_lock:  true,
-		sides:     kmSides{shift: kmRight, ctrl: kmRight, alt: kmRight, super: kmRight},
-		_padding:  0x3f,
+		Shift:    true,
+		Ctrl:     true,
+		Alt:      true,
+		Super:    true,
+		CapsLock: true,
+		NumLock:  true,
+		Sides:    kmSides{Shift: kmRight, Ctrl: kmRight, Alt: kmRight, Super: kmRight},
+		_padding: 0x3f,
 	}
 	expectEqual(t, uint16(0xFFFF), all.Int())
 	expectEqual(t, all, kmModsFromInt(0xFFFF))
@@ -562,16 +562,16 @@ func TestKm_term51_Mods_int_bit_position_of_every_field(t *testing.T) {
 func TestKm_term51_Mods_side_mask(t *testing.T) {
 	testPlatform(t, "linux")
 	expectEqual(t, uint16(0x3C0), InputKeyModsModsSideMask.Int())
-	expect(t, !InputKeyModsModsSideMask.shift, "!Mods.side_mask.shift")
-	expect(t, !InputKeyModsModsSideMask.ctrl, "!Mods.side_mask.ctrl")
-	expect(t, !InputKeyModsModsSideMask.alt, "!Mods.side_mask.alt")
-	expect(t, !InputKeyModsModsSideMask.super, "!Mods.side_mask.super")
-	expect(t, !InputKeyModsModsSideMask.caps_lock, "!Mods.side_mask.caps_lock")
-	expect(t, !InputKeyModsModsSideMask.num_lock, "!Mods.side_mask.num_lock")
-	expectEqual(t, kmRight, InputKeyModsModsSideMask.sides.shift)
-	expectEqual(t, kmRight, InputKeyModsModsSideMask.sides.ctrl)
-	expectEqual(t, kmRight, InputKeyModsModsSideMask.sides.alt)
-	expectEqual(t, kmRight, InputKeyModsModsSideMask.sides.super)
+	expect(t, !InputKeyModsModsSideMask.Shift, "!Mods.side_mask.shift")
+	expect(t, !InputKeyModsModsSideMask.Ctrl, "!Mods.side_mask.ctrl")
+	expect(t, !InputKeyModsModsSideMask.Alt, "!Mods.side_mask.alt")
+	expect(t, !InputKeyModsModsSideMask.Super, "!Mods.side_mask.super")
+	expect(t, !InputKeyModsModsSideMask.CapsLock, "!Mods.side_mask.caps_lock")
+	expect(t, !InputKeyModsModsSideMask.NumLock, "!Mods.side_mask.num_lock")
+	expectEqual(t, kmRight, InputKeyModsModsSideMask.Sides.Shift)
+	expectEqual(t, kmRight, InputKeyModsModsSideMask.Sides.Ctrl)
+	expectEqual(t, kmRight, InputKeyModsModsSideMask.Sides.Alt)
+	expectEqual(t, kmRight, InputKeyModsModsSideMask.Sides.Super)
 }
 
 // Zig: test "term51: Mods.Side: defaults and bit layout"
@@ -579,17 +579,17 @@ func TestKm_term51_Mods_Side_defaults_and_bit_layout(t *testing.T) {
 	testPlatform(t, "linux")
 	d := kmSides{}
 	expectEqual(t, uint8(0), d.Int())
-	expectEqual(t, kmLeft, d.shift)
-	expectEqual(t, kmLeft, d.ctrl)
-	expectEqual(t, kmLeft, d.alt)
-	expectEqual(t, kmLeft, d.super)
-	expectEqual(t, uint8(0b0001), (kmSides{shift: kmRight}).Int())
-	expectEqual(t, uint8(0b0010), (kmSides{ctrl: kmRight}).Int())
-	expectEqual(t, uint8(0b0100), (kmSides{alt: kmRight}).Int())
-	expectEqual(t, uint8(0b1000), (kmSides{super: kmRight}).Int())
+	expectEqual(t, kmLeft, d.Shift)
+	expectEqual(t, kmLeft, d.Ctrl)
+	expectEqual(t, kmLeft, d.Alt)
+	expectEqual(t, kmLeft, d.Super)
+	expectEqual(t, uint8(0b0001), (kmSides{Shift: kmRight}).Int())
+	expectEqual(t, uint8(0b0010), (kmSides{Ctrl: kmRight}).Int())
+	expectEqual(t, uint8(0b0100), (kmSides{Alt: kmRight}).Int())
+	expectEqual(t, uint8(0b1000), (kmSides{Super: kmRight}).Int())
 	expectEqual(t,
 		uint8(0b1111),
-		InputKeyModsModsSideMask.sides.Int(),
+		InputKeyModsModsSideMask.Sides.Int(),
 	)
 }
 
@@ -597,15 +597,15 @@ func TestKm_term51_Mods_Side_defaults_and_bit_layout(t *testing.T) {
 func TestKm_term51_Mods_Keys_int_every_bit(t *testing.T) {
 	testPlatform(t, "linux")
 	expectEqual(t, uint8(0), (InputKeyModsModsKeys{}).Int())
-	expectEqual(t, uint8(0b0001), (InputKeyModsModsKeys{shift: true}).Int())
-	expectEqual(t, uint8(0b0010), (InputKeyModsModsKeys{ctrl: true}).Int())
-	expectEqual(t, uint8(0b0100), (InputKeyModsModsKeys{alt: true}).Int())
-	expectEqual(t, uint8(0b1000), (InputKeyModsModsKeys{super: true}).Int())
+	expectEqual(t, uint8(0b0001), (InputKeyModsModsKeys{Shift: true}).Int())
+	expectEqual(t, uint8(0b0010), (InputKeyModsModsKeys{Ctrl: true}).Int())
+	expectEqual(t, uint8(0b0100), (InputKeyModsModsKeys{Alt: true}).Int())
+	expectEqual(t, uint8(0b1000), (InputKeyModsModsKeys{Super: true}).Int())
 	expectEqual(t, uint8(0b1111), (InputKeyModsModsKeys{
-		shift: true,
-		ctrl:  true,
-		alt:   true,
-		super: true,
+		Shift: true,
+		Ctrl:  true,
+		Alt:   true,
+		Super: true,
 	}).Int())
 }
 
@@ -618,10 +618,10 @@ func TestKm_term51_Mods_empty_defaults_and_every_bit(t *testing.T) {
 		expect(t, !m.Empty(), "!m.empty()")
 	}
 	// A right side bit counts even if no key bit is set.
-	expect(t, !(kmMods{sides: kmSides{alt: kmRight}}).Empty(), "!(Mods{ .sides = .{ .alt = .right } }).empty()")
+	expect(t, !(kmMods{Sides: kmSides{Alt: kmRight}}).Empty(), "!(Mods{ .sides = .{ .alt = .right } }).empty()")
 	// Locks count.
-	expect(t, !(kmMods{caps_lock: true}).Empty(), "!(Mods{ .caps_lock = true }).empty()")
-	expect(t, !(kmMods{num_lock: true}).Empty(), "!(Mods{ .num_lock = true }).empty()")
+	expect(t, !(kmMods{CapsLock: true}).Empty(), "!(Mods{ .caps_lock = true }).empty()")
+	expect(t, !(kmMods{NumLock: true}).Empty(), "!(Mods{ .num_lock = true }).empty()")
 	// Padding counts.
 	expect(t, !(kmMods{_padding: 1}).Empty(), "!(Mods{ ._padding = 1 }).empty()")
 	expect(t, !kmModsFromInt(0xFFFF).Empty(), "!term51ADModsFromInt(0xFFFF).empty()")
@@ -645,9 +645,9 @@ func TestKm_term51_Mods_equal_every_bit_and_symmetry(t *testing.T) {
 		}
 	}
 	expect(t, (kmMods{}).Equal(kmMods{}), "(Mods{}).equal(.{})")
-	expect(t, (kmMods{ctrl: true, caps_lock: true}).Equal(kmMods{ctrl: true, caps_lock: true}), "(Mods{ .ctrl = true, .caps_lock = true }).equal(.{ .ctrl = true, .caps_lock = true })")
-	expect(t, !(kmMods{ctrl: true}).Equal(kmMods{ctrl: true, caps_lock: true}), "!(Mods{ .ctrl = true }).equal(.{ .ctrl = true, .caps_lock = true })")
-	expect(t, !(kmMods{ctrl: true}).Equal(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}), "!(Mods{ .ctrl = true }).equal(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
+	expect(t, (kmMods{Ctrl: true, CapsLock: true}).Equal(kmMods{Ctrl: true, CapsLock: true}), "(Mods{ .ctrl = true, .caps_lock = true }).equal(.{ .ctrl = true, .caps_lock = true })")
+	expect(t, !(kmMods{Ctrl: true}).Equal(kmMods{Ctrl: true, CapsLock: true}), "!(Mods{ .ctrl = true }).equal(.{ .ctrl = true, .caps_lock = true })")
+	expect(t, !(kmMods{Ctrl: true}).Equal(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}), "!(Mods{ .ctrl = true }).equal(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
 }
 
 // Zig: test "term51: Mods.keys: only the low four bits"
@@ -662,11 +662,11 @@ func TestKm_term51_Mods_keys_only_the_low_four_bits(t *testing.T) {
 		expectEqual(t, expected, m.Keys().Int())
 	}
 	all := kmModsFromInt(0xFFFF)
-	expectEqual(t, InputKeyModsModsKeys{shift: true, ctrl: true, alt: true, super: true}, all.Keys())
-	expectEqual(t, InputKeyModsModsKeys{}, (kmMods{caps_lock: true, num_lock: true}).Keys())
+	expectEqual(t, InputKeyModsModsKeys{Shift: true, Ctrl: true, Alt: true, Super: true}, all.Keys())
+	expectEqual(t, InputKeyModsModsKeys{}, (kmMods{CapsLock: true, NumLock: true}).Keys())
 	expectEqual(t,
-		InputKeyModsModsKeys{alt: true},
-		(kmMods{alt: true, caps_lock: true, sides: kmSides{alt: kmRight}}).Keys(),
+		InputKeyModsModsKeys{Alt: true},
+		(kmMods{Alt: true, CapsLock: true, Sides: kmSides{Alt: kmRight}}).Keys(),
 	)
 }
 
@@ -682,12 +682,12 @@ func TestKm_term51_Mods_binding_drops_locks_sides_and_padding(t *testing.T) {
 		expectEqual(t, expected, m.Binding().Int())
 	}
 	expectEqual(t,
-		kmMods{shift: true, ctrl: true, alt: true, super: true},
+		kmMods{Shift: true, Ctrl: true, Alt: true, Super: true},
 		kmModsFromInt(0xFFFF).Binding(),
 	)
 	expectEqual(t,
-		kmMods{ctrl: true},
-		(kmMods{ctrl: true, caps_lock: true, num_lock: true, sides: kmSides{ctrl: kmRight}}).Binding(),
+		kmMods{Ctrl: true},
+		(kmMods{Ctrl: true, CapsLock: true, NumLock: true, Sides: kmSides{Ctrl: kmRight}}).Binding(),
 	)
 	expectEqual(t, kmMods{}, (kmMods{}).Binding())
 }
@@ -700,27 +700,27 @@ func TestKm_term51_Mods_unset_self_and_not_other(t *testing.T) {
 	expectEqual(t, all, all.Unset(kmMods{}))
 	expectEqual(t, kmMods{}, (kmMods{}).Unset(all))
 	expectEqual(t,
-		kmMods{shift: true, alt: true},
-		(kmMods{shift: true, ctrl: true, alt: true}).Unset(kmMods{ctrl: true}),
+		kmMods{Shift: true, Alt: true},
+		(kmMods{Shift: true, Ctrl: true, Alt: true}).Unset(kmMods{Ctrl: true}),
 	)
 	// Bits only in other are ignored.
 	expectEqual(t,
-		kmMods{shift: true},
-		(kmMods{shift: true}).Unset(kmMods{ctrl: true, alt: true}),
+		kmMods{Shift: true},
+		(kmMods{Shift: true}).Unset(kmMods{Ctrl: true, Alt: true}),
 	)
 	// Locks and sides are plain bits too.
 	expectEqual(t,
-		kmMods{ctrl: true},
-		(kmMods{ctrl: true, caps_lock: true, num_lock: true}).Unset(kmMods{caps_lock: true, num_lock: true}),
+		kmMods{Ctrl: true},
+		(kmMods{Ctrl: true, CapsLock: true, NumLock: true}).Unset(kmMods{CapsLock: true, NumLock: true}),
 	)
 	expectEqual(t,
-		kmMods{alt: true},
-		(kmMods{alt: true, sides: kmSides{alt: kmRight}}).Unset(kmMods{sides: kmSides{alt: kmRight}}),
+		kmMods{Alt: true},
+		(kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}).Unset(kmMods{Sides: kmSides{Alt: kmRight}}),
 	)
 	// Removing the key bit leaves the side bit.
 	expectEqual(t,
-		kmMods{sides: kmSides{alt: kmRight}},
-		(kmMods{alt: true, sides: kmSides{alt: kmRight}}).Unset(kmMods{alt: true}),
+		kmMods{Sides: kmSides{Alt: kmRight}},
+		(kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}).Unset(kmMods{Alt: true}),
 	)
 	// Every single bit against the all-ones value.
 	for i := uint(0); i < 16; i++ {
@@ -732,16 +732,16 @@ func TestKm_term51_Mods_unset_self_and_not_other(t *testing.T) {
 // Zig: test "term51: Mods.withoutLocks: clears only caps and num lock"
 func TestKm_term51_Mods_withoutLocks_clears_only_caps_and_num_lock(t *testing.T) {
 	testPlatform(t, "linux")
-	expectEqual(t, kmMods{}, (kmMods{caps_lock: true, num_lock: true}).WithoutLocks())
-	expectEqual(t, kmMods{}, (kmMods{caps_lock: true}).WithoutLocks())
-	expectEqual(t, kmMods{}, (kmMods{num_lock: true}).WithoutLocks())
+	expectEqual(t, kmMods{}, (kmMods{CapsLock: true, NumLock: true}).WithoutLocks())
+	expectEqual(t, kmMods{}, (kmMods{CapsLock: true}).WithoutLocks())
+	expectEqual(t, kmMods{}, (kmMods{NumLock: true}).WithoutLocks())
 	expectEqual(t, kmMods{}, (kmMods{}).WithoutLocks())
 	all := kmModsFromInt(0xFFFF)
 	// 0xFFFF minus bits 4 and 5.
 	expectEqual(t, uint16(0xFFCF), all.WithoutLocks().Int())
 	expectEqual(t,
-		kmMods{shift: true, alt: true, sides: kmSides{alt: kmRight}},
-		(kmMods{shift: true, alt: true, caps_lock: true, num_lock: true, sides: kmSides{alt: kmRight}}).WithoutLocks(),
+		kmMods{Shift: true, Alt: true, Sides: kmSides{Alt: kmRight}},
+		(kmMods{Shift: true, Alt: true, CapsLock: true, NumLock: true, Sides: kmSides{Alt: kmRight}}).WithoutLocks(),
 	)
 }
 
@@ -762,11 +762,11 @@ func TestKm_term51_Mods_translation_option_as_alt(t *testing.T) {
 
 			inputs := [...]kmMods{
 				{},
-				{alt: true},
-				{alt: true, sides: kmSides{alt: kmRight}},
-				{alt: true, shift: true, caps_lock: true},
-				{shift: true, ctrl: true, super: true},
-				{sides: kmSides{alt: kmRight}},
+				{Alt: true},
+				{Alt: true, Sides: kmSides{Alt: kmRight}},
+				{Alt: true, Shift: true, CapsLock: true},
+				{Shift: true, Ctrl: true, Super: true},
+				{Sides: kmSides{Alt: kmRight}},
 			}
 			for _, mods := range inputs {
 				for _, opt := range options {
@@ -779,12 +779,12 @@ func TestKm_term51_Mods_translation_option_as_alt(t *testing.T) {
 						case InputConfigOptionAsAltTrue:
 							unset = true
 						case InputConfigOptionAsAltLeft:
-							unset = mods.sides.alt != kmRight
+							unset = mods.Sides.Alt != kmRight
 						case InputConfigOptionAsAltRight:
-							unset = mods.sides.alt != kmLeft
+							unset = mods.Sides.Alt != kmLeft
 						}
 						if unset {
-							expected.alt = false
+							expected.Alt = false
 						}
 					}
 					expectEqual(t, expected, mods.Translation(opt))
@@ -793,11 +793,11 @@ func TestKm_term51_Mods_translation_option_as_alt(t *testing.T) {
 
 			// Only the alt flag is cleared: the side bit is retained.
 			if is_darwin {
-				r := (kmMods{alt: true, sides: kmSides{alt: kmRight}}).Translation(InputConfigOptionAsAltRight)
-				expectEqual(t, kmMods{sides: kmSides{alt: kmRight}}, r)
+				r := (kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}).Translation(InputConfigOptionAsAltRight)
+				expectEqual(t, kmMods{Sides: kmSides{Alt: kmRight}}, r)
 			} else {
 				// Not macOS: translation never changes anything.
-				m := kmMods{alt: true}
+				m := kmMods{Alt: true}
 				expectEqual(t, m, m.Translation(InputConfigOptionAsAltTrue))
 				expectEqual(t, m, m.Translation(InputConfigOptionAsAltLeft))
 				expectEqual(t, m, m.Translation(InputConfigOptionAsAltRight))
@@ -815,13 +815,13 @@ func TestKm_term51_Mods_ctrlOrSuper_checks_ctrl_or_super_per_platform(t *testing
 			testPlatform(t, goos)
 			is_darwin := kmIsDarwin(goos)
 			expect(t, !(kmMods{}).CtrlOrSuper(), "!(Mods{}).ctrlOrSuper()")
-			expectEqual(t, !is_darwin, (kmMods{ctrl: true}).CtrlOrSuper())
-			expectEqual(t, is_darwin, (kmMods{super: true}).CtrlOrSuper())
-			expect(t, (kmMods{ctrl: true, super: true}).CtrlOrSuper(), "(Mods{ .ctrl = true, .super = true }).ctrlOrSuper()")
-			expect(t, !(kmMods{shift: true, alt: true, caps_lock: true, num_lock: true}).CtrlOrSuper(), "!(Mods{ .shift = true, .alt = true, .caps_lock = true, .num_lock = true }).ctrlOrSuper()")
+			expectEqual(t, !is_darwin, (kmMods{Ctrl: true}).CtrlOrSuper())
+			expectEqual(t, is_darwin, (kmMods{Super: true}).CtrlOrSuper())
+			expect(t, (kmMods{Ctrl: true, Super: true}).CtrlOrSuper(), "(Mods{ .ctrl = true, .super = true }).ctrlOrSuper()")
+			expect(t, !(kmMods{Shift: true, Alt: true, CapsLock: true, NumLock: true}).CtrlOrSuper(), "!(Mods{ .shift = true, .alt = true, .caps_lock = true, .num_lock = true }).ctrlOrSuper()")
 			expectEqual(t,
 				!is_darwin,
-				(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}).CtrlOrSuper(),
+				(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}).CtrlOrSuper(),
 			)
 		})
 	}
@@ -833,7 +833,7 @@ func TestKm_term51_RemapSet_empty_value(t *testing.T) {
 	set := InputKeyModsRemapSetEmpty
 	expectEqual(t, uint(0), set.map_.Count())
 	expectEqual(t, uint16(0), kmMask(&set))
-	expect(t, !set.IsRemapped(kmMods{ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
+	expect(t, !set.IsRemapped(kmMods{Ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
 	expect(t, set.Equal(InputKeyModsRemapSetEmpty), "set.equal(.empty)")
 }
 
@@ -864,10 +864,10 @@ func TestKm_term51_RemapSet_initMods_every_mod_and_side(t *testing.T) {
 	expectEqual(t, uint16(0x104), inputKeyModsRemapSetInitMods(InputKeyModsModAlt, kmRight).Int())
 	expectEqual(t, uint16(0x208), inputKeyModsRemapSetInitMods(InputKeyModsModSuper, kmRight).Int())
 	expectEqual(t,
-		kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}},
+		kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}},
 		inputKeyModsRemapSetInitMods(InputKeyModsModCtrl, kmRight),
 	)
-	expectEqual(t, kmMods{alt: true}, inputKeyModsRemapSetInitMods(InputKeyModsModAlt, kmLeft))
+	expectEqual(t, kmMods{Alt: true}, inputKeyModsRemapSetInitMods(InputKeyModsModAlt, kmLeft))
 }
 
 // kmExpectParsedMod is term51ADExpectParsedMod.
@@ -1041,8 +1041,8 @@ func TestKm_term51_RemapSet_parse_mask_only_tracks_the_from_side(t *testing.T) {
 	defer set.Deinit()
 	kmParse(t, &set, "left_ctrl=right_super")
 	expectEqual(t, uint16(0x022), kmMask(&set))
-	expect(t, !set.mask.keys.super, "!set.mask.keys.super")
-	expect(t, !set.IsRemapped(kmMods{super: true}), "!set.isRemapped(.{ .super = true })")
+	expect(t, !set.mask.keys.Super, "!set.mask.keys.super")
+	expect(t, !set.IsRemapped(kmMods{Super: true}), "!set.isRemapped(.{ .super = true })")
 }
 
 // Zig: test "term51: RemapSet.parse: same from replaces the previous target"
@@ -1160,12 +1160,12 @@ func TestKm_term51_RemapSet_parseCLI_null_and_empty_reset_the_set(t *testing.T) 
 
 	kmParseCLI(t, &set, "ctrl=super")
 	expectEqual(t, uint(2), set.map_.Count())
-	expect(t, set.IsRemapped(kmMods{ctrl: true}), "set.isRemapped(.{ .ctrl = true })")
+	expect(t, set.IsRemapped(kmMods{Ctrl: true}), "set.isRemapped(.{ .ctrl = true })")
 
 	zigTry(t, set.ParseCLI(None[[]uint8]()))
 	expectEqual(t, uint(0), set.map_.Count())
 	expectEqual(t, uint16(0), kmMask(&set))
-	expect(t, !set.IsRemapped(kmMods{ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
+	expect(t, !set.IsRemapped(kmMods{Ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
 
 	kmParseCLI(t, &set, "alt=shift")
 	expectEqual(t, uint(2), set.map_.Count())
@@ -1286,7 +1286,7 @@ func TestKm_term51_RemapSet_clone_deep_and_independent(t *testing.T) {
 	expectEqual(t, uint(4), set.map_.Count())
 	expectEqual(t, uint(3), cloned.map_.Count())
 	expect(t, !set.Equal(cloned), "!set.equal(cloned)")
-	expect(t, !cloned.IsRemapped(kmMods{shift: true}), "!cloned.isRemapped(.{ .shift = true })")
+	expect(t, !cloned.IsRemapped(kmMods{Shift: true}), "!cloned.isRemapped(.{ .shift = true })")
 
 	// And the other way around.
 	zigTry(t, cloned.ParseCLI(Some([]uint8(""))))
@@ -1409,17 +1409,17 @@ func TestKm_term51_RemapSet_formatMod_every_mod_and_side(t *testing.T) {
 func TestKm_term51_RemapSet_formatMod_only_the_first_set_mod_is_written(t *testing.T) {
 	testPlatform(t, "linux")
 	// Priority order is shift, ctrl, alt, super.
-	kmExpectFormatMod(t, kmMods{shift: true, ctrl: true, alt: true, super: true}, "left_shift")
-	kmExpectFormatMod(t, kmMods{ctrl: true, alt: true, super: true}, "left_ctrl")
-	kmExpectFormatMod(t, kmMods{alt: true, super: true}, "left_alt")
-	kmExpectFormatMod(t, kmMods{super: true}, "left_super")
+	kmExpectFormatMod(t, kmMods{Shift: true, Ctrl: true, Alt: true, Super: true}, "left_shift")
+	kmExpectFormatMod(t, kmMods{Ctrl: true, Alt: true, Super: true}, "left_ctrl")
+	kmExpectFormatMod(t, kmMods{Alt: true, Super: true}, "left_alt")
+	kmExpectFormatMod(t, kmMods{Super: true}, "left_super")
 	// The side of the written mod is the one used.
 	kmExpectFormatMod(t,
-		kmMods{ctrl: true, alt: true, sides: kmSides{ctrl: kmRight, alt: kmLeft}},
+		kmMods{Ctrl: true, Alt: true, Sides: kmSides{Ctrl: kmRight, Alt: kmLeft}},
 		"right_ctrl",
 	)
 	kmExpectFormatMod(t,
-		kmMods{ctrl: true, alt: true, sides: kmSides{ctrl: kmLeft, alt: kmRight}},
+		kmMods{Ctrl: true, Alt: true, Sides: kmSides{Ctrl: kmLeft, Alt: kmRight}},
 		"left_ctrl",
 	)
 }
@@ -1429,7 +1429,7 @@ func TestKm_term51_RemapSet_formatMod_nothing_set_writes_nothing(t *testing.T) {
 	testPlatform(t, "linux")
 	kmExpectFormatMod(t, kmMods{}, "")
 	// Locks and side bits alone do not produce output.
-	kmExpectFormatMod(t, kmMods{caps_lock: true, num_lock: true}, "")
+	kmExpectFormatMod(t, kmMods{CapsLock: true, NumLock: true}, "")
 	kmExpectFormatMod(t, InputKeyModsModsSideMask, "")
 }
 
@@ -1440,7 +1440,7 @@ func TestKm_term51_RemapSet_formatMod_writer_errors_are_returned(t *testing.T) {
 	fbs := inputKeyModsFixedBufferStreamInit(buf[:])
 	kmExpectError(t,
 		ErrNoSpaceLeft,
-		inputKeyModsRemapSetFormatMod(&fbs, kmMods{shift: true}),
+		inputKeyModsRemapSetFormatMod(&fbs, kmMods{Shift: true}),
 	)
 
 	// Not an error when there is nothing to write.
@@ -1546,22 +1546,22 @@ func TestKm_term51_RemapSet_isRemapped_depends_on_the_mask_only(t *testing.T) {
 	defer set.Deinit()
 
 	expect(t, !set.IsRemapped(kmMods{}), "!set.isRemapped(.{})")
-	expect(t, !set.IsRemapped(kmMods{ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
+	expect(t, !set.IsRemapped(kmMods{Ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
 
 	kmParse(t, &set, "left_ctrl=super")
-	expect(t, set.IsRemapped(kmMods{ctrl: true}), "set.isRemapped(.{ .ctrl = true })")
-	expect(t, set.IsRemapped(kmMods{ctrl: true, shift: true}), "set.isRemapped(.{ .ctrl = true, .shift = true })")
-	expect(t, set.IsRemapped(kmMods{ctrl: true, caps_lock: true}), "set.isRemapped(.{ .ctrl = true, .caps_lock = true })")
+	expect(t, set.IsRemapped(kmMods{Ctrl: true}), "set.isRemapped(.{ .ctrl = true })")
+	expect(t, set.IsRemapped(kmMods{Ctrl: true, Shift: true}), "set.isRemapped(.{ .ctrl = true, .shift = true })")
+	expect(t, set.IsRemapped(kmMods{Ctrl: true, CapsLock: true}), "set.isRemapped(.{ .ctrl = true, .caps_lock = true })")
 	// Right ctrl is not remapped by a left only remap.
-	expect(t, !set.IsRemapped(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}), "!set.isRemapped(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
-	expect(t, !set.IsRemapped(kmMods{alt: true}), "!set.isRemapped(.{ .alt = true })")
-	expect(t, !set.IsRemapped(kmMods{super: true}), "!set.isRemapped(.{ .super = true })")
-	expect(t, !set.IsRemapped(kmMods{caps_lock: true}), "!set.isRemapped(.{ .caps_lock = true })")
+	expect(t, !set.IsRemapped(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}), "!set.isRemapped(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
+	expect(t, !set.IsRemapped(kmMods{Alt: true}), "!set.isRemapped(.{ .alt = true })")
+	expect(t, !set.IsRemapped(kmMods{Super: true}), "!set.isRemapped(.{ .super = true })")
+	expect(t, !set.IsRemapped(kmMods{CapsLock: true}), "!set.isRemapped(.{ .caps_lock = true })")
 	expect(t, !set.IsRemapped(kmMods{}), "!set.isRemapped(.{})")
 
 	// Direct mask edits are seen.
 	set.mask = InputKeyModsRemapSetMask{}
-	expect(t, !set.IsRemapped(kmMods{ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
+	expect(t, !set.IsRemapped(kmMods{Ctrl: true}), "!set.isRemapped(.{ .ctrl = true })")
 }
 
 // Zig: test "term51: RemapSet.apply: unremapped mods are returned unchanged"
@@ -1570,14 +1570,14 @@ func TestKm_term51_RemapSet_apply_unremapped_mods_are_returned_unchanged(t *test
 	set := InputKeyModsRemapSetEmpty
 	defer set.Deinit()
 
-	mods := kmMods{ctrl: true, caps_lock: true, _padding: 0x2a}
+	mods := kmMods{Ctrl: true, CapsLock: true, _padding: 0x2a}
 	expectEqual(t, mods, set.Apply(mods))
 
 	kmParse(t, &set, "left_alt=super")
 	set.Finalize()
 	expectEqual(t, mods, set.Apply(mods))
 	expectEqual(t, kmMods{}, set.Apply(kmMods{}))
-	right_alt := kmMods{alt: true, sides: kmSides{alt: kmRight}}
+	right_alt := kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}
 	expectEqual(t, right_alt, set.Apply(right_alt))
 }
 
@@ -1590,19 +1590,19 @@ func TestKm_term51_RemapSet_apply_keeps_other_mods_locks_and_sides(t *testing.T)
 	set.Finalize()
 
 	input := kmMods{
-		ctrl:      true,
-		shift:     true,
-		caps_lock: true,
-		num_lock:  true,
-		sides:     kmSides{shift: kmRight, alt: kmRight},
+		Ctrl:     true,
+		Shift:    true,
+		CapsLock: true,
+		NumLock:  true,
+		Sides:    kmSides{Shift: kmRight, Alt: kmRight},
 	}
 	expectEqual(t,
 		kmMods{
-			super:     true,
-			shift:     true,
-			caps_lock: true,
-			num_lock:  true,
-			sides:     kmSides{shift: kmRight, alt: kmRight},
+			Super:    true,
+			Shift:    true,
+			CapsLock: true,
+			NumLock:  true,
+			Sides:    kmSides{Shift: kmRight, Alt: kmRight},
 		},
 		set.Apply(input),
 	)
@@ -1619,11 +1619,11 @@ func TestKm_term51_RemapSet_apply_right_sided_from_and_to(t *testing.T) {
 	// Right ctrl becomes right alt: the ctrl key and side bits are cleared
 	// and the alt key and side bits set.
 	expectEqual(t,
-		kmMods{alt: true, sides: kmSides{alt: kmRight}},
-		set.Apply(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}),
+		kmMods{Alt: true, Sides: kmSides{Alt: kmRight}},
+		set.Apply(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}),
 	)
 	// Left ctrl is untouched.
-	left_ctrl := kmMods{ctrl: true}
+	left_ctrl := kmMods{Ctrl: true}
 	expectEqual(t, left_ctrl, set.Apply(left_ctrl))
 }
 
@@ -1635,8 +1635,8 @@ func TestKm_term51_RemapSet_apply_right_from_to_a_left_target(t *testing.T) {
 	kmParse(t, &set, "right_ctrl=shift")
 	set.Finalize()
 	expectEqual(t,
-		kmMods{shift: true},
-		set.Apply(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}),
+		kmMods{Shift: true},
+		set.Apply(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}),
 	)
 }
 
@@ -1648,8 +1648,8 @@ func TestKm_term51_RemapSet_apply_left_from_to_a_right_target(t *testing.T) {
 	kmParse(t, &set, "left_ctrl=right_shift")
 	set.Finalize()
 	expectEqual(t,
-		kmMods{shift: true, sides: kmSides{shift: kmRight}},
-		set.Apply(kmMods{ctrl: true}),
+		kmMods{Shift: true, Sides: kmSides{Shift: kmRight}},
+		set.Apply(kmMods{Ctrl: true}),
 	)
 }
 
@@ -1662,8 +1662,8 @@ func TestKm_term51_RemapSet_apply_remaps_are_not_chained(t *testing.T) {
 	kmParse(t, &set, "alt=super")
 	set.Finalize()
 
-	expectEqual(t, kmMods{alt: true}, set.Apply(kmMods{ctrl: true}))
-	expectEqual(t, kmMods{super: true}, set.Apply(kmMods{alt: true}))
+	expectEqual(t, kmMods{Alt: true}, set.Apply(kmMods{Ctrl: true}))
+	expectEqual(t, kmMods{Super: true}, set.Apply(kmMods{Alt: true}))
 }
 
 // Zig: test "term51: RemapSet.apply: every unsided single mod"
@@ -1700,9 +1700,9 @@ func TestKm_term51_RemapSet_apply_pressed_target_keeps_its_own_side_bit(t *testi
 
 	// Right alt is already pressed: ctrl becomes (left) alt, but the side
 	// bit of alt stays right because the to bits are OR-ed in.
-	input := kmMods{ctrl: true, alt: true, sides: kmSides{alt: kmRight}}
+	input := kmMods{Ctrl: true, Alt: true, Sides: kmSides{Alt: kmRight}}
 	expectEqual(t,
-		kmMods{alt: true, sides: kmSides{alt: kmRight}},
+		kmMods{Alt: true, Sides: kmSides{Alt: kmRight}},
 		set.Apply(input),
 	)
 }
@@ -1712,7 +1712,7 @@ func TestKm_term51_RemapSet_apply_first_matching_entry_wins_and_finalize_sets_th
 	testPlatform(t, "linux")
 	// ctrl=alt matches left ctrl, right_alt=shift matches right alt.
 	// Both match {left ctrl, right alt}; the first entry in map order wins.
-	input := kmMods{ctrl: true, alt: true, sides: kmSides{alt: kmRight}}
+	input := kmMods{Ctrl: true, Alt: true, Sides: kmSides{Alt: kmRight}}
 
 	// Without finalize the insertion order is used: left_ctrl first.
 	{
@@ -1721,7 +1721,7 @@ func TestKm_term51_RemapSet_apply_first_matching_entry_wins_and_finalize_sets_th
 		kmParse(t, &set, "ctrl=alt")
 		kmParse(t, &set, "right_alt=shift")
 		expectEqual(t,
-			kmMods{alt: true, sides: kmSides{alt: kmRight}},
+			kmMods{Alt: true, Sides: kmSides{Alt: kmRight}},
 			set.Apply(input),
 		)
 	}
@@ -1734,7 +1734,7 @@ func TestKm_term51_RemapSet_apply_first_matching_entry_wins_and_finalize_sets_th
 		kmParse(t, &set, "right_alt=shift")
 		set.Finalize()
 		expectEqual(t,
-			kmMods{ctrl: true, shift: true},
+			kmMods{Ctrl: true, Shift: true},
 			set.Apply(input),
 		)
 	}
@@ -1749,11 +1749,11 @@ func TestKm_term51_RemapSet_apply_swap_of_two_mods(t *testing.T) {
 	kmParse(t, &set, "alt=ctrl")
 	set.Finalize()
 
-	expectEqual(t, kmMods{alt: true}, set.Apply(kmMods{ctrl: true}))
-	expectEqual(t, kmMods{ctrl: true}, set.Apply(kmMods{alt: true}))
+	expectEqual(t, kmMods{Alt: true}, set.Apply(kmMods{Ctrl: true}))
+	expectEqual(t, kmMods{Ctrl: true}, set.Apply(kmMods{Alt: true}))
 	// Only one entry is applied when both are pressed (the first in map
 	// order, left_ctrl): ctrl is replaced by alt which is already set.
-	expectEqual(t, kmMods{alt: true}, set.Apply(kmMods{ctrl: true, alt: true}))
+	expectEqual(t, kmMods{Alt: true}, set.Apply(kmMods{Ctrl: true, Alt: true}))
 }
 
 // Zig: test "term51: RemapSet.apply: same mod target is the identity"
@@ -1763,14 +1763,14 @@ func TestKm_term51_RemapSet_apply_same_mod_target_is_the_identity(t *testing.T) 
 	defer set.Deinit()
 	kmParse(t, &set, "ctrl=ctrl")
 	set.Finalize()
-	expectEqual(t, kmMods{ctrl: true}, set.Apply(kmMods{ctrl: true}))
+	expectEqual(t, kmMods{Ctrl: true}, set.Apply(kmMods{Ctrl: true}))
 
 	// Right ctrl to (left) ctrl clears the right side bit.
 	kmParse(t, &set, "right_ctrl=left_ctrl")
 	set.Finalize()
 	expectEqual(t,
-		kmMods{ctrl: true},
-		set.Apply(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}),
+		kmMods{Ctrl: true},
+		set.Apply(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}),
 	)
 }
 
@@ -1784,19 +1784,19 @@ func TestKm_term51_RemapSet_Mask_default_and_layout(t *testing.T) {
 	expectEqual(t, kmSides{}, mask.right_sides)
 
 	// keys: bits 0-3, left_sides: 4-7, right_sides: 8-11.
-	expectEqual(t, uint16(0x001), (InputKeyModsRemapSetMask{keys: InputKeyModsModsKeys{shift: true}}).Int())
-	expectEqual(t, uint16(0x010), (InputKeyModsRemapSetMask{left_sides: kmSides{shift: kmRight}}).Int())
-	expectEqual(t, uint16(0x100), (InputKeyModsRemapSetMask{right_sides: kmSides{shift: kmRight}}).Int())
+	expectEqual(t, uint16(0x001), (InputKeyModsRemapSetMask{keys: InputKeyModsModsKeys{Shift: true}}).Int())
+	expectEqual(t, uint16(0x010), (InputKeyModsRemapSetMask{left_sides: kmSides{Shift: kmRight}}).Int())
+	expectEqual(t, uint16(0x100), (InputKeyModsRemapSetMask{right_sides: kmSides{Shift: kmRight}}).Int())
 }
 
 // Zig: test "term51: RemapSet.Mask.update: left sided mod"
 func TestKm_term51_RemapSet_Mask_update_left_sided_mod(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{ctrl: true})
+	mask.Update(kmMods{Ctrl: true})
 	expectEqual(t, uint16(0x022), mask.Int())
-	expectEqual(t, InputKeyModsModsKeys{ctrl: true}, mask.keys)
-	expectEqual(t, kmSides{ctrl: kmRight}, mask.left_sides)
+	expectEqual(t, InputKeyModsModsKeys{Ctrl: true}, mask.keys)
+	expectEqual(t, kmSides{Ctrl: kmRight}, mask.left_sides)
 	expectEqual(t, kmSides{}, mask.right_sides)
 }
 
@@ -1804,11 +1804,11 @@ func TestKm_term51_RemapSet_Mask_update_left_sided_mod(t *testing.T) {
 func TestKm_term51_RemapSet_Mask_update_right_sided_mod(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}})
+	mask.Update(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}})
 	expectEqual(t, uint16(0x202), mask.Int())
-	expectEqual(t, InputKeyModsModsKeys{ctrl: true}, mask.keys)
+	expectEqual(t, InputKeyModsModsKeys{Ctrl: true}, mask.keys)
 	expectEqual(t, kmSides{}, mask.left_sides)
-	expectEqual(t, kmSides{ctrl: kmRight}, mask.right_sides)
+	expectEqual(t, kmSides{Ctrl: kmRight}, mask.right_sides)
 }
 
 // Zig: test "term51: RemapSet.Mask.update: every mod and side"
@@ -1830,17 +1830,17 @@ func TestKm_term51_RemapSet_Mask_update_every_mod_and_side(t *testing.T) {
 func TestKm_term51_RemapSet_Mask_update_accumulates_with_OR(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{ctrl: true})
-	mask.Update(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}})
+	mask.Update(kmMods{Ctrl: true})
+	mask.Update(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}})
 	expectEqual(t, uint16(0x222), mask.Int())
 
 	// Updating again changes nothing.
-	mask.Update(kmMods{ctrl: true})
-	mask.Update(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}})
+	mask.Update(kmMods{Ctrl: true})
+	mask.Update(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}})
 	expectEqual(t, uint16(0x222), mask.Int())
 
 	// Another mod only adds its own bits.
-	mask.Update(kmMods{super: true, sides: kmSides{super: kmRight}})
+	mask.Update(kmMods{Super: true, Sides: kmSides{Super: kmRight}})
 	expectEqual(t, uint16(0xA22|0x008|0x000), mask.Int())
 }
 
@@ -1848,7 +1848,7 @@ func TestKm_term51_RemapSet_Mask_update_accumulates_with_OR(t *testing.T) {
 func TestKm_term51_RemapSet_Mask_update_multiple_keys_in_one_value(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{shift: true, alt: true, sides: kmSides{alt: kmRight}})
+	mask.Update(kmMods{Shift: true, Alt: true, Sides: kmSides{Alt: kmRight}})
 	// keys 0b0101, left 0b0001 (shift on the left), right 0b0100 (alt).
 	expectEqual(t, uint16(0x415), mask.Int())
 }
@@ -1865,11 +1865,11 @@ func TestKm_term51_RemapSet_Mask_update_ignores_locks_stray_sides_and_empty_mods
 	expectEqual(t, uint16(0), mask.Int())
 
 	// Locks are not keys.
-	mask.Update(kmMods{caps_lock: true, num_lock: true})
+	mask.Update(kmMods{CapsLock: true, NumLock: true})
 	expectEqual(t, uint16(0), mask.Int())
 
 	// A stray side bit of a mod that is not set does not leak in.
-	mask.Update(kmMods{ctrl: true, sides: kmSides{alt: kmRight}})
+	mask.Update(kmMods{Ctrl: true, Sides: kmSides{Alt: kmRight}})
 	expectEqual(t, uint16(0x022), mask.Int())
 }
 
@@ -1877,42 +1877,42 @@ func TestKm_term51_RemapSet_Mask_update_ignores_locks_stray_sides_and_empty_mods
 func TestKm_term51_RemapSet_Mask_match_left_sided_remap(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{ctrl: true})
+	mask.Update(kmMods{Ctrl: true})
 
-	expect(t, mask.Match(kmMods{ctrl: true}), "mask.match(.{ .ctrl = true })")
-	expect(t, mask.Match(kmMods{ctrl: true, shift: true}), "mask.match(.{ .ctrl = true, .shift = true })")
-	expect(t, mask.Match(kmMods{ctrl: true, caps_lock: true}), "mask.match(.{ .ctrl = true, .caps_lock = true })")
-	expect(t, !mask.Match(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}), "!mask.match(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
-	expect(t, !mask.Match(kmMods{alt: true}), "!mask.match(.{ .alt = true })")
-	expect(t, !mask.Match(kmMods{shift: true, super: true}), "!mask.match(.{ .shift = true, .super = true })")
+	expect(t, mask.Match(kmMods{Ctrl: true}), "mask.match(.{ .ctrl = true })")
+	expect(t, mask.Match(kmMods{Ctrl: true, Shift: true}), "mask.match(.{ .ctrl = true, .shift = true })")
+	expect(t, mask.Match(kmMods{Ctrl: true, CapsLock: true}), "mask.match(.{ .ctrl = true, .caps_lock = true })")
+	expect(t, !mask.Match(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}), "!mask.match(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
+	expect(t, !mask.Match(kmMods{Alt: true}), "!mask.match(.{ .alt = true })")
+	expect(t, !mask.Match(kmMods{Shift: true, Super: true}), "!mask.match(.{ .shift = true, .super = true })")
 	expect(t, !mask.Match(kmMods{}), "!mask.match(.{})")
-	expect(t, !mask.Match(kmMods{caps_lock: true, num_lock: true}), "!mask.match(.{ .caps_lock = true, .num_lock = true })")
+	expect(t, !mask.Match(kmMods{CapsLock: true, NumLock: true}), "!mask.match(.{ .caps_lock = true, .num_lock = true })")
 	// The side bit of ctrl without ctrl pressed.
-	expect(t, !mask.Match(kmMods{sides: kmSides{ctrl: kmRight}}), "!mask.match(.{ .sides = .{ .ctrl = .right } })")
+	expect(t, !mask.Match(kmMods{Sides: kmSides{Ctrl: kmRight}}), "!mask.match(.{ .sides = .{ .ctrl = .right } })")
 }
 
 // Zig: test "term51: RemapSet.Mask.match: right sided remap"
 func TestKm_term51_RemapSet_Mask_match_right_sided_remap(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{alt: true, sides: kmSides{alt: kmRight}})
+	mask.Update(kmMods{Alt: true, Sides: kmSides{Alt: kmRight}})
 
-	expect(t, mask.Match(kmMods{alt: true, sides: kmSides{alt: kmRight}}), "mask.match(.{ .alt = true, .sides = .{ .alt = .right } })")
-	expect(t, !mask.Match(kmMods{alt: true}), "!mask.match(.{ .alt = true })")
-	expect(t, !mask.Match(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}), "!mask.match(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
-	expect(t, mask.Match(kmMods{alt: true, ctrl: true, sides: kmSides{alt: kmRight}}), "mask.match(.{ .alt = true, .ctrl = true, .sides = .{ .alt = .right } })")
+	expect(t, mask.Match(kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}), "mask.match(.{ .alt = true, .sides = .{ .alt = .right } })")
+	expect(t, !mask.Match(kmMods{Alt: true}), "!mask.match(.{ .alt = true })")
+	expect(t, !mask.Match(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}), "!mask.match(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
+	expect(t, mask.Match(kmMods{Alt: true, Ctrl: true, Sides: kmSides{Alt: kmRight}}), "mask.match(.{ .alt = true, .ctrl = true, .sides = .{ .alt = .right } })")
 }
 
 // Zig: test "term51: RemapSet.Mask.match: both sides remapped"
 func TestKm_term51_RemapSet_Mask_match_both_sides_remapped(t *testing.T) {
 	testPlatform(t, "linux")
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{super: true})
-	mask.Update(kmMods{super: true, sides: kmSides{super: kmRight}})
+	mask.Update(kmMods{Super: true})
+	mask.Update(kmMods{Super: true, Sides: kmSides{Super: kmRight}})
 
-	expect(t, mask.Match(kmMods{super: true}), "mask.match(.{ .super = true })")
-	expect(t, mask.Match(kmMods{super: true, sides: kmSides{super: kmRight}}), "mask.match(.{ .super = true, .sides = .{ .super = .right } })")
-	expect(t, !mask.Match(kmMods{ctrl: true}), "!mask.match(.{ .ctrl = true })")
+	expect(t, mask.Match(kmMods{Super: true}), "mask.match(.{ .super = true })")
+	expect(t, mask.Match(kmMods{Super: true, Sides: kmSides{Super: kmRight}}), "mask.match(.{ .super = true, .sides = .{ .super = .right } })")
+	expect(t, !mask.Match(kmMods{Ctrl: true}), "!mask.match(.{ .ctrl = true })")
 }
 
 // Zig: test "term51: RemapSet.Mask.match: sides are tracked per mod"
@@ -1920,31 +1920,31 @@ func TestKm_term51_RemapSet_Mask_match_sides_are_tracked_per_mod(t *testing.T) {
 	testPlatform(t, "linux")
 	// left ctrl and right alt are remapped.
 	mask := InputKeyModsRemapSetMask{}
-	mask.Update(kmMods{ctrl: true})
-	mask.Update(kmMods{alt: true, sides: kmSides{alt: kmRight}})
+	mask.Update(kmMods{Ctrl: true})
+	mask.Update(kmMods{Alt: true, Sides: kmSides{Alt: kmRight}})
 
-	expect(t, mask.Match(kmMods{ctrl: true}), "mask.match(.{ .ctrl = true })")
-	expect(t, mask.Match(kmMods{alt: true, sides: kmSides{alt: kmRight}}), "mask.match(.{ .alt = true, .sides = .{ .alt = .right } })")
+	expect(t, mask.Match(kmMods{Ctrl: true}), "mask.match(.{ .ctrl = true })")
+	expect(t, mask.Match(kmMods{Alt: true, Sides: kmSides{Alt: kmRight}}), "mask.match(.{ .alt = true, .sides = .{ .alt = .right } })")
 	expect(t, mask.Match(kmMods{
-		ctrl:  true,
-		alt:   true,
-		sides: kmSides{alt: kmRight},
+		Ctrl:  true,
+		Alt:   true,
+		Sides: kmSides{Alt: kmRight},
 	}), "mask.match(.{ .ctrl = true, .alt = true, .sides = .{ .alt = .right } })")
 	// Right ctrl and left alt: neither remapped.
 	expect(t, !mask.Match(kmMods{
-		ctrl:  true,
-		alt:   true,
-		sides: kmSides{ctrl: kmRight},
+		Ctrl:  true,
+		Alt:   true,
+		Sides: kmSides{Ctrl: kmRight},
 	}), "!mask.match(.{ .ctrl = true, .alt = true, .sides = .{ .ctrl = .right } })")
-	expect(t, !mask.Match(kmMods{alt: true}), "!mask.match(.{ .alt = true })")
+	expect(t, !mask.Match(kmMods{Alt: true}), "!mask.match(.{ .alt = true })")
 	// Right ctrl with right alt: alt matches.
 	expect(t, mask.Match(kmMods{
-		ctrl:  true,
-		alt:   true,
-		sides: kmSides{ctrl: kmRight, alt: kmRight},
+		Ctrl:  true,
+		Alt:   true,
+		Sides: kmSides{Ctrl: kmRight, Alt: kmRight},
 	}), "mask.match(.{ .ctrl = true, .alt = true, .sides = .{ .ctrl = .right, .alt = .right } })")
 	// Left ctrl with left alt: ctrl matches.
-	expect(t, mask.Match(kmMods{ctrl: true, alt: true}), "mask.match(.{ .ctrl = true, .alt = true })")
+	expect(t, mask.Match(kmMods{Ctrl: true, Alt: true}), "mask.match(.{ .ctrl = true, .alt = true })")
 }
 
 // Zig: test "term51: RemapSet.Mask.match: every mod and side against every mask"
@@ -1972,17 +1972,17 @@ func TestKm_term51_RemapSet_Mask_match_empty_mask_and_inconsistent_mask(t *testi
 	testPlatform(t, "linux")
 	empty := InputKeyModsRemapSetMask{}
 	expect(t, !empty.Match(kmMods{}), "!empty.match(.{})")
-	expect(t, !empty.Match(kmMods{ctrl: true}), "!empty.match(.{ .ctrl = true })")
+	expect(t, !empty.Match(kmMods{Ctrl: true}), "!empty.match(.{ .ctrl = true })")
 	expect(t, !empty.Match(kmModsFromInt(0xFFFF)), "!empty.match(term51ADModsFromInt(0xFFFF))")
 
 	// A key is set but no side is: nothing can match.
-	keys_only := InputKeyModsRemapSetMask{keys: InputKeyModsModsKeys{ctrl: true}}
-	expect(t, !keys_only.Match(kmMods{ctrl: true}), "!keys_only.match(.{ .ctrl = true })")
-	expect(t, !keys_only.Match(kmMods{ctrl: true, sides: kmSides{ctrl: kmRight}}), "!keys_only.match(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
+	keys_only := InputKeyModsRemapSetMask{keys: InputKeyModsModsKeys{Ctrl: true}}
+	expect(t, !keys_only.Match(kmMods{Ctrl: true}), "!keys_only.match(.{ .ctrl = true })")
+	expect(t, !keys_only.Match(kmMods{Ctrl: true, Sides: kmSides{Ctrl: kmRight}}), "!keys_only.match(.{ .ctrl = true, .sides = .{ .ctrl = .right } })")
 
 	// A side is set but the key is not.
-	sides_only := InputKeyModsRemapSetMask{left_sides: kmSides{ctrl: kmRight}}
-	expect(t, !sides_only.Match(kmMods{ctrl: true}), "!sides_only.match(.{ .ctrl = true })")
+	sides_only := InputKeyModsRemapSetMask{left_sides: kmSides{Ctrl: kmRight}}
+	expect(t, !sides_only.Match(kmMods{Ctrl: true}), "!sides_only.match(.{ .ctrl = true })")
 }
 
 // Go-only: panic test: RemapSet.apply: the mask matched but no entry did (unreachable)
@@ -1991,8 +1991,8 @@ func TestKm_panic_RemapSet_apply_mask_matched_but_no_entry_did(t *testing.T) {
 	// The mask says ctrl is remapped but the map is empty: Zig falls off the
 	// end of the loop into `unreachable`.
 	set := InputKeyModsRemapSetEmpty
-	set.mask.Update(kmMods{ctrl: true})
+	set.mask.Update(kmMods{Ctrl: true})
 	kmExpectPanic(t, func() {
-		set.Apply(kmMods{ctrl: true})
+		set.Apply(kmMods{Ctrl: true})
 	})
 }

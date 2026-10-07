@@ -193,62 +193,62 @@ const terminalTabstopInterval = 8
 // The Go zero value is not an initialised terminal; use TerminalInit.
 type Terminal struct {
 	// The set of screens behind this terminal (e.g. primary vs alternate).
-	screens ScreenSet
+	Screens ScreenSet
 
 	// Whether we're currently writing to the status line (DECSASD and DECSSDT).
 	// We don't support a status line currently so we just black hole this
 	// data so that it doesn't mess up our main display.
 	//
 	// Zig default: .main.
-	status_display ANSIStatusDisplay
+	StatusDisplay ANSIStatusDisplay
 
 	// Where the tabstops are.
-	tabstops Tabstops
+	Tabstops Tabstops
 
 	// The size of the terminal.
-	rows SizeCellCountInt
-	cols SizeCellCountInt
+	Rows SizeCellCountInt
+	Cols SizeCellCountInt
 
 	// The size of the screen in pixels. This is used for pty events and images
 	//
 	// Zig: u32, default 0.
-	width_px uint32
+	WidthPx uint32
 	// Zig: u32, default 0.
-	height_px uint32
+	HeightPx uint32
 
 	// The current scrolling region.
-	scrolling_region TerminalScrollingRegion
+	ScrollingRegion TerminalScrollingRegion
 
 	// The last reported pwd, if any.
 	//
 	// Zig: std.ArrayList(u8). See the file header.
-	pwd []uint8
+	Pwd []uint8
 
 	// The color state for this terminal.
-	colors TerminalColors
+	Colors TerminalColors
 
 	// The previous printed character. This is used for the repeat previous
 	// char CSI (ESC [ <n> b).
 	//
 	// Zig: ?u21, default null.
-	previous_char Optional[uint32]
+	PreviousChar Optional[uint32]
 
 	// The modes that this terminal currently has active.
 	//
 	// Zig default: `.{}`, which is NOT the Go zero value (see modes.go);
 	// `init` sets `values` and `default` from the option `default_modes`.
-	modes ModesModeState
+	Modes ModesModeState
 
 	// The most recently set mouse shape for the terminal.
 	//
 	// Zig default: .text, which is NOT the Go zero value (.default).
-	mouse_shape MouseShape
+	MouseShape MouseShape
 
 	// These are just a packed set of flags we may set on the terminal.
 	//
 	// Zig default: `.{}`, which is NOT the Go zero value (`focused` is
 	// true); see TerminalFlags.
-	flags TerminalFlags
+	Flags TerminalFlags
 }
 
 // TerminalFlags is NOT a named Zig declaration: it is the anonymous packed
@@ -266,13 +266,13 @@ type TerminalFlags struct {
 	//
 	// Zig default: .true (OSCParsersSemanticPromptRedrawTrue), the zero
 	// value.
-	shell_redraws_prompt OSCParsersSemanticPromptRedraw
+	ShellRedrawsPrompt OSCParsersSemanticPromptRedraw
 
 	// This is set via ESC[4;2m. Any other modify key mode just sets
 	// this to false and we act in mode 1 by default.
 	//
 	// Zig default: false.
-	modify_other_keys_2 bool
+	ModifyOtherKeys2 bool
 
 	// The mouse event mode and format. These are set to the last
 	// set mode in modes. You can't get the right event/format to use
@@ -280,33 +280,33 @@ type TerminalFlags struct {
 	// this was called so we have to track it separately.
 	//
 	// Zig default: .none.
-	mouse_event TerminalMouseEvents
+	MouseEvent TerminalMouseEvents
 	// Zig default: .x10.
-	mouse_format TerminalMouseFormat
+	MouseFormat TerminalMouseFormat
 
 	// Set via the XTSHIFTESCAPE sequence. If true (XTSHIFTESCAPE = 1)
 	// then we want to capture the shift key for the mouse protocol
 	// if the configuration allows it.
 	//
 	// Zig default: .null.
-	mouse_shift_capture TerminalFlagsMouseShiftCapture
+	MouseShiftCapture TerminalFlagsMouseShiftCapture
 
 	// True if the window is focused.
 	//
 	// Zig default: TRUE, which is NOT the Go zero value.
-	focused bool
+	Focused bool
 
 	// True if the terminal is in a password entry mode. This is set
 	// to true based on termios state. This is set
 	// to true based on termios state.
 	//
 	// Zig default: false.
-	password_input bool
+	PasswordInput bool
 
 	// True if the terminal should perform selection scrolling.
 	//
 	// Zig default: false.
-	selection_scroll bool
+	SelectionScroll bool
 
 	// Dirty flag used only by the search thread. The renderer is expected
 	// to set this to true if the viewport was dirty as it was rendering.
@@ -318,12 +318,12 @@ type TerminalFlags struct {
 	// resulting in more throughput for everything.
 	//
 	// Zig default: false.
-	search_viewport_dirty bool
+	SearchViewportDirty bool
 
 	// Dirty flags for the renderer.
 	//
 	// Zig default: `.{}`.
-	dirty TerminalDirty
+	Dirty TerminalDirty
 }
 
 // TerminalFlagsMouseShiftCapture is NOT a named Zig declaration: it is the
@@ -354,10 +354,10 @@ func (self TerminalFlagsMouseShiftCapture) String() string {
 // be set dynamically via OSC, with defaults usually coming from a
 // configuration.
 type TerminalColors struct {
-	background ColorDynamicRGB
-	foreground ColorDynamicRGB
-	cursor     ColorDynamicRGB
-	palette    ColorDynamicPalette
+	Background ColorDynamicRGB
+	Foreground ColorDynamicRGB
+	Cursor     ColorDynamicRGB
+	Palette    ColorDynamicPalette
 }
 
 // TerminalColorsDefault is Terminal.Colors.default.
@@ -367,10 +367,10 @@ type TerminalColors struct {
 // ColorDynamicPaletteDefault, initialised once at start-up (Go's package
 // initialisation runs ColorDynamicPaletteDefault's initialiser first).
 var TerminalColorsDefault = TerminalColors{
-	background: ColorDynamicRGBUnset,
-	foreground: ColorDynamicRGBUnset,
-	cursor:     ColorDynamicRGBUnset,
-	palette:    ColorDynamicPaletteDefault,
+	Background: ColorDynamicRGBUnset,
+	Foreground: ColorDynamicRGBUnset,
+	Cursor:     ColorDynamicRGBUnset,
+	Palette:    ColorDynamicPaletteDefault,
 }
 
 // TerminalDirty is Terminal.Dirty.
@@ -386,17 +386,17 @@ var TerminalColorsDefault = TerminalColors{
 // struct; no non-test Zig code converts it to its integer.
 type TerminalDirty struct {
 	// Set when the color palette is modified in any way.
-	palette bool
+	Palette bool
 
 	// Set when the reverse colors mode is modified.
-	reverse_colors bool
+	ReverseColors bool
 
 	// Screen clear of some kind. This can be due to a screen change,
 	// erase display, etc.
-	clear bool
+	Clear bool
 
 	// Set when the pre-edit is modified.
-	preedit bool
+	Preedit bool
 }
 
 // TerminalMouseEvents is Terminal.MouseEvents.
@@ -459,14 +459,14 @@ func (self TerminalMouseFormat) String() string { return terminalMouseFormatName
 type TerminalScrollingRegion struct {
 	// Top and bottom of the scroll region (0-indexed)
 	// Precondition: top < bottom
-	top    SizeCellCountInt
-	bottom SizeCellCountInt
+	Top    SizeCellCountInt
+	Bottom SizeCellCountInt
 
 	// Left/right scroll regions.
 	// Precondition: right > left
 	// Precondition: right <= cols - 1
-	left  SizeCellCountInt
-	right SizeCellCountInt
+	Left  SizeCellCountInt
+	Right SizeCellCountInt
 }
 
 // TerminalOptions is Terminal.Options.
@@ -474,23 +474,23 @@ type TerminalScrollingRegion struct {
 // The Go zero value of three fields is NOT the Zig default; see the file
 // header.
 type TerminalOptions struct {
-	cols SizeCellCountInt
-	rows SizeCellCountInt
+	Cols SizeCellCountInt
+	Rows SizeCellCountInt
 
 	// Zig: usize, default 10_000, which is NOT the Go zero value. Bytes: it
 	// is passed to ScreenSet.init as Screen.Options.max_scrollback.
-	max_scrollback uint64
+	MaxScrollback uint64
 
 	// Zig default: .default (TerminalColorsDefault), which is NOT the Go
 	// zero value.
-	colors TerminalColors
+	Colors TerminalColors
 
 	// The default mode state. When the terminal gets a reset, it
 	// will revert back to this state.
 	//
 	// Zig default: `.{}` (ModesModePackedInit()), which is NOT the Go zero
 	// value.
-	default_modes ModesModePacked
+	DefaultModes ModesModePacked
 }
 
 // TerminalInit is Terminal.init.
@@ -501,16 +501,16 @@ type TerminalOptions struct {
 // allocator parameter is dropped. The inferred error set is that of
 // ScreenSet.init and Tabstops.init: ErrOutOfMemory (dcs.go).
 func TerminalInit(opts TerminalOptions) (Terminal, error) {
-	cols := opts.cols
-	rows := opts.rows
+	cols := opts.Cols
+	rows := opts.Rows
 
 	screen_set, err := ScreenSetInit(ScreenOptions{
-		cols:           cols,
-		rows:           rows,
-		max_scrollback: opts.max_scrollback,
+		Cols:          cols,
+		Rows:          rows,
+		MaxScrollback: opts.MaxScrollback,
 
 		// Zig: the field default, which is not the Go zero value.
-		kitty_image_storage_limit: ScreenOptionsDefault.kitty_image_storage_limit,
+		KittyImageStorageLimit: ScreenOptionsDefault.KittyImageStorageLimit,
 	})
 	if err != nil {
 		return Terminal{}, err
@@ -527,27 +527,27 @@ func TerminalInit(opts TerminalOptions) (Terminal, error) {
 	assert(cols >= 1)
 
 	return Terminal{
-		cols:     cols,
-		rows:     rows,
-		screens:  screen_set,
-		tabstops: tabstops,
-		scrolling_region: TerminalScrollingRegion{
-			top:    0,
-			bottom: rows - 1,
-			left:   0,
-			right:  cols - 1,
+		Cols:     cols,
+		Rows:     rows,
+		Screens:  screen_set,
+		Tabstops: tabstops,
+		ScrollingRegion: TerminalScrollingRegion{
+			Top:    0,
+			Bottom: rows - 1,
+			Left:   0,
+			Right:  cols - 1,
 		},
-		pwd:    nil, // Zig: .empty
-		colors: opts.colors,
-		modes: ModesModeState{
-			values:   opts.default_modes,
-			saved:    ModesModePackedInit(), // Zig: the field default `.{}`
-			default_: opts.default_modes,
+		Pwd:    nil, // Zig: .empty
+		Colors: opts.Colors,
+		Modes: ModesModeState{
+			Values:  opts.DefaultModes,
+			Saved:   ModesModePackedInit(), // Zig: the field default `.{}`
+			Default: opts.DefaultModes,
 		},
 
 		// The field defaults that are not the Go zero value.
-		mouse_shape: MouseShapeText,
-		flags:       TerminalFlags{focused: true},
+		MouseShape: MouseShapeText,
+		Flags:      TerminalFlags{Focused: true},
 	}, nil
 }
 
@@ -557,8 +557,8 @@ func TerminalInit(opts TerminalOptions) (Terminal, error) {
 // parameter is dropped. Kept: it deinitialises the tabstops and the
 // screens, and every test calls it.
 func (self *Terminal) Deinit() {
-	self.tabstops.Deinit()
-	self.screens.Deinit()
+	self.Tabstops.Deinit()
+	self.Screens.Deinit()
 	// Zig: self.pwd.deinit(alloc); Go memory.
 	*self = Terminal{} // Zig: self.* = undefined
 }
@@ -654,8 +654,8 @@ func (self *Terminal) PrintString(str []uint8) error {
 // Zig: pub fn printRepeat(self: *Terminal, count_req: usize) !void. The
 // inferred error set is that of print.
 func (self *Terminal) PrintRepeat(count_req uint) error {
-	if self.previous_char.Valid {
-		c := self.previous_char.Value
+	if self.PreviousChar.Valid {
+		c := self.PreviousChar.Value
 		count := max(count_req, 1)
 		for range count {
 			if err := self.Print(c); err != nil {
@@ -675,7 +675,7 @@ func (self *Terminal) Print(c uint32) error {
 	// log.debug("print={x} y={} x={}", .{ c, self.screens.active.cursor.y, self.screens.active.cursor.x });
 
 	// If we're not on the main display, do nothing for now
-	if self.status_display != ANSIStatusDisplayMain {
+	if self.StatusDisplay != ANSIStatusDisplayMain {
 		return nil
 	}
 
@@ -688,7 +688,7 @@ func (self *Terminal) Print(c uint32) error {
 	// A Zig defer does not run when the function panics, and neither does
 	// this.
 	err := self.printBody(c)
-	self.screens.active.AssertIntegrity()
+	self.Screens.Active.AssertIntegrity()
 	return err
 }
 
@@ -698,10 +698,10 @@ func (self *Terminal) printBody(c uint32) error {
 
 	// Our right margin depends where our cursor is now.
 	var right_limit SizeCellCountInt
-	if self.screens.active.cursor.x > self.scrolling_region.right {
-		right_limit = self.cols
+	if self.Screens.Active.Cursor.X > self.ScrollingRegion.Right {
+		right_limit = self.Cols
 	} else {
-		right_limit = self.scrolling_region.right + 1
+		right_limit = self.ScrollingRegion.Right + 1
 	}
 
 	// Perform grapheme clustering if grapheme support is enabled (mode 2027).
@@ -709,8 +709,8 @@ func (self *Terminal) printBody(c uint32) error {
 	// purposely ordered in least-likely to most-likely so we can drop out
 	// as quickly as possible.
 	if c > 255 &&
-		self.modes.Get(ModesModeGraphemeCluster) &&
-		self.screens.active.cursor.x > 0 {
+		self.Modes.Get(ModesModeGraphemeCluster) &&
+		self.Screens.Active.Cursor.X > 0 {
 		// Zig: the labeled block `grapheme:`; `break :grapheme` is
 		// `goto grapheme`, to the label after this block.
 
@@ -731,20 +731,20 @@ func (self *Terminal) printBody(c uint32) error {
 
 				// If we have wraparound, then we use the prev col unless
 				// there's a pending wrap, in which case we use the current.
-				if self.modes.Get(ModesModeWraparound) {
+				if self.Modes.Get(ModesModeWraparound) {
 					// Zig: @intFromBool(!pending_wrap)
-					if !self.screens.active.cursor.pending_wrap {
+					if !self.Screens.Active.Cursor.PendingWrap {
 						left = 1
 					} else {
 						left = 0
 					}
-				} else if self.screens.active.cursor.x != right_limit-1 {
+				} else if self.Screens.Active.Cursor.X != right_limit-1 {
 					// If we do not have wraparound, the logic is trickier. If
 					// we're not on the last column, then we just use the previous
 					// column. Otherwise, we need to check if there is text to
 					// figure out if we're attaching to the prev or current.
 					left = 1
-				} else if self.screens.active.cursor.page_cell.Codepoint() == 0 {
+				} else if self.Screens.Active.Cursor.PageCell.Codepoint() == 0 {
 					// Zig: @intFromBool(codepoint() == 0)
 					left = 1
 				} else {
@@ -755,13 +755,13 @@ func (self *Terminal) printBody(c uint32) error {
 			// If the previous cell is a wide spacer tail, then we actually
 			// want to use the cell before that because that has the actual
 			// content.
-			immediate := self.screens.active.CursorCellLeft(left)
+			immediate := self.Screens.Active.CursorCellLeft(left)
 			switch immediate.wide {
 			default:
 				prev = Prev{cell: immediate, left: left}
 			case PageCellWideSpacerTail:
 				prev = Prev{
-					cell: self.screens.active.CursorCellLeft(left + 1),
+					cell: self.Screens.Active.CursorCellLeft(left + 1),
 					left: left + 1,
 				}
 			}
@@ -780,7 +780,7 @@ func (self *Terminal) printBody(c uint32) error {
 				state := UucodeGraphemeBreakStateDefault
 				cp1 := prev.cell.content.codepoint
 				if prev.cell.HasGrapheme() {
-					cps := self.screens.active.cursor.page_pin.node.data.LookupGrapheme(prev.cell)
+					cps := self.Screens.Active.Cursor.PagePin.Node.data.LookupGrapheme(prev.cell)
 					assert(cps.Valid) // .?
 					for _, cp2 := range cps.Value {
 						// log.debug("cp1={x} cp2={x}", .{ cp1, cp2 });
@@ -843,13 +843,13 @@ func (self *Terminal) printBody(c uint32) error {
 
 					// Move our cursor back to the previous. We'll move
 					// the cursor within this block to the proper location.
-					self.screens.active.CursorLeft(prev.left)
+					self.Screens.Active.CursorLeft(prev.left)
 
 					// If we don't have space for the wide char, we need to
 					// insert spacers and wrap. We need special handling if the
 					// previous cell has grapheme data.
-					if self.screens.active.cursor.x == right_limit-1 {
-						if !self.modes.Get(ModesModeWraparound) {
+					if self.Screens.Active.Cursor.X == right_limit-1 {
+						if !self.Modes.Get(ModesModeWraparound) {
 							return nil
 						}
 
@@ -857,9 +857,9 @@ func (self *Terminal) printBody(c uint32) error {
 						// which can trigger integrity violations so mark
 						// the wrap first to keep the intermediary state valid
 						// if we're wrapping.
-						row_wrap := right_limit == self.cols
+						row_wrap := right_limit == self.Cols
 						if row_wrap {
-							self.screens.active.cursor.page_row.wrap = true
+							self.Screens.Active.Cursor.PageRow.wrap = true
 						}
 
 						prev_cp := prev.cell.content.codepoint
@@ -879,38 +879,38 @@ func (self *Terminal) printBody(c uint32) error {
 							}
 							self.printCell(prev_cp, PageCellWideWide)
 
-							new_pin := *self.screens.active.cursor.page_pin
+							new_pin := *self.Screens.Active.Cursor.PagePin
 							new_rac := new_pin.RowAndCell()
 
 							{
 								// Zig: the labeled block `transfer_graphemes:`;
 								// `break :transfer_graphemes` is `goto
 								// transfer_graphemes`, to the label after it.
-								old_pin_ := self.screens.active.cursor.page_pin.Up(1)
+								old_pin_ := self.Screens.Active.Cursor.PagePin.Up(1)
 								if !old_pin_.Valid {
 									goto transfer_graphemes
 								}
 								old_pin := old_pin_.Value
-								old_pin.x = right_limit - 1
+								old_pin.X = right_limit - 1
 								old_rac := old_pin.RowAndCell()
 
-								if new_pin.node == old_pin.node {
-									new_pin.node.data.MoveGrapheme(prev.cell, new_rac.cell)
+								if new_pin.Node == old_pin.Node {
+									new_pin.Node.data.MoveGrapheme(prev.cell, new_rac.cell)
 									prev.cell.content_tag = PageCellContentTagCodepoint
 									new_rac.cell.content_tag = PageCellContentTagCodepointGrapheme
 									new_rac.row.grapheme = true
 								} else {
-									cps := old_pin.node.data.LookupGrapheme(old_rac.cell)
+									cps := old_pin.Node.data.LookupGrapheme(old_rac.cell)
 									assert(cps.Valid) // .?
 									for _, cp := range cps.Value {
-										if err := self.screens.active.AppendGrapheme(new_rac.cell, cp); err != nil {
+										if err := self.Screens.Active.AppendGrapheme(new_rac.cell, cp); err != nil {
 											return err
 										}
 									}
-									old_pin.node.data.ClearGrapheme(old_rac.cell)
+									old_pin.Node.data.ClearGrapheme(old_rac.cell)
 								}
 
-								old_pin.node.data.UpdateRowGraphemeFlag(old_rac.row)
+								old_pin.Node.data.UpdateRowGraphemeFlag(old_rac.row)
 							}
 						transfer_graphemes:
 
@@ -932,21 +932,21 @@ func (self *Terminal) printBody(c uint32) error {
 
 							// Point prev.cell to our new previous cell that
 							// we'll be appending graphemes to
-							prev.cell = self.screens.active.cursor.page_cell
+							prev.cell = self.Screens.Active.Cursor.PageCell
 						}
 					} else {
 						prev.cell.wide = PageCellWideWide
 					}
 
 					// Write our spacer, since prev.cell is now wide
-					self.screens.active.CursorRight(1)
+					self.Screens.Active.CursorRight(1)
 					self.printCell(0, PageCellWideSpacerTail)
 
 					// Move the cursor again so we're beyond our spacer
-					if self.screens.active.cursor.x == right_limit-1 {
-						self.screens.active.cursor.pending_wrap = true
+					if self.Screens.Active.Cursor.X == right_limit-1 {
+						self.Screens.Active.Cursor.PendingWrap = true
 					} else {
-						self.screens.active.CursorRight(1)
+						self.Screens.Active.CursorRight(1)
 					}
 
 				case desired_wide_narrow:
@@ -961,7 +961,7 @@ func (self *Terminal) printBody(c uint32) error {
 
 					// Remove the wide spacer tail
 					assert(prev.left >= 1) // Zig: prev.left - 1 (u16) traps
-					cell := self.screens.active.CursorCellLeft(prev.left - 1)
+					cell := self.Screens.Active.CursorCellLeft(prev.left - 1)
 					cell.wide = PageCellWideNarrow
 
 					// Back track the cursor so that we don't end up with
@@ -971,15 +971,15 @@ func (self *Terminal) printBody(c uint32) error {
 					// least surprise, and also matches the behavior that
 					// can be observed in Kitty, which is one of the only
 					// other VS aware terminals.
-					if self.screens.active.cursor.x == right_limit-1 {
+					if self.Screens.Active.Cursor.X == right_limit-1 {
 						// If we're already at the right edge, we stay
 						// here and set the pending wrap to false since
 						// when we pend a wrap, we only move our cursor once
 						// even for wide chars (tests verify).
-						self.screens.active.cursor.pending_wrap = false
+						self.Screens.Active.Cursor.PendingWrap = false
 					} else {
 						// Otherwise, move back.
-						self.screens.active.CursorLeft(1)
+						self.Screens.Active.CursorLeft(1)
 					}
 
 				default:
@@ -987,8 +987,8 @@ func (self *Terminal) printBody(c uint32) error {
 
 				// Zig: log.debug("c={X} grapheme attach to left={} primary_cp={X}", .{
 				//     c, prev.left, prev.cell.codepoint() });
-				self.screens.active.CursorMarkDirty()
-				return self.screens.active.AppendGrapheme(prev.cell, c)
+				self.Screens.Active.CursorMarkDirty()
+				return self.Screens.Active.AppendGrapheme(prev.cell, c)
 			}
 		}
 	}
@@ -1016,7 +1016,7 @@ grapheme:
 		// If we have grapheme clustering enabled, we don't blindly attach
 		// any zero width character to our cells and we instead just ignore
 		// it.
-		if self.modes.Get(ModesModeGraphemeCluster) {
+		if self.Modes.Get(ModesModeGraphemeCluster) {
 			return nil
 		}
 
@@ -1024,7 +1024,7 @@ grapheme:
 		// print anything or even store this. Zero-width characters are ALWAYS
 		// attached to some other non-zero-width character at the time of
 		// writing.
-		if self.screens.active.cursor.x == 0 {
+		if self.Screens.Active.Cursor.X == 0 {
 			warn("terminal", "zero-width character with no prior character, ignoring")
 			return nil
 		}
@@ -1033,11 +1033,11 @@ grapheme:
 		var prev *PageCell
 		{
 			// Zig: the labeled block `prev:`.
-			immediate := self.screens.active.CursorCellLeft(1)
+			immediate := self.Screens.Active.CursorCellLeft(1)
 			if immediate.wide != PageCellWideSpacerTail {
 				prev = immediate
 			} else {
-				prev = self.screens.active.CursorCellLeft(2)
+				prev = self.Screens.Active.CursorCellLeft(2)
 			}
 		}
 
@@ -1056,14 +1056,14 @@ grapheme:
 			}
 		}
 
-		return self.screens.active.AppendGrapheme(prev, c)
+		return self.Screens.Active.AppendGrapheme(prev, c)
 	}
 
 	// We have a printable character, save it
-	self.previous_char = Some(c)
+	self.PreviousChar = Some(c)
 
 	// If we're soft-wrapping, then handle that first.
-	if self.screens.active.cursor.pending_wrap && self.modes.Get(ModesModeWraparound) {
+	if self.Screens.Active.Cursor.PendingWrap && self.Modes.Get(ModesModeWraparound) {
 		if err := self.printWrap(); err != nil {
 			return err
 		}
@@ -1071,15 +1071,15 @@ grapheme:
 
 	// If we have insert mode enabled then we need to handle that. We
 	// only do insert mode if we're not at the end of the line.
-	if self.modes.Get(ModesModeInsert) &&
-		uint(self.screens.active.cursor.x)+width < uint(self.cols) {
+	if self.Modes.Get(ModesModeInsert) &&
+		uint(self.Screens.Active.Cursor.X)+width < uint(self.Cols) {
 		self.InsertBlanks(width)
 	}
 
 	switch width {
 	// Single cell is very easy: just write in the cell
 	case 1:
-		self.screens.active.CursorMarkDirty()
+		self.Screens.Active.CursorMarkDirty()
 		self.printCell(c, PageCellWideNarrow) // Zig: @call(.always_inline, ...)
 
 	// Wide character requires a spacer. We print this by
@@ -1087,28 +1087,28 @@ grapheme:
 	// wide char. The second is guaranteed to be a spacer if
 	// we're not at the end of the line.
 	case 2:
-		assert(right_limit >= self.scrolling_region.left) // Zig: - (u16) traps
-		if (right_limit - self.scrolling_region.left) > 1 {
+		assert(right_limit >= self.ScrollingRegion.Left) // Zig: - (u16) traps
+		if (right_limit - self.ScrollingRegion.Left) > 1 {
 			// If we don't have space for the wide char, we need
 			// to insert spacers and wrap. Then we just print the wide
 			// char as normal.
-			if self.screens.active.cursor.x == right_limit-1 {
+			if self.Screens.Active.Cursor.X == right_limit-1 {
 				// If we don't have wraparound enabled then we don't print
 				// this character at all and don't move the cursor. This is
 				// how xterm behaves.
-				if !self.modes.Get(ModesModeWraparound) {
+				if !self.Modes.Get(ModesModeWraparound) {
 					return nil
 				}
 
 				// We only create a spacer head if we're at the real edge
 				// of the screen. Otherwise, we clear the space with a narrow.
 				// This allows soft wrapping to work correctly.
-				if right_limit == self.cols {
+				if right_limit == self.Cols {
 					// Special-case: we need to set wrap to true even
 					// though we call printWrap below because if there is
 					// a page resize during printCell then it'll fail
 					// integrity checks.
-					self.screens.active.cursor.page_row.wrap = true
+					self.Screens.Active.Cursor.PageRow.wrap = true
 					self.printCell(0, PageCellWideSpacerHead)
 				} else {
 					self.printCell(0, PageCellWideNarrow)
@@ -1118,14 +1118,14 @@ grapheme:
 				}
 			}
 
-			self.screens.active.CursorMarkDirty()
+			self.Screens.Active.CursorMarkDirty()
 			self.printCell(c, PageCellWideWide)
-			self.screens.active.CursorRight(1)
+			self.Screens.Active.CursorRight(1)
 			self.printCell(0, PageCellWideSpacerTail)
 		} else {
 			// This is pretty broken, terminals should never be only 1-wide.
 			// We should prevent this downstream.
-			self.screens.active.CursorMarkDirty()
+			self.Screens.Active.CursorMarkDirty()
 			self.printCell(0, PageCellWideNarrow)
 		}
 
@@ -1135,13 +1135,13 @@ grapheme:
 
 	// If we're at the column limit, then we need to wrap the next time.
 	// In this case, we don't move the cursor.
-	if self.screens.active.cursor.x == right_limit-1 {
-		self.screens.active.cursor.pending_wrap = true
+	if self.Screens.Active.Cursor.X == right_limit-1 {
+		self.Screens.Active.Cursor.PendingWrap = true
 		return nil
 	}
 
 	// Move the cursor
-	self.screens.active.CursorRight(1)
+	self.Screens.Active.CursorRight(1)
 	return nil
 }
 
@@ -1163,15 +1163,15 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 
 		// If we're single shifting, then we use the key exactly once.
 		var key CharsetsSlots
-		if self.screens.active.charset.single_shift.Valid {
-			key_once := self.screens.active.charset.single_shift.Value
-			self.screens.active.charset.single_shift = None[CharsetsSlots]()
+		if self.Screens.Active.Charset.SingleShift.Valid {
+			key_once := self.Screens.Active.Charset.SingleShift.Value
+			self.Screens.Active.Charset.SingleShift = None[CharsetsSlots]()
 			key = key_once
 		} else {
-			key = self.screens.active.charset.gl
+			key = self.Screens.Active.Charset.Gl
 		}
 
-		set := self.screens.active.charset.charsets.Get(key)
+		set := self.Screens.Active.Charset.charsets.Get(key)
 
 		if set == CharsetsCharsetUtf8 || set == CharsetsCharsetAscii {
 			// UTF-8 or ASCII is used as-is
@@ -1187,7 +1187,7 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 		}
 	}
 
-	cell := self.screens.active.cursor.page_cell
+	cell := self.Screens.Active.Cursor.PageCell
 
 	// If the wide property of this cell is the same, then we don't
 	// need to do the special handling here because the structure will
@@ -1202,16 +1202,16 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 		case PageCellWideWide:
 			// Zig: the labeled block `wide:`; `break :wide` is Go's break
 			// out of the switch.
-			if self.screens.active.cursor.x >= self.cols-1 {
+			if self.Screens.Active.Cursor.X >= self.Cols-1 {
 				break
 			}
 
-			spacer_cell := self.screens.active.CursorCellRight(1)
-			page := &self.screens.active.cursor.page_pin.node.data
+			spacer_cell := self.Screens.Active.CursorCellRight(1)
+			page := &self.Screens.Active.Cursor.PagePin.Node.data
 			i := page.cellIndex(spacer_cell)
-			self.screens.active.ClearCells(
+			self.Screens.Active.ClearCells(
 				page,
-				self.screens.active.cursor.page_row,
+				self.Screens.Active.Cursor.PageRow,
 				page.cells[i:i+1],
 			)
 
@@ -1219,15 +1219,15 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 			// wrapped from the previous row, leaving a spacer_head
 			// at the end of that row. Clear it so the previous row
 			// doesn't keep a stale spacer_head.
-			if self.screens.active.cursor.y > 0 && self.screens.active.cursor.x <= 1 {
-				head_cell := self.screens.active.CursorCellEndOfPrev()
+			if self.Screens.Active.Cursor.Y > 0 && self.Screens.Active.Cursor.X <= 1 {
+				head_cell := self.Screens.Active.CursorCellEndOfPrev()
 				if head_cell.wide == PageCellWideSpacerHead {
 					head_cell.wide = PageCellWideNarrow
 				}
 			}
 
 		case PageCellWideSpacerTail:
-			assert(self.screens.active.cursor.x > 0)
+			assert(self.Screens.Active.Cursor.X > 0)
 
 			// So integrity checks pass. We fix this up later so we don't
 			// need to do this without safety checks.
@@ -1236,20 +1236,20 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 			// safe build the port follows.
 			cell.wide = PageCellWideNarrow
 
-			wide_cell := self.screens.active.CursorCellLeft(1)
-			page := &self.screens.active.cursor.page_pin.node.data
+			wide_cell := self.Screens.Active.CursorCellLeft(1)
+			page := &self.Screens.Active.Cursor.PagePin.Node.data
 			i := page.cellIndex(wide_cell)
-			self.screens.active.ClearCells(
+			self.Screens.Active.ClearCells(
 				page,
-				self.screens.active.cursor.page_row,
+				self.Screens.Active.Cursor.PageRow,
 				page.cells[i:i+1],
 			)
 			// If we're near the left edge, a wide char may have
 			// wrapped from the previous row, leaving a spacer_head
 			// at the end of that row. Clear it so the previous row
 			// doesn't keep a stale spacer_head.
-			if self.screens.active.cursor.y > 0 && self.screens.active.cursor.x <= 1 {
-				head_cell := self.screens.active.CursorCellEndOfPrev()
+			if self.Screens.Active.Cursor.Y > 0 && self.Screens.Active.Cursor.X <= 1 {
+				head_cell := self.Screens.Active.CursorCellEndOfPrev()
 				if head_cell.wide == PageCellWideSpacerHead {
 					head_cell.wide = PageCellWideNarrow
 				}
@@ -1267,20 +1267,20 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 
 	// If the prior value had graphemes, clear those
 	if cell.HasGrapheme() {
-		page := &self.screens.active.cursor.page_pin.node.data
+		page := &self.Screens.Active.Cursor.PagePin.Node.data
 		page.ClearGrapheme(cell)
-		page.UpdateRowGraphemeFlag(self.screens.active.cursor.page_row)
+		page.UpdateRowGraphemeFlag(self.Screens.Active.Cursor.PageRow)
 	}
 
 	// We don't need to update the style refs unless the
 	// cell's new style will be different after writing.
-	style_changed := cell.style_id != self.screens.active.cursor.style_id
+	style_changed := cell.style_id != self.Screens.Active.Cursor.StyleID
 	if style_changed {
-		page := &self.screens.active.cursor.page_pin.node.data
+		page := &self.Screens.Active.Cursor.PagePin.Node.data
 
 		// Release the old style.
-		if cell.style_id != StyleDefaultId {
-			assert(self.screens.active.cursor.page_row.styled)
+		if cell.style_id != StyleDefaultID {
+			assert(self.Screens.Active.Cursor.PageRow.styled)
 			page.styles.Release(cell.style_id)
 		}
 	}
@@ -1292,19 +1292,19 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 	*cell = PageCell{
 		content_tag:      PageCellContentTagCodepoint,
 		content:          PageCellContent{codepoint: c},
-		style_id:         self.screens.active.cursor.style_id,
+		style_id:         self.Screens.Active.Cursor.StyleID,
 		wide:             wide,
-		protected:        self.screens.active.cursor.protected,
-		semantic_content: self.screens.active.cursor.semantic_content,
+		protected:        self.Screens.Active.Cursor.Protected,
+		semantic_content: self.Screens.Active.Cursor.SemanticContent,
 	}
 
 	if style_changed {
-		page := &self.screens.active.cursor.page_pin.node.data
+		page := &self.Screens.Active.Cursor.PagePin.Node.data
 
 		// Use the new style.
-		if cell.style_id != StyleDefaultId {
+		if cell.style_id != StyleDefaultID {
 			page.styles.Use(cell.style_id)
-			self.screens.active.cursor.page_row.styled = true
+			self.Screens.Active.Cursor.PageRow.styled = true
 		}
 	}
 
@@ -1314,20 +1314,20 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 	// We check for an active hyperlink first because setHyperlink
 	// handles clearing the old hyperlink and an optimization if we're
 	// overwriting the same hyperlink.
-	if self.screens.active.cursor.hyperlink_id > 0 {
-		if err := self.screens.active.CursorSetHyperlink(); err != nil {
+	if self.Screens.Active.Cursor.HyperlinkID > 0 {
+		if err := self.Screens.Active.CursorSetHyperlink(); err != nil {
 			warn("terminal", "error reallocating for more hyperlink space, ignoring hyperlink err=error.%v", err)
 			assert(!cell.hyperlink)
 		}
 	} else if had_hyperlink {
 		// If the previous cell had a hyperlink then we need to clear it.
-		page := &self.screens.active.cursor.page_pin.node.data
+		page := &self.Screens.Active.Cursor.PagePin.Node.data
 		page.ClearHyperlink(cell)
-		page.UpdateRowHyperlinkFlag(self.screens.active.cursor.page_row)
+		page.UpdateRowHyperlinkFlag(self.Screens.Active.Cursor.PageRow)
 	}
 
 	// Zig: the `defer` at the top of the function (see Print).
-	self.screens.active.AssertIntegrity()
+	self.Screens.Active.AssertIntegrity()
 }
 
 // printWrap is Terminal.printWrap.
@@ -1338,46 +1338,46 @@ func (self *Terminal) printWrap() error {
 	// We only mark that we soft-wrapped if we're at the edge of our
 	// full screen. We don't mark the row as wrapped if we're in the
 	// middle due to a right margin.
-	cursor := &self.screens.active.cursor
-	mark_wrap := cursor.x == self.cols-1
+	cursor := &self.Screens.Active.Cursor
+	mark_wrap := cursor.X == self.Cols-1
 	if mark_wrap {
-		cursor.page_row.wrap = true
+		cursor.PageRow.wrap = true
 	}
 
 	// Get the old semantic prompt so we can extend it to the next
 	// line. We need to do this before we index() because we may
 	// modify memory.
-	old_semantic := cursor.semantic_content
-	old_semantic_clear := cursor.semantic_content_clear_eol
+	old_semantic := cursor.SemanticContent
+	old_semantic_clear := cursor.SemanticContentClearEol
 
 	// Move to the next line
 	if err := self.Index(); err != nil {
 		return err
 	}
-	self.screens.active.CursorHorizontalAbsolute(self.scrolling_region.left)
+	self.Screens.Active.CursorHorizontalAbsolute(self.ScrollingRegion.Left)
 
 	// Our pointer should never move
-	assert(cursor == &self.screens.active.cursor)
+	assert(cursor == &self.Screens.Active.Cursor)
 
 	// We always reset our semantic prompt state
-	cursor.semantic_content = old_semantic
-	cursor.semantic_content_clear_eol = old_semantic_clear
+	cursor.SemanticContent = old_semantic
+	cursor.SemanticContentClearEol = old_semantic_clear
 	switch old_semantic {
 	case PageCellSemanticContentOutput, PageCellSemanticContentInput:
 	case PageCellSemanticContentPrompt:
-		cursor.page_row.semantic_prompt = PageRowSemanticPromptPromptContinuation
+		cursor.PageRow.semantic_prompt = PageRowSemanticPromptPromptContinuation
 	default:
 		panic("unreachable")
 	}
 
 	if mark_wrap {
-		row := self.screens.active.cursor.page_row
+		row := self.Screens.Active.Cursor.PageRow
 		// Always mark the row as a continuation
 		row.wrap_continuation = true
 	}
 
 	// Assure that our screen is consistent
-	self.screens.active.AssertIntegrity()
+	self.Screens.Active.AssertIntegrity()
 	return nil
 }
 
@@ -1385,7 +1385,7 @@ func (self *Terminal) printWrap() error {
 //
 // Set the charset into the given slot.
 func (self *Terminal) ConfigureCharset(slot CharsetsSlots, set CharsetsCharset) {
-	self.screens.active.charset.charsets.Set(slot, set)
+	self.Screens.Active.Charset.charsets.Set(slot, set)
 }
 
 // InvokeCharset is Terminal.invokeCharset.
@@ -1395,15 +1395,15 @@ func (self *Terminal) ConfigureCharset(slot CharsetsSlots, set CharsetsCharset) 
 func (self *Terminal) InvokeCharset(active CharsetsActiveSlot, slot CharsetsSlots, single bool) {
 	if single {
 		assert(active == CharsetsActiveSlotGL)
-		self.screens.active.charset.single_shift = Some(slot)
+		self.Screens.Active.Charset.SingleShift = Some(slot)
 		return
 	}
 
 	switch active {
 	case CharsetsActiveSlotGL:
-		self.screens.active.charset.gl = slot
+		self.Screens.Active.Charset.Gl = slot
 	case CharsetsActiveSlotGR:
-		self.screens.active.charset.gr = slot
+		self.Screens.Active.Charset.Gr = slot
 	default:
 		panic("unreachable")
 	}
@@ -1414,18 +1414,18 @@ func (self *Terminal) InvokeCharset(active CharsetsActiveSlot, slot CharsetsSlot
 // Carriage return moves the cursor to the first column.
 func (self *Terminal) CarriageReturn() {
 	// Always reset pending wrap state
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// In origin mode we always move to the left margin
 	var x SizeCellCountInt
-	if self.modes.Get(ModesModeOrigin) {
-		x = self.scrolling_region.left
-	} else if self.screens.active.cursor.x >= self.scrolling_region.left {
-		x = self.scrolling_region.left
+	if self.Modes.Get(ModesModeOrigin) {
+		x = self.ScrollingRegion.Left
+	} else if self.Screens.Active.Cursor.X >= self.ScrollingRegion.Left {
+		x = self.ScrollingRegion.Left
 	} else {
 		x = 0
 	}
-	self.screens.active.CursorHorizontalAbsolute(x)
+	self.Screens.Active.CursorHorizontalAbsolute(x)
 }
 
 // Linefeed is Terminal.linefeed.
@@ -1437,7 +1437,7 @@ func (self *Terminal) Linefeed() error {
 	if err := self.Index(); err != nil {
 		return err
 	}
-	if self.modes.Get(ModesModeLinefeed) {
+	if self.Modes.Get(ModesModeLinefeed) {
 		self.CarriageReturn()
 	}
 	return nil
@@ -1459,19 +1459,19 @@ func (self *Terminal) Backspace() {
 // Zig: count_req is usize.
 func (self *Terminal) CursorUp(count_req uint) {
 	// Always resets pending wrap
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// The maximum amount the cursor can move up depends on scrolling regions
 	var max_ SizeCellCountInt // Zig: max
-	if self.screens.active.cursor.y >= self.scrolling_region.top {
-		max_ = self.screens.active.cursor.y - self.scrolling_region.top
+	if self.Screens.Active.Cursor.Y >= self.ScrollingRegion.Top {
+		max_ = self.Screens.Active.Cursor.Y - self.ScrollingRegion.Top
 	} else {
-		max_ = self.screens.active.cursor.y
+		max_ = self.Screens.Active.Cursor.Y
 	}
 	count := min(uint(max_), max(count_req, 1))
 
 	// We can safely intCast below because of the min/max clamping we did above.
-	self.screens.active.CursorUp(SizeCellCountInt(count))
+	self.Screens.Active.CursorUp(SizeCellCountInt(count))
 }
 
 // CursorDown is Terminal.cursorDown.
@@ -1483,17 +1483,17 @@ func (self *Terminal) CursorUp(count_req uint) {
 // Zig: count_req is usize.
 func (self *Terminal) CursorDown(count_req uint) {
 	// Always resets pending wrap
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// The max the cursor can move to depends where the cursor currently is
 	var max_ SizeCellCountInt // Zig: max
-	if self.screens.active.cursor.y <= self.scrolling_region.bottom {
-		max_ = self.scrolling_region.bottom - self.screens.active.cursor.y
+	if self.Screens.Active.Cursor.Y <= self.ScrollingRegion.Bottom {
+		max_ = self.ScrollingRegion.Bottom - self.Screens.Active.Cursor.Y
 	} else {
-		max_ = self.rows - self.screens.active.cursor.y - 1
+		max_ = self.Rows - self.Screens.Active.Cursor.Y - 1
 	}
 	count := min(uint(max_), max(count_req, 1))
-	self.screens.active.CursorDown(SizeCellCountInt(count))
+	self.Screens.Active.CursorDown(SizeCellCountInt(count))
 }
 
 // CursorRight is Terminal.cursorRight.
@@ -1506,17 +1506,17 @@ func (self *Terminal) CursorDown(count_req uint) {
 // Zig: count_req is usize.
 func (self *Terminal) CursorRight(count_req uint) {
 	// Always resets pending wrap
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// The max the cursor can move to depends where the cursor currently is
 	var max_ SizeCellCountInt // Zig: max
-	if self.screens.active.cursor.x <= self.scrolling_region.right {
-		max_ = self.scrolling_region.right - self.screens.active.cursor.x
+	if self.Screens.Active.Cursor.X <= self.ScrollingRegion.Right {
+		max_ = self.ScrollingRegion.Right - self.Screens.Active.Cursor.X
 	} else {
-		max_ = self.cols - self.screens.active.cursor.x - 1
+		max_ = self.Cols - self.Screens.Active.Cursor.X - 1
 	}
 	count := min(uint(max_), max(count_req, 1))
-	self.screens.active.CursorRight(SizeCellCountInt(count))
+	self.Screens.Active.CursorRight(SizeCellCountInt(count))
 }
 
 // CursorLeft is Terminal.cursorLeft.
@@ -1536,11 +1536,11 @@ func (self *Terminal) CursorLeft(count_req uint) {
 	var wrap_mode int
 	{
 		// Zig: the labeled block `wrap_mode:`.
-		if !self.modes.Get(ModesModeWraparound) {
+		if !self.Modes.Get(ModesModeWraparound) {
 			wrap_mode = wrap_mode_none
-		} else if self.modes.Get(ModesModeReverseWrapExtended) {
+		} else if self.Modes.Get(ModesModeReverseWrapExtended) {
 			wrap_mode = wrap_mode_reverse_extended
-		} else if self.modes.Get(ModesModeReverseWrap) {
+		} else if self.Modes.Get(ModesModeReverseWrap) {
 			wrap_mode = wrap_mode_reverse
 		} else {
 			wrap_mode = wrap_mode_none
@@ -1552,37 +1552,37 @@ func (self *Terminal) CursorLeft(count_req uint) {
 	// If we are in no wrap mode, then we move the cursor left and exit
 	// since this is the fastest and most typical path.
 	if wrap_mode == wrap_mode_none {
-		self.screens.active.CursorLeft(SizeCellCountInt(min(count, uint(self.screens.active.cursor.x))))
-		self.screens.active.cursor.pending_wrap = false
+		self.Screens.Active.CursorLeft(SizeCellCountInt(min(count, uint(self.Screens.Active.Cursor.X))))
+		self.Screens.Active.Cursor.PendingWrap = false
 		return
 	}
 
 	// If we have a pending wrap state and we are in either reverse wrap
 	// modes then we decrement the amount we move by one to match xterm.
-	if self.screens.active.cursor.pending_wrap {
+	if self.Screens.Active.Cursor.PendingWrap {
 		count -= 1
-		self.screens.active.cursor.pending_wrap = false
+		self.Screens.Active.Cursor.PendingWrap = false
 	}
 
 	// The margins we can move to.
-	top := self.scrolling_region.top
-	bottom := self.scrolling_region.bottom
-	right_margin := self.scrolling_region.right
+	top := self.ScrollingRegion.Top
+	bottom := self.ScrollingRegion.Bottom
+	right_margin := self.ScrollingRegion.Right
 	var left_margin SizeCellCountInt
-	if self.screens.active.cursor.x < self.scrolling_region.left {
+	if self.Screens.Active.Cursor.X < self.ScrollingRegion.Left {
 		left_margin = 0
 	} else {
-		left_margin = self.scrolling_region.left
+		left_margin = self.ScrollingRegion.Left
 	}
 
 	// Handle some edge cases when our cursor is already on the left margin.
-	if self.screens.active.cursor.x == left_margin {
+	if self.Screens.Active.Cursor.X == left_margin {
 		switch wrap_mode {
 		// In reverse mode, if we're already before the top margin
 		// then we just set our cursor to the top-left and we're done.
 		case wrap_mode_reverse:
-			if self.screens.active.cursor.y <= top {
-				self.screens.active.CursorAbsolute(left_margin, top)
+			if self.Screens.Active.Cursor.Y <= top {
+				self.Screens.Active.CursorAbsolute(left_margin, top)
 				return
 			}
 
@@ -1597,13 +1597,13 @@ func (self *Terminal) CursorLeft(count_req uint) {
 
 	for {
 		// We can move at most to the left margin.
-		max_ := self.screens.active.cursor.x - left_margin // Zig: max
+		max_ := self.Screens.Active.Cursor.X - left_margin // Zig: max
 
 		// We want to move at most the number of columns we have left
 		// or our remaining count. Do the move.
 		amount := SizeCellCountInt(min(uint(max_), count))
 		count -= uint(amount)
-		self.screens.active.CursorLeft(amount)
+		self.Screens.Active.CursorLeft(amount)
 
 		// If we have no more to move, then we're done.
 		if count == 0 {
@@ -1611,12 +1611,12 @@ func (self *Terminal) CursorLeft(count_req uint) {
 		}
 
 		// If we are at the top, then we are done.
-		if self.screens.active.cursor.y == top {
+		if self.Screens.Active.Cursor.Y == top {
 			if wrap_mode != wrap_mode_reverse_extended {
 				break
 			}
 
-			self.screens.active.CursorAbsolute(right_margin, bottom)
+			self.Screens.Active.CursorAbsolute(right_margin, bottom)
 			count -= 1
 			continue
 		}
@@ -1628,20 +1628,20 @@ func (self *Terminal) CursorLeft(count_req uint) {
 		// up to the (0, 0) and stopping there. My reasoning is that for an
 		// appropriately sized value of "count" this is the behavior that xterm
 		// would have. This is unit tested.
-		if self.screens.active.cursor.y == 0 {
-			assert(self.screens.active.cursor.x == left_margin)
+		if self.Screens.Active.Cursor.Y == 0 {
+			assert(self.Screens.Active.Cursor.X == left_margin)
 			break
 		}
 
 		// If our previous line is not wrapped then we are done.
 		if wrap_mode != wrap_mode_reverse_extended {
-			prev_row := self.screens.active.CursorRowUp(1)
+			prev_row := self.Screens.Active.CursorRowUp(1)
 			if !prev_row.wrap {
 				break
 			}
 		}
 
-		self.screens.active.CursorAbsolute(right_margin, self.screens.active.cursor.y-1)
+		self.Screens.Active.CursorAbsolute(right_margin, self.Screens.Active.Cursor.Y-1)
 		count -= 1
 	}
 }
@@ -1654,14 +1654,14 @@ func (self *Terminal) CursorLeft(count_req uint) {
 // is kept per screen (main / alternative). If for the current screen state
 // was already saved it is overwritten.
 func (self *Terminal) SaveCursor() {
-	self.screens.active.saved_cursor = Some(ScreenSavedCursor{
-		x:            self.screens.active.cursor.x,
-		y:            self.screens.active.cursor.y,
-		style:        self.screens.active.cursor.style,
-		protected:    self.screens.active.cursor.protected,
-		pending_wrap: self.screens.active.cursor.pending_wrap,
-		origin:       self.modes.Get(ModesModeOrigin),
-		charset:      self.screens.active.charset,
+	self.Screens.Active.SavedCursor = Some(ScreenSavedCursor{
+		X:           self.Screens.Active.Cursor.X,
+		Y:           self.Screens.Active.Cursor.Y,
+		Style:       self.Screens.Active.Cursor.Style,
+		Protected:   self.Screens.Active.Cursor.Protected,
+		PendingWrap: self.Screens.Active.Cursor.PendingWrap,
+		Origin:      self.Modes.Get(ModesModeOrigin),
+		Charset:     self.Screens.Active.Charset,
 	})
 }
 
@@ -1673,46 +1673,46 @@ func (self *Terminal) SaveCursor() {
 // If no save was done before values are reset to their initial values.
 func (self *Terminal) RestoreCursor() {
 	var saved ScreenSavedCursor
-	if self.screens.active.saved_cursor.Valid {
-		saved = self.screens.active.saved_cursor.Value
+	if self.Screens.Active.SavedCursor.Valid {
+		saved = self.Screens.Active.SavedCursor.Value
 	} else {
 		saved = ScreenSavedCursor{
-			x:            0,
-			y:            0,
-			style:        Style{},
-			protected:    false,
-			pending_wrap: false,
-			origin:       false,
-			charset:      ScreenCharsetState{gr: CharsetsSlotsG2}, // Zig: .{}
+			X:           0,
+			Y:           0,
+			Style:       Style{},
+			Protected:   false,
+			PendingWrap: false,
+			Origin:      false,
+			Charset:     ScreenCharsetState{Gr: CharsetsSlotsG2}, // Zig: .{}
 		}
 	}
 
 	// Set the style first because it can fail
-	self.screens.active.cursor.style = saved.style
-	if err := self.screens.active.ManualStyleUpdate(); err != nil {
+	self.Screens.Active.Cursor.Style = saved.Style
+	if err := self.Screens.Active.ManualStyleUpdate(); err != nil {
 		// Regardless of the error here, we revert back to an unstyled
 		// cursor. It is more important that the restore succeeds in
 		// other attributes because terminals have no way to communicate
 		// failure back.
 		warn("terminal", "restoreCursor error updating style err=error.%v", err)
-		screen := self.screens.active
-		screen.cursor.style = Style{}
-		if err := self.screens.active.ManualStyleUpdate(); err != nil {
+		screen := self.Screens.Active
+		screen.Cursor.Style = Style{}
+		if err := self.Screens.Active.ManualStyleUpdate(); err != nil {
 			panic("unreachable") // Zig: catch unreachable
 		}
 	}
 
-	self.screens.active.charset = saved.charset
-	self.modes.Set(ModesModeOrigin, saved.origin)
-	self.screens.active.cursor.pending_wrap = saved.pending_wrap
-	self.screens.active.cursor.protected = saved.protected
-	self.screens.active.CursorAbsolute(
-		min(saved.x, self.cols-1),
-		min(saved.y, self.rows-1),
+	self.Screens.Active.Charset = saved.Charset
+	self.Modes.Set(ModesModeOrigin, saved.Origin)
+	self.Screens.Active.Cursor.PendingWrap = saved.PendingWrap
+	self.Screens.Active.Cursor.Protected = saved.Protected
+	self.Screens.Active.CursorAbsolute(
+		min(saved.X, self.Cols-1),
+		min(saved.Y, self.Rows-1),
 	)
 
 	// Ensure our screen is consistent
-	self.screens.active.AssertIntegrity()
+	self.Screens.Active.AssertIntegrity()
 }
 
 // SetProtectedMode is Terminal.setProtectedMode.
@@ -1721,19 +1721,19 @@ func (self *Terminal) RestoreCursor() {
 func (self *Terminal) SetProtectedMode(mode ANSIProtectedMode) {
 	switch mode {
 	case ANSIProtectedModeOff:
-		self.screens.active.cursor.protected = false
+		self.Screens.Active.Cursor.Protected = false
 
 		// screen.protected_mode is NEVER reset to ".off" because
 		// logic such as eraseChars depends on knowing what the
 		// _most recent_ mode was.
 
 	case ANSIProtectedModeIso:
-		self.screens.active.cursor.protected = true
-		self.screens.active.protected_mode = ANSIProtectedModeIso
+		self.Screens.Active.Cursor.Protected = true
+		self.Screens.Active.ProtectedMode = ANSIProtectedModeIso
 
 	case ANSIProtectedModeDec:
-		self.screens.active.cursor.protected = true
-		self.screens.active.protected_mode = ANSIProtectedModeDec
+		self.Screens.Active.Cursor.Protected = true
+		self.Screens.Active.ProtectedMode = ANSIProtectedModeDec
 
 	default:
 		panic("unreachable")
@@ -1752,7 +1752,7 @@ func (self *Terminal) SetProtectedMode(mode ANSIProtectedMode) {
 // cmd: osc.Command.SemanticPrompt) !void. The inferred error set is that of
 // semanticPromptFreshLine.
 func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
-	switch cmd.action {
+	switch cmd.Action {
 	case OSCParsersSemanticPromptCommandActionFreshLine:
 		return self.semanticPromptFreshLine()
 
@@ -1762,7 +1762,7 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 			return err
 		}
 
-		screen := self.screens.active
+		screen := self.Screens.Active
 
 		// "Subsequent text (until a OSC "133;B" or OSC "133;I" command)
 		// is a prompt string (as if followed by OSC 133;P;k=i\007)."
@@ -1780,7 +1780,7 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 		// is NOT capable of redraw. Redraw defaults to true so this
 		// usually just disables it, but either is possible.
 		if v := cmd.ReadOption(OSCParsersSemanticPromptOptionRedraw).Redraw; v.Valid {
-			self.flags.shell_redraws_prompt = v.Value
+			self.Flags.ShellRedrawsPrompt = v.Value
 		}
 
 		func() {
@@ -1793,7 +1793,7 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 			// shell to handle them.
 			if v := cmd.ReadOption(OSCParsersSemanticPromptOptionClickEvents).ClickEvents; v.Valid {
 				if v.Value {
-					screen.semantic_prompt.click = ScreenSemanticPromptSemanticClick{
+					screen.SemanticPrompt.Click = ScreenSemanticPromptSemanticClick{
 						Tag: ScreenSemanticPromptSemanticClickClickEvents,
 					}
 					return
@@ -1802,7 +1802,7 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 
 			// If click_events was not set or disabled, fallback to `cl`.
 			if v := cmd.ReadOption(OSCParsersSemanticPromptOptionCl).Cl; v.Valid {
-				screen.semantic_prompt.click = ScreenSemanticPromptSemanticClick{
+				screen.SemanticPrompt.Click = ScreenSemanticPromptSemanticClick{
 					Tag: ScreenSemanticPromptSemanticClickCl,
 					Cl:  v.Value,
 				}
@@ -1826,8 +1826,8 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 		// so there is no need to terminate prior commands. We just
 		// perform the `A` action.
 		return self.SemanticPrompt(OSCCommandSemanticPrompt{
-			action:              OSCParsersSemanticPromptCommandActionFreshLineNewPrompt,
-			options_unvalidated: cmd.options_unvalidated,
+			Action:             OSCParsersSemanticPromptCommandActionFreshLineNewPrompt,
+			OptionsUnvalidated: cmd.OptionsUnvalidated,
 		})
 
 	case OSCParsersSemanticPromptCommandActionPromptStart:
@@ -1841,7 +1841,7 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 		if v := cmd.ReadOption(OSCParsersSemanticPromptOptionPromptKind).PromptKind; v.Valid {
 			prompt_kind = v.Value
 		}
-		self.screens.active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
+		self.Screens.Active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
 			Tag:    ScreenCursorSetSemanticContentTagPrompt,
 			Prompt: prompt_kind,
 		})
@@ -1849,21 +1849,21 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 	case OSCParsersSemanticPromptCommandActionEndPromptStartInput:
 		// End of prompt and start of user input, terminated by a OSC
 		// "133;C" or another prompt (OSC "133;P").
-		self.screens.active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
+		self.Screens.Active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
 			Tag:   ScreenCursorSetSemanticContentTagInput,
 			Input: ScreenCursorSetSemanticContentInputClearExplicit,
 		})
 
 	case OSCParsersSemanticPromptCommandActionEndPromptStartInputTerminateEol:
 		// End of prompt and start of user input, terminated by end-of-line.
-		self.screens.active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
+		self.Screens.Active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
 			Tag:   ScreenCursorSetSemanticContentTagInput,
 			Input: ScreenCursorSetSemanticContentInputClearEol,
 		})
 
 	case OSCParsersSemanticPromptCommandActionEndInputStartOutput:
 		// "End of input, and start of output."
-		self.screens.active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
+		self.Screens.Active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
 			Tag: ScreenCursorSetSemanticContentTagOutput,
 		})
 
@@ -1876,9 +1876,9 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 		// cursor that the new line is also a prompt. But fish changes
 		// to output on the newline. So if we're at col 0 we just assume
 		// we're overwriting the prompt.
-		if self.screens.active.cursor.page_row.semantic_prompt != PageRowSemanticPromptNone &&
-			self.screens.active.cursor.x == 0 {
-			self.screens.active.cursor.page_row.semantic_prompt = PageRowSemanticPromptNone
+		if self.Screens.Active.Cursor.PageRow.semantic_prompt != PageRowSemanticPromptNone &&
+			self.Screens.Active.Cursor.X == 0 {
+			self.Screens.Active.Cursor.PageRow.semantic_prompt = PageRowSemanticPromptNone
 		}
 
 	case OSCParsersSemanticPromptCommandActionEndCommand:
@@ -1886,7 +1886,7 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 		// anything. Other terminals appear to do nothing here. I think
 		// its reasonable at this point to reset our semantic content
 		// state but the spec doesn't really say what to do.
-		self.screens.active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
+		self.Screens.Active.CursorSetSemanticContent(ScreenCursorSetSemanticContent{
 			Tag: ScreenCursorSetSemanticContentTagOutput,
 		})
 
@@ -1904,10 +1904,10 @@ func (self *Terminal) SemanticPrompt(cmd OSCCommandSemanticPrompt) error {
 // error set is that of index.
 func (self *Terminal) semanticPromptFreshLine() error {
 	var left_margin SizeCellCountInt
-	if self.screens.active.cursor.x < self.scrolling_region.left {
+	if self.Screens.Active.Cursor.X < self.ScrollingRegion.Left {
 		left_margin = 0
 	} else {
-		left_margin = self.scrolling_region.left
+		left_margin = self.ScrollingRegion.Left
 	}
 
 	// Spec: "If the cursor is the initial column (left, assuming
@@ -1917,7 +1917,7 @@ func (self *Terminal) semanticPromptFreshLine() error {
 	// it as being at the left margin for the purposes of this command.
 	// This is arbitrary. If someone has a better reasonable idea we can
 	// apply it.
-	if self.screens.active.cursor.x == left_margin {
+	if self.Screens.Active.Cursor.X == left_margin {
 		return nil
 	}
 
@@ -1960,18 +1960,18 @@ func (self TerminalSemanticPrompt) String() string { return terminalSemanticProm
 // If the shell integration doesn't exist, this will always return false.
 func (self *Terminal) CursorIsAtPrompt() bool {
 	// If we're on the secondary screen, we're never at a prompt.
-	if self.screens.active_key == ScreenSetKeyAlternate {
+	if self.Screens.ActiveKey == ScreenSetKeyAlternate {
 		return false
 	}
 
 	// If our page row is a prompt then we're always at a prompt
-	cursor := &self.screens.active.cursor
-	if cursor.page_row.semantic_prompt != PageRowSemanticPromptNone {
+	cursor := &self.Screens.Active.Cursor
+	if cursor.PageRow.semantic_prompt != PageRowSemanticPromptNone {
 		return true
 	}
 
 	// Otherwise, determine our cursor state
-	switch cursor.semantic_content {
+	switch cursor.SemanticContent {
 	case PageCellSemanticContentInput, PageCellSemanticContentPrompt:
 		return true
 	case PageCellSemanticContentOutput:
@@ -1986,14 +1986,14 @@ func (self *Terminal) CursorIsAtPrompt() bool {
 // Horizontal tab moves the cursor to the next tabstop, clearing
 // the screen to the left the tabstop.
 func (self *Terminal) HorizontalTab() {
-	for self.screens.active.cursor.x < self.scrolling_region.right {
+	for self.Screens.Active.Cursor.X < self.ScrollingRegion.Right {
 		// Move the cursor right
-		self.screens.active.CursorRight(1)
+		self.Screens.Active.CursorRight(1)
 
 		// If the last cursor position was a tabstop we return. We do
 		// "last cursor position" because we want a space to be written
 		// at the tabstop unless we're at the end (the while condition).
-		if self.tabstops.Get(uint(self.screens.active.cursor.x)) {
+		if self.Tabstops.Get(uint(self.Screens.Active.Cursor.X)) {
 			return
 		}
 	}
@@ -2005,21 +2005,21 @@ func (self *Terminal) HorizontalTab() {
 func (self *Terminal) HorizontalTabBack() {
 	// With origin mode enabled, our leftmost limit is the left margin.
 	var left_limit SizeCellCountInt
-	if self.modes.Get(ModesModeOrigin) {
-		left_limit = self.scrolling_region.left
+	if self.Modes.Get(ModesModeOrigin) {
+		left_limit = self.ScrollingRegion.Left
 	} else {
 		left_limit = 0
 	}
 
 	for {
 		// If we're already at the edge of the screen, then we're done.
-		if self.screens.active.cursor.x <= left_limit {
+		if self.Screens.Active.Cursor.X <= left_limit {
 			return
 		}
 
 		// Move the cursor left
-		self.screens.active.CursorLeft(1)
-		if self.tabstops.Get(uint(self.screens.active.cursor.x)) {
+		self.Screens.Active.CursorLeft(1)
+		if self.Tabstops.Get(uint(self.Screens.Active.Cursor.X)) {
 			return
 		}
 	}
@@ -2031,9 +2031,9 @@ func (self *Terminal) HorizontalTabBack() {
 func (self *Terminal) TabClear(cmd CSITabClear) {
 	switch cmd {
 	case CSITabClearCurrent:
-		self.tabstops.Unset(uint(self.screens.active.cursor.x))
+		self.Tabstops.Unset(uint(self.Screens.Active.Cursor.X))
 	case CSITabClearAll:
-		self.tabstops.Reset(0)
+		self.Tabstops.Reset(0)
 	default:
 		warn("terminal", "invalid or unknown tab clear setting: %v", cmd)
 	}
@@ -2044,14 +2044,14 @@ func (self *Terminal) TabClear(cmd CSITabClear) {
 // Set a tab stop on the current cursor.
 // TODO: test
 func (self *Terminal) TabSet() {
-	self.tabstops.Set(uint(self.screens.active.cursor.x))
+	self.Tabstops.Set(uint(self.Screens.Active.Cursor.X))
 }
 
 // TabReset is Terminal.tabReset.
 //
 // TODO: test
 func (self *Terminal) TabReset() {
-	self.tabstops.Reset(terminalTabstopInterval)
+	self.Tabstops.Reset(terminalTabstopInterval)
 }
 
 // Index is Terminal.index.
@@ -2074,23 +2074,23 @@ func (self *Terminal) TabReset() {
 // of Screen.cursorScrollAbove, scrollUp and PageList.eraseRowBounded:
 // ErrOutOfMemory (dcs.go) and Page.CloneFromError (page.go).
 func (self *Terminal) Index() error {
-	screen := self.screens.active
+	screen := self.Screens.Active
 
 	// Unset pending wrap state
-	screen.cursor.pending_wrap = false
+	screen.Cursor.PendingWrap = false
 
 	// We handle our cursor semantic prompt state AFTER doing the
 	// scrolling, because we may need to apply to new rows.
 	defer func() {
-		if screen.cursor.semantic_content != PageCellSemanticContentOutput {
+		if screen.Cursor.SemanticContent != PageCellSemanticContentOutput {
 			// Always reset any semantic content clear-eol state.
 			//
 			// The specification is not clear what "end-of-line" means. If we
 			// discover that there are more scenarios we should be unsetting
 			// this we should document and test it.
-			if screen.cursor.semantic_content_clear_eol {
-				screen.cursor.semantic_content = PageCellSemanticContentOutput
-				screen.cursor.semantic_content_clear_eol = false
+			if screen.Cursor.SemanticContentClearEol {
+				screen.Cursor.SemanticContent = PageCellSemanticContentOutput
+				screen.Cursor.SemanticContentClearEol = false
 			} else {
 				// If we aren't clearing our state at EOL and we're not output,
 				// then we mark the new row as a prompt continuation. This is
@@ -2100,20 +2100,20 @@ func (self *Terminal) Index() error {
 				// This can be a false positive if the shell changes content
 				// type later and outputs something. We handle that in the
 				// semanticPrompt function.
-				screen.cursor.page_row.semantic_prompt = PageRowSemanticPromptPromptContinuation
+				screen.Cursor.PageRow.semantic_prompt = PageRowSemanticPromptPromptContinuation
 			}
 		} else {
 			// This should never be set in the output mode.
-			assert(!screen.cursor.semantic_content_clear_eol)
+			assert(!screen.Cursor.SemanticContentClearEol)
 		}
 	}()
 
 	// Outside of the scroll region we move the cursor one line down.
-	if screen.cursor.y < self.scrolling_region.top ||
-		screen.cursor.y > self.scrolling_region.bottom {
+	if screen.Cursor.Y < self.ScrollingRegion.Top ||
+		screen.Cursor.Y > self.ScrollingRegion.Bottom {
 		// We only move down if we're not already at the bottom of
 		// the screen.
-		if screen.cursor.y < self.rows-1 {
+		if screen.Cursor.Y < self.Rows-1 {
 			screen.CursorDown(1)
 		}
 
@@ -2123,22 +2123,22 @@ func (self *Terminal) Index() error {
 	// If the cursor is inside the scrolling region and on the bottom-most
 	// line, then we scroll up. If our scrolling region is the full screen
 	// we create scrollback.
-	if screen.cursor.y == self.scrolling_region.bottom &&
-		screen.cursor.x >= self.scrolling_region.left &&
-		screen.cursor.x <= self.scrolling_region.right {
+	if screen.Cursor.Y == self.ScrollingRegion.Bottom &&
+		screen.Cursor.X >= self.ScrollingRegion.Left &&
+		screen.Cursor.X <= self.ScrollingRegion.Right {
 		// Zig: `screen.kitty_images.dirty = true` under
 		// `build_options.kitty_graphics` (compiled out).
 
 		// If our scrolling region is at the top, we create scrollback.
-		if self.scrolling_region.top == 0 &&
-			self.scrolling_region.left == 0 &&
-			self.scrolling_region.right == self.cols-1 {
+		if self.ScrollingRegion.Top == 0 &&
+			self.ScrollingRegion.Left == 0 &&
+			self.ScrollingRegion.Right == self.Cols-1 {
 			return screen.CursorScrollAbove()
 		}
 
 		// Slow path for left and right scrolling region margins.
-		if self.scrolling_region.left != 0 ||
-			self.scrolling_region.right != self.cols-1 ||
+		if self.ScrollingRegion.Left != 0 ||
+			self.ScrollingRegion.Right != self.Cols-1 ||
 
 			// PERF(mitchellh): If we have an SGR background set then
 			// we need to preserve that background in our erased rows.
@@ -2154,11 +2154,11 @@ func (self *Terminal) Index() error {
 		// scroll the contents of the scrolling region.
 
 		// Preserve old cursor just for assertions
-		old_cursor := screen.cursor
+		old_cursor := screen.Cursor
 
-		if err := screen.pages.EraseRowBounded(
-			Point{Tag: PointTagActive, Active: PointCoordinate{y: uint32(self.scrolling_region.top)}},
-			uint(self.scrolling_region.bottom-self.scrolling_region.top),
+		if err := screen.Pages.EraseRowBounded(
+			Point{Tag: PointTagActive, Active: PointCoordinate{Y: uint32(self.ScrollingRegion.Top)}},
+			uint(self.ScrollingRegion.Bottom-self.ScrollingRegion.Top),
 		); err != nil {
 			return err
 		}
@@ -2167,9 +2167,9 @@ func (self *Terminal) Index() error {
 		// up by 1, so we need to move it back down. A `cursorReload`
 		// would be better option but this is more efficient and this is
 		// a super hot path so we do this instead.
-		assert(screen.cursor.x == old_cursor.x)
-		assert(screen.cursor.y == old_cursor.y)
-		screen.cursor.y -= 1
+		assert(screen.Cursor.X == old_cursor.X)
+		assert(screen.Cursor.Y == old_cursor.Y)
+		screen.Cursor.Y -= 1
 		screen.CursorDown(1)
 
 		// The operations above can prune our cursor style so we need to
@@ -2177,7 +2177,7 @@ func (self *Terminal) Index() error {
 		// memory.
 		if err := screen.ManualStyleUpdate(); err != nil {
 			warn("default", "deleteLines manualStyleUpdate err=error.%v", err) // Zig: std.log.warn
-			screen.cursor.style = Style{}
+			screen.Cursor.Style = Style{}
 			if err := screen.ManualStyleUpdate(); err != nil {
 				panic("unreachable") // Zig: catch unreachable
 			}
@@ -2187,7 +2187,7 @@ func (self *Terminal) Index() error {
 	}
 
 	// Increase cursor by 1, maximum to bottom of scroll region
-	if screen.cursor.y < self.scrolling_region.bottom {
+	if screen.Cursor.Y < self.ScrollingRegion.Bottom {
 		screen.CursorDown(1)
 	}
 	return nil
@@ -2208,9 +2208,9 @@ func (self *Terminal) Index() error {
 //   - If the cursor is not on the top-most line of the scrolling region:
 //     move the cursor one line up
 func (self *Terminal) ReverseIndex() {
-	if self.screens.active.cursor.y != self.scrolling_region.top ||
-		self.screens.active.cursor.x < self.scrolling_region.left ||
-		self.screens.active.cursor.x > self.scrolling_region.right {
+	if self.Screens.Active.Cursor.Y != self.ScrollingRegion.Top ||
+		self.Screens.Active.Cursor.X < self.ScrollingRegion.Left ||
+		self.Screens.Active.Cursor.X > self.ScrollingRegion.Right {
 		self.CursorUp(1)
 		return
 	}
@@ -2243,18 +2243,18 @@ func (self *Terminal) SetCursorPos(row_req uint, col_req uint) {
 		x_max    SizeCellCountInt
 		y_max    SizeCellCountInt
 	}
-	if self.modes.Get(ModesModeOrigin) {
-		params.x_offset = self.scrolling_region.left
-		params.y_offset = self.scrolling_region.top
-		params.x_max = self.scrolling_region.right + 1  // We need this 1-indexed
-		params.y_max = self.scrolling_region.bottom + 1 // We need this 1-indexed
+	if self.Modes.Get(ModesModeOrigin) {
+		params.x_offset = self.ScrollingRegion.Left
+		params.y_offset = self.ScrollingRegion.Top
+		params.x_max = self.ScrollingRegion.Right + 1  // We need this 1-indexed
+		params.y_max = self.ScrollingRegion.Bottom + 1 // We need this 1-indexed
 	} else {
-		params.x_max = self.cols
-		params.y_max = self.rows
+		params.x_max = self.Cols
+		params.y_max = self.Rows
 	}
 
 	// Unset pending wrap state
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// Calculate our new x/y
 	row := row_req
@@ -2284,18 +2284,18 @@ func (self *Terminal) SetCursorPos(row_req uint, col_req uint) {
 	}
 
 	// If the y is unchanged then this is fast pointer math
-	if y == self.screens.active.cursor.y {
-		if x > self.screens.active.cursor.x {
-			self.screens.active.CursorRight(x - self.screens.active.cursor.x)
+	if y == self.Screens.Active.Cursor.Y {
+		if x > self.Screens.Active.Cursor.X {
+			self.Screens.Active.CursorRight(x - self.Screens.Active.Cursor.X)
 		} else {
-			self.screens.active.CursorLeft(self.screens.active.cursor.x - x)
+			self.Screens.Active.CursorLeft(self.Screens.Active.Cursor.X - x)
 		}
 
 		return
 	}
 
 	// If everything changed we do an absolute change which is slightly slower
-	self.screens.active.CursorAbsolute(x, y)
+	self.Screens.Active.CursorAbsolute(x, y)
 	// log.info("set cursor position: col={} row={}", .{ self.screens.active.cursor.x, self.screens.active.cursor.y });
 }
 
@@ -2319,16 +2319,16 @@ func (self *Terminal) SetTopAndBottomMargin(top_req uint, bottom_req uint) {
 	top := max(1, top_req)
 	bottom_ := bottom_req
 	if bottom_req == 0 {
-		bottom_ = uint(self.rows)
+		bottom_ = uint(self.Rows)
 	}
 	// Zig: @min(CellCountInt, usize) has type CellCountInt.
-	bottom := SizeCellCountInt(min(uint(self.rows), bottom_))
+	bottom := SizeCellCountInt(min(uint(self.Rows), bottom_))
 	if top >= uint(bottom) {
 		return
 	}
 
-	self.scrolling_region.top = SizeCellCountInt(top - 1)
-	self.scrolling_region.bottom = bottom - 1
+	self.ScrollingRegion.Top = SizeCellCountInt(top - 1)
+	self.ScrollingRegion.Bottom = bottom - 1
 	self.SetCursorPos(1, 1)
 }
 
@@ -2339,23 +2339,23 @@ func (self *Terminal) SetTopAndBottomMargin(top_req uint, bottom_req uint) {
 // Zig: left_req and right_req are usize.
 func (self *Terminal) SetLeftAndRightMargin(left_req uint, right_req uint) {
 	// We must have this mode enabled to do anything
-	if !self.modes.Get(ModesModeEnableLeftAndRightMargin) {
+	if !self.Modes.Get(ModesModeEnableLeftAndRightMargin) {
 		return
 	}
 
 	left := max(1, left_req)
 	right_ := right_req
 	if right_req == 0 {
-		right_ = uint(self.cols)
+		right_ = uint(self.Cols)
 	}
 	// Zig: @min(CellCountInt, usize) has type CellCountInt.
-	right := SizeCellCountInt(min(uint(self.cols), right_))
+	right := SizeCellCountInt(min(uint(self.Cols), right_))
 	if left >= uint(right) {
 		return
 	}
 
-	self.scrolling_region.left = SizeCellCountInt(left - 1)
-	self.scrolling_region.right = right - 1
+	self.ScrollingRegion.Left = SizeCellCountInt(left - 1)
+	self.ScrollingRegion.Right = right - 1
 	self.SetCursorPos(1, 1)
 }
 
@@ -2366,16 +2366,16 @@ func (self *Terminal) SetLeftAndRightMargin(left_req uint, right_req uint) {
 // Zig: pub fn scrollDown(self: *Terminal, count: usize) void.
 func (self *Terminal) ScrollDown(count uint) {
 	// Preserve our x/y to restore.
-	old_x := self.screens.active.cursor.x
-	old_y := self.screens.active.cursor.y
-	old_wrap := self.screens.active.cursor.pending_wrap
+	old_x := self.Screens.Active.Cursor.X
+	old_y := self.Screens.Active.Cursor.Y
+	old_wrap := self.Screens.Active.Cursor.PendingWrap
 	defer func() {
-		self.screens.active.CursorAbsolute(old_x, old_y)
-		self.screens.active.cursor.pending_wrap = old_wrap
+		self.Screens.Active.CursorAbsolute(old_x, old_y)
+		self.Screens.Active.Cursor.PendingWrap = old_wrap
 	}()
 
 	// Move to the top of the scroll region
-	self.screens.active.CursorAbsolute(self.scrolling_region.left, self.scrolling_region.top)
+	self.Screens.Active.CursorAbsolute(self.ScrollingRegion.Left, self.ScrollingRegion.Top)
 	self.InsertLines(count)
 }
 
@@ -2394,25 +2394,25 @@ func (self *Terminal) ScrollDown(count uint) {
 // and Page.CloneFromError (page.go).
 func (self *Terminal) ScrollUp(count uint) error {
 	// Preserve our x/y to restore.
-	old_x := self.screens.active.cursor.x
-	old_y := self.screens.active.cursor.y
-	old_wrap := self.screens.active.cursor.pending_wrap
+	old_x := self.Screens.Active.Cursor.X
+	old_y := self.Screens.Active.Cursor.Y
+	old_wrap := self.Screens.Active.Cursor.PendingWrap
 	defer func() {
-		self.screens.active.CursorAbsolute(old_x, old_y)
-		self.screens.active.cursor.pending_wrap = old_wrap
+		self.Screens.Active.CursorAbsolute(old_x, old_y)
+		self.Screens.Active.Cursor.PendingWrap = old_wrap
 	}()
 
 	// If our scroll region is at the top and we have no left/right
 	// margins then we move the scrolled out text into the scrollback.
-	if self.scrolling_region.top == 0 &&
-		self.scrolling_region.left == 0 &&
-		self.scrolling_region.right == self.cols-1 {
+	if self.ScrollingRegion.Top == 0 &&
+		self.ScrollingRegion.Left == 0 &&
+		self.ScrollingRegion.Right == self.Cols-1 {
 		// Scrolling dirties the images because it updates their placements pins.
 		//
 		// Zig: under `build_options.kitty_graphics` (compiled out).
 
 		// Clamp count to the scroll region height.
-		region_height := self.scrolling_region.bottom + 1
+		region_height := self.ScrollingRegion.Bottom + 1
 		adjusted_count := min(count, uint(region_height))
 
 		// TODO: Create an optimized version that can scroll N times
@@ -2421,9 +2421,9 @@ func (self *Terminal) ScrollUp(count uint) error {
 
 		// Move our cursor to the bottom of the scroll region so we can
 		// use the cursorScrollAbove function to create scrollback
-		self.screens.active.CursorAbsolute(0, self.scrolling_region.bottom)
+		self.Screens.Active.CursorAbsolute(0, self.ScrollingRegion.Bottom)
 		for range adjusted_count {
-			if err := self.screens.active.CursorScrollAbove(); err != nil {
+			if err := self.Screens.Active.CursorScrollAbove(); err != nil {
 				return err
 			}
 		}
@@ -2431,7 +2431,7 @@ func (self *Terminal) ScrollUp(count uint) error {
 	}
 
 	// Move to the top of the scroll region
-	self.screens.active.CursorAbsolute(self.scrolling_region.left, self.scrolling_region.top)
+	self.Screens.Active.CursorAbsolute(self.ScrollingRegion.Left, self.ScrollingRegion.Top)
 	self.DeleteLines(count)
 	return nil
 }
@@ -2491,7 +2491,7 @@ func (self *Terminal) ScrollViewport(behavior TerminalScrollViewport) {
 	default:
 		panic("unreachable")
 	}
-	self.screens.active.Scroll(scroll)
+	self.Screens.Active.Scroll(scroll)
 }
 
 // rowWillBeShifted is Terminal.rowWillBeShifted.
@@ -2515,8 +2515,8 @@ func (self *Terminal) rowWillBeShifted(page *Page, row *PageRow) {
 	// characters in the first column which may be associated with a
 	// spacer head will be either moved or cleared, so we also need
 	// to turn the spacer heads in to empty cells in that case.
-	if self.scrolling_region.right == self.cols-1 ||
-		self.scrolling_region.left < 2 {
+	if self.ScrollingRegion.Right == self.Cols-1 ||
+		self.ScrollingRegion.Left < 2 {
 		end_cell := &cells[page.size.cols-1]
 		if end_cell.wide == PageCellWideSpacerHead {
 			end_cell.wide = PageCellWideNarrow
@@ -2526,12 +2526,12 @@ func (self *Terminal) rowWillBeShifted(page *Page, row *PageRow) {
 	// If the leftmost or rightmost cells of our scrolling region
 	// are parts of wide chars, we need to clear the cells' contents
 	// since they'd be split by the move.
-	left_cell := &cells[self.scrolling_region.left]
-	right_cell := &cells[self.scrolling_region.right]
+	left_cell := &cells[self.ScrollingRegion.Left]
+	right_cell := &cells[self.ScrollingRegion.Right]
 
 	if left_cell.wide == PageCellWideSpacerTail {
-		assert(self.scrolling_region.left >= 1) // Zig: left - 1 (u16) traps
-		wide_cell := &cells[self.scrolling_region.left-1]
+		assert(self.ScrollingRegion.Left >= 1) // Zig: left - 1 (u16) traps
+		wide_cell := &cells[self.ScrollingRegion.Left-1]
 		if wide_cell.HasGrapheme() {
 			page.ClearGrapheme(wide_cell)
 			page.UpdateRowGraphemeFlag(row)
@@ -2542,7 +2542,7 @@ func (self *Terminal) rowWillBeShifted(page *Page, row *PageRow) {
 	}
 
 	if right_cell.wide == PageCellWideWide {
-		tail_cell := &cells[self.scrolling_region.right+1]
+		tail_cell := &cells[self.ScrollingRegion.Right+1]
 		if right_cell.HasGrapheme() {
 			page.ClearGrapheme(right_cell)
 			page.UpdateRowGraphemeFlag(row)
@@ -2587,10 +2587,10 @@ func (self *Terminal) InsertLines(count uint) {
 	}
 
 	// If the cursor is outside the scroll region we do nothing.
-	if self.screens.active.cursor.y < self.scrolling_region.top ||
-		self.screens.active.cursor.y > self.scrolling_region.bottom ||
-		self.screens.active.cursor.x < self.scrolling_region.left ||
-		self.screens.active.cursor.x > self.scrolling_region.right {
+	if self.Screens.Active.Cursor.Y < self.ScrollingRegion.Top ||
+		self.Screens.Active.Cursor.Y > self.ScrollingRegion.Bottom ||
+		self.Screens.Active.Cursor.X < self.ScrollingRegion.Left ||
+		self.Screens.Active.Cursor.X > self.ScrollingRegion.Right {
 		return
 	}
 
@@ -2598,20 +2598,20 @@ func (self *Terminal) InsertLines(count uint) {
 	// `build_options.kitty_graphics` (compiled out).
 
 	// At the end we need to return the cursor to the row it started on.
-	start_y := self.screens.active.cursor.y
+	start_y := self.Screens.Active.Cursor.Y
 	defer func() {
-		self.screens.active.CursorAbsolute(self.scrolling_region.left, start_y)
+		self.Screens.Active.CursorAbsolute(self.ScrollingRegion.Left, start_y)
 
 		// Always unset pending wrap
-		self.screens.active.cursor.pending_wrap = false
+		self.Screens.Active.Cursor.PendingWrap = false
 	}()
 
 	// We have a slower path if we have left or right scroll margins.
-	left_right := self.scrolling_region.left > 0 ||
-		self.scrolling_region.right < self.cols-1
+	left_right := self.ScrollingRegion.Left > 0 ||
+		self.ScrollingRegion.Right < self.Cols-1
 
 	// Remaining rows from our cursor to the bottom of the scroll region.
-	rem := self.scrolling_region.bottom - self.screens.active.cursor.y + 1
+	rem := self.ScrollingRegion.Bottom - self.Screens.Active.Cursor.Y + 1
 
 	// We can only insert lines up to our remaining lines in the scroll
 	// region. So we take whichever is smaller.
@@ -2621,9 +2621,9 @@ func (self *Terminal) InsertLines(count uint) {
 
 	// Create a new tracked pin which we'll use to navigate the page list
 	// so that if we need to adjust capacity it will be properly tracked.
-	down := self.screens.active.cursor.page_pin.Down(uint(rem - 1))
+	down := self.Screens.Active.Cursor.PagePin.Down(uint(rem - 1))
 	assert(down.Valid) // .?
-	cur_p, err := self.screens.active.pages.TrackPin(down.Value)
+	cur_p, err := self.Screens.Active.Pages.TrackPin(down.Value)
 	if err != nil {
 		// Zig: comptime assert(@TypeOf(err) == error{OutOfMemory});
 
@@ -2635,7 +2635,7 @@ func (self *Terminal) InsertLines(count uint) {
 		warn("terminal", "insertLines trackPin error err=error.%v", err) // Zig: log.err
 		panic("insertLines trackPin OOM")
 	}
-	defer func() { self.screens.active.pages.UntrackPin(cur_p) }()
+	defer func() { self.Screens.Active.Pages.UntrackPin(cur_p) }()
 
 	// Our current y position relative to the cursor
 	y := uint(rem)
@@ -2653,8 +2653,8 @@ func (self *Terminal) InsertLines(count uint) {
 			off_rac := off_p.RowAndCell()
 			off_row := off_rac.row
 
-			self.rowWillBeShifted(&cur_p.node.data, cur_row)
-			self.rowWillBeShifted(&off_p.node.data, off_row)
+			self.rowWillBeShifted(&cur_p.Node.data, cur_row)
+			self.rowWillBeShifted(&off_p.Node.data, off_row)
 
 			// If our scrolling region is full width, then we unset wrap.
 			if !left_right {
@@ -2671,18 +2671,18 @@ func (self *Terminal) InsertLines(count uint) {
 
 			// If our page doesn't match, then we need to do a copy from
 			// one page to another. This is the slow path.
-			if src_p.node != dst_p.node {
-				if err := dst_p.node.data.ClonePartialRowFrom(
-					&src_p.node.data,
+			if src_p.Node != dst_p.Node {
+				if err := dst_p.Node.data.ClonePartialRowFrom(
+					&src_p.Node.data,
 					dst_row,
 					src_row,
-					uint(self.scrolling_region.left),
-					uint(self.scrolling_region.right)+1,
+					uint(self.ScrollingRegion.Left),
+					uint(self.ScrollingRegion.Right)+1,
 				); err != nil {
 					// Adjust our page capacity to make
 					// room for we didn't have space for
-					if _, e := self.screens.active.IncreaseCapacity(
-						dst_p.node,
+					if _, e := self.Screens.Active.IncreaseCapacity(
+						dst_p.Node,
 						terminalCloneFromErrorAdjustment(err),
 					); e != nil {
 						switch e {
@@ -2718,29 +2718,29 @@ func (self *Terminal) InsertLines(count uint) {
 					*src_row = dst
 
 					// Ensure what we did didn't corrupt the page
-					cur_p.node.data.AssertIntegrity()
+					cur_p.Node.data.AssertIntegrity()
 				} else {
 					// Left/right scroll margins we have to
 					// copy cells, which is much slower...
-					page := &cur_p.node.data
+					page := &cur_p.Node.data
 					page.MoveCells(
 						src_row,
-						uint(self.scrolling_region.left),
+						uint(self.ScrollingRegion.Left),
 						dst_row,
-						uint(self.scrolling_region.left),
-						uint(self.scrolling_region.right-self.scrolling_region.left)+1,
+						uint(self.ScrollingRegion.Left),
+						uint(self.ScrollingRegion.Right-self.ScrollingRegion.Left)+1,
 					)
 				}
 			}
 		} else {
 			// Clear the cells for this row, it has been shifted.
-			self.rowWillBeShifted(&cur_p.node.data, cur_row)
-			page := &cur_p.node.data
+			self.rowWillBeShifted(&cur_p.Node.data, cur_row)
+			page := &cur_p.Node.data
 			cells := page.GetCells(cur_row)
-			self.screens.active.ClearCells(
+			self.Screens.Active.ClearCells(
 				page,
 				cur_row,
-				cells[self.scrolling_region.left:self.scrolling_region.right+1],
+				cells[self.ScrollingRegion.Left:self.ScrollingRegion.Right+1],
 			)
 		}
 
@@ -2816,10 +2816,10 @@ func (self *Terminal) DeleteLines(count uint) {
 	}
 
 	// If the cursor is outside the scroll region we do nothing.
-	if self.screens.active.cursor.y < self.scrolling_region.top ||
-		self.screens.active.cursor.y > self.scrolling_region.bottom ||
-		self.screens.active.cursor.x < self.scrolling_region.left ||
-		self.screens.active.cursor.x > self.scrolling_region.right {
+	if self.Screens.Active.Cursor.Y < self.ScrollingRegion.Top ||
+		self.Screens.Active.Cursor.Y > self.ScrollingRegion.Bottom ||
+		self.Screens.Active.Cursor.X < self.ScrollingRegion.Left ||
+		self.Screens.Active.Cursor.X > self.ScrollingRegion.Right {
 		return
 	}
 
@@ -2827,19 +2827,19 @@ func (self *Terminal) DeleteLines(count uint) {
 	// `build_options.kitty_graphics` (compiled out).
 
 	// At the end we need to return the cursor to the row it started on.
-	start_y := self.screens.active.cursor.y
+	start_y := self.Screens.Active.Cursor.Y
 	defer func() {
-		self.screens.active.CursorAbsolute(self.scrolling_region.left, start_y)
+		self.Screens.Active.CursorAbsolute(self.ScrollingRegion.Left, start_y)
 		// Always unset pending wrap
-		self.screens.active.cursor.pending_wrap = false
+		self.Screens.Active.Cursor.PendingWrap = false
 	}()
 
 	// We have a slower path if we have left or right scroll margins.
-	left_right := self.scrolling_region.left > 0 ||
-		self.scrolling_region.right < self.cols-1
+	left_right := self.ScrollingRegion.Left > 0 ||
+		self.ScrollingRegion.Right < self.Cols-1
 
 	// Remaining rows from our cursor to the bottom of the scroll region.
-	rem := self.scrolling_region.bottom - self.screens.active.cursor.y + 1
+	rem := self.ScrollingRegion.Bottom - self.Screens.Active.Cursor.Y + 1
 
 	// We can only insert lines up to our remaining lines in the scroll
 	// region. So we take whichever is smaller.
@@ -2849,14 +2849,14 @@ func (self *Terminal) DeleteLines(count uint) {
 
 	// Create a new tracked pin which we'll use to navigate the page list
 	// so that if we need to adjust capacity it will be properly tracked.
-	cur_p, err := self.screens.active.pages.TrackPin(*self.screens.active.cursor.page_pin)
+	cur_p, err := self.Screens.Active.Pages.TrackPin(*self.Screens.Active.Cursor.PagePin)
 	if err != nil {
 		// See insertLines
 		// Zig: comptime assert(@TypeOf(err) == error{OutOfMemory});
 		warn("terminal", "deleteLines trackPin error err=error.%v", err) // Zig: log.err
 		panic("deleteLines trackPin OOM")
 	}
-	defer func() { self.screens.active.pages.UntrackPin(cur_p) }()
+	defer func() { self.Screens.Active.Pages.UntrackPin(cur_p) }()
 
 	// Our current y position relative to the cursor
 	var y uint = 0
@@ -2874,8 +2874,8 @@ func (self *Terminal) DeleteLines(count uint) {
 			off_rac := off_p.RowAndCell()
 			off_row := off_rac.row
 
-			self.rowWillBeShifted(&cur_p.node.data, cur_row)
-			self.rowWillBeShifted(&off_p.node.data, off_row)
+			self.rowWillBeShifted(&cur_p.Node.data, cur_row)
+			self.rowWillBeShifted(&off_p.Node.data, off_row)
 
 			// If our scrolling region is full width, then we unset wrap.
 			if !left_right {
@@ -2892,18 +2892,18 @@ func (self *Terminal) DeleteLines(count uint) {
 
 			// If our page doesn't match, then we need to do a copy from
 			// one page to another. This is the slow path.
-			if src_p.node != dst_p.node {
-				if err := dst_p.node.data.ClonePartialRowFrom(
-					&src_p.node.data,
+			if src_p.Node != dst_p.Node {
+				if err := dst_p.Node.data.ClonePartialRowFrom(
+					&src_p.Node.data,
 					dst_row,
 					src_row,
-					uint(self.scrolling_region.left),
-					uint(self.scrolling_region.right)+1,
+					uint(self.ScrollingRegion.Left),
+					uint(self.ScrollingRegion.Right)+1,
 				); err != nil {
 					// Adjust our page capacity to make
 					// room for we didn't have space for
-					if _, e := self.screens.active.IncreaseCapacity(
-						dst_p.node,
+					if _, e := self.Screens.Active.IncreaseCapacity(
+						dst_p.Node,
 						terminalCloneFromErrorAdjustment(err),
 					); e != nil {
 						switch e {
@@ -2932,29 +2932,29 @@ func (self *Terminal) DeleteLines(count uint) {
 					*src_row = dst
 
 					// Ensure what we did didn't corrupt the page
-					cur_p.node.data.AssertIntegrity()
+					cur_p.Node.data.AssertIntegrity()
 				} else {
 					// Left/right scroll margins we have to
 					// copy cells, which is much slower...
-					page := &cur_p.node.data
+					page := &cur_p.Node.data
 					page.MoveCells(
 						src_row,
-						uint(self.scrolling_region.left),
+						uint(self.ScrollingRegion.Left),
 						dst_row,
-						uint(self.scrolling_region.left),
-						uint(self.scrolling_region.right-self.scrolling_region.left)+1,
+						uint(self.ScrollingRegion.Left),
+						uint(self.ScrollingRegion.Right-self.ScrollingRegion.Left)+1,
 					)
 				}
 			}
 		} else {
 			// Clear the cells for this row, it's from out of bounds.
-			self.rowWillBeShifted(&cur_p.node.data, cur_row)
-			page := &cur_p.node.data
+			self.rowWillBeShifted(&cur_p.Node.data, cur_row)
+			page := &cur_p.Node.data
 			cells := page.GetCells(cur_row)
-			self.screens.active.ClearCells(
+			self.Screens.Active.ClearCells(
 				page,
 				cur_row,
-				cells[self.scrolling_region.left:self.scrolling_region.right+1],
+				cells[self.ScrollingRegion.Left:self.ScrollingRegion.Right+1],
 			)
 		}
 
@@ -2985,7 +2985,7 @@ func (self *Terminal) InsertBlanks(count uint) {
 	// Unset pending wrap state without wrapping. Note: this purposely
 	// happens BEFORE the scroll region check below, because that's what
 	// xterm does.
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// If we're given a zero then we do nothing. The rest of this function
 	// assumes count > 0 and will crash if zero so return early. Note that
@@ -2997,8 +2997,8 @@ func (self *Terminal) InsertBlanks(count uint) {
 
 	// If our cursor is outside the margins then do nothing. We DO reset
 	// wrap state still so this must remain below the above logic.
-	if self.screens.active.cursor.x < self.scrolling_region.left ||
-		self.screens.active.cursor.x > self.scrolling_region.right {
+	if self.Screens.Active.Cursor.X < self.ScrollingRegion.Left ||
+		self.Screens.Active.Cursor.X > self.ScrollingRegion.Right {
 		return
 	}
 
@@ -3014,18 +3014,18 @@ func (self *Terminal) InsertBlanks(count uint) {
 	// left is just the cursor position but as a multi-pointer
 	//
 	// Go: the index of the cursor cell in the page's cells.
-	page := &self.screens.active.cursor.page_pin.node.data
-	left := page.cellIndex(self.screens.active.cursor.page_cell)
+	page := &self.Screens.Active.Cursor.PagePin.Node.data
+	left := page.cellIndex(self.Screens.Active.Cursor.PageCell)
 
 	// If our X is a wide spacer tail then we need to erase the
 	// previous cell too so we don't split a multi-cell character.
-	if self.screens.active.cursor.page_cell.wide == PageCellWideSpacerTail {
-		assert(self.screens.active.cursor.x > 0)
-		self.screens.active.ClearCells(page, self.screens.active.cursor.page_row, page.cells[left-1:left+1])
+	if self.Screens.Active.Cursor.PageCell.wide == PageCellWideSpacerTail {
+		assert(self.Screens.Active.Cursor.X > 0)
+		self.Screens.Active.ClearCells(page, self.Screens.Active.Cursor.PageRow, page.cells[left-1:left+1])
 	}
 
 	// Remaining cols from our cursor to the right margin.
-	rem := self.scrolling_region.right - self.screens.active.cursor.x + 1
+	rem := self.ScrollingRegion.Right - self.Screens.Active.Cursor.X + 1
 
 	// If the cell at the right margin is wide, its spacer tail is
 	// outside the scroll region and would be orphaned by either the
@@ -3033,9 +3033,9 @@ func (self *Terminal) InsertBlanks(count uint) {
 	{
 		right_cell := left + uint(rem-1)
 		if page.cells[right_cell].wide == PageCellWideWide {
-			self.screens.active.ClearCells(
+			self.Screens.Active.ClearCells(
 				page,
-				self.screens.active.cursor.page_row,
+				self.Screens.Active.Cursor.PageRow,
 				page.cells[right_cell:right_cell+2],
 			)
 		}
@@ -3067,9 +3067,9 @@ func (self *Terminal) InsertBlanks(count uint) {
 			if page.cells[end].wide == PageCellWideWide {
 				end_multi := end
 				assert(page.cells[end_multi+1].wide == PageCellWideSpacerTail)
-				self.screens.active.ClearCells(
+				self.Screens.Active.ClearCells(
 					page,
-					self.screens.active.cursor.page_row,
+					self.Screens.Active.Cursor.PageRow,
 					page.cells[end_multi:end_multi+2],
 				)
 			}
@@ -3084,10 +3084,10 @@ func (self *Terminal) InsertBlanks(count uint) {
 	}
 
 	// Insert blanks. The blanks preserve the background color.
-	self.screens.active.ClearCells(page, self.screens.active.cursor.page_row, page.cells[left:left+uint(adjusted_count)])
+	self.Screens.Active.ClearCells(page, self.Screens.Active.Cursor.PageRow, page.cells[left:left+uint(adjusted_count)])
 
 	// Our row is always dirty
-	self.screens.active.CursorMarkDirty()
+	self.Screens.Active.CursorMarkDirty()
 }
 
 // DeleteChars is Terminal.deleteChars.
@@ -3109,28 +3109,28 @@ func (self *Terminal) DeleteChars(count_req uint) {
 
 	// If our cursor is outside the margins then do nothing. We DO reset
 	// wrap state still so this must remain below the above logic.
-	if self.screens.active.cursor.x < self.scrolling_region.left ||
-		self.screens.active.cursor.x > self.scrolling_region.right {
+	if self.Screens.Active.Cursor.X < self.ScrollingRegion.Left ||
+		self.Screens.Active.Cursor.X > self.ScrollingRegion.Right {
 		return
 	}
 
 	// left is just the cursor position but as a multi-pointer
 	//
 	// Go: the index of the cursor cell in the page's cells.
-	page := &self.screens.active.cursor.page_pin.node.data
-	left := page.cellIndex(self.screens.active.cursor.page_cell)
+	page := &self.Screens.Active.Cursor.PagePin.Node.data
+	left := page.cellIndex(self.Screens.Active.Cursor.PageCell)
 
 	// Remaining cols from our cursor to the right margin.
-	rem := self.scrolling_region.right - self.screens.active.cursor.x + 1
+	rem := self.ScrollingRegion.Right - self.Screens.Active.Cursor.X + 1
 
 	// We can only insert blanks up to our remaining cols
 	//
 	// Zig: @min(usize, CellCountInt) has type CellCountInt.
 	count := SizeCellCountInt(min(count_req, uint(rem)))
 
-	self.screens.active.SplitCellBoundary(self.screens.active.cursor.x)
-	self.screens.active.SplitCellBoundary(self.screens.active.cursor.x + count)
-	self.screens.active.SplitCellBoundary(self.scrolling_region.right + 1)
+	self.Screens.Active.SplitCellBoundary(self.Screens.Active.Cursor.X)
+	self.Screens.Active.SplitCellBoundary(self.Screens.Active.Cursor.X + count)
+	self.Screens.Active.SplitCellBoundary(self.ScrollingRegion.Right + 1)
 
 	// This is the amount of space at the right of the scroll region
 	// that will NOT be blank, so we need to shift the correct cols right.
@@ -3155,13 +3155,13 @@ func (self *Terminal) DeleteChars(count_req uint) {
 	}
 
 	// Insert blanks. The blanks preserve the background color.
-	self.screens.active.ClearCells(page, self.screens.active.cursor.page_row, page.cells[x:x+uint(rem-scroll_amount)])
+	self.Screens.Active.ClearCells(page, self.Screens.Active.Cursor.PageRow, page.cells[x:x+uint(rem-scroll_amount)])
 
 	// Our row's soft-wrap is always reset.
-	self.screens.active.CursorResetWrap()
+	self.Screens.Active.CursorResetWrap()
 
 	// Our row is always dirty
-	self.screens.active.CursorMarkDirty()
+	self.Screens.Active.CursorMarkDirty()
 }
 
 // EraseChars is Terminal.eraseChars.
@@ -3171,14 +3171,14 @@ func (self *Terminal) EraseChars(count_req uint) {
 	var count SizeCellCountInt
 	{
 		// Zig: the labeled block `end:`.
-		remaining := self.cols - self.screens.active.cursor.x
+		remaining := self.Cols - self.Screens.Active.Cursor.X
 		// Zig: @min(CellCountInt, usize) has type CellCountInt.
 		end := SizeCellCountInt(min(uint(remaining), max(count_req, 1)))
 
 		// If our last cell is a wide char then we need to also clear the
 		// cell beyond it since we can't just split a wide char.
 		if end != remaining {
-			last := self.screens.active.CursorCellRight(end - 1)
+			last := self.Screens.Active.CursorCellRight(end - 1)
 			if last.wide == PageCellWideWide {
 				end += 1
 			}
@@ -3192,36 +3192,36 @@ func (self *Terminal) EraseChars(count_req uint) {
 	// TODO(qwerasd): This isn't actually correct if you take in to account
 	// protected modes. We need to figure out how to make `clearCells` or at
 	// least `clearUnprotectedCells` handle boundary conditions...
-	self.screens.active.SplitCellBoundary(self.screens.active.cursor.x)
-	self.screens.active.SplitCellBoundary(self.screens.active.cursor.x + count)
+	self.Screens.Active.SplitCellBoundary(self.Screens.Active.Cursor.X)
+	self.Screens.Active.SplitCellBoundary(self.Screens.Active.Cursor.X + count)
 
 	// Reset our row's soft-wrap.
-	self.screens.active.CursorResetWrap()
+	self.Screens.Active.CursorResetWrap()
 
 	// Mark our cursor row as dirty
-	self.screens.active.CursorMarkDirty()
+	self.Screens.Active.CursorMarkDirty()
 
 	// Clear the cells
 	//
 	// Go: the index of the cursor cell in the page's cells.
-	page := &self.screens.active.cursor.page_pin.node.data
-	cells := page.cellIndex(self.screens.active.cursor.page_cell)
+	page := &self.Screens.Active.Cursor.PagePin.Node.data
+	cells := page.cellIndex(self.Screens.Active.Cursor.PageCell)
 
 	// If we never had a protection mode, then we can assume no cells
 	// are protected and go with the fast path. If the last protection
 	// mode was not ISO we also always ignore protection attributes.
-	if self.screens.active.protected_mode != ANSIProtectedModeIso {
-		self.screens.active.ClearCells(
+	if self.Screens.Active.ProtectedMode != ANSIProtectedModeIso {
+		self.Screens.Active.ClearCells(
 			page,
-			self.screens.active.cursor.page_row,
+			self.Screens.Active.Cursor.PageRow,
 			page.cells[cells:cells+uint(count)],
 		)
 		return
 	}
 
-	self.screens.active.ClearUnprotectedCells(
+	self.Screens.Active.ClearUnprotectedCells(
 		page,
-		self.screens.active.cursor.page_row,
+		self.Screens.Active.Cursor.PageRow,
 		page.cells[cells:cells+uint(count)],
 	)
 }
@@ -3238,25 +3238,25 @@ func (self *Terminal) EraseLine(mode CSIEraseLine, protected_req bool) {
 	switch mode {
 	case CSIEraseLineRight:
 		// Zig: the labeled block `right:`.
-		x := self.screens.active.cursor.x
+		x := self.Screens.Active.Cursor.X
 
 		// If our X is a wide spacer tail then we need to erase the
 		// previous cell too so we don't split a multi-cell character.
-		if x > 0 && self.screens.active.cursor.page_cell.wide == PageCellWideSpacerTail {
+		if x > 0 && self.Screens.Active.Cursor.PageCell.wide == PageCellWideSpacerTail {
 			x -= 1
 		}
 
 		// Reset our row's soft-wrap.
-		self.screens.active.CursorResetWrap()
+		self.Screens.Active.CursorResetWrap()
 
-		start, end = x, self.cols
+		start, end = x, self.Cols
 
 	case CSIEraseLineLeft:
 		// Zig: the labeled block `left:`.
-		x := self.screens.active.cursor.x
+		x := self.Screens.Active.Cursor.X
 
 		// If our x is a wide char we need to delete the tail too.
-		if self.screens.active.cursor.page_cell.wide == PageCellWideWide {
+		if self.Screens.Active.Cursor.PageCell.wide == PageCellWideWide {
 			x += 1
 		}
 
@@ -3265,7 +3265,7 @@ func (self *Terminal) EraseLine(mode CSIEraseLine, protected_req bool) {
 	// Note that it seems like complete should reset the soft-wrap
 	// state of the line but in xterm it does not.
 	case CSIEraseLineComplete:
-		start, end = 0, self.cols
+		start, end = 0, self.Cols
 
 	default:
 		warn("terminal", "unimplemented erase line mode: %v", mode) // Zig: log.err
@@ -3274,41 +3274,41 @@ func (self *Terminal) EraseLine(mode CSIEraseLine, protected_req bool) {
 
 	// All modes will clear the pending wrap state and we know we have
 	// a valid mode at this point.
-	self.screens.active.cursor.pending_wrap = false
+	self.Screens.Active.Cursor.PendingWrap = false
 
 	// We always mark our row as dirty
-	self.screens.active.CursorMarkDirty()
+	self.Screens.Active.CursorMarkDirty()
 
 	// Start of our cells
 	//
 	// Go: the index in the page's cells of the cursor row's first cell.
-	page := &self.screens.active.cursor.page_pin.node.data
+	page := &self.Screens.Active.Cursor.PagePin.Node.data
 	var cells uint
 	{
 		// Zig: the labeled block `cells:`.
-		cells_ := page.cellIndex(self.screens.active.cursor.page_cell)
-		cells = cells_ - uint(self.screens.active.cursor.x)
+		cells_ := page.cellIndex(self.Screens.Active.Cursor.PageCell)
+		cells = cells_ - uint(self.Screens.Active.Cursor.X)
 	}
 
 	// We respect protected attributes if explicitly requested (probably
 	// a DECSEL sequence) or if our last protected mode was ISO even if its
 	// not currently set.
-	protected := self.screens.active.protected_mode == ANSIProtectedModeIso || protected_req
+	protected := self.Screens.Active.ProtectedMode == ANSIProtectedModeIso || protected_req
 
 	// If we're not respecting protected attributes, we can use a fast-path
 	// to fill the entire line.
 	if !protected {
-		self.screens.active.ClearCells(
+		self.Screens.Active.ClearCells(
 			page,
-			self.screens.active.cursor.page_row,
+			self.Screens.Active.Cursor.PageRow,
 			page.cells[cells+uint(start):cells+uint(end)],
 		)
 		return
 	}
 
-	self.screens.active.ClearUnprotectedCells(
+	self.Screens.Active.ClearUnprotectedCells(
 		page,
-		self.screens.active.cursor.page_row,
+		self.Screens.Active.Cursor.PageRow,
 		page.cells[cells+uint(start):cells+uint(end)],
 	)
 }
@@ -3323,18 +3323,18 @@ func (self *Terminal) EraseDisplay(mode CSIEraseDisplay, protected_req bool) {
 	// We respect protected attributes if explicitly requested (probably
 	// a DECSEL sequence) or if our last protected mode was ISO even if its
 	// not currently set.
-	protected := self.screens.active.protected_mode == ANSIProtectedModeIso || protected_req
+	protected := self.Screens.Active.ProtectedMode == ANSIProtectedModeIso || protected_req
 
 	switch mode {
 	case CSIEraseDisplayScrollComplete:
-		if err := self.screens.active.ScrollClear(); err != nil {
+		if err := self.Screens.Active.ScrollClear(); err != nil {
 			warn("terminal", "scroll clear failed, doing a normal clear err=error.%v", err)
 			self.EraseDisplay(CSIEraseDisplayComplete, protected_req)
 			return
 		}
 
 		// Unsets pending wrap state
-		self.screens.active.cursor.pending_wrap = false
+		self.Screens.Active.Cursor.PendingWrap = false
 
 		// Zig: clearing all Kitty graphics state for this screen is under
 		// `build_options.kitty_graphics` (compiled out).
@@ -3346,14 +3346,14 @@ func (self *Terminal) EraseDisplay(mode CSIEraseDisplay, protected_req bool) {
 		// at a prompt scrolls the screen contents prior to clearing.
 		// Most shells send `ESC [ H ESC [ 2 J` so we can't just check
 		// our current cursor position. See #905
-		if self.screens.active_key == ScreenSetKeyPrimary {
+		if self.Screens.ActiveKey == ScreenSetKeyPrimary {
 			func() {
 				// Zig: the labeled block `at_prompt:`, followed by
 				// nothing; `break :at_prompt` is `return`.
 
 				// Go from the bottom of the active up and see if we're
 				// at a prompt.
-				active_br_ := self.screens.active.pages.GetBottomRight(
+				active_br_ := self.Screens.Active.Pages.GetBottomRight(
 					PointTagActive,
 				)
 				if !active_br_.Valid {
@@ -3362,7 +3362,7 @@ func (self *Terminal) EraseDisplay(mode CSIEraseDisplay, protected_req bool) {
 				active_br := active_br_.Value
 				it := active_br.RowIterator(
 					PageListDirectionLeftUp,
-					Some(self.screens.active.pages.GetTopLeft(PointTagActive)),
+					Some(self.Screens.Active.Pages.GetTopLeft(PointTagActive)),
 				)
 			loop:
 				for {
@@ -3388,7 +3388,7 @@ func (self *Terminal) EraseDisplay(mode CSIEraseDisplay, protected_req bool) {
 					}
 				}
 
-				if err := self.screens.active.ScrollClear(); err != nil {
+				if err := self.Screens.Active.ScrollClear(); err != nil {
 					// If we fail, we just fall back to doing a normal clear
 					// so we don't worry about the error.
 				}
@@ -3396,55 +3396,55 @@ func (self *Terminal) EraseDisplay(mode CSIEraseDisplay, protected_req bool) {
 		}
 
 		// All active area
-		self.screens.active.ClearRows(
+		self.Screens.Active.ClearRows(
 			Point{Tag: PointTagActive},
 			None[Point](),
 			protected,
 		)
 
 		// Unsets pending wrap state
-		self.screens.active.cursor.pending_wrap = false
+		self.Screens.Active.Cursor.PendingWrap = false
 
 		// Zig: clearing all Kitty graphics state for this screen is under
 		// `build_options.kitty_graphics` (compiled out).
 
 		// Cleared screen dirty bit
-		self.flags.dirty.clear = true
+		self.Flags.Dirty.Clear = true
 
 	case CSIEraseDisplayBelow:
 		// All lines to the right (including the cursor)
 		self.EraseLine(CSIEraseLineRight, protected_req)
 
 		// All lines below
-		if self.screens.active.cursor.y+1 < self.rows {
-			self.screens.active.ClearRows(
-				Point{Tag: PointTagActive, Active: PointCoordinate{y: uint32(self.screens.active.cursor.y + 1)}},
+		if self.Screens.Active.Cursor.Y+1 < self.Rows {
+			self.Screens.Active.ClearRows(
+				Point{Tag: PointTagActive, Active: PointCoordinate{Y: uint32(self.Screens.Active.Cursor.Y + 1)}},
 				None[Point](),
 				protected,
 			)
 		}
 
 		// Unsets pending wrap state. Should be done by eraseLine.
-		assert(!self.screens.active.cursor.pending_wrap)
+		assert(!self.Screens.Active.Cursor.PendingWrap)
 
 	case CSIEraseDisplayAbove:
 		// Erase to the left (including the cursor)
 		self.EraseLine(CSIEraseLineLeft, protected_req)
 
 		// All lines above
-		if self.screens.active.cursor.y > 0 {
-			self.screens.active.ClearRows(
-				Point{Tag: PointTagActive, Active: PointCoordinate{y: 0}},
-				Some(Point{Tag: PointTagActive, Active: PointCoordinate{y: uint32(self.screens.active.cursor.y - 1)}}),
+		if self.Screens.Active.Cursor.Y > 0 {
+			self.Screens.Active.ClearRows(
+				Point{Tag: PointTagActive, Active: PointCoordinate{Y: 0}},
+				Some(Point{Tag: PointTagActive, Active: PointCoordinate{Y: uint32(self.Screens.Active.Cursor.Y - 1)}}),
 				protected,
 			)
 		}
 
 		// Unsets pending wrap state
-		assert(!self.screens.active.cursor.pending_wrap)
+		assert(!self.Screens.Active.Cursor.PendingWrap)
 
 	case CSIEraseDisplayScrollback:
-		self.screens.active.EraseRows(Point{Tag: PointTagHistory}, None[Point]())
+		self.Screens.Active.EraseRows(Point{Tag: PointTagHistory}, None[Point]())
 
 	default:
 		panic("unreachable")
@@ -3463,38 +3463,38 @@ func (self *Terminal) EraseDisplay(mode CSIEraseDisplay, protected_req bool) {
 func (self *Terminal) Decaln() (err error) {
 	// Clear our stylistic attributes. This is the only thing that can
 	// fail so we do it first so we can undo it.
-	old_style := self.screens.active.cursor.style
-	self.screens.active.cursor.style = Style{
-		bg_color: self.screens.active.cursor.style.bg_color,
-		fg_color: self.screens.active.cursor.style.fg_color,
+	old_style := self.Screens.Active.Cursor.Style
+	self.Screens.Active.Cursor.Style = Style{
+		BgColor: self.Screens.Active.Cursor.Style.BgColor,
+		FgColor: self.Screens.Active.Cursor.Style.FgColor,
 	}
 	// Zig: errdefer self.screens.active.cursor.style = old_style;
 	defer func() {
 		if err != nil {
-			self.screens.active.cursor.style = old_style
+			self.Screens.Active.Cursor.Style = old_style
 		}
 	}()
-	if err = self.screens.active.ManualStyleUpdate(); err != nil {
+	if err = self.Screens.Active.ManualStyleUpdate(); err != nil {
 		return err
 	}
 
 	// Reset margins, also sets cursor to top-left
-	self.scrolling_region = TerminalScrollingRegion{
-		top:    0,
-		bottom: self.rows - 1,
-		left:   0,
-		right:  self.cols - 1,
+	self.ScrollingRegion = TerminalScrollingRegion{
+		Top:    0,
+		Bottom: self.Rows - 1,
+		Left:   0,
+		Right:  self.Cols - 1,
 	}
 
 	// Origin mode is disabled
-	self.modes.Set(ModesModeOrigin, false)
+	self.Modes.Set(ModesModeOrigin, false)
 
 	// Move our cursor to the top-left
 	self.SetCursorPos(1, 1)
 
 	// Use clearRows instead of eraseDisplay because we must NOT respect
 	// protected attributes here.
-	self.screens.active.ClearRows(
+	self.Screens.Active.ClearRows(
 		Point{Tag: PointTagActive},
 		None[Point](),
 		false,
@@ -3502,15 +3502,15 @@ func (self *Terminal) Decaln() (err error) {
 
 	// Fill with Es by moving the cursor but reset it after.
 	for {
-		page := &self.screens.active.cursor.page_pin.node.data
-		row := self.screens.active.cursor.page_row
+		page := &self.Screens.Active.Cursor.PagePin.Node.data
+		row := self.Screens.Active.Cursor.PageRow
 		cells_multi := page.rowCells(row)
 		cells := cells_multi[0:page.size.cols]
 		for i := range cells { // Zig: @memset
 			cells[i] = PageCell{
 				content_tag: PageCellContentTagCodepoint,
 				content:     PageCellContent{codepoint: 'E'},
-				style_id:    self.screens.active.cursor.style_id,
+				style_id:    self.Screens.Active.Cursor.StyleID,
 
 				// DECALN does not respect protected state. Verified with xterm.
 				protected: false,
@@ -3518,9 +3518,9 @@ func (self *Terminal) Decaln() (err error) {
 		}
 
 		// If we have a ref-counted style, increase
-		if self.screens.active.cursor.style_id != StyleDefaultId {
+		if self.Screens.Active.Cursor.StyleID != StyleDefaultID {
 			page.styles.UseMultiple(
-				self.screens.active.cursor.style_id,
+				self.Screens.Active.Cursor.StyleID,
 				SizeCellCountInt(len(cells)),
 			)
 			row.styled = true
@@ -3529,11 +3529,11 @@ func (self *Terminal) Decaln() (err error) {
 		// We messed with the page so assert its integrity here.
 		page.AssertIntegrity()
 
-		self.screens.active.CursorMarkDirty()
-		if self.screens.active.cursor.y == self.rows-1 {
+		self.Screens.Active.CursorMarkDirty()
+		if self.Screens.Active.Cursor.Y == self.Rows-1 {
 			break
 		}
-		self.screens.active.CursorDown(1)
+		self.Screens.Active.CursorDown(1)
 	}
 
 	// Reset the cursor to the top-left
@@ -3551,7 +3551,7 @@ func (self *Terminal) Decaln() (err error) {
 // inferred error set is that of Screen.setAttribute: ErrOutOfMemory
 // (dcs.go) or ErrOutOfSpace (PageList.go).
 func (self *Terminal) SetAttribute(attr SGRAttribute) error {
-	return self.screens.active.SetAttribute(attr)
+	return self.Screens.Active.SetAttribute(attr)
 }
 
 // PrintAttributes is Terminal.printAttributes.
@@ -3586,46 +3586,46 @@ func (self *Terminal) PrintAttributes(buf []uint8) ([]uint8, error) {
 		return nil, err
 	}
 
-	pen := self.screens.active.cursor.style
+	pen := self.Screens.Active.Cursor.Style
 	var attrs [8]uint8 // Zig: @splat(0)
 	var i uint = 0
 
-	if pen.flags.bold {
+	if pen.Flags.Bold {
 		attrs[i] = '1'
 		i += 1
 	}
 
-	if pen.flags.faint {
+	if pen.Flags.Faint {
 		attrs[i] = '2'
 		i += 1
 	}
 
-	if pen.flags.italic {
+	if pen.Flags.Italic {
 		attrs[i] = '3'
 		i += 1
 	}
 
-	if pen.flags.underline != SGRAttributeUnderlineNone {
+	if pen.Flags.Underline != SGRAttributeUnderlineNone {
 		attrs[i] = '4'
 		i += 1
 	}
 
-	if pen.flags.blink {
+	if pen.Flags.Blink {
 		attrs[i] = '5'
 		i += 1
 	}
 
-	if pen.flags.inverse {
+	if pen.Flags.Inverse {
 		attrs[i] = '7'
 		i += 1
 	}
 
-	if pen.flags.invisible {
+	if pen.Flags.Invisible {
 		attrs[i] = '8'
 		i += 1
 	}
 
-	if pen.flags.strikethrough {
+	if pen.Flags.Strikethrough {
 		attrs[i] = '9'
 		i += 1
 	}
@@ -3636,10 +3636,10 @@ func (self *Terminal) PrintAttributes(buf []uint8) ([]uint8, error) {
 		}
 	}
 
-	switch pen.fg_color.Tag {
+	switch pen.FgColor.Tag {
 	case StyleColorNone:
 	case StyleColorPalette:
-		idx := pen.fg_color.Palette
+		idx := pen.FgColor.Palette
 		var s string
 		if idx >= 16 {
 			s = ";38:5:" + itoa(uint64(idx))
@@ -3652,8 +3652,8 @@ func (self *Terminal) PrintAttributes(buf []uint8) ([]uint8, error) {
 			return nil, err
 		}
 	case StyleColorRgb:
-		rgb := pen.fg_color.Rgb
-		s := ";38:2::" + itoa(uint64(rgb.r)) + ":" + itoa(uint64(rgb.g)) + ":" + itoa(uint64(rgb.b))
+		rgb := pen.FgColor.Rgb
+		s := ";38:2::" + itoa(uint64(rgb.R)) + ":" + itoa(uint64(rgb.G)) + ":" + itoa(uint64(rgb.B))
 		if err := writeAll([]uint8(s)); err != nil {
 			return nil, err
 		}
@@ -3661,10 +3661,10 @@ func (self *Terminal) PrintAttributes(buf []uint8) ([]uint8, error) {
 		panic("unreachable")
 	}
 
-	switch pen.bg_color.Tag {
+	switch pen.BgColor.Tag {
 	case StyleColorNone:
 	case StyleColorPalette:
-		idx := pen.bg_color.Palette
+		idx := pen.BgColor.Palette
 		var s string
 		if idx >= 16 {
 			s = ";48:5:" + itoa(uint64(idx))
@@ -3677,8 +3677,8 @@ func (self *Terminal) PrintAttributes(buf []uint8) ([]uint8, error) {
 			return nil, err
 		}
 	case StyleColorRgb:
-		rgb := pen.bg_color.Rgb
-		s := ";48:2::" + itoa(uint64(rgb.r)) + ":" + itoa(uint64(rgb.g)) + ":" + itoa(uint64(rgb.b))
+		rgb := pen.BgColor.Rgb
+		s := ";48:2::" + itoa(uint64(rgb.R)) + ":" + itoa(uint64(rgb.G)) + ":" + itoa(uint64(rgb.B))
 		if err := writeAll([]uint8(s)); err != nil {
 			return nil, err
 		}
@@ -3725,13 +3725,13 @@ func (self *Terminal) Deccolm(mode TerminalDeccolmMode) error {
 	// If DEC mode 40 isn't enabled, then this is ignored. We also make
 	// sure that we don't have deccolm set because we want to fully ignore
 	// set mode.
-	if !self.modes.Get(ModesModeEnableMode3) {
-		self.modes.Set(ModesMode132Column, false)
+	if !self.Modes.Get(ModesModeEnableMode3) {
+		self.Modes.Set(ModesMode132Column, false)
 		return nil
 	}
 
 	// Enable it
-	self.modes.Set(ModesMode132Column, mode == TerminalDeccolmMode132Cols)
+	self.Modes.Set(ModesMode132Column, mode == TerminalDeccolmMode132Cols)
 
 	// Resize to the requested size
 	var cols SizeCellCountInt
@@ -3743,7 +3743,7 @@ func (self *Terminal) Deccolm(mode TerminalDeccolmMode) error {
 	default:
 		panic("unreachable")
 	}
-	if err := self.Resize(cols, self.rows); err != nil {
+	if err := self.Resize(cols, self.Rows); err != nil {
 		return err
 	}
 
@@ -3763,63 +3763,63 @@ func (self *Terminal) Deccolm(mode TerminalDeccolmMode) error {
 // Screen.resize: ErrOutOfMemory (dcs.go).
 func (self *Terminal) Resize(cols SizeCellCountInt, rows SizeCellCountInt) error {
 	// If our cols/rows didn't change then we're done
-	if self.cols == cols && self.rows == rows {
+	if self.Cols == cols && self.Rows == rows {
 		return nil
 	}
 
 	// Resize our tabstops
-	if self.cols != cols {
-		self.tabstops.Deinit()
+	if self.Cols != cols {
+		self.Tabstops.Deinit()
 		tabstops, err := TabstopsInit(uint(cols), 8)
 		if err != nil {
 			return err
 		}
-		self.tabstops = tabstops
+		self.Tabstops = tabstops
 	}
 
 	// Resize primary screen, which supports reflow
-	primary := self.screens.Get(ScreenSetKeyPrimary)
+	primary := self.Screens.Get(ScreenSetKeyPrimary)
 	assert(primary != nil) // .?
 	if err := primary.Resize(ScreenResize{
-		cols:          cols,
-		rows:          rows,
-		reflow:        self.modes.Get(ModesModeWraparound),
-		prompt_redraw: self.flags.shell_redraws_prompt,
+		Cols:         cols,
+		Rows:         rows,
+		Reflow:       self.Modes.Get(ModesModeWraparound),
+		PromptRedraw: self.Flags.ShellRedrawsPrompt,
 	}); err != nil {
 		return err
 	}
 
 	// Alternate screen, if it exists, doesn't reflow
-	if alt := self.screens.Get(ScreenSetKeyAlternate); alt != nil {
+	if alt := self.Screens.Get(ScreenSetKeyAlternate); alt != nil {
 		if err := alt.Resize(ScreenResize{
-			cols:   cols,
-			rows:   rows,
-			reflow: false,
+			Cols:   cols,
+			Rows:   rows,
+			Reflow: false,
 
 			// Zig: the field default, which is not the Go zero value.
-			prompt_redraw: OSCParsersSemanticPromptRedrawFalse,
+			PromptRedraw: OSCParsersSemanticPromptRedrawFalse,
 		}); err != nil {
 			return err
 		}
 	}
 
 	// Whenever we resize we just mark it as a screen clear
-	self.flags.dirty.clear = true
+	self.Flags.Dirty.Clear = true
 
 	// Set our size
-	self.cols = cols
-	self.rows = rows
+	self.Cols = cols
+	self.Rows = rows
 
 	// Reset the scrolling region
 	//
 	// Zig: `rows - 1` and `cols - 1` (u16) trap below 1.
 	assert(rows >= 1)
 	assert(cols >= 1)
-	self.scrolling_region = TerminalScrollingRegion{
-		top:    0,
-		bottom: rows - 1,
-		left:   0,
-		right:  cols - 1,
+	self.ScrollingRegion = TerminalScrollingRegion{
+		Top:    0,
+		Bottom: rows - 1,
+		Left:   0,
+		Right:  cols - 1,
 	}
 	return nil
 }
@@ -3831,21 +3831,21 @@ func (self *Terminal) Resize(cols SizeCellCountInt, rows SizeCellCountInt) error
 // Zig: pub fn setPwd(self: *Terminal, pwd: []const u8) !void. The error is
 // ErrOutOfMemory (dcs.go).
 func (self *Terminal) SetPwd(pwd []uint8) error {
-	self.pwd = self.pwd[:0] // Zig: clearRetainingCapacity
+	self.Pwd = self.Pwd[:0] // Zig: clearRetainingCapacity
 	// Zig: appendSlice copies with @memcpy into items[0..pwd.len]; a safe
 	// build stops when the two ranges overlap ("@memcpy arguments alias"),
 	// e.g. t.setPwd(t.getPwd().?). Go's append would copy anyway, so the
 	// check is explicit. When the capacity is too small Zig grows the list
 	// first and the ranges cannot overlap.
-	if len(pwd) > 0 && cap(self.pwd) >= len(pwd) {
-		dst := reflect.ValueOf(self.pwd[:len(pwd)]).Pointer()
+	if len(pwd) > 0 && cap(self.Pwd) >= len(pwd) {
+		dst := reflect.ValueOf(self.Pwd[:len(pwd)]).Pointer()
 		src := reflect.ValueOf(pwd).Pointer()
 		n := uintptr(len(pwd))
 		if src < dst+n && dst < src+n {
 			panic("@memcpy arguments alias")
 		}
 	}
-	self.pwd = append(self.pwd, pwd...) // Zig: appendSlice(self.gpa(), pwd)
+	self.Pwd = append(self.Pwd, pwd...) // Zig: appendSlice(self.gpa(), pwd)
 	return nil
 }
 
@@ -3856,10 +3856,10 @@ func (self *Terminal) SetPwd(pwd []uint8) error {
 //
 // Zig: pub fn getPwd(self: *const Terminal) ?[]const u8.
 func (self *Terminal) GetPwd() Optional[[]uint8] {
-	if len(self.pwd) == 0 {
+	if len(self.Pwd) == 0 {
 		return None[[]uint8]()
 	}
-	return Some(self.pwd)
+	return Some(self.Pwd)
 }
 
 // SwitchScreen is Terminal.switchScreen.
@@ -3885,43 +3885,43 @@ func (self *Terminal) GetPwd() Optional[[]uint8] {
 // ErrOutOfMemory (dcs.go).
 func (self *Terminal) SwitchScreen(key ScreenSetKey) (*Screen, error) {
 	// If we're already on the requested screen we do nothing.
-	if self.screens.active_key == key {
+	if self.Screens.ActiveKey == key {
 		return nil, nil
 	}
-	old := self.screens.active
+	old := self.Screens.Active
 
 	// We always end hyperlink state when switching screens.
 	// We need to do this on the original screen.
 	old.EndHyperlink()
 
 	// Switch the screens/
-	new_ := self.screens.Get(key) // Zig: new
+	new_ := self.Screens.Get(key) // Zig: new
 	if new_ == nil {
 		// Zig: the labeled block `new:`.
-		primary := self.screens.Get(ScreenSetKeyPrimary)
+		primary := self.Screens.Get(ScreenSetKeyPrimary)
 		assert(primary != nil) // .?
 		var max_scrollback uint64
 		switch key {
 		case ScreenSetKeyPrimary:
-			max_scrollback = primary.pages.explicit_max_size
+			max_scrollback = primary.Pages.explicit_max_size
 		case ScreenSetKeyAlternate:
 			max_scrollback = 0
 		default:
 			panic("unreachable")
 		}
-		s, err := self.screens.GetInit(
+		s, err := self.Screens.GetInit(
 			key,
 			ScreenOptions{
-				cols:           self.cols,
-				rows:           self.rows,
-				max_scrollback: max_scrollback,
+				Cols:          self.Cols,
+				Rows:          self.Rows,
+				MaxScrollback: max_scrollback,
 
 				// Inherit our Kitty image storage limit from the primary
 				// screen if we have to initialize.
 				//
 				// Zig: `primary.kitty_images.total_limit` under
 				// `build_options.kitty_graphics` (compiled out), else 0.
-				kitty_image_storage_limit: 0,
+				KittyImageStorageLimit: 0,
 			},
 		)
 		if err != nil {
@@ -3931,10 +3931,10 @@ func (self *Terminal) SwitchScreen(key ScreenSetKey) (*Screen, error) {
 	}
 
 	// The new screen should not have any hyperlinks set
-	assert(new_.cursor.hyperlink_id == 0)
+	assert(new_.Cursor.HyperlinkID == 0)
 
 	// Bring our charset state with us
-	new_.charset = old.charset
+	new_.Charset = old.Charset
 
 	// Clear our selection
 	new_.ClearSelection()
@@ -3943,10 +3943,10 @@ func (self *Terminal) SwitchScreen(key ScreenSetKey) (*Screen, error) {
 	// `build_options.kitty_graphics` (compiled out).
 
 	// Mark our terminal as dirty to redraw the grid.
-	self.flags.dirty.clear = true
+	self.Flags.Dirty.Clear = true
 
 	// Finalize the switch
-	self.screens.SwitchTo(key)
+	self.Screens.SwitchTo(key)
 
 	return old, nil
 }
@@ -3978,7 +3978,7 @@ func (self *Terminal) SwitchScreenMode(mode TerminalSwitchScreenMode, enabled bo
 	// If we're disabling 1047 and we're on alt screen then
 	// we clear the screen.
 	case TerminalSwitchScreenMode1047:
-		if !enabled && self.screens.active_key == ScreenSetKeyAlternate {
+		if !enabled && self.Screens.ActiveKey == ScreenSetKeyAlternate {
 			self.EraseDisplay(CSIEraseDisplayComplete, false)
 		}
 
@@ -4012,8 +4012,8 @@ func (self *Terminal) SwitchScreenMode(mode TerminalSwitchScreenMode, enabled bo
 	// of destination screen.
 	case TerminalSwitchScreenMode47, TerminalSwitchScreenMode1047:
 		if old := old_; old != nil {
-			if err := self.screens.active.CursorCopy(old.cursor, ScreenCursorCopyOptions{
-				hyperlink: false,
+			if err := self.Screens.Active.CursorCopy(old.Cursor, ScreenCursorCopyOptions{
+				Hyperlink: false,
 			}); err != nil {
 				warn(
 					"terminal",
@@ -4027,15 +4027,15 @@ func (self *Terminal) SwitchScreenMode(mode TerminalSwitchScreenMode, enabled bo
 	// we disable it.
 	case TerminalSwitchScreenMode1049:
 		if enabled {
-			assert(self.screens.active_key == ScreenSetKeyAlternate)
+			assert(self.Screens.ActiveKey == ScreenSetKeyAlternate)
 			self.EraseDisplay(CSIEraseDisplayComplete, false)
 
 			// When we enter alt screen with 1049, we always copy the
 			// cursor from the primary screen (if we weren't already
 			// on it).
 			if old := old_; old != nil {
-				if err := self.screens.active.CursorCopy(old.cursor, ScreenCursorCopyOptions{
-					hyperlink: false,
+				if err := self.Screens.Active.CursorCopy(old.Cursor, ScreenCursorCopyOptions{
+					Hyperlink: false,
 				}); err != nil {
 					warn(
 						"terminal",
@@ -4045,7 +4045,7 @@ func (self *Terminal) SwitchScreenMode(mode TerminalSwitchScreenMode, enabled bo
 				}
 			}
 		} else {
-			assert(self.screens.active_key == ScreenSetKeyPrimary)
+			assert(self.Screens.ActiveKey == ScreenSetKeyPrimary)
 			self.RestoreCursor()
 		}
 
@@ -4104,7 +4104,7 @@ func (self TerminalSwitchScreenMode) String() string {
 // Screen.dumpStringAlloc: ErrUnknownPoint (Screen.go), ErrWriteFailed
 // (osc.go) and ErrOutOfMemory (dcs.go).
 func (self *Terminal) PlainString() ([]uint8, error) {
-	return self.screens.active.DumpStringAlloc(Point{Tag: PointTagViewport})
+	return self.Screens.Active.DumpStringAlloc(Point{Tag: PointTagViewport})
 }
 
 // PlainStringUnwrapped is Terminal.plainStringUnwrapped.
@@ -4116,7 +4116,7 @@ func (self *Terminal) PlainString() ([]uint8, error) {
 // is that of Screen.dumpStringAllocUnwrapped: ErrUnknownPoint (Screen.go),
 // ErrWriteFailed (osc.go) and ErrOutOfMemory (dcs.go).
 func (self *Terminal) PlainStringUnwrapped() ([]uint8, error) {
-	return self.screens.active.DumpStringAllocUnwrapped(Point{Tag: PointTagViewport})
+	return self.Screens.Active.DumpStringAllocUnwrapped(Point{Tag: PointTagViewport})
 }
 
 // FullReset is Terminal.fullReset.
@@ -4128,30 +4128,30 @@ func (self *Terminal) PlainStringUnwrapped() ([]uint8, error) {
 // be wasted (since its unused) but it isn't leaked.
 func (self *Terminal) FullReset() {
 	// Ensure we're back on primary screen
-	self.screens.SwitchTo(ScreenSetKeyPrimary)
-	self.screens.Remove(
+	self.Screens.SwitchTo(ScreenSetKeyPrimary)
+	self.Screens.Remove(
 		ScreenSetKeyAlternate,
 	)
 
 	// Reset our screens
-	self.screens.active.Reset()
+	self.Screens.Active.Reset()
 
 	// Rest our basic state
-	self.modes.Reset()
-	self.flags = TerminalFlags{focused: true} // Zig: .{}
-	self.tabstops.Reset(terminalTabstopInterval)
-	self.previous_char = None[uint32]()
-	self.pwd = self.pwd[:0] // Zig: clearRetainingCapacity
-	self.status_display = ANSIStatusDisplayMain
-	self.scrolling_region = TerminalScrollingRegion{
-		top:    0,
-		bottom: self.rows - 1,
-		left:   0,
-		right:  self.cols - 1,
+	self.Modes.Reset()
+	self.Flags = TerminalFlags{Focused: true} // Zig: .{}
+	self.Tabstops.Reset(terminalTabstopInterval)
+	self.PreviousChar = None[uint32]()
+	self.Pwd = self.Pwd[:0] // Zig: clearRetainingCapacity
+	self.StatusDisplay = ANSIStatusDisplayMain
+	self.ScrollingRegion = TerminalScrollingRegion{
+		Top:    0,
+		Bottom: self.Rows - 1,
+		Left:   0,
+		Right:  self.Cols - 1,
 	}
 
 	// Always mark dirty so we redraw everything
-	self.flags.dirty.clear = true
+	self.Flags.Dirty.Clear = true
 }
 
 // isDirty is Terminal.isDirty.
@@ -4160,7 +4160,7 @@ func (self *Terminal) FullReset() {
 //
 // Zig: fn isDirty(t: *const Terminal, pt: point.Point) bool.
 func (t *Terminal) isDirty(pt Point) bool {
-	cell := t.screens.active.pages.GetCell(pt)
+	cell := t.Screens.Active.Pages.GetCell(pt)
 	assert(cell.Valid) // .?
 	return cell.Value.IsDirty()
 }
@@ -4171,5 +4171,5 @@ func (t *Terminal) isDirty(pt Point) bool {
 //
 // Zig: fn clearDirty(t: *Terminal) void.
 func (t *Terminal) clearDirty() {
-	t.screens.active.pages.ClearDirty()
+	t.Screens.Active.Pages.ClearDirty()
 }

@@ -84,19 +84,19 @@ func tm7Fill(t *testing.T, term *Terminal, rows []string) {
 // tm7CellAt is term51UCellAt.
 func tm7CellAt(t *testing.T, term *Terminal, x uint, y uint) *PageCell {
 	t.Helper()
-	return zigUnwrap(t, term.screens.active.pages.GetCell(Point{
+	return zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)},
-	})).cell
+		Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)},
+	})).Cell
 }
 
 // tm7RowAt is term51URowAt.
 func tm7RowAt(t *testing.T, term *Terminal, y uint) *PageRow {
 	t.Helper()
-	return zigUnwrap(t, term.screens.active.pages.GetCell(Point{
+	return zigUnwrap(t, term.Screens.Active.Pages.GetCell(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: 0, y: uint32(y)},
-	})).row
+		Active: PointCoordinate{X: 0, Y: uint32(y)},
+	})).Row
 }
 
 // tm7CellChar is term51UCellChar. One character per cell: '.' empty, the
@@ -135,13 +135,13 @@ func tm7CellChar(cell PageCell) uint8 {
 // the expected rows.
 func tm7ExpectGrid(t *testing.T, term *Terminal, expected []string) {
 	t.Helper()
-	expectEqual(t, uint(term.rows), uint(len(expected)))
+	expectEqual(t, uint(term.Rows), uint(len(expected)))
 	var buf [64]uint8
 	for y, exp := range expected {
-		for x := uint(0); x < uint(term.cols); x++ {
+		for x := uint(0); x < uint(term.Cols); x++ {
 			buf[x] = tm7CellChar(*tm7CellAt(t, term, x, uint(y)))
 		}
-		expectEqualStrings(t, exp, string(buf[0:term.cols]))
+		expectEqualStrings(t, exp, string(buf[0:term.Cols]))
 	}
 }
 
@@ -149,25 +149,25 @@ func tm7ExpectGrid(t *testing.T, term *Terminal, expected []string) {
 // active row: 'D' dirty, '.' clean.
 func tm7ExpectDirty(t *testing.T, term *Terminal, expected string) {
 	t.Helper()
-	expectEqual(t, uint(term.rows), uint(len(expected)))
+	expectEqual(t, uint(term.Rows), uint(len(expected)))
 	var buf [64]uint8
-	for y := uint(0); y < uint(term.rows); y++ {
+	for y := uint(0); y < uint(term.Rows); y++ {
 		if tm7RowAt(t, term, y).dirty {
 			buf[y] = 'D'
 		} else {
 			buf[y] = '.'
 		}
 	}
-	expectEqualStrings(t, expected, string(buf[0:term.rows]))
+	expectEqualStrings(t, expected, string(buf[0:term.Rows]))
 }
 
 // tm7ExpectWrap is term51UExpectWrap: compare the wrap (w),
 // wrap_continuation (c), both (b) or neither (.) of every active row.
 func tm7ExpectWrap(t *testing.T, term *Terminal, expected string) {
 	t.Helper()
-	expectEqual(t, uint(term.rows), uint(len(expected)))
+	expectEqual(t, uint(term.Rows), uint(len(expected)))
 	var buf [64]uint8
-	for y := uint(0); y < uint(term.rows); y++ {
+	for y := uint(0); y < uint(term.Rows); y++ {
 		row := tm7RowAt(t, term, y)
 		if row.wrap && row.wrap_continuation {
 			buf[y] = 'b'
@@ -179,7 +179,7 @@ func tm7ExpectWrap(t *testing.T, term *Terminal, expected string) {
 			buf[y] = '.'
 		}
 	}
-	expectEqualStrings(t, expected, string(buf[0:term.rows]))
+	expectEqualStrings(t, expected, string(buf[0:term.Rows]))
 }
 
 // tm7SetWrap is term51USetWrap: set every row to the "wrap" state given by
@@ -197,15 +197,15 @@ func tm7SetWrap(t *testing.T, term *Terminal, flags string) {
 // tm7ExpectCursor is term51UExpectCursor.
 func tm7ExpectCursor(t *testing.T, term *Terminal, x uint, y uint, pending_wrap bool) {
 	t.Helper()
-	expectEqual(t, x, uint(term.screens.active.cursor.x))
-	expectEqual(t, y, uint(term.screens.active.cursor.y))
-	expectEqual(t, pending_wrap, term.screens.active.cursor.pending_wrap)
+	expectEqual(t, x, uint(term.Screens.Active.Cursor.X))
+	expectEqual(t, y, uint(term.Screens.Active.Cursor.Y))
+	expectEqual(t, pending_wrap, term.Screens.Active.Cursor.PendingWrap)
 }
 
 // tm7Page is term51UPage: the page that holds the cursor; fine for terminals
 // that fit one page.
 func tm7Page(term *Terminal) *Page {
-	return &term.screens.active.cursor.page_pin.node.data
+	return &term.Screens.Active.Cursor.PagePin.Node.data
 }
 
 // tm7PutStr is term51UPutStr: print `str` starting at the 0-indexed position
@@ -228,7 +228,7 @@ func tm7PutWide(t *testing.T, term *Terminal, x uint, y uint) {
 // sequence, which is one wide cell with a grapheme.
 func tm7PutWideGrapheme(t *testing.T, term *Terminal, x uint, y uint) {
 	t.Helper()
-	term.modes.Set(ModesModeGraphemeCluster, true)
+	term.Modes.Set(ModesModeGraphemeCluster, true)
 	term.SetCursorPos(y+1, x+1)
 	zigTry(t, term.Print(0x1F468))
 	zigTry(t, term.Print(0x200D))
@@ -256,19 +256,19 @@ func tm7PutGrapheme(t *testing.T, term *Terminal, x uint, y uint) {
 // rows.
 func tm7CrossPage(t *testing.T, term *Terminal, tail_rows uint) {
 	t.Helper()
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	n := uint(first.data.capacity.rows)
 	for i := uint(0); i < n+tail_rows-1; i++ {
 		zigTry(t, term.Linefeed())
 	}
 	term.SetCursorPos(1, 1)
 	expect(t, first.next != nil, "first.next != null")
-	for y := uint(0); y < uint(term.rows); y++ {
-		node := zigUnwrap(t, term.screens.active.pages.Pin(Point{
+	for y := uint(0); y < uint(term.Rows); y++ {
+		node := zigUnwrap(t, term.Screens.Active.Pages.Pin(Point{
 			Tag:    PointTagActive,
-			Active: PointCoordinate{y: uint32(y)},
-		})).node
-		if y+tail_rows < uint(term.rows) {
+			Active: PointCoordinate{Y: uint32(y)},
+		})).Node
+		if y+tail_rows < uint(term.Rows) {
 			expect(t, node == first, "node == first")
 		} else {
 			expect(t, node == first.next, "node == first.next.?")
@@ -296,9 +296,9 @@ func tm7PrintDistinctStyles(t *testing.T, term *Terminal, y_first uint, cols uin
 		zigTry(t, term.SetAttribute(SGRAttribute{
 			Tag: SGRAttributeTagDirectColorFg,
 			DirectColorFg: ColorRGB{
-				r: uint8(i),
-				g: uint8(i >> 8),
-				b: 0,
+				R: uint8(i),
+				G: uint8(i >> 8),
+				B: 0,
 			},
 		}))
 		zigTry(t, term.Print('S'))
@@ -347,9 +347,9 @@ func (self tm7Cross) fillY() uint {
 func (self tm7Cross) dstPage(term *Terminal) *Page {
 	var node *PageListNode
 	if self.is_insert {
-		node = term.screens.active.pages.pages.last
+		node = term.Screens.Active.Pages.pages.last
 	} else {
-		node = term.screens.active.pages.pages.first
+		node = term.Screens.Active.Pages.pages.first
 	}
 	return &node.data
 }
@@ -367,7 +367,7 @@ func (self tm7Cross) run(term *Terminal) {
 func tm7CrossTerm(t *testing.T, cross tm7Cross) *Terminal {
 	t.Helper()
 	opts := terminalOptionsDefault(60, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	// Zig-only: errdefer t.deinit(alloc);
 	tm7CrossPage(t, term, cross.tail())
@@ -476,8 +476,8 @@ func tm7CrossHyperlink(t *testing.T, cross tm7Cross, full tm7HyperlinkFull) {
 	case tm7HyperlinkFullMap:
 		// One link on every cell until the map has no more room.
 		id, err := dst.InsertHyperlink(Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
-			uri: []uint8("http://d.test"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
+			URI: []uint8("http://d.test"),
 		})
 		zigTry(t, err)
 		var n uint = 0
@@ -496,21 +496,21 @@ func tm7CrossHyperlink(t *testing.T, cross tm7Cross, full tm7HyperlinkFull) {
 		// for the explicit id.
 		uri := strings.Repeat("u", 63*32)
 		id, err := dst.InsertHyperlink(Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("i")},
-			uri: []uint8(uri),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdExplicit, Explicit: []uint8("i")},
+			URI: []uint8(uri),
 		})
 		zigTry(t, err)
 		zigTry(t, dst.SetHyperlink(tm7RowAt(t, term, fill_y), tm7CellAt(t, term, 0, fill_y), id))
 	case tm7HyperlinkFullSet, tm7HyperlinkFullRehash:
 		id1, err := dst.InsertHyperlink(Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
-			uri: []uint8("http://d1.test"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 1},
+			URI: []uint8("http://d1.test"),
 		})
 		zigTry(t, err)
 		zigTry(t, dst.SetHyperlink(tm7RowAt(t, term, fill_y), tm7CellAt(t, term, 0, fill_y), id1))
 		id2, err := dst.InsertHyperlink(Hyperlink{
-			id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 2},
-			uri: []uint8("http://d2.test"),
+			ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 2},
+			URI: []uint8("http://d2.test"),
 		})
 		zigTry(t, err)
 		zigTry(t, dst.SetHyperlink(tm7RowAt(t, term, fill_y+1), tm7CellAt(t, term, 0, fill_y+1), id2))
@@ -526,9 +526,9 @@ func tm7CrossHyperlink(t *testing.T, cross tm7Cross, full tm7HyperlinkFull) {
 
 	// The source row has a different hyperlink.
 	term.SetCursorPos(cross.srcY()+1, 1)
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://s.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://s.test"), None[[]uint8]()))
 	zigTry(t, term.Print('X'))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 
 	cross.run(term)
 
@@ -605,7 +605,7 @@ func TestTm7_term51_deleteLines_a_wide_character_split_by_the_right_margin_is_cl
 	tm7PutWide(t, term, 5, 1)
 	tm7PutStr(t, term, 7, 1, "h")
 
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(1, 1)
 	term.DeleteLines(1)
 
@@ -623,7 +623,7 @@ func TestTm7_term51_deleteLines_a_wide_character_on_the_right_margin_is_cleared_
 	tm7PutWide(t, term, 5, 1)
 	tm7PutStr(t, term, 7, 1, "h")
 
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(2, 1)
 	term.DeleteLines(math.MaxUint)
 
@@ -642,7 +642,7 @@ func TestTm7_term51_deleteLines_a_wide_character_with_a_grapheme_split_by_the_le
 	tm7PutStr(t, term, 4, 1, "efgh")
 	expectEqual(t, uint(1), tm7Page(term).GraphemeCount())
 
-	term.scrolling_region.left = 3
+	term.ScrollingRegion.Left = 3
 	term.SetCursorPos(1, 4)
 	term.DeleteLines(1)
 
@@ -664,7 +664,7 @@ func TestTm7_term51_deleteLines_a_wide_character_with_a_grapheme_split_by_the_ri
 	tm7PutStr(t, term, 7, 1, "h")
 	expectEqual(t, uint(1), tm7Page(term).GraphemeCount())
 
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(1, 1)
 	term.DeleteLines(1)
 
@@ -681,8 +681,8 @@ func TestTm7_term51_deleteLines_wide_characters_inside_the_margins_move_whole(t 
 
 	tm7PutWide(t, term, 2, 1)
 	tm7PutWide(t, term, 4, 1)
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(1, 3)
 	term.DeleteLines(1)
 
@@ -766,8 +766,8 @@ func TestTm7_term51_deleteLines_style_reference_counts_with_left_and_right_margi
 	bold := tm7CellAt(t, term, 0, 1).style_id
 	italic := tm7CellAt(t, term, 0, 2).style_id
 
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(2, 2)
 	term.DeleteLines(1)
 
@@ -788,11 +788,11 @@ func TestTm7_term51_deleteLines_hyperlinks_move_with_their_rows_and_are_released
 	term := tm7Init(t, terminalOptionsDefault(6, 4))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm7PutStr(t, term, 0, 1, "XXXXXX")
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://b.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://b.test"), None[[]uint8]()))
 	tm7PutStr(t, term, 0, 2, "YYYYYY")
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	page := tm7Page(term)
 	expectEqual(t, uint(12), page.HyperlinkCount())
 
@@ -826,13 +826,13 @@ func TestTm7_term51_deleteLines_hyperlinks_with_left_and_right_margins(t *testin
 	term := tm7Init(t, terminalOptionsDefault(6, 4))
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm7PutStr(t, term, 0, 1, "XXXXXX")
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	page := tm7Page(term)
 
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(1, 2)
 	term.DeleteLines(1)
 
@@ -895,8 +895,8 @@ func TestTm7_term51_deleteLines_graphemes_with_left_and_right_margins(t *testing
 	tm7PutGrapheme(t, term, 2, 1)
 	page := tm7Page(term)
 
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 3
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 3
 	term.SetCursorPos(1, 2)
 	term.DeleteLines(1)
 	tm7ExpectGrid(t, term, []string{"..*...", "*.....", "......", "......"})
@@ -934,23 +934,23 @@ func TestTm7_term51_deleteLines_rows_crossing_a_page_boundary_keep_styles_hyperl
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(10, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	defer term.Deinit()
 
 	tm7CrossPage(t, term, 2)
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	second := tm7Node(t, first.next)
 
 	tm7Fill(t, term, []string{"AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC", "..........", "EEEEEEEEEE"})
 	// Row 3 is the first row of the second page and has all three kinds of
 	// managed memory.
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
 	tm7PutGrapheme(t, term, 0, 3)
 	tm7PutStr(t, term, 1, 3, "XXXXXXXXX")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	expectEqual(t, uint(1), second.data.GraphemeCount())
 	expectEqual(t, uint(10), second.data.HyperlinkCount())
 
@@ -961,7 +961,7 @@ func TestTm7_term51_deleteLines_rows_crossing_a_page_boundary_keep_styles_hyperl
 	// Row 3 moved up into the first page: the clone crosses the boundary.
 	tm7ExpectGrid(t, term, []string{"AAAAAAAAAA", "BBBBBBBBBB", "*XXXXXXXXX", "EEEEEEEEEE", ".........."})
 	tm7ExpectDirty(t, term, "..DDD")
-	expect(t, term.screens.active.pages.pages.first == first, "t.screens.active.pages.pages.first.? == first")
+	expect(t, term.Screens.Active.Pages.pages.first == first, "t.screens.active.pages.pages.first.? == first")
 	expect(t, first.next == second, "first.next.? == second")
 	expectEqual(t, uint(1), first.data.GraphemeCount())
 	expectEqual(t, uint(10), first.data.HyperlinkCount())
@@ -983,24 +983,24 @@ func TestTm7_term51_deleteLines_left_and_right_margins_across_a_page_boundary_co
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(10, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	defer term.Deinit()
 
 	tm7CrossPage(t, term, 2)
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	second := tm7Node(t, first.next)
 
 	tm7Fill(t, term, []string{"AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC", "..........", "EEEEEEEEEE"})
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagBold}))
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://x.test"), None[[]uint8]()))
 	tm7PutGrapheme(t, term, 0, 3)
 	tm7PutStr(t, term, 1, 3, "XXXXXXXXX")
 	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagUnset}))
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 
-	term.scrolling_region.left = 1
-	term.scrolling_region.right = 8
+	term.ScrollingRegion.Left = 1
+	term.ScrollingRegion.Right = 8
 	term.SetCursorPos(3, 2)
 	term.DeleteLines(1)
 
@@ -1025,13 +1025,13 @@ func TestTm7_term51_insertLines_a_full_style_set_in_the_destination_page_is_grow
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(60, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	defer term.Deinit()
 
 	// Row 0 is the last row of the first page, rows 1-4 are on the second.
 	tm7CrossPage(t, term, 4)
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	second := tm7Node(t, first.next)
 	old_capacity := second.data.capacity.styles
 	need := second.data.styles.layout.cap - 1
@@ -1060,8 +1060,8 @@ func TestTm7_term51_insertLines_a_full_style_set_in_the_destination_page_is_grow
 	tm7ExpectCursor(t, term, 0, 0, false)
 
 	// Only the destination page grew; the first page lost its bold style.
-	expect(t, term.screens.active.pages.pages.first == first, "t.screens.active.pages.pages.first.? == first")
-	grown := tm7Node(t, term.screens.active.pages.pages.last)
+	expect(t, term.Screens.Active.Pages.pages.first == first, "t.screens.active.pages.pages.first.? == first")
+	grown := tm7Node(t, term.Screens.Active.Pages.pages.last)
 	expect(t, first.next == grown, "first.next.? == grown")
 	expectEqual(t, uint(old_capacity)*2, uint(grown.data.capacity.styles))
 	expectEqual(t, uint(0), first.data.styles.Count())
@@ -1076,12 +1076,12 @@ func TestTm7_term51_insertLines_a_style_set_that_needs_a_rehash_in_the_destinati
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(60, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	defer term.Deinit()
 
 	tm7CrossPage(t, term, 4)
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	second := tm7Node(t, first.next)
 	old_capacity := second.data.capacity.styles
 	need := second.data.styles.layout.cap - 1
@@ -1108,7 +1108,7 @@ func TestTm7_term51_insertLines_a_style_set_that_needs_a_rehash_in_the_destinati
 	tm7ExpectRowChars(t, term, 3, 50, 60, 'S')
 
 	// The capacity stayed the same: the page was only rehashed.
-	rehashed := tm7Node(t, term.screens.active.pages.pages.last)
+	rehashed := tm7Node(t, term.Screens.Active.Pages.pages.last)
 	expectEqual(t, uint(old_capacity), uint(rehashed.data.capacity.styles))
 	expectEqual(t, need-50+1, rehashed.data.styles.Count())
 	expect(t, uint(rehashed.data.styles.next_id) <= need-50+2, "rehashed.data.styles.next_id <= need - 50 + 2")
@@ -1120,13 +1120,13 @@ func TestTm7_term51_deleteLines_a_full_style_set_in_the_destination_page_is_grow
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(60, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	defer term.Deinit()
 
 	// Rows 0-3 are on the first page, row 4 is the only one on the second.
 	tm7CrossPage(t, term, 1)
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	second := tm7Node(t, first.next)
 	old_capacity := first.data.capacity.styles
 	need := first.data.styles.layout.cap - 1
@@ -1153,10 +1153,10 @@ func TestTm7_term51_deleteLines_a_full_style_set_in_the_destination_page_is_grow
 	tm7ExpectRowChars(t, term, 4, 0, 60, '.')
 	tm7ExpectCursor(t, term, 0, 0, false)
 
-	grown := tm7Node(t, term.screens.active.pages.pages.first)
+	grown := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	expectEqual(t, uint(old_capacity)*2, uint(grown.data.capacity.styles))
 	expectEqual(t, need+1, grown.data.styles.Count())
-	expect(t, grown.next == term.screens.active.pages.pages.last, "grown.next.? == t.screens.active.pages.pages.last.?")
+	expect(t, grown.next == term.Screens.Active.Pages.pages.last, "grown.next.? == t.screens.active.pages.pages.last.?")
 	expectEqual(t, uint(0), tm7Node(t, grown.next).data.styles.Count())
 	bold := tm7CellAt(t, term, 0, 3).style_id
 	expectEqual(t, SizeCellCountInt(60), grown.data.styles.RefCount(bold))
@@ -1167,12 +1167,12 @@ func TestTm7_term51_deleteLines_a_style_set_that_needs_a_rehash_in_the_destinati
 	testStdCapacity(t)
 	// Zig-only: const alloc = testing.allocator;
 	opts := terminalOptionsDefault(60, 5)
-	opts.max_scrollback = 1024
+	opts.MaxScrollback = 1024
 	term := tm7Init(t, opts)
 	defer term.Deinit()
 
 	tm7CrossPage(t, term, 1)
-	first := tm7Node(t, term.screens.active.pages.pages.first)
+	first := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	old_capacity := first.data.capacity.styles
 	need := first.data.styles.layout.cap - 1
 	expect(t, need > 60 && need <= 120, "need > 60 and need <= 120")
@@ -1194,7 +1194,7 @@ func TestTm7_term51_deleteLines_a_style_set_that_needs_a_rehash_in_the_destinati
 	tm7ExpectRowChars(t, term, 3, 0, 60, 'Z')
 	tm7ExpectRowChars(t, term, 4, 0, 60, '.')
 
-	rehashed := tm7Node(t, term.screens.active.pages.pages.first)
+	rehashed := tm7Node(t, term.Screens.Active.Pages.pages.first)
 	expectEqual(t, uint(old_capacity), uint(rehashed.data.capacity.styles))
 	expectEqual(t, need-50+1, rehashed.data.styles.Count())
 	expect(t, uint(rehashed.data.styles.next_id) <= need-50+2, "rehashed.data.styles.next_id <= need - 50 + 2")
@@ -1279,7 +1279,7 @@ func TestTm7_term51_insertBlanks_zero_count_clears_pending_wrap_and_changes_noth
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.InsertBlanks(0)
 
 	tm7ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop"})
@@ -1294,9 +1294,9 @@ func TestTm7_term51_insertBlanks_cursor_left_of_the_left_margin_clears_pending_w
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	term.screens.active.cursor.pending_wrap = true
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop"})
@@ -1311,9 +1311,9 @@ func TestTm7_term51_insertBlanks_cursor_right_of_the_right_margin_clears_pending
 	term := tm7EightAt(t, 6, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	term.screens.active.cursor.pending_wrap = true
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop"})
@@ -1328,7 +1328,7 @@ func TestTm7_term51_insertBlanks_one_blank_in_the_middle_shifts_the_rest_right(t
 	term := tm7EightAt(t, 2, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"ab.cdefg", "ijklmnop"})
@@ -1433,8 +1433,8 @@ func TestTm7_term51_insertBlanks_left_and_right_margins_confine_the_shift(t *tes
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"abc.degh", "ijklmnop"})
@@ -1448,8 +1448,8 @@ func TestTm7_term51_insertBlanks_count_larger_than_the_margin_region_clears_only
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.InsertBlanks(100)
 
 	tm7ExpectGrid(t, term, []string{"abc...gh", "ijklmnop"})
@@ -1462,8 +1462,8 @@ func TestTm7_term51_insertBlanks_cursor_on_the_left_margin_column(t *testing.T) 
 	term := tm7EightAt(t, 2, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"ab.cdegh", "ijklmnop"})
@@ -1476,8 +1476,8 @@ func TestTm7_term51_insertBlanks_cursor_on_the_right_margin_column(t *testing.T)
 	term := tm7EightAt(t, 5, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"abcde.gh", "ijklmnop"})
@@ -1490,7 +1490,7 @@ func TestTm7_term51_insertBlanks_only_a_right_margin(t *testing.T) {
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.InsertBlanks(2)
 
 	tm7ExpectGrid(t, term, []string{"a..bcfgh", "ijklmnop"})
@@ -1503,7 +1503,7 @@ func TestTm7_term51_insertBlanks_only_a_left_margin(t *testing.T) {
 	term := tm7EightAt(t, 4, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 3
+	term.ScrollingRegion.Left = 3
 	term.InsertBlanks(2)
 
 	tm7ExpectGrid(t, term, []string{"abcd..ef", "ijklmnop"})
@@ -1517,8 +1517,8 @@ func TestTm7_term51_insertBlanks_top_and_bottom_margins_do_not_matter(t *testing
 	defer term.Deinit()
 
 	// The cursor is above the scroll region but still inside its columns.
-	term.scrolling_region.top = 1
-	term.scrolling_region.bottom = 1
+	term.ScrollingRegion.Top = 1
+	term.ScrollingRegion.Bottom = 1
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"ab.cdefg", "ijklmnop"})
@@ -1531,15 +1531,15 @@ func TestTm7_term51_insertBlanks_blanks_take_the_background_color_of_the_cursor_
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 4, g: 5, b: 6}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 4, G: 5, B: 6}}))
 	term.InsertBlanks(2)
 
 	tm7ExpectGrid(t, term, []string{"arrbcdef", "ijklmnop"})
 	for x := uint(1); x < 3; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
 		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
-		expectEqual(t, StyleDefaultId, cell.style_id)
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+		expectEqual(t, StyleDefaultID, cell.style_id)
 	}
 }
 
@@ -1568,9 +1568,9 @@ func TestTm7_term51_insertBlanks_only_the_margin_columns_are_colored(t *testing.
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 4, g: 5, b: 6}}))
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 4, G: 5, B: 6}}))
 	term.InsertBlanks(1)
 
 	tm7ExpectGrid(t, term, []string{"abcrdegh", "ijklmnop"})
@@ -1587,7 +1587,7 @@ func TestTm7_term51_insertBlanks_a_cursor_style_without_a_background_leaves_blan
 	term.InsertBlanks(2)
 
 	tm7ExpectGrid(t, term, []string{"a..bcdef", "ijklmnop"})
-	expectEqual(t, StyleDefaultId, tm7CellAt(t, term, 1, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).style_id)
 }
 
 // Zig: test "term51: insertBlanks: protected cells move with their text and blanks are unprotected"
@@ -1649,8 +1649,8 @@ func TestTm7_term51_insertBlanks_style_reference_counts_follow_the_shifted_and_p
 	term.InsertBlanks(2)
 	tm7ExpectGrid(t, term, []string{"a..bcdef", "ijklmnop"})
 	expectEqual(t, SizeCellCountInt(6), page.styles.RefCount(bold))
-	expectEqual(t, StyleDefaultId, tm7CellAt(t, term, 1, 0).style_id)
-	expectEqual(t, StyleDefaultId, tm7CellAt(t, term, 2, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 2, 0).style_id)
 	expectEqual(t, bold, tm7CellAt(t, term, 3, 0).style_id)
 	expectEqual(t, bold, tm7CellAt(t, term, 7, 0).style_id)
 	expect(t, tm7RowAt(t, term, 0).styled, "term51URowAt(&t, 0).styled")
@@ -1684,7 +1684,7 @@ func TestTm7_term51_insertBlanks_the_styled_flag_of_a_partially_cleared_row_stay
 	// Quirk: the flag is refreshed before the cells are blanked, so it stays.
 	expect(t, tm7RowAt(t, term, 0).styled, "term51URowAt(&t, 0).styled")
 	for x := uint(0); x < 8; x++ {
-		expectEqual(t, StyleDefaultId, tm7CellAt(t, term, x, 0).style_id)
+		expectEqual(t, StyleDefaultID, tm7CellAt(t, term, x, 0).style_id)
 	}
 }
 
@@ -1737,9 +1737,9 @@ func TestTm7_term51_insertBlanks_hyperlinks_move_right_and_are_released_when_pus
 	term := tm7EightAt(t, 0, 0)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm7PutStr(t, term, 4, 0, "efgh")
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	page := tm7Page(term)
 	expectEqual(t, uint(4), page.HyperlinkCount())
 
@@ -1765,9 +1765,9 @@ func TestTm7_term51_insertBlanks_a_hyperlink_pushed_off_the_end_of_a_partially_c
 	term := tm7EightAt(t, 0, 0)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm7PutStr(t, term, 7, 0, "h")
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	page := tm7Page(term)
 	expectEqual(t, uint(1), page.HyperlinkCount())
 
@@ -1839,7 +1839,7 @@ func TestTm7_term51_insertBlanks_cursor_on_a_spacer_tail_at_the_left_margin_clea
 	tm7PutWide(t, term, 2, 0)
 	tm7PutStr(t, term, 4, 0, "cdef")
 
-	term.scrolling_region.left = 3
+	term.ScrollingRegion.Left = 3
 	term.SetCursorPos(1, 4)
 	term.InsertBlanks(1)
 
@@ -1946,15 +1946,15 @@ func TestTm7_term51_insertBlanks_a_wide_character_on_the_right_margin_is_cleared
 	tm7PutStr(t, term, 6, 0, "gh")
 	tm7ExpectGrid(t, term, []string{"abcd#>gh", "........"})
 
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(1)
 	tm7ExpectGrid(t, term, []string{".abcd.gh", "........"})
 
 	tm7Fill(t, term, []string{"abcd..gh", "........"})
-	term.scrolling_region.right = 7
+	term.ScrollingRegion.Right = 7
 	tm7PutWide(t, term, 4, 0)
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(math.MaxUint)
 	tm7ExpectGrid(t, term, []string{"......gh", "........"})
@@ -1972,7 +1972,7 @@ func TestTm7_term51_insertBlanks_a_wide_character_ending_on_the_right_margin_is_
 	tm7PutStr(t, term, 5, 0, "fgh")
 	tm7ExpectGrid(t, term, []string{"abc#>fgh", "........"})
 
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(1)
 
@@ -2008,7 +2008,7 @@ func TestTm7_term51_insertBlanks_a_spacer_head_beyond_the_right_margin_is_kept(t
 	tm7PutStr(t, term, 0, 0, "abcdefg")
 	zigTry(t, term.Print(0x4E2D))
 
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(1, 1)
 	term.InsertBlanks(1)
 
@@ -2064,7 +2064,7 @@ func TestTm7_term51_deleteChars_zero_count_keeps_pending_wrap_and_changes_nothin
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.DeleteChars(0)
 
 	tm7ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop"})
@@ -2079,9 +2079,9 @@ func TestTm7_term51_deleteChars_cursor_left_of_the_left_margin_keeps_pending_wra
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	term.screens.active.cursor.pending_wrap = true
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop"})
@@ -2096,9 +2096,9 @@ func TestTm7_term51_deleteChars_cursor_right_of_the_right_margin_keeps_pending_w
 	term := tm7EightAt(t, 6, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	term.screens.active.cursor.pending_wrap = true
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abcdefgh", "ijklmnop"})
@@ -2113,7 +2113,7 @@ func TestTm7_term51_deleteChars_one_character_in_the_middle_shifts_the_rest_left
 	term := tm7EightAt(t, 2, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abdefgh.", "ijklmnop"})
@@ -2218,8 +2218,8 @@ func TestTm7_term51_deleteChars_left_and_right_margins_confine_the_shift(t *test
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abcef.gh", "ijklmnop"})
@@ -2233,8 +2233,8 @@ func TestTm7_term51_deleteChars_count_larger_than_the_margin_region_clears_only_
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.DeleteChars(100)
 
 	tm7ExpectGrid(t, term, []string{"abc...gh", "ijklmnop"})
@@ -2247,8 +2247,8 @@ func TestTm7_term51_deleteChars_cursor_on_the_left_margin_column(t *testing.T) {
 	term := tm7EightAt(t, 2, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abdef.gh", "ijklmnop"})
@@ -2261,8 +2261,8 @@ func TestTm7_term51_deleteChars_cursor_on_the_right_margin_column(t *testing.T) 
 	term := tm7EightAt(t, 5, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abcde.gh", "ijklmnop"})
@@ -2275,7 +2275,7 @@ func TestTm7_term51_deleteChars_only_a_right_margin(t *testing.T) {
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.DeleteChars(2)
 
 	tm7ExpectGrid(t, term, []string{"ade..fgh", "ijklmnop"})
@@ -2288,7 +2288,7 @@ func TestTm7_term51_deleteChars_only_a_left_margin(t *testing.T) {
 	term := tm7EightAt(t, 4, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 3
+	term.ScrollingRegion.Left = 3
 	term.DeleteChars(2)
 
 	tm7ExpectGrid(t, term, []string{"abcdgh..", "ijklmnop"})
@@ -2301,8 +2301,8 @@ func TestTm7_term51_deleteChars_top_and_bottom_margins_do_not_matter(t *testing.
 	term := tm7EightAt(t, 2, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.top = 1
-	term.scrolling_region.bottom = 1
+	term.ScrollingRegion.Top = 1
+	term.ScrollingRegion.Bottom = 1
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abdefgh.", "ijklmnop"})
@@ -2315,14 +2315,14 @@ func TestTm7_term51_deleteChars_blanks_take_the_background_color_of_the_cursor_s
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 4, g: 5, b: 6}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 4, G: 5, B: 6}}))
 	term.DeleteChars(2)
 
 	tm7ExpectGrid(t, term, []string{"adefghrr", "ijklmnop"})
 	for x := uint(6); x < 8; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
 		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
 	}
 }
 
@@ -2351,9 +2351,9 @@ func TestTm7_term51_deleteChars_only_the_margin_columns_are_colored(t *testing.T
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 4, g: 5, b: 6}}))
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 4, G: 5, B: 6}}))
 	term.DeleteChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abcefrgh", "ijklmnop"})
@@ -2370,7 +2370,7 @@ func TestTm7_term51_deleteChars_a_cursor_style_without_a_background_leaves_blank
 	term.DeleteChars(2)
 
 	tm7ExpectGrid(t, term, []string{"adefgh..", "ijklmnop"})
-	expectEqual(t, StyleDefaultId, tm7CellAt(t, term, 7, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 7, 0).style_id)
 }
 
 // Zig: test "term51: deleteChars: protected cells are deleted and move with their text"
@@ -2434,7 +2434,7 @@ func TestTm7_term51_deleteChars_style_reference_counts_follow_the_shifted_and_de
 	tm7ExpectGrid(t, term, []string{"adefgh..", "ijklmnop"})
 	expectEqual(t, SizeCellCountInt(6), page.styles.RefCount(bold))
 	expectEqual(t, bold, tm7CellAt(t, term, 5, 0).style_id)
-	expectEqual(t, StyleDefaultId, tm7CellAt(t, term, 6, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 6, 0).style_id)
 	expect(t, tm7RowAt(t, term, 0).styled, "term51URowAt(&t, 0).styled")
 
 	term.SetCursorPos(1, 1)
@@ -2475,9 +2475,9 @@ func TestTm7_term51_deleteChars_hyperlinks_move_left_and_are_released_when_delet
 	term := tm7EightAt(t, 0, 0)
 	defer term.Deinit()
 
-	zigTry(t, term.screens.active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
+	zigTry(t, term.Screens.Active.StartHyperlink([]uint8("http://a.test"), None[[]uint8]()))
 	tm7PutStr(t, term, 4, 0, "efgh")
-	term.screens.active.EndHyperlink()
+	term.Screens.Active.EndHyperlink()
 	page := tm7Page(term)
 
 	term.SetCursorPos(1, 1)
@@ -2553,7 +2553,7 @@ func TestTm7_term51_deleteChars_a_spacer_head_beyond_the_right_margin_is_cleared
 	tm7PutStr(t, term, 0, 0, "abcdefg")
 	zigTry(t, term.Print(0x4E2D))
 
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Right = 5
 	term.SetCursorPos(1, 1)
 	term.DeleteChars(1)
 
@@ -2647,7 +2647,7 @@ func TestTm7_term51_deleteChars_a_wide_character_on_the_right_margin_is_cleared_
 	tm7PutStr(t, term, 6, 0, "gh")
 	tm7ExpectGrid(t, term, []string{"abcd#>gh", "........"})
 
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 1)
 	term.DeleteChars(1)
 
@@ -2665,7 +2665,7 @@ func TestTm7_term51_deleteChars_a_wide_character_ending_on_the_right_margin_move
 	tm7PutWide(t, term, 3, 0)
 	tm7PutStr(t, term, 5, 0, "fgh")
 
-	term.scrolling_region.right = 4
+	term.ScrollingRegion.Right = 4
 	term.SetCursorPos(1, 1)
 	term.DeleteChars(1)
 
@@ -2850,7 +2850,7 @@ func TestTm7_term51_eraseChars_pending_wrap_is_cleared(t *testing.T) {
 	term := tm7EightAt(t, 7, 0)
 	defer term.Deinit()
 
-	term.screens.active.cursor.pending_wrap = true
+	term.Screens.Active.Cursor.PendingWrap = true
 	term.EraseChars(1)
 
 	tm7ExpectGrid(t, term, []string{"abcdefg.", "ijklmnop"})
@@ -2864,8 +2864,8 @@ func TestTm7_term51_eraseChars_margins_are_ignored(t *testing.T) {
 	term := tm7EightAt(t, 3, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.EraseChars(100)
 
 	// The erase runs through the right edge of the screen, not the margin.
@@ -2879,8 +2879,8 @@ func TestTm7_term51_eraseChars_works_outside_the_margins(t *testing.T) {
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	term.scrolling_region.left = 2
-	term.scrolling_region.right = 5
+	term.ScrollingRegion.Left = 2
+	term.ScrollingRegion.Right = 5
 	term.EraseChars(1)
 	tm7ExpectGrid(t, term, []string{"a.cdefgh", "ijklmnop"})
 
@@ -2896,15 +2896,15 @@ func TestTm7_term51_eraseChars_blanks_take_the_background_color_of_the_cursor_st
 	term := tm7EightAt(t, 1, 0)
 	defer term.Deinit()
 
-	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{r: 4, g: 5, b: 6}}))
+	zigTry(t, term.SetAttribute(SGRAttribute{Tag: SGRAttributeTagDirectColorBg, DirectColorBg: ColorRGB{R: 4, G: 5, B: 6}}))
 	term.EraseChars(2)
 
 	tm7ExpectGrid(t, term, []string{"arrdefgh", "ijklmnop"})
 	for x := uint(1); x < 3; x++ {
 		cell := *tm7CellAt(t, term, x, 0)
 		expectEqual(t, PageCellContentTagBgColorRgb, cell.content_tag)
-		expectEqual(t, PageCellRGB{r: 4, g: 5, b: 6}, cell.content.color_rgb)
-		expectEqual(t, StyleDefaultId, cell.style_id)
+		expectEqual(t, PageCellRGB{R: 4, G: 5, B: 6}, cell.content.color_rgb)
+		expectEqual(t, StyleDefaultID, cell.style_id)
 	}
 }
 
@@ -2937,7 +2937,7 @@ func TestTm7_term51_eraseChars_a_cursor_style_without_a_background_leaves_blanks
 	term.EraseChars(2)
 
 	tm7ExpectGrid(t, term, []string{"a..defgh", "ijklmnop"})
-	expectEqual(t, StyleDefaultId, tm7CellAt(t, term, 1, 0).style_id)
+	expectEqual(t, StyleDefaultID, tm7CellAt(t, term, 1, 0).style_id)
 }
 
 // Zig: test "term51: eraseChars: style reference counts follow the erased cells"
@@ -2991,7 +2991,7 @@ func TestTm7_panic_insertBlanks_spacer_tail_in_column_zero(t *testing.T) {
 	defer term.Deinit()
 
 	// A spacer tail can never be in column 0; force one.
-	term.screens.active.cursor.page_cell.wide = PageCellWideSpacerTail
+	term.Screens.Active.Cursor.PageCell.wide = PageCellWideSpacerTail
 	tm7ExpectPanic(t, func() { term.InsertBlanks(1) })
 }
 

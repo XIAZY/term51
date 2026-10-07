@@ -28,7 +28,7 @@ func TestOSCParsersHyperlink_OSC_8_hyperlink(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-	expectEqualStrings(t, string(cmd.HyperlinkStart.uri), "http://example.com")
+	expectEqualStrings(t, string(cmd.HyperlinkStart.URI), "http://example.com")
 }
 
 // Zig: test "OSC 8: hyperlink with id set"
@@ -42,8 +42,8 @@ func TestOSCParsersHyperlink_OSC_8_hyperlink_with_id_set(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-	expectEqualStrings(t, string(zigUnwrap(t, cmd.HyperlinkStart.id)), "foo")
-	expectEqualStrings(t, string(cmd.HyperlinkStart.uri), "http://example.com")
+	expectEqualStrings(t, string(zigUnwrap(t, cmd.HyperlinkStart.ID)), "foo")
+	expectEqualStrings(t, string(cmd.HyperlinkStart.URI), "http://example.com")
 }
 
 // Zig: test "OSC 8: hyperlink with empty id"
@@ -57,8 +57,8 @@ func TestOSCParsersHyperlink_OSC_8_hyperlink_with_empty_id(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-	expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
-	expectEqualStrings(t, string(cmd.HyperlinkStart.uri), "http://example.com")
+	expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
+	expectEqualStrings(t, string(cmd.HyperlinkStart.URI), "http://example.com")
 }
 
 // Zig: test "OSC 8: hyperlink with incomplete key"
@@ -72,8 +72,8 @@ func TestOSCParsersHyperlink_OSC_8_hyperlink_with_incomplete_key(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-	expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
-	expectEqualStrings(t, string(cmd.HyperlinkStart.uri), "http://example.com")
+	expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
+	expectEqualStrings(t, string(cmd.HyperlinkStart.URI), "http://example.com")
 }
 
 // Zig: test "OSC 8: hyperlink with empty key"
@@ -87,8 +87,8 @@ func TestOSCParsersHyperlink_OSC_8_hyperlink_with_empty_key(t *testing.T) {
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-	expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
-	expectEqualStrings(t, string(cmd.HyperlinkStart.uri), "http://example.com")
+	expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
+	expectEqualStrings(t, string(cmd.HyperlinkStart.URI), "http://example.com")
 }
 
 // Zig: test "OSC 8: hyperlink with empty key and id"
@@ -102,8 +102,8 @@ func TestOSCParsersHyperlink_OSC_8_hyperlink_with_empty_key_and_id(t *testing.T)
 
 	cmd := *oscA_unwrapPtr(t, p.End(Some[uint8](0x1b)))
 	expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-	expectEqualStrings(t, string(zigUnwrap(t, cmd.HyperlinkStart.id)), "foo")
-	expectEqualStrings(t, string(cmd.HyperlinkStart.uri), "http://example.com")
+	expectEqualStrings(t, string(zigUnwrap(t, cmd.HyperlinkStart.ID)), "foo")
+	expectEqualStrings(t, string(cmd.HyperlinkStart.URI), "http://example.com")
 }
 
 // Zig: test "OSC 8: hyperlink with empty uri"
@@ -139,9 +139,9 @@ func TestOSCParsersHyperlink_term51_parse_start_without_id(t *testing.T) {
 		oscA_term51Feed(&p, "8;;http://example.com")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-		expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
-		expectEqualStrings(t, "http://example.com", string(cmd.HyperlinkStart.uri))
-		expectEqual(t, uint8(0), oscA_ptrAt(cmd.HyperlinkStart.uri, len(cmd.HyperlinkStart.uri)))
+		expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
+		expectEqualStrings(t, "http://example.com", string(cmd.HyperlinkStart.URI))
+		expectEqual(t, uint8(0), oscA_ptrAt(cmd.HyperlinkStart.URI, len(cmd.HyperlinkStart.URI)))
 	}
 }
 
@@ -205,9 +205,9 @@ func TestOSCParsersHyperlink_term51_parse_id_among_other_parameters(t *testing.T
 		oscA_term51Feed(&p, input)
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-		expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.HyperlinkStart.id)))
-		expectEqual(t, uint8(0), oscA_ptrAt(zigUnwrap(t, cmd.HyperlinkStart.id), 3))
-		expectEqualStrings(t, "u", string(cmd.HyperlinkStart.uri))
+		expectEqualStrings(t, "foo", string(zigUnwrap(t, cmd.HyperlinkStart.ID)))
+		expectEqual(t, uint8(0), oscA_ptrAt(zigUnwrap(t, cmd.HyperlinkStart.ID), 3))
+		expectEqualStrings(t, "u", string(cmd.HyperlinkStart.URI))
 	}
 }
 
@@ -218,14 +218,14 @@ func TestOSCParsersHyperlink_term51_parse_repeated_id(t *testing.T) {
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "8;id=a:id=b;u")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
-		expectEqualStrings(t, "b", string(zigUnwrap(t, cmd.HyperlinkStart.id)))
+		expectEqualStrings(t, "b", string(zigUnwrap(t, cmd.HyperlinkStart.ID)))
 	}
 	{
 		// An empty id does not clear an earlier one.
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "8;id=a:id=;u")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
-		expectEqualStrings(t, "a", string(zigUnwrap(t, cmd.HyperlinkStart.id)))
+		expectEqualStrings(t, "a", string(zigUnwrap(t, cmd.HyperlinkStart.ID)))
 	}
 }
 
@@ -236,8 +236,8 @@ func TestOSCParsersHyperlink_term51_parse_id_key_is_case_sensitive(t *testing.T)
 		oscA_term51Feed(&p, input)
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-		expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
-		expectEqualStrings(t, "u", string(cmd.HyperlinkStart.uri))
+		expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
+		expectEqualStrings(t, "u", string(cmd.HyperlinkStart.URI))
 	}
 }
 
@@ -246,7 +246,7 @@ func TestOSCParsersHyperlink_term51_parse_id_value_keeps_equals_signs_and_arbitr
 	p := OSCParserInit(nil)
 	oscA_term51Feed(&p, "8;id=a=b \x01\xff;u")
 	cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
-	expectEqualSlices(t, []uint8("a=b \x01\xff"), zigUnwrap(t, cmd.HyperlinkStart.id))
+	expectEqualSlices(t, []uint8("a=b \x01\xff"), zigUnwrap(t, cmd.HyperlinkStart.ID))
 }
 
 // Zig: test "term51: parse: a parameter without equals stops parameter parsing"
@@ -257,14 +257,14 @@ func TestOSCParsersHyperlink_term51_parse_a_parameter_without_equals_stops_param
 		oscA_term51Feed(&p, "8;foo:id=x;u")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-		expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
+		expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
 	}
 	// An id before it is kept.
 	{
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "8;id=x:foo;u")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
-		expectEqualStrings(t, "x", string(zigUnwrap(t, cmd.HyperlinkStart.id)))
+		expectEqualStrings(t, "x", string(zigUnwrap(t, cmd.HyperlinkStart.ID)))
 	}
 }
 
@@ -278,14 +278,14 @@ func TestOSCParsersHyperlink_term51_parse_an_empty_parameter_hides_the_id_that_f
 		oscA_term51Feed(&p, "8;:id=x;u")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-		expect(t, !cmd.HyperlinkStart.id.Valid, "cmd.hyperlink_start.id == null")
-		expectEqualStrings(t, "u", string(cmd.HyperlinkStart.uri))
+		expect(t, !cmd.HyperlinkStart.ID.Valid, "cmd.hyperlink_start.id == null")
+		expectEqualStrings(t, "u", string(cmd.HyperlinkStart.URI))
 	}
 	{
 		p := OSCParserInit(nil)
 		oscA_term51Feed(&p, "8;id=a::id=b;u")
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
-		expectEqualStrings(t, "a", string(zigUnwrap(t, cmd.HyperlinkStart.id)))
+		expectEqualStrings(t, "a", string(zigUnwrap(t, cmd.HyperlinkStart.ID)))
 	}
 	{
 		// With an empty URI this is an end, not an error, because no id
@@ -302,8 +302,8 @@ func TestOSCParsersHyperlink_term51_parse_uri_keeps_semicolons_colons_and_arbitr
 	p := OSCParserInit(nil)
 	oscA_term51Feed(&p, "8;id=i;http://h:80/a;b=c:d\x01\xff")
 	cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
-	expectEqualStrings(t, "i", string(zigUnwrap(t, cmd.HyperlinkStart.id)))
-	expectEqualSlices(t, []uint8("http://h:80/a;b=c:d\x01\xff"), cmd.HyperlinkStart.uri)
+	expectEqualStrings(t, "i", string(zigUnwrap(t, cmd.HyperlinkStart.ID)))
+	expectEqualSlices(t, []uint8("http://h:80/a;b=c:d\x01\xff"), cmd.HyperlinkStart.URI)
 }
 
 // Zig: test "term51: parse: buffer limit"
@@ -315,7 +315,7 @@ func TestOSCParsersHyperlink_term51_parse_buffer_limit(t *testing.T) {
 		oscA_term51Feed(&p, "8;;"+uri)
 		cmd := *oscA_unwrapPtr(t, OSCParsersHyperlinkParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyHyperlinkStart, "cmd == .hyperlink_start")
-		expectEqualStrings(t, uri, string(cmd.HyperlinkStart.uri))
+		expectEqualStrings(t, uri, string(cmd.HyperlinkStart.URI))
 	}
 	{
 		uri := strings.Repeat("u", OSCParserMAX_BUF-1)

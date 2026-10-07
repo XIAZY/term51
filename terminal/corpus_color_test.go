@@ -63,12 +63,12 @@ func TestColor_corpus_lab_grid(t *testing.T) {
 	for _, r := range term51_lab_levels {
 		for _, g := range term51_lab_levels {
 			for _, b := range term51_lab_levels {
-				lab := colorLABFromRgb(ColorRGB{r: r, g: g, b: b})
+				lab := colorLABFromRgb(ColorRGB{R: r, G: g, B: b})
 				back := lab.toRgb()
 				got = append(got, fmt.Sprintf("%d %d %d %08x %08x %08x -> %d %d %d",
 					r, g, b,
 					math.Float32bits(lab.l), math.Float32bits(lab.a), math.Float32bits(lab.b),
-					back.r, back.g, back.b))
+					back.R, back.G, back.B))
 			}
 		}
 	}
@@ -89,20 +89,20 @@ func TestColor_corpus_lab_channels(t *testing.T) {
 			var c ColorRGB
 			switch which {
 			case 0:
-				c = ColorRGB{r: v, g: 0, b: 0}
+				c = ColorRGB{R: v, G: 0, B: 0}
 			case 1:
-				c = ColorRGB{r: 0, g: v, b: 0}
+				c = ColorRGB{R: 0, G: v, B: 0}
 			case 2:
-				c = ColorRGB{r: 0, g: 0, b: v}
+				c = ColorRGB{R: 0, G: 0, B: v}
 			default:
-				c = ColorRGB{r: v, g: v, b: v}
+				c = ColorRGB{R: v, G: v, B: v}
 			}
 			lab := colorLABFromRgb(c)
 			back := lab.toRgb()
 			got = append(got, fmt.Sprintf("%d %d %d %08x %08x %08x -> %d %d %d",
-				c.r, c.g, c.b,
+				c.R, c.G, c.B,
 				math.Float32bits(lab.l), math.Float32bits(lab.a), math.Float32bits(lab.b),
-				back.r, back.g, back.b))
+				back.R, back.G, back.B))
 		}
 	}
 	expectEqual(t, 4*256, len(want))
@@ -130,14 +130,14 @@ func TestColor_corpus_lab_cube(t *testing.T) {
 				var rec [15]uint8
 				for gi := 0; gi < 256; gi++ {
 					for bi := 0; bi < 256; bi++ {
-						lab := colorLABFromRgb(ColorRGB{r: uint8(ri), g: uint8(gi), b: uint8(bi)})
+						lab := colorLABFromRgb(ColorRGB{R: uint8(ri), G: uint8(gi), B: uint8(bi)})
 						back := lab.toRgb()
 						binary.LittleEndian.PutUint32(rec[0:4], math.Float32bits(lab.l))
 						binary.LittleEndian.PutUint32(rec[4:8], math.Float32bits(lab.a))
 						binary.LittleEndian.PutUint32(rec[8:12], math.Float32bits(lab.b))
-						rec[12] = back.r
-						rec[13] = back.g
-						rec[14] = back.b
+						rec[12] = back.R
+						rec[13] = back.G
+						rec[14] = back.B
 						h.Write(rec[:])
 					}
 				}
@@ -157,8 +157,8 @@ func TestColor_corpus_lab_cube(t *testing.T) {
 // "t l a b" as 8 hex digits each.
 func TestColor_corpus_lab_lerp(t *testing.T) {
 	want := corpusColorLines(t, "lab_lerp.txt")
-	a := colorLABFromRgb(ColorRGB{r: 10, g: 20, b: 200})
-	b := colorLABFromRgb(ColorRGB{r: 240, g: 230, b: 15})
+	a := colorLABFromRgb(ColorRGB{R: 10, G: 20, B: 200})
+	b := colorLABFromRgb(ColorRGB{R: 240, G: 230, B: 15})
 	ts := [...]float32{0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.0 / 3.0, 2.0 / 3.0, 0.5, 0.1, 0.9}
 	var got []string
 	for _, t_ := range ts {
@@ -184,28 +184,28 @@ func TestColor_corpus_generate256(t *testing.T) {
 		bg   ColorRGB
 		fg   ColorRGB
 	}{
-		{"black_white", ColorRGB{r: 0, g: 0, b: 0}, ColorRGB{r: 255, g: 255, b: 255}},
-		{"white_black", ColorRGB{r: 255, g: 255, b: 255}, ColorRGB{r: 0, g: 0, b: 0}},
-		{"black_black", ColorRGB{r: 0, g: 0, b: 0}, ColorRGB{r: 0, g: 0, b: 0}},
-		{"white_white", ColorRGB{r: 255, g: 255, b: 255}, ColorRGB{r: 255, g: 255, b: 255}},
-		{"gray_gray", ColorRGB{r: 128, g: 128, b: 128}, ColorRGB{r: 128, g: 128, b: 128}},
-		{"near_equal_lo", ColorRGB{r: 127, g: 127, b: 127}, ColorRGB{r: 128, g: 128, b: 128}},
-		{"near_equal_hi", ColorRGB{r: 128, g: 128, b: 128}, ColorRGB{r: 127, g: 127, b: 127}},
-		{"solarized_dark", ColorRGB{r: 0x00, g: 0x2b, b: 0x36}, ColorRGB{r: 0x83, g: 0x94, b: 0x96}},
-		{"solarized_light", ColorRGB{r: 0xfd, g: 0xf6, b: 0xe3}, ColorRGB{r: 0x65, g: 0x7b, b: 0x83}},
-		{"dracula", ColorRGB{r: 0x28, g: 0x2a, b: 0x36}, ColorRGB{r: 0xf8, g: 0xf8, b: 0xf2}},
-		{"gruvbox_dark", ColorRGB{r: 0x28, g: 0x28, b: 0x28}, ColorRGB{r: 0xeb, g: 0xdb, b: 0xb2}},
-		{"nord", ColorRGB{r: 0x2e, g: 0x34, b: 0x40}, ColorRGB{r: 0xd8, g: 0xde, b: 0xe9}},
-		{"github_light", ColorRGB{r: 0xff, g: 0xff, b: 0xff}, ColorRGB{r: 0x24, g: 0x29, b: 0x2f}},
-		{"red_on_blue", ColorRGB{r: 255, g: 0, b: 0}, ColorRGB{r: 0, g: 0, b: 255}},
-		{"dark_gray_on_light_gray", ColorRGB{r: 200, g: 200, b: 200}, ColorRGB{r: 60, g: 60, b: 60}},
-		{"yellow_on_navy", ColorRGB{r: 0, g: 0, b: 80}, ColorRGB{r: 255, g: 255, b: 0}},
+		{"black_white", ColorRGB{R: 0, G: 0, B: 0}, ColorRGB{R: 255, G: 255, B: 255}},
+		{"white_black", ColorRGB{R: 255, G: 255, B: 255}, ColorRGB{R: 0, G: 0, B: 0}},
+		{"black_black", ColorRGB{R: 0, G: 0, B: 0}, ColorRGB{R: 0, G: 0, B: 0}},
+		{"white_white", ColorRGB{R: 255, G: 255, B: 255}, ColorRGB{R: 255, G: 255, B: 255}},
+		{"gray_gray", ColorRGB{R: 128, G: 128, B: 128}, ColorRGB{R: 128, G: 128, B: 128}},
+		{"near_equal_lo", ColorRGB{R: 127, G: 127, B: 127}, ColorRGB{R: 128, G: 128, B: 128}},
+		{"near_equal_hi", ColorRGB{R: 128, G: 128, B: 128}, ColorRGB{R: 127, G: 127, B: 127}},
+		{"solarized_dark", ColorRGB{R: 0x00, G: 0x2b, B: 0x36}, ColorRGB{R: 0x83, G: 0x94, B: 0x96}},
+		{"solarized_light", ColorRGB{R: 0xfd, G: 0xf6, B: 0xe3}, ColorRGB{R: 0x65, G: 0x7b, B: 0x83}},
+		{"dracula", ColorRGB{R: 0x28, G: 0x2a, B: 0x36}, ColorRGB{R: 0xf8, G: 0xf8, B: 0xf2}},
+		{"gruvbox_dark", ColorRGB{R: 0x28, G: 0x28, B: 0x28}, ColorRGB{R: 0xeb, G: 0xdb, B: 0xb2}},
+		{"nord", ColorRGB{R: 0x2e, G: 0x34, B: 0x40}, ColorRGB{R: 0xd8, G: 0xde, B: 0xe9}},
+		{"github_light", ColorRGB{R: 0xff, G: 0xff, B: 0xff}, ColorRGB{R: 0x24, G: 0x29, B: 0x2f}},
+		{"red_on_blue", ColorRGB{R: 255, G: 0, B: 0}, ColorRGB{R: 0, G: 0, B: 255}},
+		{"dark_gray_on_light_gray", ColorRGB{R: 200, G: 200, B: 200}, ColorRGB{R: 60, G: 60, B: 60}},
+		{"yellow_on_navy", ColorRGB{R: 0, G: 0, B: 80}, ColorRGB{R: 255, G: 255, B: 0}},
 	}
 
 	theme_base := ColorDefault
 	// a second base: every first-16 entry replaced by a distinct value
 	for i := 0; i < 16; i++ {
-		theme_base[i] = ColorRGB{r: uint8(i * 16), g: uint8(255 - i*16), b: uint8((i * 37) % 256)}
+		theme_base[i] = ColorRGB{R: uint8(i * 16), G: uint8(255 - i*16), B: uint8((i * 37) % 256)}
 	}
 	bases := [...]struct {
 		name string
@@ -240,7 +240,7 @@ func TestColor_corpus_generate256(t *testing.T) {
 					}
 					for i, c := range result {
 						got = append(got, fmt.Sprintf("%s/%s/%s/%s %d %02x%02x%02x",
-							theme.name, base.name, mask.name, mode, i, c.r, c.g, c.b))
+							theme.name, base.name, mask.name, mode, i, c.R, c.G, c.B))
 					}
 				}
 			}
@@ -275,7 +275,7 @@ func TestX11Color_corpus_rgb_txt(t *testing.T) {
 		b, err := strconv.ParseUint(strings.Trim(line[8:11], " "), 10, 8)
 		zigTry(t, err)
 		name := strings.Trim(line[12:], " \t\n")
-		want := ColorRGB{r: uint8(r), g: uint8(g), b: uint8(b)}
+		want := ColorRGB{R: uint8(r), G: uint8(g), B: uint8(b)}
 
 		expectEqual(t, want, zigUnwrap(t, col_x11Get(name)))
 		expectEqual(t, want, zigUnwrap(t, col_x11Get(col_allocLowerString(name))))

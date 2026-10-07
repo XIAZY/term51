@@ -83,7 +83,7 @@ func fm3Write(tt *testing.T, term *Terminal, data string) {
 
 // fm3Page is term51ZPage: the first page of the active screen.
 func fm3Page(term *Terminal) *Page {
-	return &term.screens.active.pages.pages.first.data
+	return &term.Screens.Active.Pages.pages.first.data
 }
 
 // fm3Cell is term51ZCell.
@@ -94,7 +94,7 @@ func fm3Cell(term *Terminal, x SizeCellCountInt, y SizeCellCountInt) *PageCell {
 // fm3Opts is `.{ .emit = emit }`: a preset with another format.
 func fm3Opts(emit FormatterFormat) FormatterOptions {
 	opts := FormatterOptionsPlain
-	opts.emit = emit
+	opts.Emit = emit
 	return opts
 }
 
@@ -111,7 +111,7 @@ func fm3Trailing(rows uint, cells uint) Optional[FormatterPageFormatterTrailingS
 
 // fm3Coord is `Coordinate{ .x = x, .y = y }`.
 func fm3Coord(x SizeCellCountInt, y uint32) PointCoordinate {
-	return PointCoordinate{x: x, y: y}
+	return PointCoordinate{X: x, Y: y}
 }
 
 // fm3Formatter is "any formatter that has a `format` method".
@@ -168,12 +168,12 @@ const fm3HtmlOpen = "<div style=\"font-family: monospace; white-space: pre;\">"
 
 // fm3Rgb is term51ZRgb: "{d};{d};{d}".
 func fm3Rgb(c ColorRGB) string {
-	return fmt.Sprintf("%d;%d;%d", c.r, c.g, c.b)
+	return fmt.Sprintf("%d;%d;%d", c.R, c.G, c.B)
 }
 
 // fm3Hex is term51ZHex: "{x:0>2}/{x:0>2}/{x:0>2}".
 func fm3Hex(c ColorRGB) string {
-	return fmt.Sprintf("%02x/%02x/%02x", c.r, c.g, c.b)
+	return fmt.Sprintf("%02x/%02x/%02x", c.R, c.G, c.B)
 }
 
 // fm3ExpectWriteFailed is `try std.testing.expectError(error.WriteFailed, err)`.
@@ -199,7 +199,7 @@ func fm3IndexOfNone(s string, set string) int {
 // count.
 func fm3TwoPages(tt *testing.T, term *Terminal, first string, second string) uint {
 	tt.Helper()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_rows := uint(pages.pages.first.data.capacity.rows)
 	s := term.VtStream()
 	defer s.Deinit()
@@ -218,9 +218,9 @@ func fm3TwoPages(tt *testing.T, term *Terminal, first string, second string) uin
 // .y = y } }).?`.
 func fm3Pin(tt *testing.T, term *Terminal, x SizeCellCountInt, y uint32) PageListPin {
 	tt.Helper()
-	return zigUnwrap(tt, term.screens.active.pages.Pin(Point{
+	return zigUnwrap(tt, term.Screens.Active.Pages.Pin(Point{
 		Tag:    PointTagActive,
-		Active: PointCoordinate{x: x, y: y},
+		Active: PointCoordinate{X: x, Y: y},
 	}))
 }
 
@@ -238,7 +238,7 @@ var fm3ContentNone = FormatterScreenFormatterContent{Tag: FormatterScreenFormatt
 // fm3SelOut is term51ZSelOut.
 func fm3SelOut(tt *testing.T, term *Terminal, opts FormatterOptions, sel Selection) string {
 	tt.Helper()
-	f := FormatterScreenFormatterInit(term.screens.active, opts)
+	f := FormatterScreenFormatterInit(term.Screens.Active, opts)
 	f.content = fm3ContentSelection(sel)
 	return fm3Out(tt, f)
 }
@@ -249,17 +249,17 @@ func fm3SetExtraField(tt *testing.T, extra *FormatterScreenFormatterExtra, name 
 	tt.Helper()
 	switch name {
 	case "cursor":
-		extra.cursor = true
+		extra.Cursor = true
 	case "style":
-		extra.style = true
+		extra.Style = true
 	case "hyperlink":
-		extra.hyperlink = true
+		extra.Hyperlink = true
 	case "protection":
-		extra.protection = true
+		extra.Protection = true
 	case "kitty_keyboard":
-		extra.kitty_keyboard = true
+		extra.KittyKeyboard = true
 	case "charsets":
-		extra.charsets = true
+		extra.Charsets = true
 	default:
 		tt.Fatalf("no such field: %s", name)
 	}
@@ -324,12 +324,12 @@ func fm3CellStyle(term *Terminal, x SizeCellCountInt, y SizeCellCountInt) Style 
 		}
 		return *p.styles.Get(c.style_id)
 	case PageCellContentTagBgColorPalette:
-		return Style{bg_color: StyleColor{Tag: StyleColorPalette, Palette: c.content.color_palette}}
+		return Style{BgColor: StyleColor{Tag: StyleColorPalette, Palette: c.content.color_palette}}
 	case PageCellContentTagBgColorRgb:
-		return Style{bg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: c.content.color_rgb.r,
-			g: c.content.color_rgb.g,
-			b: c.content.color_rgb.b,
+		return Style{BgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: c.content.color_rgb.R,
+			G: c.content.color_rgb.G,
+			B: c.content.color_rgb.B,
 		}}}
 	}
 	panic("unreachable")
@@ -380,14 +380,14 @@ func TestFm3_term51_PageFormatter_formatWithState_empty_page_per_format_and_head
 	term := fm3Init(t, 10, 3)
 	defer term.Deinit()
 
-	bg := ColorRGB{r: 1, g: 2, b: 3}
-	fg := ColorRGB{r: 0xaa, g: 0xbb, b: 0xcc}
+	bg := ColorRGB{R: 1, G: 2, B: 3}
+	fg := ColorRGB{R: 0xaa, G: 0xbb, B: 0xcc}
 
 	// Plain: nothing, never any header. State counts all rows blank.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.background = Some(bg)
-		opts.foreground = Some(fg)
+		opts.Background = Some(bg)
+		opts.Foreground = Some(fg)
 		f := FormatterPageFormatterInit(fm3Page(term), opts)
 		r := fm3Run(t, f)
 		// Zig-only: defer r.deinit(alloc);
@@ -401,18 +401,18 @@ func TestFm3_term51_PageFormatter_formatWithState_empty_page_per_format_and_head
 	fm3ExpectPage(t, term, FormatterOptionsVt, "")
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.foreground = Some(fg)
+		opts.Foreground = Some(fg)
 		fm3ExpectPage(t, term, opts, "\x1b]10;rgb:aa/bb/cc\x1b\\")
 	}
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.background = Some(bg)
+		opts.Background = Some(bg)
 		fm3ExpectPage(t, term, opts, "\x1b]11;rgb:01/02/03\x1b\\")
 	}
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.foreground = Some(fg)
-		opts.background = Some(bg)
+		opts.Foreground = Some(fg)
+		opts.Background = Some(bg)
 		fm3ExpectPage(t, term, opts, "\x1b]10;rgb:aa/bb/cc\x1b\\\x1b]11;rgb:01/02/03\x1b\\")
 	}
 
@@ -421,20 +421,20 @@ func TestFm3_term51_PageFormatter_formatWithState_empty_page_per_format_and_head
 	fm3ExpectPage(t, term, FormatterOptionsHtml, fm3HtmlOpen+"</div>")
 	{
 		opts := fm3Opts(FormatterFormatHtml)
-		opts.background = Some(bg)
+		opts.Background = Some(bg)
 		fm3ExpectPage(t, term, opts,
 			"<div style=\"font-family: monospace; white-space: pre;background-color: #010203;\"></div>")
 	}
 	{
 		opts := fm3Opts(FormatterFormatHtml)
-		opts.foreground = Some(fg)
+		opts.Foreground = Some(fg)
 		fm3ExpectPage(t, term, opts,
 			"<div style=\"font-family: monospace; white-space: pre;color: #aabbcc;\"></div>")
 	}
 	{
 		opts := fm3Opts(FormatterFormatHtml)
-		opts.background = Some(bg)
-		opts.foreground = Some(fg)
+		opts.Background = Some(bg)
+		opts.Foreground = Some(fg)
 		fm3ExpectPage(t, term, opts,
 			"<div style=\"font-family: monospace; white-space: pre;"+
 				"background-color: #010203;color: #aabbcc;\"></div>")
@@ -695,7 +695,7 @@ func TestFm3_term51_PageFormatter_formatWithState_trailing_cells_carry_across_a_
 	// are emitted as spaces before the first text.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		f.trailing_state = fm3Trailing(0, 3)
 		r := fm3Run(t, f)
@@ -708,7 +708,7 @@ func TestFm3_term51_PageFormatter_formatWithState_trailing_cells_carry_across_a_
 	// The same without prior cells.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		r := fm3Run(t, f)
 		// Zig-only: defer r.deinit(alloc);
@@ -719,7 +719,7 @@ func TestFm3_term51_PageFormatter_formatWithState_trailing_cells_carry_across_a_
 	page.GetRow(0).wrap_continuation = false
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		f.trailing_state = fm3Trailing(0, 3)
 		r := fm3Run(t, f)
@@ -744,7 +744,7 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	// Whole page, unwrap: no newline, spacer cells skipped.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		r := fm3Run(t, f)
 		// Zig-only: defer r.deinit(alloc);
@@ -764,7 +764,7 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	// of the next row, so the wide character is included.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		f.end_y = fm3SomeCc(0)
 		f.end_x = fm3SomeCc(4)
@@ -775,7 +775,7 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	// Same bound, end_x before the spacer head: no move.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		f.end_y = fm3SomeCc(0)
 		f.end_x = fm3SomeCc(3)
@@ -795,7 +795,7 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	// A rectangle never moves.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		f.rectangle = true
 		f.end_y = fm3SomeCc(0)
@@ -811,7 +811,7 @@ func TestFm3_term51_PageFormatter_formatWithState_soft_wrap_with_spacer_head_at_
 	fm3Cell(term, 4, 2).wide = PageCellWideSpacerHead
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		f := FormatterPageFormatterInit(page, opts)
 		f.start_y = 2
 		f.end_y = fm3SomeCc(2)
@@ -834,7 +834,7 @@ func TestFm3_term51_PageFormatter_formatWithState_start_on_a_spacer_head_skips_t
 	// counting it as a blank row (so there is no leading newline).
 	for _, unwrap := range []bool{false, true} {
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = unwrap
+		opts.Unwrap = unwrap
 		f := FormatterPageFormatterInit(page, opts)
 		f.start_x = 4
 		r := fm3Run(t, f)
@@ -973,9 +973,9 @@ func TestFm3_term51_PageFormatter_formatWithState_start_and_end_inside_wide_char
 		// Zig-only: defer r.deinit(alloc);
 		expectEqual(t, len(r.out), len(pm))
 		expectEqualSlices(t, []PointCoordinate{
-			{x: 1, y: 0}, {x: 1, y: 0}, {x: 1, y: 0},
-			{x: 3, y: 0}, {x: 4, y: 0}, {x: 4, y: 0},
-			{x: 4, y: 0},
+			{X: 1, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 0},
+			{X: 3, Y: 0}, {X: 4, Y: 0}, {X: 4, Y: 0},
+			{X: 4, Y: 0},
 		}, pm)
 	}
 }
@@ -1143,10 +1143,10 @@ func TestFm3_term51_PageFormatter_formatWithState_every_sgr_attribute_and_color_
 	term51ZRgb4 := fm3Rgb(ColorDefault[4])
 	term51ZRgb9 := fm3Rgb(ColorDefault[9])
 	palette := ColorDefault
-	palette[1] = ColorRGB{r: 11, g: 12, b: 13}
-	palette[200] = ColorRGB{r: 21, g: 22, b: 23}
+	palette[1] = ColorRGB{R: 11, G: 12, B: 13}
+	palette[200] = ColorRGB{R: 21, G: 22, B: 23}
 	palette_opts := fm3Opts(FormatterFormatVt)
-	palette_opts.palette = &palette
+	palette_opts.Palette = &palette
 	fm3ExpectPage(t, term2, palette_opts, "\x1b[0m\x1b[4:2mA"+
 		"\x1b[0m\x1b[4:3mB"+
 		"\x1b[0m\x1b[4:4mC"+
@@ -1216,14 +1216,14 @@ func TestFm3_term51_PageFormatter_formatWithState_styled_formats_do_not_trim_spa
 	// With trim off the spaces remain; the empty tail still does not.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.trim = false
+		opts.Trim = false
 		fm3ExpectPage(t, term, opts, "x  \n  \ny")
 	}
 	// Styled formats keep every written space whatever `trim` says.
 	fm3ExpectPage(t, term, FormatterOptionsVt, "x  \r\n  \r\ny")
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.trim = true
+		opts.Trim = true
 		fm3ExpectPage(t, term, opts, "x  \r\n  \r\ny")
 	}
 	fm3ExpectPage(t, term, FormatterOptionsHtml, fm3HtmlOpen+"x  \n  \ny</div>")
@@ -1277,14 +1277,14 @@ func TestFm3_term51_PageFormatter_formatWithState_header_bytes_map_to_the_origin
 	term := fm3Init(t, 10, 2)
 	defer term.Deinit()
 	fm3Write(t, term, "\r\nab")
-	fg := ColorRGB{r: 1, g: 2, b: 3}
+	fg := ColorRGB{R: 1, G: 2, B: 3}
 
 	// VT header: 19 bytes for OSC 10.
 	{
 		var pm []PointCoordinate
 		// Zig-only: defer pm.deinit(alloc);
 		opts := fm3Opts(FormatterFormatVt)
-		opts.foreground = Some(fg)
+		opts.Foreground = Some(fg)
 		f := FormatterPageFormatterInit(fm3Page(term), opts)
 		f.point_map = Some(FormatterPageFormatterPointMap{map_: &pm})
 		r := fm3Run(t, f)
@@ -1376,17 +1376,17 @@ func TestFm3_term51_PageFormatter_formatWithState_codepoint_map_end_to_end(t *te
 
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.codepoint_map = m
+		opts.CodepointMap = m
 		fm3ExpectPage(t, term, opts, "AA>bW e")
 	}
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.codepoint_map = m
+		opts.CodepointMap = m
 		fm3ExpectPage(t, term, opts, "AA>bW e")
 	}
 	{
 		opts := fm3Opts(FormatterFormatHtml)
-		opts.codepoint_map = m
+		opts.CodepointMap = m
 		fm3ExpectPage(t, term, opts, fm3HtmlOpen+"AA&gt;bW e</div>")
 	}
 
@@ -1396,19 +1396,19 @@ func TestFm3_term51_PageFormatter_formatWithState_codepoint_map_end_to_end(t *te
 	var pm []PointCoordinate
 	// Zig-only: defer pm.deinit(alloc);
 	opts := fm3Opts(FormatterFormatPlain)
-	opts.codepoint_map = m
+	opts.CodepointMap = m
 	f := FormatterPageFormatterInit(fm3Page(term), opts)
 	f.point_map = Some(FormatterPageFormatterPointMap{map_: &pm})
 	r := fm3Run(t, f)
 	// Zig-only: defer r.deinit(alloc);
 	expectEqualStrings(t, "AA>bW e", r.out)
 	expectEqualSlices(t, []PointCoordinate{
-		{x: 0, y: 0}, {x: 0, y: 0}, // AA
-		{x: 1, y: 0}, // >
-		{x: 2, y: 0}, // b
-		{x: 3, y: 0}, // W
-		{x: 5, y: 0}, // space
-		{x: 6, y: 0}, // e
+		{X: 0, Y: 0}, {X: 0, Y: 0}, // AA
+		{X: 1, Y: 0}, // >
+		{X: 2, Y: 0}, // b
+		{X: 3, Y: 0}, // W
+		{X: 5, Y: 0}, // space
+		{X: 6, Y: 0}, // e
 	}, pm)
 }
 
@@ -1453,19 +1453,19 @@ func TestFm3_term51_PageFormatter_formatWithState_trim_and_wrapped_rows_with_unw
 	// has text: explicit spaces are blank cells, so they are replayed.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		fm3ExpectPage(t, term, opts, "ab   cd\nz")
 	}
 	// trim = false emits them in place instead.
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.trim = false
+		opts.Trim = false
 		fm3ExpectPage(t, term, opts, "ab   \ncd\nz")
 	}
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.trim = false
-		opts.unwrap = true
+		opts.Trim = false
+		opts.Unwrap = true
 		fm3ExpectPage(t, term, opts, "ab   cd\nz")
 	}
 }
@@ -1475,7 +1475,7 @@ func TestFm3_term51_PageListFormatter_format_empty_screen_per_format(t *testing.
 	testStdCapacity(t)
 	term := fm3Init(t, 10, 3)
 	defer term.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 
 	for _, c := range []struct {
 		emit     FormatterFormat
@@ -1508,7 +1508,7 @@ func TestFm3_term51_PageListFormatter_format_html_and_vt_emit_a_header_per_page(
 	term := fm3Init(t, 10, 3)
 	defer term.Deinit()
 	first_page_rows := fm3TwoPages(t, term, "page one", "page two")
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 
 	// HTML: leading blank rows of the first page, then a separate wrapper
 	// for each page. The newline separating the lines is emitted in the
@@ -1527,7 +1527,7 @@ func TestFm3_term51_PageListFormatter_format_html_and_vt_emit_a_header_per_page(
 	// newline is \r\n.
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.foreground = Some(ColorRGB{r: 1, g: 2, b: 3})
+		opts.Foreground = Some(ColorRGB{R: 1, G: 2, B: 3})
 		f := FormatterPageListFormatterInit(pages, opts)
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -1554,12 +1554,12 @@ func TestFm3_term51_PageListFormatter_format_bounds_spanning_pages(t *testing.T)
 	term := fm3Init(t, 10, 3)
 	defer term.Deinit()
 	first_page_rows := fm3TwoPages(t, term, "abcdefgh", "ijklmnop")
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_node := pages.pages.first
 	last_node := pages.pages.last
 
-	tl := PageListPin{node: first_node, x: 2, y: SizeCellCountInt(first_page_rows - 1)}
-	br := PageListPin{node: last_node, x: 4, y: 0}
+	tl := PageListPin{Node: first_node, X: 2, Y: SizeCellCountInt(first_page_rows - 1)}
+	br := PageListPin{Node: last_node, X: 4, Y: 0}
 
 	// Non-rectangle: start_x on the first page only, end_x on the last.
 	{
@@ -1606,7 +1606,7 @@ func TestFm3_term51_PageListFormatter_format_bounds_spanning_pages(t *testing.T)
 	// Rectangle starting at x=0 keeps the newline between the pages.
 	{
 		f := FormatterPageListFormatterInit(pages, FormatterOptionsPlain)
-		f.top_left = Some(PageListPin{node: first_node, x: 0, y: SizeCellCountInt(first_page_rows - 1)})
+		f.top_left = Some(PageListPin{Node: first_node, X: 0, Y: SizeCellCountInt(first_page_rows - 1)})
 		f.bottom_right = Some(br)
 		f.rectangle = true
 		out := fm3Out(t, f)
@@ -1628,12 +1628,12 @@ func TestFm3_term51_PageListFormatter_format_bounds_spanning_pages(t *testing.T)
 		expectEqual(t, len(out), len(pm))
 		y := SizeCellCountInt(first_page_rows - 1)
 		for i := 0; i < 6; i++ {
-			expectEqual(t, PageListPin{node: first_node, x: SizeCellCountInt(2 + i), y: y}, pm[i])
+			expectEqual(t, PageListPin{Node: first_node, X: SizeCellCountInt(2 + i), Y: y}, pm[i])
 		}
 		// The newline belongs to the second page's chunk.
-		expectEqual(t, last_node, pm[6].node)
+		expectEqual(t, last_node, pm[6].Node)
 		for i := 0; i < 5; i++ {
-			expectEqual(t, PageListPin{node: last_node, x: SizeCellCountInt(i), y: 0}, pm[7+i])
+			expectEqual(t, PageListPin{Node: last_node, X: SizeCellCountInt(i), Y: 0}, pm[7+i])
 		}
 	}
 }
@@ -1709,7 +1709,7 @@ func TestFm3_term51_PageListFormatter_format_selection_in_wrapped_lines_and_wide
 	}
 	{
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		out := fm3SelOut(t, term, opts, sel)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "llo world", out)
@@ -1718,7 +1718,7 @@ func TestFm3_term51_PageListFormatter_format_selection_in_wrapped_lines_and_wide
 	{
 		sel2 := SelectionInit(fm3Pin(t, term, 3, 0), fm3Pin(t, term, 2, 1), false)
 		opts := fm3Opts(FormatterFormatPlain)
-		opts.unwrap = true
+		opts.Unwrap = true
 		out := fm3SelOut(t, term, opts, sel2)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "lo wo", out)
@@ -1762,7 +1762,7 @@ func TestFm3_term51_ScreenFormatter_format_content_none_and_extras_per_format(t 
 
 	// No content, no extras.
 	{
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 		f.content = fm3ContentNone
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -1771,7 +1771,7 @@ func TestFm3_term51_ScreenFormatter_format_content_none_and_extras_per_format(t 
 
 	// Content with no extras for VT, with a trailing-blank trimmed result.
 	{
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "hi", out)
@@ -1779,21 +1779,21 @@ func TestFm3_term51_ScreenFormatter_format_content_none_and_extras_per_format(t 
 
 	// Plain and html ignore all extras.
 	{
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 		f.extra = FormatterScreenFormatterExtraAll
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "hi", out)
 	}
 	{
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsHtml)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsHtml)
 		f.extra = FormatterScreenFormatterExtraAll
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, fm3HtmlOpen+"hi</div>", out)
 	}
 	{
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 		f.content = fm3ContentNone
 		f.extra = FormatterScreenFormatterExtraAll
 		out := fm3Out(t, f)
@@ -1821,7 +1821,7 @@ func TestFm3_term51_ScreenFormatter_format_each_extra_on_a_default_screen(t *tes
 		{field: "charsets", expected: ""},
 		{field: "cursor", expected: "\x1b[1;1H"},
 	} {
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 		f.content = fm3ContentNone
 		f.extra = FormatterScreenFormatterExtraNone
 		fm3SetExtraField(t, &f.extra, c.field)
@@ -1837,9 +1837,9 @@ func TestFm3_term51_ScreenFormatter_format_style_extra(t *testing.T) {
 	term := fm3Init(t, 10, 5)
 	defer term.Deinit()
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.content = fm3ContentNone
-	f.extra.style = true
+	f.extra.Style = true
 
 	fm3Write(t, term, "\x1b[1;3;4:2;9;38;5;9;48;2;4;5;6;58;2;7;8;9m")
 	{
@@ -1853,10 +1853,10 @@ func TestFm3_term51_ScreenFormatter_format_style_extra(t *testing.T) {
 	// The palette option is not used by the screen's style extra: indices
 	// stay indices.
 	palette := ColorDefault
-	palette[9] = ColorRGB{r: 1, g: 1, b: 1}
+	palette[9] = ColorRGB{R: 1, G: 1, B: 1}
 	{
 		fp := f
-		fp.opts.palette = &palette
+		fp.opts.Palette = &palette
 		out := fm3Out(t, fp)
 		// Zig-only: defer alloc.free(out);
 		expect(t, strings.Contains(out, "\x1b[38;5;9m"), "std.mem.indexOf(u8, out, \"\\x1b[38;5;9m\") != null")
@@ -1876,9 +1876,9 @@ func TestFm3_term51_ScreenFormatter_format_hyperlink_extra(t *testing.T) {
 	term := fm3Init(t, 10, 5)
 	defer term.Deinit()
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.content = fm3ContentNone
-	f.extra.hyperlink = true
+	f.extra.Hyperlink = true
 
 	// Implicit id: only the URI is emitted.
 	fm3Write(t, term, "\x1b]8;;http://example.com/a?b=1\x1b\\")
@@ -1911,16 +1911,16 @@ func TestFm3_term51_ScreenFormatter_format_protection_and_kitty_keyboard_extras(
 	term := fm3Init(t, 10, 5)
 	defer term.Deinit()
 
-	fp := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	fp := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	fp.content = fm3ContentNone
-	fp.extra.protection = true
-	fk := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	fp.extra.Protection = true
+	fk := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	fk.content = fm3ContentNone
-	fk.extra.kitty_keyboard = true
+	fk.extra.KittyKeyboard = true
 
 	// Protection: DECSCA 1 protects, 0 and 2 unprotect.
 	fm3Write(t, term, "\x1b[1\"q")
-	expect(t, term.screens.active.cursor.protected, "t.screens.active.cursor.protected")
+	expect(t, term.Screens.Active.Cursor.Protected, "t.screens.active.cursor.protected")
 	{
 		out := fm3Out(t, fp)
 		// Zig-only: defer alloc.free(out);
@@ -1933,7 +1933,7 @@ func TestFm3_term51_ScreenFormatter_format_protection_and_kitty_keyboard_extras(
 		expectEqualStrings(t, "", out)
 	}
 	// ISO protection (SPA) sets the same cursor flag.
-	term.screens.active.cursor.protected = true
+	term.Screens.Active.Cursor.Protected = true
 	{
 		out := fm3Out(t, fp)
 		// Zig-only: defer alloc.free(out);
@@ -1978,11 +1978,11 @@ func TestFm3_term51_ScreenFormatter_format_charsets_extra_designations_and_invoc
 	testStdCapacity(t)
 	term := fm3Init(t, 10, 5)
 	defer term.Deinit()
-	screen := term.screens.active
+	screen := term.Screens.Active
 
 	f := FormatterScreenFormatterInit(screen, FormatterOptionsVt)
 	f.content = fm3ContentNone
-	f.extra.charsets = true
+	f.extra.Charsets = true
 
 	// Defaults: all UTF-8, GL=G0, GR=G2: nothing.
 	{
@@ -2011,29 +2011,29 @@ func TestFm3_term51_ScreenFormatter_format_charsets_extra_designations_and_invoc
 	}
 	for _, s := range slots {
 		for _, c := range sets {
-			screen.charset.charsets.Set(s.slot, c.cs)
+			screen.Charset.charsets.Set(s.slot, c.cs)
 			out := fm3Out(t, f)
 			// Zig-only: defer alloc.free(out);
 			expectEqualStrings(t, "\x1b", out[0:1])
 			expectEqualStrings(t, s.inter, out[1:2])
 			expectEqualStrings(t, c.final, out[2:3])
 			expectEqual(t, 3, len(out))
-			screen.charset.charsets.Set(s.slot, CharsetsCharsetUtf8)
+			screen.Charset.charsets.Set(s.slot, CharsetsCharsetUtf8)
 		}
 	}
 
 	// Multiple designations are emitted in slot order.
-	screen.charset.charsets.Set(CharsetsSlotsG3, CharsetsCharsetBritish)
-	screen.charset.charsets.Set(CharsetsSlotsG1, CharsetsCharsetDecSpecial)
-	screen.charset.charsets.Set(CharsetsSlotsG0, CharsetsCharsetAscii)
+	screen.Charset.charsets.Set(CharsetsSlotsG3, CharsetsCharsetBritish)
+	screen.Charset.charsets.Set(CharsetsSlotsG1, CharsetsCharsetDecSpecial)
+	screen.Charset.charsets.Set(CharsetsSlotsG0, CharsetsCharsetAscii)
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "\x1b(B\x1b)0\x1b+A", out)
 	}
-	screen.charset.charsets.Set(CharsetsSlotsG3, CharsetsCharsetUtf8)
-	screen.charset.charsets.Set(CharsetsSlotsG1, CharsetsCharsetUtf8)
-	screen.charset.charsets.Set(CharsetsSlotsG0, CharsetsCharsetUtf8)
+	screen.Charset.charsets.Set(CharsetsSlotsG3, CharsetsCharsetUtf8)
+	screen.Charset.charsets.Set(CharsetsSlotsG1, CharsetsCharsetUtf8)
+	screen.Charset.charsets.Set(CharsetsSlotsG0, CharsetsCharsetUtf8)
 
 	// GL invocations.
 	gls := []struct {
@@ -2045,12 +2045,12 @@ func TestFm3_term51_ScreenFormatter_format_charsets_extra_designations_and_invoc
 		{gl: CharsetsSlotsG3, seq: "\x1bo"},
 	}
 	for _, c := range gls {
-		screen.charset.gl = c.gl
+		screen.Charset.Gl = c.gl
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, c.seq, out)
 	}
-	screen.charset.gl = CharsetsSlotsG0
+	screen.Charset.Gl = CharsetsSlotsG0
 
 	// GR invocations (G2 is the default).
 	grs := []struct {
@@ -2061,16 +2061,16 @@ func TestFm3_term51_ScreenFormatter_format_charsets_extra_designations_and_invoc
 		{gr: CharsetsSlotsG3, seq: "\x1b|"},
 	}
 	for _, c := range grs {
-		screen.charset.gr = c.gr
+		screen.Charset.Gr = c.gr
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, c.seq, out)
 	}
 
 	// Everything together: designations, then GL, then GR.
-	screen.charset.charsets.Set(CharsetsSlotsG2, CharsetsCharsetDecSpecial)
-	screen.charset.gl = CharsetsSlotsG3
-	screen.charset.gr = CharsetsSlotsG1
+	screen.Charset.charsets.Set(CharsetsSlotsG2, CharsetsCharsetDecSpecial)
+	screen.Charset.Gl = CharsetsSlotsG3
+	screen.Charset.Gr = CharsetsSlotsG1
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2085,9 +2085,9 @@ func TestFm3_term51_ScreenFormatter_format_charsets_set_through_the_stream_round
 	defer term.Deinit()
 	fm3Write(t, term, "\x1b(0\x1b)A\x1b*B\x1b+0\x0e\x1b|")
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.content = fm3ContentNone
-	f.extra.charsets = true
+	f.extra.Charsets = true
 	out := fm3Out(t, f)
 	// Zig-only: defer alloc.free(out);
 	expectEqualStrings(t, "\x1b(0\x1b)A\x1b*B\x1b+0\x0e\x1b|", out)
@@ -2097,12 +2097,12 @@ func TestFm3_term51_ScreenFormatter_format_charsets_set_through_the_stream_round
 	fm3Write(t, term2, out)
 	for _, slot := range []CharsetsSlots{CharsetsSlotsG0, CharsetsSlotsG1, CharsetsSlotsG2, CharsetsSlotsG3} {
 		expectEqual(t,
-			term.screens.active.charset.charsets.Get(slot),
-			term2.screens.active.charset.charsets.Get(slot),
+			term.Screens.Active.Charset.charsets.Get(slot),
+			term2.Screens.Active.Charset.charsets.Get(slot),
 		)
 	}
-	expectEqual(t, term.screens.active.charset.gl, term2.screens.active.charset.gl)
-	expectEqual(t, term.screens.active.charset.gr, term2.screens.active.charset.gr)
+	expectEqual(t, term.Screens.Active.Charset.Gl, term2.Screens.Active.Charset.Gl)
+	expectEqual(t, term.Screens.Active.Charset.Gr, term2.Screens.Active.Charset.Gr)
 }
 
 // Zig: test "term51: ScreenFormatter.format: cursor extra positions"
@@ -2111,9 +2111,9 @@ func TestFm3_term51_ScreenFormatter_format_cursor_extra_positions(t *testing.T) 
 	term := fm3Init(t, 10, 5)
 	defer term.Deinit()
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.content = fm3ContentNone
-	f.extra.cursor = true
+	f.extra.Cursor = true
 
 	cases := []struct {
 		input    string
@@ -2135,7 +2135,7 @@ func TestFm3_term51_ScreenFormatter_format_cursor_extra_positions(t *testing.T) 
 
 	// A pending wrap still reports the last column.
 	fm3Write(t, term, "\x1b[H0123456789")
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2151,7 +2151,7 @@ func TestFm3_term51_ScreenFormatter_format_extras_follow_content_in_a_fixed_orde
 	fm3Write(t, term, "hi\r\nyo")
 	fm3Write(t, term, "\x1b[1m\x1b]8;id=x;http://u\x1b\\\x1b[1\"q\x1b[=3;1u\x1b(0\x0e\x1b[2;2H")
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.extra = FormatterScreenFormatterExtraAll
 	out := fm3Out(t, f)
 	// Zig-only: defer alloc.free(out);
@@ -2179,17 +2179,17 @@ func TestFm3_term51_ScreenFormatter_format_extras_follow_content_in_a_fixed_orde
 	term2 := fm3Init(t, 10, 5)
 	defer term2.Deinit()
 	fm3Write(t, term2, out)
-	s1 := term.screens.active
-	s2 := term2.screens.active
-	expectEqual(t, s1.cursor.x, s2.cursor.x)
-	expectEqual(t, s1.cursor.y, s2.cursor.y)
-	expect(t, s1.cursor.style.Eql(s2.cursor.style), "s1.cursor.style.eql(s2.cursor.style)")
-	expect(t, s2.cursor.protected, "s2.cursor.protected")
-	expect(t, s1.cursor.hyperlink != nil, "s1.cursor.hyperlink != null")
-	expect(t, s2.cursor.hyperlink != nil, "s2.cursor.hyperlink != null")
-	expectEqualStrings(t, string(s1.cursor.hyperlink.uri), string(s2.cursor.hyperlink.uri))
-	expectEqual(t, s1.kitty_keyboard.Current().Int(), s2.kitty_keyboard.Current().Int())
-	expectEqual(t, s1.charset.gl, s2.charset.gl)
+	s1 := term.Screens.Active
+	s2 := term2.Screens.Active
+	expectEqual(t, s1.Cursor.X, s2.Cursor.X)
+	expectEqual(t, s1.Cursor.Y, s2.Cursor.Y)
+	expect(t, s1.Cursor.Style.Eql(s2.Cursor.Style), "s1.cursor.style.eql(s2.cursor.style)")
+	expect(t, s2.Cursor.Protected, "s2.cursor.protected")
+	expect(t, s1.Cursor.Hyperlink != nil, "s1.cursor.hyperlink != null")
+	expect(t, s2.Cursor.Hyperlink != nil, "s2.cursor.hyperlink != null")
+	expectEqualStrings(t, string(s1.Cursor.Hyperlink.URI), string(s2.Cursor.Hyperlink.URI))
+	expectEqual(t, s1.KittyKeyboard.Current().Int(), s2.KittyKeyboard.Current().Int())
+	expectEqual(t, s1.Charset.Gl, s2.Charset.Gl)
 }
 
 // Zig: test "term51: ScreenFormatter.format: pin map for extras"
@@ -2198,24 +2198,24 @@ func TestFm3_term51_ScreenFormatter_format_pin_map_for_extras(t *testing.T) {
 	term := fm3Init(t, 10, 5)
 	defer term.Deinit()
 	fm3Write(t, term, "hi\x1b[1m")
-	node := term.screens.active.pages.pages.first
+	node := term.Screens.Active.Pages.pages.first
 
 	// Extras after content map to the last content pin.
 	{
 		var pm []PageListPin
 		// Zig-only: defer pm.deinit(alloc);
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
-		f.extra.style = true
-		f.extra.cursor = true
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
+		f.extra.Style = true
+		f.extra.Cursor = true
 		f.pin_map = Some(FormatterPinMap{map_: &pm})
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "hi\x1b[0m\x1b[1m\x1b[1;3H", out)
 		expectEqual(t, len(out), len(pm))
-		expectEqual(t, PageListPin{node: node, x: 0, y: 0}, pm[0])
-		expectEqual(t, PageListPin{node: node, x: 1, y: 0}, pm[1])
+		expectEqual(t, PageListPin{Node: node, X: 0, Y: 0}, pm[0])
+		expectEqual(t, PageListPin{Node: node, X: 1, Y: 0}, pm[1])
 		for _, p := range pm[2:] {
-			expectEqual(t, PageListPin{node: node, x: 1, y: 0}, p)
+			expectEqual(t, PageListPin{Node: node, X: 1, Y: 0}, p)
 		}
 	}
 
@@ -2223,16 +2223,16 @@ func TestFm3_term51_ScreenFormatter_format_pin_map_for_extras(t *testing.T) {
 	{
 		var pm []PageListPin
 		// Zig-only: defer pm.deinit(alloc);
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 		f.content = fm3ContentNone
-		f.extra.cursor = true
+		f.extra.Cursor = true
 		f.pin_map = Some(FormatterPinMap{map_: &pm})
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "\x1b[1;3H", out)
 		expectEqual(t, len(out), len(pm))
 		for _, p := range pm {
-			expectEqual(t, PageListPin{node: node, x: 0, y: 0}, p)
+			expectEqual(t, PageListPin{Node: node, X: 0, Y: 0}, p)
 		}
 	}
 
@@ -2240,7 +2240,7 @@ func TestFm3_term51_ScreenFormatter_format_pin_map_for_extras(t *testing.T) {
 	{
 		var pm []PageListPin
 		// Zig-only: defer pm.deinit(alloc);
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 		f.extra = FormatterScreenFormatterExtraAll
 		f.pin_map = Some(FormatterPinMap{map_: &pm})
 		out := fm3Out(t, f)
@@ -2253,7 +2253,7 @@ func TestFm3_term51_ScreenFormatter_format_pin_map_for_extras(t *testing.T) {
 	{
 		var pm []PageListPin
 		// Zig-only: defer pm.deinit(alloc);
-		f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+		f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 		f.pin_map = Some(FormatterPinMap{map_: &pm})
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2269,7 +2269,7 @@ func TestFm3_term51_ScreenFormatter_format_content_selection_null_covers_the_who
 	defer term.Deinit()
 	fm3Write(t, term, "ab\r\ncd\r\nef")
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsPlain)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsPlain)
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2282,7 +2282,7 @@ func TestFm3_term51_ScreenFormatter_format_content_selection_null_covers_the_who
 		expectEqualStrings(t, "ab\ncd\nef", out)
 	}
 	// The screen's own selection is not consulted.
-	zigTry(t, term.screens.active.Select(Some(SelectionInit(fm3Pin(t, term, 0, 1), fm3Pin(t, term, 1, 1), false))))
+	zigTry(t, term.Screens.Active.Select(Some(SelectionInit(fm3Pin(t, term, 0, 1), fm3Pin(t, term, 1, 1), false))))
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2321,7 +2321,7 @@ func TestFm3_term51_TerminalFormatter_format_palette_extra_for_vt_and_html(t *te
 		f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 		f.content = fm3ContentNone
 		f.extra = FormatterTerminalFormatterExtraNone
-		f.extra.palette = true
+		f.extra.Palette = true
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 
@@ -2343,7 +2343,7 @@ func TestFm3_term51_TerminalFormatter_format_palette_extra_for_vt_and_html(t *te
 		f := FormatterTerminalFormatterInit(term, FormatterOptionsHtml)
 		f.content = fm3ContentNone
 		f.extra = FormatterTerminalFormatterExtraNone
-		f.extra.palette = true
+		f.extra.Palette = true
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 
@@ -2391,7 +2391,7 @@ func TestFm3_term51_TerminalFormatter_format_every_mode_individually(t *testing.
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f.content = fm3ContentNone
 	f.extra = FormatterTerminalFormatterExtraNone
-	f.extra.modes = true
+	f.extra.Modes = true
 
 	// No change from defaults: nothing.
 	{
@@ -2402,9 +2402,9 @@ func TestFm3_term51_TerminalFormatter_format_every_mode_individually(t *testing.
 
 	for _, m := range fm3Modes {
 		func() {
-			dflt := term.modes.Get(m.mode)
-			term.modes.Set(m.mode, !dflt)
-			defer term.modes.Set(m.mode, dflt)
+			dflt := term.Modes.Get(m.mode)
+			term.Modes.Set(m.mode, !dflt)
+			defer term.Modes.Set(m.mode, dflt)
 
 			out := fm3Out(t, f)
 			// Zig-only: defer alloc.free(out);
@@ -2427,13 +2427,13 @@ func TestFm3_term51_TerminalFormatter_format_all_modes_changed_in_declaration_or
 	defer term.Deinit()
 
 	for _, m := range fm3Modes {
-		term.modes.Set(m.mode, !term.modes.Get(m.mode))
+		term.Modes.Set(m.mode, !term.Modes.Get(m.mode))
 	}
 
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f.content = fm3ContentNone
 	f.extra = FormatterTerminalFormatterExtraNone
-	f.extra.modes = true
+	f.extra.Modes = true
 	out := fm3Out(t, f)
 	// Zig-only: defer alloc.free(out);
 	expectEqualStrings(t,
@@ -2452,7 +2452,7 @@ func TestFm3_term51_TerminalFormatter_format_all_modes_changed_in_declaration_or
 		fm := FormatterTerminalFormatterInit(term, fm3Opts(emit))
 		fm.content = fm3ContentNone
 		fm.extra = FormatterTerminalFormatterExtraNone
-		fm.extra.modes = true
+		fm.extra.Modes = true
 		o := fm3Out(t, fm)
 		// Zig-only: defer alloc.free(o);
 		expectEqualStrings(t, "", o)
@@ -2463,8 +2463,8 @@ func TestFm3_term51_TerminalFormatter_format_all_modes_changed_in_declaration_or
 func TestFm3_term51_TerminalFormatter_format_modes_are_compared_with_the_terminals_defaults(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 3)
-	opts.default_modes.bracketed_paste = true
-	opts.default_modes.wraparound = false
+	opts.DefaultModes.bracketed_paste = true
+	opts.DefaultModes.wraparound = false
 	term_, err := TerminalInit(opts)
 	zigTry(t, err)
 	term := &term_
@@ -2473,11 +2473,11 @@ func TestFm3_term51_TerminalFormatter_format_modes_are_compared_with_the_termina
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f.content = fm3ContentNone
 	f.extra = FormatterTerminalFormatterExtraNone
-	f.extra.modes = true
+	f.extra.Modes = true
 
 	// Equal to the configured defaults: nothing.
-	expect(t, term.modes.Get(ModesModeBracketedPaste), "t.modes.get(.bracketed_paste)")
-	expect(t, !term.modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
+	expect(t, term.Modes.Get(ModesModeBracketedPaste), "t.modes.get(.bracketed_paste)")
+	expect(t, !term.Modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2486,8 +2486,8 @@ func TestFm3_term51_TerminalFormatter_format_modes_are_compared_with_the_termina
 
 	// Differences from those defaults are emitted, in the reverse sense of
 	// the built-in defaults.
-	term.modes.Set(ModesModeBracketedPaste, false)
-	term.modes.Set(ModesModeWraparound, true)
+	term.Modes.Set(ModesModeBracketedPaste, false)
+	term.Modes.Set(ModesModeWraparound, true)
 	{
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
@@ -2504,7 +2504,7 @@ func TestFm3_term51_TerminalFormatter_format_scrolling_region_extra(t *testing.T
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f.content = fm3ContentNone
 	f.extra = FormatterTerminalFormatterExtraNone
-	f.extra.scrolling_region = true
+	f.extra.ScrollingRegion = true
 
 	// Default: full screen, nothing.
 	{
@@ -2578,17 +2578,17 @@ func TestFm3_term51_TerminalFormatter_format_scrolling_region_extra(t *testing.T
 	out := fm3Out(t, f)
 	// Zig-only: defer alloc.free(out);
 	fm3Write(t, term2, out)
-	expectEqual(t, term.scrolling_region.top, term2.scrolling_region.top)
-	expectEqual(t, term.scrolling_region.bottom, term2.scrolling_region.bottom)
-	expectEqual(t, term.scrolling_region.left, term2.scrolling_region.left)
-	expectEqual(t, term.scrolling_region.right, term2.scrolling_region.right)
+	expectEqual(t, term.ScrollingRegion.Top, term2.ScrollingRegion.Top)
+	expectEqual(t, term.ScrollingRegion.Bottom, term2.ScrollingRegion.Bottom)
+	expectEqual(t, term.ScrollingRegion.Left, term2.ScrollingRegion.Left)
+	expectEqual(t, term.ScrollingRegion.Right, term2.ScrollingRegion.Right)
 
 	// Plain and html do not emit it.
 	for _, emit := range []FormatterFormat{FormatterFormatPlain, FormatterFormatHtml} {
 		fm := FormatterTerminalFormatterInit(term, fm3Opts(emit))
 		fm.content = fm3ContentNone
 		fm.extra = FormatterTerminalFormatterExtraNone
-		fm.extra.scrolling_region = true
+		fm.extra.ScrollingRegion = true
 		o := fm3Out(t, fm)
 		// Zig-only: defer alloc.free(o);
 		expectEqualStrings(t, "", o)
@@ -2604,7 +2604,7 @@ func TestFm3_term51_TerminalFormatter_format_tabstops_extra(t *testing.T) {
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f.content = fm3ContentNone
 	f.extra = FormatterTerminalFormatterExtraNone
-	f.extra.tabstops = true
+	f.extra.Tabstops = true
 
 	// The default interval of 8 gives stops at 8 and 16 (0-indexed).
 	{
@@ -2636,18 +2636,18 @@ func TestFm3_term51_TerminalFormatter_format_tabstops_extra(t *testing.T) {
 	// Zig-only: defer alloc.free(out);
 	fm3Write(t, term2, out)
 	for col := uint(0); col < 20; col++ {
-		expectEqual(t, term.tabstops.Get(col), term2.tabstops.Get(col))
+		expectEqual(t, term.Tabstops.Get(col), term2.Tabstops.Get(col))
 	}
-	expect(t, term2.tabstops.Get(0), "t2.tabstops.get(0)")
-	expect(t, term2.tabstops.Get(19), "t2.tabstops.get(19)")
-	expect(t, !term2.tabstops.Get(8), "!t2.tabstops.get(8)")
+	expect(t, term2.Tabstops.Get(0), "t2.tabstops.get(0)")
+	expect(t, term2.Tabstops.Get(19), "t2.tabstops.get(19)")
+	expect(t, !term2.Tabstops.Get(8), "!t2.tabstops.get(8)")
 
 	// Plain and html do not emit it.
 	for _, emit := range []FormatterFormat{FormatterFormatPlain, FormatterFormatHtml} {
 		fm := FormatterTerminalFormatterInit(term, fm3Opts(emit))
 		fm.content = fm3ContentNone
 		fm.extra = FormatterTerminalFormatterExtraNone
-		fm.extra.tabstops = true
+		fm.extra.Tabstops = true
 		o := fm3Out(t, fm)
 		// Zig-only: defer alloc.free(o);
 		expectEqualStrings(t, "", o)
@@ -2663,11 +2663,11 @@ func TestFm3_term51_TerminalFormatter_format_keyboard_and_pwd_extras(t *testing.
 	fk := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	fk.content = fm3ContentNone
 	fk.extra = FormatterTerminalFormatterExtraNone
-	fk.extra.keyboard = true
+	fk.extra.Keyboard = true
 	fp := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	fp.content = fm3ContentNone
 	fp.extra = FormatterTerminalFormatterExtraNone
-	fp.extra.pwd = true
+	fp.extra.Pwd = true
 
 	// Defaults: nothing.
 	{
@@ -2683,7 +2683,7 @@ func TestFm3_term51_TerminalFormatter_format_keyboard_and_pwd_extras(t *testing.
 
 	// Only modifyOtherKeys level 2 is represented.
 	fm3Write(t, term, "\x1b[>4;1m")
-	expect(t, !term.flags.modify_other_keys_2, "!t.flags.modify_other_keys_2")
+	expect(t, !term.Flags.ModifyOtherKeys2, "!t.flags.modify_other_keys_2")
 	{
 		out := fm3Out(t, fk)
 		// Zig-only: defer alloc.free(out);
@@ -2697,9 +2697,9 @@ func TestFm3_term51_TerminalFormatter_format_keyboard_and_pwd_extras(t *testing.
 	}
 
 	// The read-only stream ignores OSC 7, so set the pwd directly.
-	expectEqual(t, 0, len(term.pwd))
+	expectEqual(t, 0, len(term.Pwd))
 	fm3Write(t, term, "\x1b]7;file://ignored/x\x1b\\")
-	expectEqual(t, 0, len(term.pwd))
+	expectEqual(t, 0, len(term.Pwd))
 	zigTry(t, term.SetPwd([]uint8("file://host/home/user")))
 	{
 		out := fm3Out(t, fp)
@@ -2712,8 +2712,8 @@ func TestFm3_term51_TerminalFormatter_format_keyboard_and_pwd_extras(t *testing.
 		fm := FormatterTerminalFormatterInit(term, fm3Opts(emit))
 		fm.content = fm3ContentNone
 		fm.extra = FormatterTerminalFormatterExtraNone
-		fm.extra.keyboard = true
-		fm.extra.pwd = true
+		fm.extra.Keyboard = true
+		fm.extra.Pwd = true
 		o := fm3Out(t, fm)
 		// Zig-only: defer alloc.free(o);
 		expectEqualStrings(t, "", o)
@@ -2764,26 +2764,26 @@ func TestFm3_term51_TerminalFormatter_format_all_extras_in_order_with_round_trip
 	term2 := fm3Init(t, 10, 3)
 	defer term2.Deinit()
 	fm3Write(t, term2, out)
-	expectEqual(t, term.colors.palette.current[3], term2.colors.palette.current[3])
-	expect(t, term2.modes.Get(ModesModeBracketedPaste), "t2.modes.get(.bracketed_paste)")
-	expectEqual(t, term.scrolling_region.top, term2.scrolling_region.top)
-	expectEqual(t, term.scrolling_region.bottom, term2.scrolling_region.bottom)
-	expectEqual(t, term.flags.modify_other_keys_2, term2.flags.modify_other_keys_2)
+	expectEqual(t, term.Colors.Palette.Current[3], term2.Colors.Palette.Current[3])
+	expect(t, term2.Modes.Get(ModesModeBracketedPaste), "t2.modes.get(.bracketed_paste)")
+	expectEqual(t, term.ScrollingRegion.Top, term2.ScrollingRegion.Top)
+	expectEqual(t, term.ScrollingRegion.Bottom, term2.ScrollingRegion.Bottom)
+	expectEqual(t, term.Flags.ModifyOtherKeys2, term2.Flags.ModifyOtherKeys2)
 	// The read-only stream does not apply OSC 7, so the pwd is not restored.
-	expectEqual(t, 0, len(term2.pwd))
+	expectEqual(t, 0, len(term2.Pwd))
 	expectEqual(t,
-		term.screens.active.kitty_keyboard.Current().Int(),
-		term2.screens.active.kitty_keyboard.Current().Int(),
+		term.Screens.Active.KittyKeyboard.Current().Int(),
+		term2.Screens.Active.KittyKeyboard.Current().Int(),
 	)
-	expect(t, term2.screens.active.cursor.protected, "t2.screens.active.cursor.protected")
-	expect(t, term2.screens.active.cursor.style.flags.bold, "t2.screens.active.cursor.style.flags.bold")
+	expect(t, term2.Screens.Active.Cursor.Protected, "t2.screens.active.cursor.protected")
+	expect(t, term2.Screens.Active.Cursor.Style.Flags.Bold, "t2.screens.active.cursor.style.flags.bold")
 	// The cursor is NOT restored: the cursor position is emitted by the
 	// screen formatter, but the scrolling region (DECSTBM homes the
 	// cursor) and the tabstops (the last HTS was set at column 9) are
 	// emitted after it and move it.
-	expectEqual(t, SizeCellCountInt(2), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(8), term2.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(0), term2.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(2), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(8), term2.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(0), term2.Screens.Active.Cursor.Y)
 }
 
 // Zig: test "term51: TerminalFormatter.format: trailing extras move the replayed cursor"
@@ -2792,16 +2792,16 @@ func TestFm3_term51_TerminalFormatter_format_trailing_extras_move_the_replayed_c
 	term := fm3Init(t, 10, 4)
 	defer term.Deinit()
 	fm3Write(t, term, "\x1b[2;3r\x1b[3;5H")
-	expectEqual(t, SizeCellCountInt(4), term.screens.active.cursor.x)
-	expectEqual(t, SizeCellCountInt(2), term.screens.active.cursor.y)
+	expectEqual(t, SizeCellCountInt(4), term.Screens.Active.Cursor.X)
+	expectEqual(t, SizeCellCountInt(2), term.Screens.Active.Cursor.Y)
 
 	// The cursor then the region: the region resets the cursor to home.
 	{
 		f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 		f.content = fm3ContentNone
 		f.extra = FormatterTerminalFormatterExtraNone
-		f.extra.screen.cursor = true
-		f.extra.scrolling_region = true
+		f.extra.Screen.Cursor = true
+		f.extra.ScrollingRegion = true
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "\x1b[3;5H\x1b[2;3r", out)
@@ -2809,8 +2809,8 @@ func TestFm3_term51_TerminalFormatter_format_trailing_extras_move_the_replayed_c
 		term2 := fm3Init(t, 10, 4)
 		defer term2.Deinit()
 		fm3Write(t, term2, out)
-		expectEqual(t, SizeCellCountInt(0), term2.screens.active.cursor.x)
-		expectEqual(t, SizeCellCountInt(0), term2.screens.active.cursor.y)
+		expectEqual(t, SizeCellCountInt(0), term2.Screens.Active.Cursor.X)
+		expectEqual(t, SizeCellCountInt(0), term2.Screens.Active.Cursor.Y)
 	}
 
 	// The cursor then the tabstops: the cursor ends on the last stop.
@@ -2818,8 +2818,8 @@ func TestFm3_term51_TerminalFormatter_format_trailing_extras_move_the_replayed_c
 		f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 		f.content = fm3ContentNone
 		f.extra = FormatterTerminalFormatterExtraNone
-		f.extra.screen.cursor = true
-		f.extra.tabstops = true
+		f.extra.Screen.Cursor = true
+		f.extra.Tabstops = true
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "\x1b[3;5H\x1b[3g\x1b[9G\x1bH", out)
@@ -2827,8 +2827,8 @@ func TestFm3_term51_TerminalFormatter_format_trailing_extras_move_the_replayed_c
 		term2 := fm3Init(t, 10, 4)
 		defer term2.Deinit()
 		fm3Write(t, term2, out)
-		expectEqual(t, SizeCellCountInt(8), term2.screens.active.cursor.x)
-		expectEqual(t, SizeCellCountInt(2), term2.screens.active.cursor.y)
+		expectEqual(t, SizeCellCountInt(8), term2.Screens.Active.Cursor.X)
+		expectEqual(t, SizeCellCountInt(2), term2.Screens.Active.Cursor.Y)
 	}
 }
 
@@ -2838,15 +2838,15 @@ func TestFm3_term51_TerminalFormatter_format_pin_map_covers_palette_modes_and_tr
 	term := fm3Init(t, 10, 3)
 	defer term.Deinit()
 	fm3Write(t, term, "\x1b[?2004hab\x1b[>4;2m")
-	node := term.screens.active.pages.pages.first
+	node := term.Screens.Active.Pages.pages.first
 
 	var pm []PageListPin
 	// Zig-only: defer pm.deinit(alloc);
 	f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f.extra = FormatterTerminalFormatterExtraNone
-	f.extra.palette = true
-	f.extra.modes = true
-	f.extra.keyboard = true
+	f.extra.Palette = true
+	f.extra.Modes = true
+	f.extra.Keyboard = true
 	f.pin_map = Some(FormatterPinMap{map_: &pm})
 	out := fm3Out(t, f)
 	// Zig-only: defer alloc.free(out);
@@ -2856,7 +2856,7 @@ func TestFm3_term51_TerminalFormatter_format_pin_map_covers_palette_modes_and_tr
 	expectEqualStrings(t, modes+"ab"+"\x1b[>4;2m", out[palette_len:])
 	expectEqual(t, len(out), len(pm))
 
-	top_left := PageListPin{node: node, x: 0, y: 0}
+	top_left := PageListPin{Node: node, X: 0, Y: 0}
 	// Palette and modes map to the top-left pin.
 	for _, p := range pm[0 : palette_len+len(modes)] {
 		expectEqual(t, top_left, p)
@@ -2864,12 +2864,12 @@ func TestFm3_term51_TerminalFormatter_format_pin_map_covers_palette_modes_and_tr
 	// Content.
 	expectEqual(t, top_left, pm[palette_len+len(modes)])
 	expectEqual(t,
-		PageListPin{node: node, x: 1, y: 0},
+		PageListPin{Node: node, X: 1, Y: 0},
 		pm[palette_len+len(modes)+1],
 	)
 	// The trailing keyboard sequence maps to the last content pin.
 	for _, p := range pm[palette_len+len(modes)+2:] {
-		expectEqual(t, PageListPin{node: node, x: 1, y: 0}, p)
+		expectEqual(t, PageListPin{Node: node, X: 1, Y: 0}, p)
 	}
 
 	// With no content at all, the trailing extras map to the final pin of
@@ -2879,8 +2879,8 @@ func TestFm3_term51_TerminalFormatter_format_pin_map_covers_palette_modes_and_tr
 	f2 := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 	f2.content = fm3ContentNone
 	f2.extra = FormatterTerminalFormatterExtraNone
-	f2.extra.keyboard = true
-	f2.extra.pwd = true
+	f2.extra.Keyboard = true
+	f2.extra.Pwd = true
 	f2.pin_map = Some(FormatterPinMap{map_: &pm2})
 	out2 := fm3Out(t, f2)
 	// Zig-only: defer alloc.free(out2);
@@ -2927,7 +2927,7 @@ func TestFm3_term51_TerminalFormatter_format_formats_only_the_active_screen(t *t
 	{
 		f := FormatterTerminalFormatterInit(term, FormatterOptionsVt)
 		f.extra = FormatterTerminalFormatterExtraNone
-		f.extra.modes = true
+		f.extra.Modes = true
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "\x1b[?1049h"+"       alt", out)
@@ -2960,8 +2960,8 @@ func TestFm3_term51_TerminalFormatter_format_selection_content_and_styles_extra_
 	}
 
 	// Background and foreground options apply to the page wrapper.
-	f.opts.background = Some(ColorRGB{r: 0, g: 0, b: 0})
-	f.opts.foreground = Some(ColorRGB{r: 255, g: 255, b: 255})
+	f.opts.Background = Some(ColorRGB{R: 0, G: 0, B: 0})
+	f.opts.Foreground = Some(ColorRGB{R: 255, G: 255, B: 255})
 	f.content = fm3ContentSelection(SelectionInit(fm3Pin(t, term, 0, 0), fm3Pin(t, term, 3, 0), false))
 	{
 		out := fm3Out(t, f)
@@ -3070,7 +3070,7 @@ func TestFm3_term51_ScreenFormatter_format_small_writers_fail_in_content_and_ext
 	defer term.Deinit()
 	fm3Write(t, term, "abcdef")
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.extra = FormatterScreenFormatterExtraAll
 	out := fm3Out(t, f)
 	// Zig-only: defer alloc.free(out);
@@ -3138,7 +3138,7 @@ func TestFm3_term51_TerminalFormatter_format_vt_output_replays_into_an_equivalen
 		}
 	}
 	// The red fill cells came back as background cells.
-	red := Style{bg_color: StyleColor{Tag: StyleColorPalette, Palette: 1}}
+	red := Style{BgColor: StyleColor{Tag: StyleColorPalette, Palette: 1}}
 	expect(t, fm3CellStyle(term2, 12, 3).Eql(red), "term51ZCellStyle(&t2, 12, 3).eql(.{ .bg_color = .{ .palette = 1 } })")
 	expect(t, fm3CellStyle(term2, 19, 3).Eql(red), "term51ZCellStyle(&t2, 19, 3).eql(.{ .bg_color = .{ .palette = 1 } })")
 
@@ -3165,15 +3165,15 @@ func TestFm3_term51_PageListFormatter_format_vt_of_a_wrapped_page_replays_with_t
 	// line breaks. With unwrap the soft wraps are rejoined and the replay
 	// wraps again by itself.
 	{
-		f := FormatterPageListFormatterInit(&term.screens.active.pages, FormatterOptionsVt)
+		f := FormatterPageListFormatterInit(&term.Screens.Active.Pages, FormatterOptionsVt)
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "hello\r\n worl\r\nd\r\nab", out)
 	}
 	{
 		opts := fm3Opts(FormatterFormatVt)
-		opts.unwrap = true
-		f := FormatterPageListFormatterInit(&term.screens.active.pages, opts)
+		opts.Unwrap = true
+		f := FormatterPageListFormatterInit(&term.Screens.Active.Pages, opts)
 		out := fm3Out(t, f)
 		// Zig-only: defer alloc.free(out);
 		expectEqualStrings(t, "hello world\r\nab", out)
@@ -3210,10 +3210,10 @@ func TestFm3_panic_ScreenFormatter_format_charsets_extra_gr_is_G0(t *testing.T) 
 	b := oscWriterAllocatingInit()
 	defer b.deinit()
 
-	f := FormatterScreenFormatterInit(term.screens.active, FormatterOptionsVt)
+	f := FormatterScreenFormatterInit(term.Screens.Active, FormatterOptionsVt)
 	f.content = fm3ContentNone
-	f.extra.charsets = true
-	term.screens.active.charset.gr = CharsetsSlotsG0
+	f.extra.Charsets = true
+	term.Screens.Active.Charset.Gr = CharsetsSlotsG0
 	fm3ExpectPanic(t, func() { _ = f.format(&b.writer) })
 }
 
@@ -3241,7 +3241,7 @@ func TestFm3_panic_PageFormatter_formatWithState_replacement_string_not_valid_ut
 	defer b.deinit()
 
 	opts := fm3Opts(FormatterFormatPlain)
-	opts.codepoint_map = Some([]FormatterCodepointMap{
+	opts.CodepointMap = Some([]FormatterCodepointMap{
 		{range_: [2]uint32{'a', 'a'}, replacement: FormatterCodepointMapReplacement{
 			Tag: FormatterCodepointMapReplacementString, String: []uint8("\xff")}},
 	})

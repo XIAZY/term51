@@ -105,11 +105,11 @@ func (self *KittyKeyFlagStack) Pop(n uint) {
 // ordinary struct; Int and KittyKeyFlagsFromInt are the conversions to and
 // from the packed integer.
 type KittyKeyFlags struct {
-	disambiguate      bool
-	report_events     bool
-	report_alternates bool
-	report_all        bool
-	report_associated bool
+	Disambiguate     bool
+	ReportEvents     bool
+	ReportAlternates bool
+	ReportAll        bool
+	ReportAssociated bool
 }
 
 // KittyKeyFlagsDisabled is kitty.key.Flags.disabled: Kitty keyboard protocol
@@ -120,11 +120,11 @@ var KittyKeyFlagsDisabled = KittyKeyFlags{}
 //
 // A constant value, so it is given here; it is not logic.
 var KittyKeyFlagsTrue = KittyKeyFlags{
-	disambiguate:      true,
-	report_events:     true,
-	report_alternates: true,
-	report_all:        true,
-	report_associated: true,
+	Disambiguate:     true,
+	ReportEvents:     true,
+	ReportAlternates: true,
+	ReportAll:        true,
+	ReportAssociated: true,
 }
 
 // Int is kitty.key.Flags.int: the packed integer, disambiguate in bit 0
@@ -133,19 +133,19 @@ var KittyKeyFlagsTrue = KittyKeyFlags{
 // Zig: returns u5, `@bitCast(self)`.
 func (self KittyKeyFlags) Int() uint8 {
 	var v uint8 = 0
-	if self.disambiguate {
+	if self.Disambiguate {
 		v |= 1 << 0
 	}
-	if self.report_events {
+	if self.ReportEvents {
 		v |= 1 << 1
 	}
-	if self.report_alternates {
+	if self.ReportAlternates {
 		v |= 1 << 2
 	}
-	if self.report_all {
+	if self.ReportAll {
 		v |= 1 << 3
 	}
-	if self.report_associated {
+	if self.ReportAssociated {
 		v |= 1 << 4
 	}
 	return v
@@ -159,11 +159,11 @@ func (self KittyKeyFlags) Int() uint8 {
 func KittyKeyFlagsFromInt(v uint8) KittyKeyFlags {
 	assert(v <= 0x1F)
 	return KittyKeyFlags{
-		disambiguate:      v&(1<<0) != 0,
-		report_events:     v&(1<<1) != 0,
-		report_alternates: v&(1<<2) != 0,
-		report_all:        v&(1<<3) != 0,
-		report_associated: v&(1<<4) != 0,
+		Disambiguate:     v&(1<<0) != 0,
+		ReportEvents:     v&(1<<1) != 0,
+		ReportAlternates: v&(1<<2) != 0,
+		ReportAll:        v&(1<<3) != 0,
+		ReportAssociated: v&(1<<4) != 0,
 	}
 }
 

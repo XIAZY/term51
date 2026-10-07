@@ -203,10 +203,10 @@ func (self *SearchViewport) Update(list *PageList) (_ bool, err error) {
 					// we are in the active area. We purposely do this first
 					// because our viewport is always larger than the active area.
 					for _, node := range old.nodes {
-						if node == active_tl.node {
+						if node == active_tl.Node {
 							return false // break :match
 						}
-						if node == active_br.node {
+						if node == active_br.Node {
 							return false // break :match
 						}
 					}

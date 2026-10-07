@@ -202,17 +202,17 @@ type SearchScreenSelectedMatch struct {
 	// Index from the end of the match list (0 = most recent match)
 	//
 	// Zig: usize.
-	idx uint
+	Idx uint
 
 	// Tracked highlight so we can detect movement.
-	highlight HighlightTracked
+	Highlight HighlightTracked
 }
 
 // Deinit is ScreenSearch.SelectedMatch.deinit.
 //
 // Kept: it untracks the highlight's pins in the screen's page list.
 func (self *SearchScreenSelectedMatch) Deinit(screen *Screen) {
-	self.highlight.Deinit(screen)
+	self.Highlight.Deinit(screen)
 }
 
 // searchScreenHistorySearch is ScreenSearch.HistorySearch.
@@ -234,7 +234,7 @@ type searchScreenHistorySearch struct {
 // Kept: it deinits the searcher and untracks `start_pin`.
 func (self *searchScreenHistorySearch) Deinit(screen *Screen) {
 	self.searcher.Deinit()
-	screen.pages.UntrackPin(self.start_pin)
+	screen.Pages.UntrackPin(self.start_pin)
 }
 
 // searchScreenState is ScreenSearch.State: search state machine.
@@ -313,8 +313,8 @@ func SearchScreenInit(screen *Screen, needle_unowned []uint8) (_ SearchScreen, e
 	}
 	result := SearchScreen{
 		screen:          screen,
-		rows:            screen.pages.rows,
-		cols:            screen.pages.cols,
+		rows:            screen.Pages.rows,
+		cols:            screen.Pages.cols,
 		active:          active,
 		history:         None[searchScreenHistorySearch](),
 		state:           searchScreenStateActive,
@@ -492,8 +492,8 @@ func (self *SearchScreen) Feed() error {
 	// isn't ideal but we don't have a better way right now to handle
 	// reflowing the search results beyond putting a tracked pin for
 	// every single result.
-	if self.screen.pages.rows != self.rows ||
-		self.screen.pages.cols != self.cols {
+	if self.screen.Pages.rows != self.rows ||
+		self.screen.Pages.cols != self.cols {
 		// Reinit
 		new, err := SearchScreenInit(
 			self.screen,
@@ -508,8 +508,8 @@ func (self *SearchScreen) Feed() error {
 		*self = new
 
 		// New result should have matching dimensions
-		assert(self.screen.pages.rows == self.rows)
-		assert(self.screen.pages.cols == self.cols)
+		assert(self.screen.Pages.rows == self.rows)
+		assert(self.screen.Pages.cols == self.cols)
 	}
 
 	if !self.history.Valid {
@@ -588,8 +588,8 @@ func (self *SearchScreen) pruneHistory() {
 	for i := 0; i < n; i++ {
 		hl := &self.history_results[i]
 		// Zig: hl.chunks.items(.serial)[0]
-		lowest := hl.chunks[0].serial
-		if lowest < self.screen.pages.page_serial_min {
+		lowest := hl.Chunks[0].Serial
+		if lowest < self.screen.Pages.page_serial_min {
 			// Everything from here forward we assume is invalid because
 			// our history results only get older.
 			for j := i; j < len(self.history_results); j++ {
@@ -643,7 +643,7 @@ func (self *SearchScreen) tickHistory() error {
 	for hl := history.searcher.Next(); hl.Valid; hl = history.searcher.Next() {
 		// Ignore selections that are found within the starting
 		// node since those are covered by the active area search.
-		if hl.Value.chunks[0].node == history.start_pin.node {
+		if hl.Value.Chunks[0].Node == history.start_pin.Node {
 			continue
 		}
 
@@ -689,8 +689,8 @@ func (self *SearchScreen) ReloadActive() (err error) {
 			return false
 		}
 		m := &self.selected.Value
-		if !m.highlight.start.garbage &&
-			!m.highlight.end.garbage {
+		if !m.Highlight.Start.Garbage &&
+			!m.Highlight.End.Garbage {
 			return false
 		}
 
@@ -707,7 +707,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 		}
 	}()
 
-	list := &self.screen.pages
+	list := &self.screen.Pages
 	history_node, err := self.active.Update(list)
 	if err != nil {
 		return err
@@ -722,7 +722,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 			// our history results.
 
 			// If our screen has no scrollback then we have no history.
-			if self.screen.no_scrollback {
+			if self.screen.NoScrollback {
 				assert(!self.history.Valid)
 				return nil // break :history
 			}
@@ -734,7 +734,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 				// If our start pin became garbage, it means we pruned all
 				// the way up through it, so we have no history anymore.
 				// Reset our history state.
-				if h.start_pin.garbage {
+				if h.start_pin.Garbage {
 					h.Deinit(self.screen)
 					self.history = None[searchScreenHistorySearch]()
 					for i := range self.history_results {
@@ -760,7 +760,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 					return err
 				}
 
-				pin, err := list.TrackPin(PageListPin{node: history_node})
+				pin, err := list.TrackPin(PageListPin{Node: history_node})
 				if err != nil {
 					// Zig: errdefer search.deinit()
 					search.Deinit()
@@ -780,7 +780,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 			}
 			history := history_
 
-			if history.start_pin.node == history_node {
+			if history.start_pin.Node == history_node {
 				// No change in the starting node, we're done.
 				return nil // break :history
 			}
@@ -798,25 +798,25 @@ func (self *SearchScreen) ReloadActive() (err error) {
 			}
 			defer window.Deinit()
 			for {
-				if _, err := window.Append(history.start_pin.node); err != nil {
+				if _, err := window.Append(history.start_pin.Node); err != nil {
 					return err
 				}
-				if history.start_pin.node == history_node {
+				if history.start_pin.Node == history_node {
 					break
 				}
-				next := history.start_pin.node.next
+				next := history.start_pin.Node.next
 				if next == nil {
 					break
 				}
-				history.start_pin.node = next
+				history.start_pin.Node = next
 			}
-			assert(history.start_pin.node == history_node)
+			assert(history.start_pin.Node == history_node)
 
 			results := make([]HighlightFlattened, 0, len(self.history_results))
 			// Zig: errdefer { for (results.items) |*hl| hl.deinit(alloc);
 			// results.deinit(alloc); } Go memory.
 			for hl := window.Next(); hl.Valid; hl = window.Next() {
-				if hl.Value.chunks[0].node == history_node {
+				if hl.Value.Chunks[0].Node == history_node {
 					continue
 				}
 
@@ -853,17 +853,17 @@ func (self *SearchScreen) ReloadActive() (err error) {
 				// selected:
 				m := &self.selected.Value
 				active_len := uint(len(self.active_results))
-				if m.idx >= active_len {
-					assert(m.idx <= math.MaxUint-added_len) // Zig: usize addition traps
-					m.idx += added_len
+				if m.Idx >= active_len {
+					assert(m.Idx <= math.MaxUint-added_len) // Zig: usize addition traps
+					m.Idx += added_len
 
 					// Moving the idx should not change our targeted result
 					// since the history is immutable.
 					//
 					// Zig: if (comptime std.debug.runtime_safety); see the
 					// file header.
-					hl := self.history_results[m.idx-active_len]
-					assert(m.highlight.start.Eql(hl.StartPin()))
+					hl := self.history_results[m.Idx-active_len]
+					assert(m.Highlight.Start.Eql(hl.StartPin()))
 				}
 			}
 			return nil
@@ -889,7 +889,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 			// selected:
 			m := &self.selected.Value
 			active_len := uint(len(self.active_results))
-			if m.idx >= active_len {
+			if m.Idx >= active_len {
 				m.Deinit(self.screen)
 				self.selected = None[SearchScreenSelectedMatch]()
 				if _, err := self.Select(SearchScreenSelectPrev); err != nil {
@@ -905,7 +905,7 @@ func (self *SearchScreen) ReloadActive() (err error) {
 	old_active_len := uint(len(self.active_results))
 	old_selection_idx := None[uint]()
 	if self.selected.Valid {
-		old_selection_idx = Some(self.selected.Value.idx)
+		old_selection_idx = Some(self.selected.Value.Idx)
 	}
 	defer func() {
 		// errdefer
@@ -959,12 +959,12 @@ func (self *SearchScreen) ReloadActive() (err error) {
 	// items as well. This is all related to the fact that PageList
 	// scrollback limits are discrete by page size except we special
 	// case zero.
-	if self.screen.no_scrollback &&
+	if self.screen.NoScrollback &&
 		len(self.active_results) > 0 {
 		func() {
 			// active_prune:
 			items := self.active_results
-			tl := self.screen.pages.GetTopLeft(PointTagActive)
+			tl := self.screen.Pages.GetTopLeft(PointTagActive)
 			for i := range items {
 				hl := &items[i]
 				if !tl.Before(hl.EndPin()) {
@@ -1006,20 +1006,20 @@ func (self *SearchScreen) ReloadActive() (err error) {
 		// If our old selection wasn't in the active area, then we
 		// need to fix up our offsets.
 		if old_idx >= old_active_len {
-			assert(m.idx >= old_active_len) // Zig: usize subtraction traps
-			m.idx -= old_active_len
-			assert(m.idx <= math.MaxUint-uint(len(self.active_results))) // Zig: usize addition traps
-			m.idx += uint(len(self.active_results))
+			assert(m.Idx >= old_active_len) // Zig: usize subtraction traps
+			m.Idx -= old_active_len
+			assert(m.Idx <= math.MaxUint-uint(len(self.active_results))) // Zig: usize addition traps
+			m.Idx += uint(len(self.active_results))
 			return // break :fixup
 		}
 
 		// We search for the matching highlight in the new active results.
 		for i, hl := range self.active_results {
 			untracked := hl.Untracked()
-			if m.highlight.start.Eql(untracked.start) &&
-				m.highlight.end.Eql(untracked.end) {
+			if m.Highlight.Start.Eql(untracked.Start) &&
+				m.Highlight.End.Eql(untracked.End) {
 				// Found it! Update our index.
-				m.idx = uint(len(self.active_results)) - 1 - uint(i)
+				m.Idx = uint(len(self.active_results)) - 1 - uint(i)
 				return // break :fixup
 			}
 		}
@@ -1048,13 +1048,13 @@ func (self *SearchScreen) SelectedMatch() Optional[HighlightFlattened] {
 	}
 	sel := self.selected.Value
 	active_len := uint(len(self.active_results))
-	if sel.idx < active_len {
-		return Some(self.active_results[active_len-1-sel.idx])
+	if sel.Idx < active_len {
+		return Some(self.active_results[active_len-1-sel.Idx])
 	}
 
 	history_len := uint(len(self.history_results))
-	if sel.idx < active_len+history_len {
-		return Some(self.history_results[sel.idx-active_len])
+	if sel.Idx < active_len+history_len {
+		return Some(self.history_results[sel.Idx-active_len])
 	}
 
 	return None[HighlightFlattened]()
@@ -1145,15 +1145,15 @@ func (self *SearchScreen) selectNext() (bool, error) {
 		// Our selection is index zero since we just started and
 		// we store our selection.
 		self.selected = Some(SearchScreenSelectedMatch{
-			idx:       0,
-			highlight: tracked,
+			Idx:       0,
+			Highlight: tracked,
 		})
 		return true, nil
 	}
 	prev := &self.selected.Value
 
-	assert(prev.idx < math.MaxUint) // Zig: usize addition traps
-	next_idx := prev.idx + 1
+	assert(prev.Idx < math.MaxUint) // Zig: usize addition traps
+	next_idx := prev.Idx + 1
 	active_len := uint(len(self.active_results))
 	history_len := uint(len(self.history_results))
 	if next_idx >= active_len+history_len {
@@ -1179,8 +1179,8 @@ func (self *SearchScreen) selectNext() (bool, error) {
 	// Free our previous match and setup our new selection
 	prev.Deinit(self.screen)
 	self.selected = Some(SearchScreenSelectedMatch{
-		idx:       next_idx,
-		highlight: tracked,
+		Idx:       next_idx,
+		Highlight: tracked,
 	})
 
 	return true, nil
@@ -1221,20 +1221,20 @@ func (self *SearchScreen) selectPrev() (bool, error) {
 		active_len := uint(len(self.active_results))
 		history_len := uint(len(self.history_results))
 		self.selected = Some(SearchScreenSelectedMatch{
-			idx:       active_len + history_len - 1,
-			highlight: tracked,
+			Idx:       active_len + history_len - 1,
+			Highlight: tracked,
 		})
 		return true, nil
 	}
 	prev := &self.selected.Value
 
 	// Can't go below zero
-	if prev.idx == 0 {
+	if prev.Idx == 0 {
 		// No more matches. We don't wrap or reset the match currently.
 		return false, nil
 	}
 
-	next_idx := prev.idx - 1
+	next_idx := prev.Idx - 1
 	active_len := uint(len(self.active_results))
 	var hl HighlightFlattened
 	if next_idx < active_len {
@@ -1255,8 +1255,8 @@ func (self *SearchScreen) selectPrev() (bool, error) {
 	// Free our previous match and setup our new selection
 	prev.Deinit(self.screen)
 	self.selected = Some(SearchScreenSelectedMatch{
-		idx:       next_idx,
-		highlight: tracked,
+		Idx:       next_idx,
+		Highlight: tracked,
 	})
 
 	return true, nil

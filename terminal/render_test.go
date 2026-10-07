@@ -64,20 +64,20 @@ type rnInt interface {
 // rnActive, rnViewport and rnScreen are the Zig literals
 // `.{ .active = .{ .x = x, .y = y } }` and so on.
 func rnActive[X, Y rnInt](x X, y Y) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 func rnViewport[X, Y rnInt](x X, y Y) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 func rnScreen[X, Y rnInt](x X, y Y) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}}
 }
 
 // rnCoord is the Zig literal `.{ .x = x, .y = y }` of a point.Coordinate.
 func rnCoord[X, Y rnInt](x X, y Y) PointCoordinate {
-	return PointCoordinate{x: SizeCellCountInt(x), y: uint32(y)}
+	return PointCoordinate{X: SizeCellCountInt(x), Y: uint32(y)}
 }
 
 // rnInitOpts is `try Terminal.init(alloc, opts)`; the terminal is returned by
@@ -100,7 +100,7 @@ func rnInit(tt *testing.T, cols SizeCellCountInt, rows SizeCellCountInt) *Termin
 func rnInitScrollback(tt *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_scrollback uint64) *Terminal {
 	tt.Helper()
 	opts := terminalOptionsDefault(cols, rows)
-	opts.max_scrollback = max_scrollback
+	opts.MaxScrollback = max_scrollback
 	return rnInitOpts(tt, opts)
 }
 
@@ -122,24 +122,24 @@ func rnWrite(tt *testing.T, term *Terminal, data string) {
 
 // rnMemsetDirty is `@memset(state.row_data.items(.dirty), false)`.
 func rnMemsetDirty(state *RenderState) {
-	for y := range state.row_data {
-		state.row_data[y].dirty = false
+	for y := range state.RowData {
+		state.RowData[y].Dirty = false
 	}
 }
 
 // rnClean is term51ZRsClean: pretend the renderer consumed everything:
 // dirty false, all rows clean.
 func rnClean(state *RenderState) {
-	state.dirty = RenderStateDirtyFalse
+	state.Dirty = RenderStateDirtyFalse
 	rnMemsetDirty(state)
 }
 
 // rnExpectRowDirty is term51ZRsExpectRowDirty.
 func rnExpectRowDirty(tt *testing.T, state *RenderState, expected []bool) {
 	tt.Helper()
-	got := make([]bool, len(state.row_data))
-	for y := range state.row_data {
-		got[y] = state.row_data[y].dirty
+	got := make([]bool, len(state.RowData))
+	for y := range state.RowData {
+		got[y] = state.RowData[y].Dirty
 	}
 	expectEqualSlices(tt, expected, got)
 }
@@ -147,14 +147,14 @@ func rnExpectRowDirty(tt *testing.T, state *RenderState, expected []bool) {
 // rnAllRows is term51ZRsAllRows.
 func rnAllRows(tt *testing.T, state *RenderState, value bool) {
 	tt.Helper()
-	for _, row := range state.row_data {
-		expectEqual(tt, value, row.dirty)
+	for _, row := range state.RowData {
+		expectEqual(tt, value, row.Dirty)
 	}
 }
 
 // rnCell is term51ZRsCell.
 func rnCell(state *RenderState, x uint, y uint) RenderStateCell {
-	return state.row_data[y].cells[x]
+	return state.RowData[y].Cells[x]
 }
 
 // rnFillTwoPages is term51ZRsFillTwoPages: fill a terminal so that the
@@ -165,7 +165,7 @@ func rnFillTwoPages(tt *testing.T, term *Terminal) {
 	tt.Helper()
 	s := term.VtStream()
 	defer s.Deinit()
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_cap := rnPtrNode(tt, pages.pages.first, "pages.pages.first.?").data.capacity.rows
 	for range int(first_page_cap) - 1 {
 		zigTry(tt, s.NextSlice([]uint8("\r\n")))
@@ -193,11 +193,11 @@ func rnSel(a SizeCellCountInt, b SizeCellCountInt) rnSelBounds {
 // Valid flag only, as Zig compares optionals.
 func rnExpectSels(tt *testing.T, state *RenderState, expected []rnSelBounds) {
 	tt.Helper()
-	if len(state.row_data) != len(expected) {
-		tt.Fatalf("got %d rows, want %d", len(state.row_data), len(expected))
+	if len(state.RowData) != len(expected) {
+		tt.Fatalf("got %d rows, want %d", len(state.RowData), len(expected))
 	}
 	for y := range expected {
-		got := state.row_data[y].selection
+		got := state.RowData[y].Selection
 		want := expected[y]
 		if got.Valid != want.Valid || (want.Valid && got.Value != want.Value) {
 			tt.Fatalf("selection of row %d: got %v, want %v", y, got, want)
@@ -208,32 +208,32 @@ func rnExpectSels(tt *testing.T, state *RenderState, expected []rnSelBounds) {
 // rnPin is term51ZRsPin: the pin of an active point.
 func rnPin(tt *testing.T, term *Terminal, x SizeCellCountInt, y SizeCellCountInt) PageListPin {
 	tt.Helper()
-	return zigUnwrap(tt, term.screens.active.pages.Pin(rnActive(x, y)))
+	return zigUnwrap(tt, term.Screens.Active.Pages.Pin(rnActive(x, y)))
 }
 
 // rnFlat is term51ZRsFlat: a highlight.Flattened built by hand.
 func rnFlat(top_x SizeCellCountInt, bot_x SizeCellCountInt, chunks []HighlightFlattenedChunk) HighlightFlattened {
 	var hl HighlightFlattened
 	// Zig-only: errdefer hl.deinit(alloc);
-	hl.chunks = append(hl.chunks, chunks...)
-	hl.top_x = top_x
-	hl.bot_x = bot_x
+	hl.Chunks = append(hl.Chunks, chunks...)
+	hl.TopX = top_x
+	hl.BotX = bot_x
 	return hl
 }
 
 // rnHighlights is term51ZRsHighlights.
 func rnHighlights(state *RenderState, y uint) []RenderStateHighlight {
-	return state.row_data[y].highlights
+	return state.RowData[y].Highlights
 }
 
 // rnRange is `&hl.range`: the range of a highlight as a slice.
 func rnRange(h RenderStateHighlight) []SizeCellCountInt {
-	return h.range_[:]
+	return h.Range[:]
 }
 
 // rnMapParam is the Zig `.{ .alloc = alloc, .map = &map }`.
 func rnMapParam(m *RenderStateStringMap) Optional[RenderStateStringMapParam] {
-	return Some(RenderStateStringMapParam{map_: m})
+	return Some(RenderStateStringMapParam{Map: m})
 }
 
 // rnExpectError is `try testing.expectError(want, got)`.
@@ -273,21 +273,21 @@ func TestRender_basic_text(t *testing.T) {
 	zigTry(t, state.Update(term))
 
 	// Verify we have the right number of rows
-	row_data := state.row_data
+	row_data := state.RowData
 	expectEqual(t, 3, len(row_data))
 
 	// All rows should have cols cells
-	expectEqual(t, 10, len(row_data[0].cells))
-	expectEqual(t, 10, len(row_data[1].cells))
-	expectEqual(t, 10, len(row_data[2].cells))
+	expectEqual(t, 10, len(row_data[0].Cells))
+	expectEqual(t, 10, len(row_data[1].Cells))
+	expectEqual(t, 10, len(row_data[2].Cells))
 
 	// Row zero should contain our text
-	cells := row_data[0].cells
-	expectEqual(t, uint32('A'), cells[0].raw.Codepoint())
-	expectEqual(t, uint32('B'), cells[1].raw.Codepoint())
-	expectEqual(t, uint32('C'), cells[2].raw.Codepoint())
-	expectEqual(t, uint32('D'), cells[3].raw.Codepoint())
-	expectEqual(t, uint32(0), cells[4].raw.Codepoint())
+	cells := row_data[0].Cells
+	expectEqual(t, uint32('A'), cells[0].Raw.Codepoint())
+	expectEqual(t, uint32('B'), cells[1].Raw.Codepoint())
+	expectEqual(t, uint32('C'), cells[2].Raw.Codepoint())
+	expectEqual(t, uint32('D'), cells[3].Raw.Codepoint())
+	expectEqual(t, uint32(0), cells[4].Raw.Codepoint())
 }
 
 // Zig: test "styled text"
@@ -307,29 +307,29 @@ func TestRender_styled_text(t *testing.T) {
 	zigTry(t, state.Update(term))
 
 	// Verify we have the right number of rows
-	row_data := state.row_data
+	row_data := state.RowData
 	expectEqual(t, 3, len(row_data))
 
 	// All rows should have cols cells
-	expectEqual(t, 10, len(row_data[0].cells))
-	expectEqual(t, 10, len(row_data[1].cells))
-	expectEqual(t, 10, len(row_data[2].cells))
+	expectEqual(t, 10, len(row_data[0].Cells))
+	expectEqual(t, 10, len(row_data[1].Cells))
+	expectEqual(t, 10, len(row_data[2].Cells))
 
 	// Row zero should contain our text
-	cells := row_data[0].cells
+	cells := row_data[0].Cells
 	{
 		cell := cells[0]
-		expectEqual(t, uint32('A'), cell.raw.Codepoint())
-		expect(t, cell.style.flags.bold, "cell.style.flags.bold")
+		expectEqual(t, uint32('A'), cell.Raw.Codepoint())
+		expect(t, cell.Style.Flags.Bold, "cell.style.flags.bold")
 	}
 	{
 		cell := cells[1]
-		expectEqual(t, uint32('B'), cell.raw.Codepoint())
-		expect(t, !cell.style.flags.bold, "!cell.style.flags.bold")
-		expect(t, cell.style.flags.italic, "cell.style.flags.italic")
+		expectEqual(t, uint32('B'), cell.Raw.Codepoint())
+		expect(t, !cell.Style.Flags.Bold, "!cell.style.flags.bold")
+		expect(t, cell.Style.Flags.Italic, "cell.style.flags.italic")
 	}
-	expectEqual(t, uint32('C'), cells[2].raw.Codepoint())
-	expectEqual(t, uint32(0), cells[3].raw.Codepoint())
+	expectEqual(t, uint32('C'), cells[2].Raw.Codepoint())
+	expectEqual(t, uint32(0), cells[3].Raw.Codepoint())
 }
 
 // Zig: test "grapheme"
@@ -348,30 +348,30 @@ func TestRender_grapheme(t *testing.T) {
 	zigTry(t, state.Update(term))
 
 	// Verify we have the right number of rows
-	row_data := state.row_data
+	row_data := state.RowData
 	expectEqual(t, 3, len(row_data))
 
 	// All rows should have cols cells
-	expectEqual(t, 10, len(row_data[0].cells))
-	expectEqual(t, 10, len(row_data[1].cells))
-	expectEqual(t, 10, len(row_data[2].cells))
+	expectEqual(t, 10, len(row_data[0].Cells))
+	expectEqual(t, 10, len(row_data[1].Cells))
+	expectEqual(t, 10, len(row_data[2].Cells))
 
 	// Row zero should contain our text
-	cells := row_data[0].cells
+	cells := row_data[0].Cells
 	{
 		cell := cells[0]
-		expectEqual(t, uint32('A'), cell.raw.Codepoint())
+		expectEqual(t, uint32('A'), cell.Raw.Codepoint())
 	}
 	{
 		cell := cells[1]
-		expectEqual(t, uint32(0x1F468), cell.raw.Codepoint())
-		expectEqual(t, PageCellWideWide, cell.raw.wide)
-		expectEqualSlices(t, []uint32{0x200D}, cell.grapheme)
+		expectEqual(t, uint32(0x1F468), cell.Raw.Codepoint())
+		expectEqual(t, PageCellWideWide, cell.Raw.wide)
+		expectEqualSlices(t, []uint32{0x200D}, cell.Grapheme)
 	}
 	{
 		cell := cells[2]
-		expectEqual(t, uint32(0), cell.raw.Codepoint())
-		expectEqual(t, PageCellWideSpacerTail, cell.raw.wide)
+		expectEqual(t, uint32(0), cell.Raw.Codepoint())
+		expectEqual(t, PageCellWideSpacerTail, cell.Raw.wide)
 	}
 }
 
@@ -390,27 +390,27 @@ func TestRender_cursor_state_in_viewport(t *testing.T) {
 
 	// Initial update
 	zigTry(t, state.Update(term))
-	expectEqual(t, 0, state.cursor.active.x)
-	expectEqual(t, 0, state.cursor.active.y)
-	expectEqual(t, 0, zigUnwrap(t, state.cursor.viewport).x)
-	expectEqual(t, 0, zigUnwrap(t, state.cursor.viewport).y)
-	expectEqual(t, uint32('A'), state.cursor.cell.Codepoint())
-	expect(t, state.cursor.style.Default(), "state.cursor.style.default()")
+	expectEqual(t, 0, state.Cursor.Active.X)
+	expectEqual(t, 0, state.Cursor.Active.Y)
+	expectEqual(t, 0, zigUnwrap(t, state.Cursor.Viewport).X)
+	expectEqual(t, 0, zigUnwrap(t, state.Cursor.Viewport).Y)
+	expectEqual(t, uint32('A'), state.Cursor.Cell.Codepoint())
+	expect(t, state.Cursor.Style.Default(), "state.cursor.style.default()")
 
 	// Set a style on the cursor
 	zigTry(t, s.NextSlice([]uint8("\x1b[1m"))) // Bold
 	zigTry(t, state.Update(term))
-	expect(t, !state.cursor.style.Default(), "!state.cursor.style.default()")
-	expect(t, state.cursor.style.flags.bold, "state.cursor.style.flags.bold")
+	expect(t, !state.Cursor.Style.Default(), "!state.cursor.style.default()")
+	expect(t, state.Cursor.Style.Flags.Bold, "state.cursor.style.flags.bold")
 	zigTry(t, s.NextSlice([]uint8("\x1b[0m"))) // Reset style
 
 	// Move cursor to 2,1
 	zigTry(t, s.NextSlice([]uint8("\x1b[2;3H")))
 	zigTry(t, state.Update(term))
-	expectEqual(t, 2, state.cursor.active.x)
-	expectEqual(t, 1, state.cursor.active.y)
-	expectEqual(t, 2, zigUnwrap(t, state.cursor.viewport).x)
-	expectEqual(t, 1, zigUnwrap(t, state.cursor.viewport).y)
+	expectEqual(t, 2, state.Cursor.Active.X)
+	expectEqual(t, 1, state.Cursor.Active.Y)
+	expectEqual(t, 2, zigUnwrap(t, state.Cursor.Viewport).X)
+	expectEqual(t, 1, zigUnwrap(t, state.Cursor.Viewport).Y)
 }
 
 // Zig: test "cursor state out of viewport"
@@ -428,19 +428,19 @@ func TestRender_cursor_state_out_of_viewport(t *testing.T) {
 
 	// Initial update
 	zigTry(t, state.Update(term))
-	expectEqual(t, 0, state.cursor.active.x)
-	expectEqual(t, 1, state.cursor.active.y)
-	expectEqual(t, 0, zigUnwrap(t, state.cursor.viewport).x)
-	expectEqual(t, 1, zigUnwrap(t, state.cursor.viewport).y)
+	expectEqual(t, 0, state.Cursor.Active.X)
+	expectEqual(t, 1, state.Cursor.Active.Y)
+	expectEqual(t, 0, zigUnwrap(t, state.Cursor.Viewport).X)
+	expectEqual(t, 1, zigUnwrap(t, state.Cursor.Viewport).Y)
 
 	// Scroll the viewport
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	zigTry(t, state.Update(term))
 
 	// Set a style on the cursor
-	expectEqual(t, 0, state.cursor.active.x)
-	expectEqual(t, 1, state.cursor.active.y)
-	expect(t, !state.cursor.viewport.Valid, "state.cursor.viewport == null")
+	expectEqual(t, 0, state.Cursor.Active.X)
+	expectEqual(t, 1, state.Cursor.Active.Y)
+	expect(t, !state.Cursor.Viewport.Valid, "state.cursor.viewport == null")
 }
 
 // Zig: test "dirty state"
@@ -457,31 +457,31 @@ func TestRender_dirty_state(t *testing.T) {
 
 	// First update should trigger redraw due to resize
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 
 	// Reset dirty flag and dirty rows
-	state.dirty = RenderStateDirtyFalse
+	state.Dirty = RenderStateDirtyFalse
 	{
 		rnMemsetDirty(&state)
 	}
 
 	// Second update with no changes - no dirty rows
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	{
-		for _, row := range state.row_data {
-			expect(t, !row.dirty, "!d")
+		for _, row := range state.RowData {
+			expect(t, !row.Dirty, "!d")
 		}
 	}
 
 	// Write to first line
 	zigTry(t, s.NextSlice([]uint8("A")))
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	{
-		dirty := state.row_data
-		expect(t, dirty[0].dirty, "dirty[0]")   // First row dirty
-		expect(t, !dirty[1].dirty, "!dirty[1]") // Second row clean
+		dirty := state.RowData
+		expect(t, dirty[0].Dirty, "dirty[0]")   // First row dirty
+		expect(t, !dirty[1].Dirty, "!dirty[1]") // Second row clean
 	}
 }
 
@@ -504,18 +504,18 @@ func TestRender_colors(t *testing.T) {
 	zigTry(t, s.NextSlice([]uint8("\x1b]12;#FF0000\x07")))
 	zigTry(t, state.Update(term))
 
-	c := zigUnwrap(t, state.colors.cursor)
-	expectEqual(t, 0xFF, c.r)
-	expectEqual(t, 0, c.g)
-	expectEqual(t, 0, c.b)
+	c := zigUnwrap(t, state.Colors.Cursor)
+	expectEqual(t, 0xFF, c.R)
+	expectEqual(t, 0, c.G)
+	expectEqual(t, 0, c.B)
 
 	// Change palette color 0 to White
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;0;#FFFFFF\x07")))
 	zigTry(t, state.Update(term))
-	p0 := state.colors.palette[0]
-	expectEqual(t, 0xFF, p0.r)
-	expectEqual(t, 0xFF, p0.g)
-	expectEqual(t, 0xFF, p0.b)
+	p0 := state.Colors.Palette[0]
+	expectEqual(t, 0xFF, p0.R)
+	expectEqual(t, 0xFF, p0.G)
+	expectEqual(t, 0xFF, p0.B)
 }
 
 // Zig: test "selection single line"
@@ -524,10 +524,10 @@ func TestRender_selection_single_line(t *testing.T) {
 	term := rnInit(t, 10, 3)
 	defer term.Deinit()
 
-	screen := term.screens.active
+	screen := term.Screens.Active
 	zigTry(t, screen.Select(Some(SelectionInit(
-		zigUnwrap(t, screen.pages.Pin(rnActive(0, 1))),
-		zigUnwrap(t, screen.pages.Pin(rnActive(2, 1))),
+		zigUnwrap(t, screen.Pages.Pin(rnActive(0, 1))),
+		zigUnwrap(t, screen.Pages.Pin(rnActive(2, 1))),
 		false,
 	))))
 
@@ -535,20 +535,20 @@ func TestRender_selection_single_line(t *testing.T) {
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
 
-	sels := state.row_data
-	expect(t, !sels[0].selection.Valid, "sels[0] == null")
+	sels := state.RowData
+	expect(t, !sels[0].Selection.Valid, "sels[0] == null")
 	{
-		sel1 := zigUnwrap(t, sels[1].selection)
+		sel1 := zigUnwrap(t, sels[1].Selection)
 		expectEqualSlices(t, []SizeCellCountInt{0, 2}, sel1[:])
 	}
-	expect(t, !sels[2].selection.Valid, "sels[2] == null")
+	expect(t, !sels[2].Selection.Valid, "sels[2] == null")
 
 	// Clear the selection
 	zigTry(t, screen.Select(Optional[Selection]{}))
 	zigTry(t, state.Update(term))
-	expect(t, !sels[0].selection.Valid, "sels[0] == null")
-	expect(t, !sels[1].selection.Valid, "sels[1] == null")
-	expect(t, !sels[2].selection.Valid, "sels[2] == null")
+	expect(t, !sels[0].Selection.Valid, "sels[0] == null")
+	expect(t, !sels[1].Selection.Valid, "sels[1] == null")
+	expect(t, !sels[2].Selection.Valid, "sels[2] == null")
 }
 
 // Zig: test "selection multiple lines"
@@ -557,10 +557,10 @@ func TestRender_selection_multiple_lines(t *testing.T) {
 	term := rnInit(t, 10, 3)
 	defer term.Deinit()
 
-	screen := term.screens.active
+	screen := term.Screens.Active
 	zigTry(t, screen.Select(Some(SelectionInit(
-		zigUnwrap(t, screen.pages.Pin(rnActive(0, 1))),
-		zigUnwrap(t, screen.pages.Pin(rnActive(2, 2))),
+		zigUnwrap(t, screen.Pages.Pin(rnActive(0, 1))),
+		zigUnwrap(t, screen.Pages.Pin(rnActive(2, 2))),
 		false,
 	))))
 
@@ -568,14 +568,14 @@ func TestRender_selection_multiple_lines(t *testing.T) {
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
 
-	sels := state.row_data
-	expect(t, !sels[0].selection.Valid, "sels[0] == null")
+	sels := state.RowData
+	expect(t, !sels[0].Selection.Valid, "sels[0] == null")
 	{
-		sel1 := zigUnwrap(t, sels[1].selection)
-		expectEqualSlices(t, []SizeCellCountInt{0, screen.pages.cols - 1}, sel1[:])
+		sel1 := zigUnwrap(t, sels[1].Selection)
+		expectEqualSlices(t, []SizeCellCountInt{0, screen.Pages.cols - 1}, sel1[:])
 	}
 	{
-		sel2 := zigUnwrap(t, sels[2].selection)
+		sel2 := zigUnwrap(t, sels[2].Selection)
 		expectEqualSlices(t, []SizeCellCountInt{0, 2}, sel2[:])
 	}
 }
@@ -648,14 +648,14 @@ func TestRender_linkCells_with_scrollback_spanning_pages(t *testing.T) {
 	const tail_rows SizeCellCountInt = 5
 
 	opts := terminalOptionsDefault(PageStdCapacity.cols, viewport_rows)
-	opts.max_scrollback = 10_000
+	opts.MaxScrollback = 10_000
 	term := rnInitOpts(t, opts)
 	defer term.Deinit()
 
 	s := term.VtStream()
 	defer s.Deinit()
 
-	pages := &term.screens.active.pages
+	pages := &term.Screens.Active.Pages
 	first_page_cap := rnPtrNode(t, pages.pages.first, "pages.pages.first.?").data.capacity.rows
 
 	// Fill first page
@@ -697,7 +697,7 @@ func TestRender_linkCells_with_invalid_viewport_point(t *testing.T) {
 
 	// Row out of bound
 	{
-		cells, err := state.LinkCells(rnCoord(0, term.rows+10))
+		cells, err := state.LinkCells(rnCoord(0, term.Rows+10))
 		zigTry(t, err)
 		defer cells.Deinit()
 		expectEqual(t, 0, cells.Count())
@@ -705,7 +705,7 @@ func TestRender_linkCells_with_invalid_viewport_point(t *testing.T) {
 
 	// Col out of bound
 	{
-		cells, err := state.LinkCells(rnCoord(term.cols+10, 0))
+		cells, err := state.LinkCells(rnCoord(term.Cols+10, 0))
 		zigTry(t, err)
 		defer cells.Deinit()
 		expectEqual(t, 0, cells.Count())
@@ -727,26 +727,26 @@ func TestRender_dirty_row_resets_highlights(t *testing.T) {
 	zigTry(t, state.Update(term))
 
 	// Reset dirty state
-	state.dirty = RenderStateDirtyFalse
+	state.Dirty = RenderStateDirtyFalse
 	{
 		rnMemsetDirty(&state)
 	}
 
 	// Manually add a highlight to row 0
 	{
-		row_data := state.row_data
+		row_data := state.RowData
 		// Zig-only: var arena = row_arenas[0].promote(alloc);
 		// Zig-only: defer row_arenas[0] = arena.state;
-		row_data[0].highlights = append(row_data[0].highlights, RenderStateHighlight{
-			tag:    1,
-			range_: [2]SizeCellCountInt{0, 2},
+		row_data[0].Highlights = append(row_data[0].Highlights, RenderStateHighlight{
+			Tag:   1,
+			Range: [2]SizeCellCountInt{0, 2},
 		})
 	}
 
 	// Verify we have a highlight
 	{
-		row_data := state.row_data
-		expectEqual(t, 1, len(row_data[0].highlights))
+		row_data := state.RowData
+		expectEqual(t, 1, len(row_data[0].Highlights))
 	}
 
 	// Write to row 0 to make it dirty
@@ -756,8 +756,8 @@ func TestRender_dirty_row_resets_highlights(t *testing.T) {
 
 	// Verify the highlight was reset on the dirty row
 	{
-		row_data := state.row_data
-		expectEqual(t, 0, len(row_data[0].highlights))
+		row_data := state.RowData
+		expectEqual(t, 0, len(row_data[0].Highlights))
 	}
 }
 
@@ -768,21 +768,21 @@ func TestRender_term51_RenderState_update_initial_state_and_first_update(t *test
 	defer state.Deinit()
 
 	// The empty state.
-	expectEqual(t, SizeCellCountInt(0), state.rows)
-	expectEqual(t, SizeCellCountInt(0), state.cols)
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
-	expectEqual(t, ScreenSetKeyPrimary, state.screen)
-	expect(t, !state.viewport_pin.Valid, "state.viewport_pin == null")
+	expectEqual(t, SizeCellCountInt(0), state.Rows)
+	expectEqual(t, SizeCellCountInt(0), state.Cols)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
+	expectEqual(t, ScreenSetKeyPrimary, state.Screen)
+	expect(t, !state.ViewportPin.Valid, "state.viewport_pin == null")
 	expect(t, !state.selection_cache.Valid, "state.selection_cache == null")
-	expectEqual(t, 0, len(state.row_data))
-	expect(t, !state.cursor.viewport.Valid, "state.cursor.viewport == null")
-	expect(t, state.cursor.cell.IsZero(), "state.cursor.cell.isZero()")
-	expectEqual(t, CursorStyleBlock, state.cursor.visual_style)
-	expect(t, !state.cursor.password_input, "!state.cursor.password_input")
-	expect(t, state.cursor.visible, "state.cursor.visible")
-	expect(t, !state.cursor.blinking, "!state.cursor.blinking")
-	expect(t, !state.colors.cursor.Valid, "state.colors.cursor == null")
-	expectEqualSlices(t, ColorDefault[:], state.colors.palette[:])
+	expectEqual(t, 0, len(state.RowData))
+	expect(t, !state.Cursor.Viewport.Valid, "state.cursor.viewport == null")
+	expect(t, state.Cursor.Cell.IsZero(), "state.cursor.cell.isZero()")
+	expectEqual(t, CursorStyleBlock, state.Cursor.VisualStyle)
+	expect(t, !state.Cursor.PasswordInput, "!state.cursor.password_input")
+	expect(t, state.Cursor.Visible, "state.cursor.visible")
+	expect(t, !state.Cursor.Blinking, "!state.cursor.blinking")
+	expect(t, !state.Colors.Cursor.Valid, "state.colors.cursor == null")
+	expectEqualSlices(t, ColorDefault[:], state.Colors.Palette[:])
 
 	// The Dirty enum order.
 	expectEqual(t, uint8(0), uint8(RenderStateDirtyFalse))
@@ -793,37 +793,37 @@ func TestRender_term51_RenderState_update_initial_state_and_first_update(t *test
 	defer term.Deinit()
 	// A soft wrapped row is not needed: use hard lines and a wrap marker.
 	rnWrite(t, term, "ab\r\n\r\ncd")
-	term.flags.dirty.palette = true
-	term.screens.active.dirty.selection = true
+	term.Flags.Dirty.Palette = true
+	term.Screens.Active.Dirty.Selection = true
 
 	zigTry(t, state.Update(term))
-	expectEqual(t, SizeCellCountInt(4), state.rows)
-	expectEqual(t, SizeCellCountInt(10), state.cols)
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
-	expectEqual(t, ScreenSetKeyPrimary, state.screen)
-	expect(t, state.viewport_pin.Valid, "state.viewport_pin != null")
-	expect(t, zigUnwrap(t, state.viewport_pin).Eql(term.screens.active.pages.GetTopLeft(PointTagViewport)), "state.viewport_pin.?.eql(t.screens.active.pages.getTopLeft(.viewport))")
-	expectEqual(t, 4, len(state.row_data))
+	expectEqual(t, SizeCellCountInt(4), state.Rows)
+	expectEqual(t, SizeCellCountInt(10), state.Cols)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
+	expectEqual(t, ScreenSetKeyPrimary, state.Screen)
+	expect(t, state.ViewportPin.Valid, "state.viewport_pin != null")
+	expect(t, zigUnwrap(t, state.ViewportPin).Eql(term.Screens.Active.Pages.GetTopLeft(PointTagViewport)), "state.viewport_pin.?.eql(t.screens.active.pages.getTopLeft(.viewport))")
+	expectEqual(t, 4, len(state.RowData))
 	rnAllRows(t, &state, true)
 
 	// The terminal and screen dirty flags were consumed.
-	expect(t, !term.flags.dirty.palette, "!t.flags.dirty.palette")
-	expect(t, !term.screens.active.dirty.selection, "!t.screens.active.dirty.selection")
+	expect(t, !term.Flags.Dirty.Palette, "!t.flags.dirty.palette")
+	expect(t, !term.Screens.Active.Dirty.Selection, "!t.screens.active.dirty.selection")
 
 	// Each row has `cols` cells, a pin matching the viewport and a raw row.
-	row_data := state.row_data
+	row_data := state.RowData
 	for y := range 4 {
-		expectEqual(t, 10, len(row_data[y].cells))
-		expected_pin := zigUnwrap(t, term.screens.active.pages.Pin(rnViewport(0, y)))
-		expect(t, row_data[y].pin.Eql(expected_pin), "row_data.items(.pin)[y].eql(expected_pin)")
-		expect(t, !row_data[y].selection.Valid, "row_data.items(.selection)[y] == null")
-		expectEqual(t, 0, len(row_data[y].highlights))
+		expectEqual(t, 10, len(row_data[y].Cells))
+		expected_pin := zigUnwrap(t, term.Screens.Active.Pages.Pin(rnViewport(0, y)))
+		expect(t, row_data[y].Pin.Eql(expected_pin), "row_data.items(.pin)[y].eql(expected_pin)")
+		expect(t, !row_data[y].Selection.Valid, "row_data.items(.selection)[y] == null")
+		expectEqual(t, 0, len(row_data[y].Highlights))
 	}
-	expectEqual(t, uint32('a'), rnCell(&state, 0, 0).raw.Codepoint())
-	expectEqual(t, uint32('b'), rnCell(&state, 1, 0).raw.Codepoint())
-	expectEqual(t, uint32(0), rnCell(&state, 2, 0).raw.Codepoint())
-	expectEqual(t, uint32('c'), rnCell(&state, 0, 2).raw.Codepoint())
-	expectEqual(t, uint32('d'), rnCell(&state, 1, 2).raw.Codepoint())
+	expectEqual(t, uint32('a'), rnCell(&state, 0, 0).Raw.Codepoint())
+	expectEqual(t, uint32('b'), rnCell(&state, 1, 0).Raw.Codepoint())
+	expectEqual(t, uint32(0), rnCell(&state, 2, 0).Raw.Codepoint())
+	expectEqual(t, uint32('c'), rnCell(&state, 0, 2).Raw.Codepoint())
+	expectEqual(t, uint32('d'), rnCell(&state, 1, 2).Raw.Codepoint())
 }
 
 // Zig: test "term51: RenderState.update: dirty state persists until the caller resets it"
@@ -836,17 +836,17 @@ func TestRender_term51_RenderState_update_dirty_state_persists_until_the_caller_
 	defer state.Deinit()
 
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 
 	// Without a reset, an unchanged update keeps `full` (and the rows).
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 	rnAllRows(t, &state, true)
 
 	// Reset: unchanged update stays false and touches no row.
 	rnClean(&state)
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{false, false, false, false})
 
 	// Writes to rows 1 and 3 give partial. Moving the cursor away from a
@@ -854,14 +854,14 @@ func TestRender_term51_RenderState_update_dirty_state_persists_until_the_caller_
 	// is dirty as well, while row 2 was never touched.
 	rnWrite(t, term, "\x1b[2;1Ha\x1b[4;1Hb")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{true, true, false, true})
-	expectEqual(t, uint32('a'), rnCell(&state, 0, 1).raw.Codepoint())
-	expectEqual(t, uint32('b'), rnCell(&state, 0, 3).raw.Codepoint())
+	expectEqual(t, uint32('a'), rnCell(&state, 0, 1).Raw.Codepoint())
+	expectEqual(t, uint32('b'), rnCell(&state, 0, 3).Raw.Codepoint())
 
 	// The row dirty flags of the terminal were consumed by the update.
 	for y := range 4 {
-		pin := zigUnwrap(t, term.screens.active.pages.Pin(rnViewport(0, y)))
+		pin := zigUnwrap(t, term.Screens.Active.Pages.Pin(rnViewport(0, y)))
 		expect(t, !pin.RowAndCell().row.dirty, "!pin.rowAndCell().row.dirty")
 	}
 
@@ -871,20 +871,20 @@ func TestRender_term51_RenderState_update_dirty_state_persists_until_the_caller_
 	rnMemsetDirty(&state)
 	rnWrite(t, term, "z")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	// The cursor is on row 3 (after "b"), so only that row changed.
 	rnExpectRowDirty(t, &state, []bool{false, false, false, true})
 	rnMemsetDirty(&state)
 	rnWrite(t, term, "\x1b[1;1Hz")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{true, false, false, true})
 
 	// A partial update while `full` leaves it `full`.
-	state.dirty = RenderStateDirtyFull
+	state.Dirty = RenderStateDirtyFull
 	rnWrite(t, term, "\x1b[3;1Hq")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{true, false, true, true})
 }
 
@@ -906,14 +906,14 @@ func TestRender_term51_RenderState_update_every_redraw_trigger_gives_full_dirty(
 		set  func(bool)
 		get  func() bool
 	}{
-		{"palette", func(v bool) { term.flags.dirty.palette = v }, func() bool { return term.flags.dirty.palette }},
-		{"reverse_colors", func(v bool) { term.flags.dirty.reverse_colors = v }, func() bool { return term.flags.dirty.reverse_colors }},
-		{"clear", func(v bool) { term.flags.dirty.clear = v }, func() bool { return term.flags.dirty.clear }},
-		{"preedit", func(v bool) { term.flags.dirty.preedit = v }, func() bool { return term.flags.dirty.preedit }},
+		{"palette", func(v bool) { term.Flags.Dirty.Palette = v }, func() bool { return term.Flags.Dirty.Palette }},
+		{"reverse_colors", func(v bool) { term.Flags.Dirty.ReverseColors = v }, func() bool { return term.Flags.Dirty.ReverseColors }},
+		{"clear", func(v bool) { term.Flags.Dirty.Clear = v }, func() bool { return term.Flags.Dirty.Clear }},
+		{"preedit", func(v bool) { term.Flags.Dirty.Preedit = v }, func() bool { return term.Flags.Dirty.Preedit }},
 	} {
 		c.set(true)
 		zigTry(t, state.Update(term))
-		expectEqual(t, RenderStateDirtyFull, state.dirty)
+		expectEqual(t, RenderStateDirtyFull, state.Dirty)
 		rnAllRows(t, &state, true)
 		// Consumed.
 		expect(t, !c.get(), "!@field(t.flags.dirty, name)")
@@ -926,12 +926,12 @@ func TestRender_term51_RenderState_update_every_redraw_trigger_gives_full_dirty(
 		set  func(bool)
 		get  func() bool
 	}{
-		{"selection", func(v bool) { term.screens.active.dirty.selection = v }, func() bool { return term.screens.active.dirty.selection }},
-		{"hyperlink_hover", func(v bool) { term.screens.active.dirty.hyperlink_hover = v }, func() bool { return term.screens.active.dirty.hyperlink_hover }},
+		{"selection", func(v bool) { term.Screens.Active.Dirty.Selection = v }, func() bool { return term.Screens.Active.Dirty.Selection }},
+		{"hyperlink_hover", func(v bool) { term.Screens.Active.Dirty.HyperlinkHover = v }, func() bool { return term.Screens.Active.Dirty.HyperlinkHover }},
 	} {
 		c.set(true)
 		zigTry(t, state.Update(term))
-		expectEqual(t, RenderStateDirtyFull, state.dirty)
+		expectEqual(t, RenderStateDirtyFull, state.Dirty)
 		rnAllRows(t, &state, true)
 		expect(t, !c.get(), "!@field(t.screens.active.dirty, name)")
 		rnClean(&state)
@@ -939,68 +939,68 @@ func TestRender_term51_RenderState_update_every_redraw_trigger_gives_full_dirty(
 
 	// Nothing dirty: no redraw.
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 
 	// Setting the selection through the screen marks it dirty.
 	{
-		screen := term.screens.active
+		screen := term.Screens.Active
 		zigTry(t, screen.Select(Some(SelectionInit(
-			zigUnwrap(t, screen.pages.Pin(rnActive(0, 0))),
-			zigUnwrap(t, screen.pages.Pin(rnActive(1, 0))),
+			zigUnwrap(t, screen.Pages.Pin(rnActive(0, 0))),
+			zigUnwrap(t, screen.Pages.Pin(rnActive(1, 0))),
 			false,
 		))))
 		zigTry(t, state.Update(term))
-		expectEqual(t, RenderStateDirtyFull, state.dirty)
+		expectEqual(t, RenderStateDirtyFull, state.Dirty)
 		rnClean(&state)
 
 		zigTry(t, screen.Select(Optional[Selection]{}))
 		zigTry(t, state.Update(term))
-		expectEqual(t, RenderStateDirtyFull, state.dirty)
+		expectEqual(t, RenderStateDirtyFull, state.Dirty)
 		rnClean(&state)
 	}
 
 	// Palette change through OSC 4, reverse colors mode, clear screen.
 	rnWrite(t, term, "\x1b]4;1;#ff0000\x07")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 	rnClean(&state)
 
 	// The read-only stream does not flag the terminal dirty for the
 	// reverse colors mode, so toggling it is not a redraw on its own.
 	rnWrite(t, term, "\x1b[?5h")
-	expect(t, term.modes.Get(ModesModeReverseColors), "t.modes.get(.reverse_colors)")
-	expect(t, !term.flags.dirty.reverse_colors, "!t.flags.dirty.reverse_colors")
+	expect(t, term.Modes.Get(ModesModeReverseColors), "t.modes.get(.reverse_colors)")
+	expect(t, !term.Flags.Dirty.ReverseColors, "!t.flags.dirty.reverse_colors")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	rnClean(&state)
 
 	rnWrite(t, term, "\x1b[2J")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 	rnClean(&state)
 
 	// Viewport scroll.
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
-	expect(t, zigUnwrap(t, state.viewport_pin).Eql(term.screens.active.pages.GetTopLeft(PointTagViewport)), "state.viewport_pin.?.eql(t.screens.active.pages.getTopLeft(.viewport))")
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
+	expect(t, zigUnwrap(t, state.ViewportPin).Eql(term.Screens.Active.Pages.GetTopLeft(PointTagViewport)), "state.viewport_pin.?.eql(t.screens.active.pages.getTopLeft(.viewport))")
 	rnClean(&state)
 
 	// Same viewport again: not a redraw.
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 	rnClean(&state)
 
 	// Cursor visibility/blink mode changes do not dirty the state.
 	rnWrite(t, term, "\x1b[?25l\x1b[?12h")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
-	expect(t, !state.cursor.visible, "!state.cursor.visible")
-	expect(t, state.cursor.blinking, "state.cursor.blinking")
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
+	expect(t, !state.Cursor.Visible, "!state.cursor.visible")
+	expect(t, state.Cursor.Blinking, "state.cursor.blinking")
 }
 
 // Zig: test "term51: RenderState.update: screen switch and resize redraw"
@@ -1013,53 +1013,53 @@ func TestRender_term51_RenderState_update_screen_switch_and_resize_redraw(t *tes
 	state := RenderStateEmpty
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
-	expectEqual(t, ScreenSetKeyPrimary, state.screen)
+	expectEqual(t, ScreenSetKeyPrimary, state.Screen)
 	rnClean(&state)
 
 	// Switch to the alternate screen.
 	rnWrite(t, term, "\x1b[?1049h")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
-	expectEqual(t, ScreenSetKeyAlternate, state.screen)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
+	expectEqual(t, ScreenSetKeyAlternate, state.Screen)
 	rnAllRows(t, &state, true)
-	expectEqual(t, uint32(0), rnCell(&state, 0, 0).raw.Codepoint())
+	expectEqual(t, uint32(0), rnCell(&state, 0, 0).Raw.Codepoint())
 	rnClean(&state)
 
 	// The cursor column (7) is kept when entering the alternate screen.
 	rnWrite(t, term, "alt")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
-	expectEqual(t, uint32('a'), rnCell(&state, 7, 0).raw.Codepoint())
-	expectEqual(t, uint32('t'), rnCell(&state, 9, 0).raw.Codepoint())
-	expectEqual(t, SizeCellCountInt(9), state.cursor.active.x)
-	expect(t, term.screens.active.cursor.pending_wrap, "t.screens.active.cursor.pending_wrap")
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
+	expectEqual(t, uint32('a'), rnCell(&state, 7, 0).Raw.Codepoint())
+	expectEqual(t, uint32('t'), rnCell(&state, 9, 0).Raw.Codepoint())
+	expectEqual(t, SizeCellCountInt(9), state.Cursor.Active.X)
+	expect(t, term.Screens.Active.Cursor.PendingWrap, "t.screens.active.cursor.pending_wrap")
 	rnClean(&state)
 
 	// And back.
 	rnWrite(t, term, "\x1b[?1049l")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
-	expectEqual(t, ScreenSetKeyPrimary, state.screen)
-	expectEqual(t, uint32('p'), rnCell(&state, 0, 0).raw.Codepoint())
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
+	expectEqual(t, ScreenSetKeyPrimary, state.Screen)
+	expectEqual(t, uint32('p'), rnCell(&state, 0, 0).Raw.Codepoint())
 	rnClean(&state)
 
 	// Resize: columns only, rows only and both.
 	zigTry(t, term.Resize(12, 4))
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
-	expectEqual(t, SizeCellCountInt(12), state.cols)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
+	expectEqual(t, SizeCellCountInt(12), state.Cols)
 	rnAllRows(t, &state, true)
 	rnClean(&state)
 
 	zigTry(t, term.Resize(12, 6))
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
-	expectEqual(t, SizeCellCountInt(6), state.rows)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
+	expectEqual(t, SizeCellCountInt(6), state.Rows)
 	rnClean(&state)
 
 	// The state's size matches the terminal when updated again unchanged.
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 }
 
 // Zig: test "term51: RenderState.update: rows and cells are reused across resizes"
@@ -1072,46 +1072,46 @@ func TestRender_term51_RenderState_update_rows_and_cells_are_reused_across_resiz
 	state := RenderStateEmpty
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
-	expectEqual(t, 4, len(state.row_data))
-	capacity := cap(state.row_data)
+	expectEqual(t, 4, len(state.RowData))
+	capacity := cap(state.RowData)
 	expect(t, capacity >= 4, "cap >= 4")
 
 	// Shrink: rows are dropped but the list keeps its capacity.
 	zigTry(t, term.Resize(10, 2))
 	zigTry(t, state.Update(term))
-	expectEqual(t, 2, len(state.row_data))
-	expectEqual(t, capacity, cap(state.row_data))
-	expectEqual(t, 10, len(state.row_data[0].cells))
-	expectEqual(t, 10, len(state.row_data[1].cells))
+	expectEqual(t, 2, len(state.RowData))
+	expectEqual(t, capacity, cap(state.RowData))
+	expectEqual(t, 10, len(state.RowData[0].Cells))
+	expectEqual(t, 10, len(state.RowData[1].Cells))
 	rnAllRows(t, &state, true)
 
 	// Narrower and grow rows: every row has the new column count.
 	zigTry(t, term.Resize(6, 5))
 	zigTry(t, state.Update(term))
-	expectEqual(t, 5, len(state.row_data))
-	for _, row := range state.row_data {
-		expectEqual(t, 6, len(row.cells))
+	expectEqual(t, 5, len(state.RowData))
+	for _, row := range state.RowData {
+		expectEqual(t, 6, len(row.Cells))
 	}
 	rnAllRows(t, &state, true)
 
 	// Wider again.
 	zigTry(t, term.Resize(20, 5))
 	zigTry(t, state.Update(term))
-	for _, row := range state.row_data {
-		expectEqual(t, 20, len(row.cells))
+	for _, row := range state.RowData {
+		expectEqual(t, 20, len(row.Cells))
 	}
-	expectEqual(t, SizeCellCountInt(20), state.cols)
+	expectEqual(t, SizeCellCountInt(20), state.Cols)
 
 	// New rows start fully dirty and clean of selection and highlights.
 	rnClean(&state)
 	zigTry(t, term.Resize(20, 8))
 	zigTry(t, state.Update(term))
-	expectEqual(t, 8, len(state.row_data))
-	for _, row := range state.row_data {
-		expect(t, !row.selection.Valid, "s == null")
+	expectEqual(t, 8, len(state.RowData))
+	for _, row := range state.RowData {
+		expect(t, !row.Selection.Valid, "s == null")
 	}
-	for _, row := range state.row_data {
-		expectEqual(t, 0, len(row.highlights))
+	for _, row := range state.RowData {
+		expectEqual(t, 0, len(row.Highlights))
 	}
 }
 
@@ -1124,26 +1124,26 @@ func TestRender_term51_RenderState_update_page_dirty_flag_marks_every_row_of_the
 	state := RenderStateEmpty
 	defer state.Deinit()
 
-	p := &rnPtrNode(t, term.screens.active.pages.pages.first, "t.screens.active.pages.pages.first.?").data
+	p := &rnPtrNode(t, term.Screens.Active.Pages.pages.first, "t.screens.active.pages.pages.first.?").data
 	p.dirty = true
 
 	// A redraw does not consume the page flag.
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 	expect(t, p.dirty, "p.dirty")
 	rnClean(&state)
 
 	// A non-redraw update sees the page as dirty, marks every row and
 	// clears the page flag.
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnAllRows(t, &state, true)
 	expect(t, !p.dirty, "!p.dirty")
 
 	// Now clean: nothing.
 	rnClean(&state)
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	rnAllRows(t, &state, false)
 }
 
@@ -1151,28 +1151,28 @@ func TestRender_term51_RenderState_update_page_dirty_flag_marks_every_row_of_the
 func TestRender_term51_RenderState_update_dirty_flags_of_each_page_in_the_viewport(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(PageStdCapacity.cols, 10)
-	opts.max_scrollback = 10_000
+	opts.MaxScrollback = 10_000
 	term := rnInitOpts(t, opts)
 	defer term.Deinit()
 	rnFillTwoPages(t, term)
 
-	first := &rnPtrNode(t, term.screens.active.pages.pages.first, "t.screens.active.pages.pages.first.?").data
-	second := &rnPtrNode(t, term.screens.active.pages.pages.last, "t.screens.active.pages.pages.last.?").data
+	first := &rnPtrNode(t, term.Screens.Active.Pages.pages.first, "t.screens.active.pages.pages.first.?").data
+	second := &rnPtrNode(t, term.Screens.Active.Pages.pages.last, "t.screens.active.pages.pages.last.?").data
 
 	state := RenderStateEmpty
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
-	expectEqual(t, 10, len(state.row_data))
+	expectEqual(t, 10, len(state.RowData))
 	// The first five rows come from the first page and the next five from
 	// the second.
-	pins := state.row_data
+	pins := state.RowData
 	for y := range 5 {
-		expect(t, pins[y].pin.node == term.screens.active.pages.pages.first, "pins[y].node == t.screens.active.pages.pages.first.?")
+		expect(t, pins[y].Pin.Node == term.Screens.Active.Pages.pages.first, "pins[y].node == t.screens.active.pages.pages.first.?")
 	}
 	for y := 5; y < 10; y++ {
-		expect(t, pins[y].pin.node == term.screens.active.pages.pages.last, "pins[y].node == t.screens.active.pages.pages.last.?")
+		expect(t, pins[y].Pin.Node == term.Screens.Active.Pages.pages.last, "pins[y].node == t.screens.active.pages.pages.last.?")
 	}
-	expectEqual(t, uint32('X'), rnCell(&state, 0, 5).raw.Codepoint())
+	expectEqual(t, uint32('X'), rnCell(&state, 0, 5).Raw.Codepoint())
 	first.dirty = false
 	second.dirty = false
 	rnClean(&state)
@@ -1180,7 +1180,7 @@ func TestRender_term51_RenderState_update_dirty_flags_of_each_page_in_the_viewpo
 	// Only the first page dirty.
 	first.dirty = true
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{
 		true, true, true, true, true,
 		false, false, false, false, false,
@@ -1192,7 +1192,7 @@ func TestRender_term51_RenderState_update_dirty_flags_of_each_page_in_the_viewpo
 	// Only the second page dirty.
 	second.dirty = true
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{
 		false, false, false, false, false,
 		true, true, true, true, true,
@@ -1206,17 +1206,17 @@ func TestRender_term51_RenderState_update_dirty_flags_of_each_page_in_the_viewpo
 	first.dirty = true
 	second.dirty = true
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnAllRows(t, &state, true)
 	expect(t, !first.dirty, "!first.dirty")
 	expect(t, !second.dirty, "!second.dirty")
 	rnClean(&state)
 
 	// A single dirty row on the second page.
-	y_pin := zigUnwrap(t, term.screens.active.pages.Pin(rnViewport(0, 7)))
+	y_pin := zigUnwrap(t, term.Screens.Active.Pages.Pin(rnViewport(0, 7)))
 	y_pin.RowAndCell().row.dirty = true
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{
 		false, false, false, false, false,
 		false, false, true, false, false,
@@ -1235,18 +1235,18 @@ func TestRender_term51_RenderState_update_cursor_fields(t *testing.T) {
 
 	// Defaults of a fresh terminal.
 	zigTry(t, state.Update(term))
-	expectEqual(t, SizeCellCountInt(0), state.cursor.active.x)
-	expectEqual(t, uint32(0), state.cursor.active.y)
-	expectEqual(t, SizeCellCountInt(0), zigUnwrap(t, state.cursor.viewport).x)
-	expectEqual(t, SizeCellCountInt(0), zigUnwrap(t, state.cursor.viewport).y)
-	expect(t, !zigUnwrap(t, state.cursor.viewport).wide_tail, "!state.cursor.viewport.?.wide_tail")
-	expect(t, state.cursor.cell.IsZero(), "state.cursor.cell.isZero()")
-	expect(t, state.cursor.style.Default(), "state.cursor.style.default()")
-	expectEqual(t, CursorStyleBlock, state.cursor.visual_style)
-	expect(t, !state.cursor.password_input, "!state.cursor.password_input")
-	expect(t, state.cursor.visible, "state.cursor.visible")
+	expectEqual(t, SizeCellCountInt(0), state.Cursor.Active.X)
+	expectEqual(t, uint32(0), state.Cursor.Active.Y)
+	expectEqual(t, SizeCellCountInt(0), zigUnwrap(t, state.Cursor.Viewport).X)
+	expectEqual(t, SizeCellCountInt(0), zigUnwrap(t, state.Cursor.Viewport).Y)
+	expect(t, !zigUnwrap(t, state.Cursor.Viewport).WideTail, "!state.cursor.viewport.?.wide_tail")
+	expect(t, state.Cursor.Cell.IsZero(), "state.cursor.cell.isZero()")
+	expect(t, state.Cursor.Style.Default(), "state.cursor.style.default()")
+	expectEqual(t, CursorStyleBlock, state.Cursor.VisualStyle)
+	expect(t, !state.Cursor.PasswordInput, "!state.cursor.password_input")
+	expect(t, state.Cursor.Visible, "state.cursor.visible")
 	// DECSCUSR default is not blinking until set; the mode default is off.
-	expect(t, !state.cursor.blinking, "!state.cursor.blinking")
+	expect(t, !state.Cursor.Blinking, "!state.cursor.blinking")
 
 	// Visual styles through DECSCUSR (and the blink mode they toggle).
 	styles := []struct {
@@ -1264,67 +1264,67 @@ func TestRender_term51_RenderState_update_cursor_fields(t *testing.T) {
 	for _, c := range styles {
 		rnWrite(t, term, c.seq)
 		zigTry(t, state.Update(term))
-		expectEqual(t, c.style, state.cursor.visual_style)
-		expectEqual(t, c.blink, state.cursor.blinking)
+		expectEqual(t, c.style, state.Cursor.VisualStyle)
+		expectEqual(t, c.blink, state.Cursor.Blinking)
 	}
 
 	// Visibility mode.
 	rnWrite(t, term, "\x1b[?25l")
 	zigTry(t, state.Update(term))
-	expect(t, !state.cursor.visible, "!state.cursor.visible")
+	expect(t, !state.Cursor.Visible, "!state.cursor.visible")
 	rnWrite(t, term, "\x1b[?25h")
 	zigTry(t, state.Update(term))
-	expect(t, state.cursor.visible, "state.cursor.visible")
+	expect(t, state.Cursor.Visible, "state.cursor.visible")
 
 	// Blink mode directly.
 	rnWrite(t, term, "\x1b[?12h")
 	zigTry(t, state.Update(term))
-	expect(t, state.cursor.blinking, "state.cursor.blinking")
+	expect(t, state.Cursor.Blinking, "state.cursor.blinking")
 	rnWrite(t, term, "\x1b[?12l")
 	zigTry(t, state.Update(term))
-	expect(t, !state.cursor.blinking, "!state.cursor.blinking")
+	expect(t, !state.Cursor.Blinking, "!state.cursor.blinking")
 
 	// Password input flag.
-	term.flags.password_input = true
+	term.Flags.PasswordInput = true
 	zigTry(t, state.Update(term))
-	expect(t, state.cursor.password_input, "state.cursor.password_input")
-	term.flags.password_input = false
+	expect(t, state.Cursor.PasswordInput, "state.cursor.password_input")
+	term.Flags.PasswordInput = false
 	zigTry(t, state.Update(term))
-	expect(t, !state.cursor.password_input, "!state.cursor.password_input")
+	expect(t, !state.Cursor.PasswordInput, "!state.cursor.password_input")
 
 	// Style and cell under the cursor.
 	rnWrite(t, term, "\x1b[H\x1b[1;38;5;3mQ\x1b[D")
 	zigTry(t, state.Update(term))
-	expectEqual(t, uint32('Q'), state.cursor.cell.Codepoint())
-	expect(t, state.cursor.cell.HasStyling(), "state.cursor.cell.hasStyling()")
-	expect(t, state.cursor.style.flags.bold, "state.cursor.style.flags.bold")
-	expect(t, state.cursor.style.fg_color.Eql(StyleColor{Tag: StyleColorPalette, Palette: 3}), "state.cursor.style.fg_color.eql(.{ .palette = 3 })")
-	expectEqual(t, SizeCellCountInt(0), state.cursor.active.x)
+	expectEqual(t, uint32('Q'), state.Cursor.Cell.Codepoint())
+	expect(t, state.Cursor.Cell.HasStyling(), "state.cursor.cell.hasStyling()")
+	expect(t, state.Cursor.Style.Flags.Bold, "state.cursor.style.flags.bold")
+	expect(t, state.Cursor.Style.FgColor.Eql(StyleColor{Tag: StyleColorPalette, Palette: 3}), "state.cursor.style.fg_color.eql(.{ .palette = 3 })")
+	expectEqual(t, SizeCellCountInt(0), state.Cursor.Active.X)
 
 	// Positions.
 	rnWrite(t, term, "\x1b[3;7H")
 	zigTry(t, state.Update(term))
-	expectEqual(t, SizeCellCountInt(6), state.cursor.active.x)
-	expectEqual(t, uint32(2), state.cursor.active.y)
-	expectEqual(t, SizeCellCountInt(6), zigUnwrap(t, state.cursor.viewport).x)
-	expectEqual(t, SizeCellCountInt(2), zigUnwrap(t, state.cursor.viewport).y)
-	expect(t, state.cursor.cell.IsZero(), "state.cursor.cell.isZero()")
+	expectEqual(t, SizeCellCountInt(6), state.Cursor.Active.X)
+	expectEqual(t, uint32(2), state.Cursor.Active.Y)
+	expectEqual(t, SizeCellCountInt(6), zigUnwrap(t, state.Cursor.Viewport).X)
+	expectEqual(t, SizeCellCountInt(2), zigUnwrap(t, state.Cursor.Viewport).Y)
+	expect(t, state.Cursor.Cell.IsZero(), "state.cursor.cell.isZero()")
 
 	// Last column / row.
 	rnWrite(t, term, "\x1b[4;10H")
 	zigTry(t, state.Update(term))
-	expectEqual(t, SizeCellCountInt(9), zigUnwrap(t, state.cursor.viewport).x)
-	expectEqual(t, SizeCellCountInt(3), zigUnwrap(t, state.cursor.viewport).y)
+	expectEqual(t, SizeCellCountInt(9), zigUnwrap(t, state.Cursor.Viewport).X)
+	expectEqual(t, SizeCellCountInt(3), zigUnwrap(t, state.Cursor.Viewport).Y)
 
 	// The viewport position is recomputed on each update: scrolled out and
 	// back in.
 	rnWrite(t, term, "\r\n\r\n\r\n\r\n")
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	zigTry(t, state.Update(term))
-	expect(t, !state.cursor.viewport.Valid, "state.cursor.viewport == null")
+	expect(t, !state.Cursor.Viewport.Valid, "state.cursor.viewport == null")
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
 	zigTry(t, state.Update(term))
-	expect(t, state.cursor.viewport.Valid, "state.cursor.viewport != null")
+	expect(t, state.Cursor.Viewport.Valid, "state.cursor.viewport != null")
 }
 
 // Zig: test "term51: RenderState.update: cursor on the tail of a wide character"
@@ -1341,26 +1341,26 @@ func TestRender_term51_RenderState_update_cursor_on_the_tail_of_a_wide_character
 	// On the wide head: not a tail (cell to the left is narrow).
 	rnWrite(t, term, "\x1b[2G")
 	zigTry(t, state.Update(term))
-	expectEqual(t, SizeCellCountInt(1), zigUnwrap(t, state.cursor.viewport).x)
-	expect(t, !zigUnwrap(t, state.cursor.viewport).wide_tail, "!state.cursor.viewport.?.wide_tail")
-	expectEqual(t, PageCellWideWide, state.cursor.cell.wide)
+	expectEqual(t, SizeCellCountInt(1), zigUnwrap(t, state.Cursor.Viewport).X)
+	expect(t, !zigUnwrap(t, state.Cursor.Viewport).WideTail, "!state.cursor.viewport.?.wide_tail")
+	expectEqual(t, PageCellWideWide, state.Cursor.Cell.wide)
 
 	// On the tail: the cell to the left is wide.
 	rnWrite(t, term, "\x1b[3G")
 	zigTry(t, state.Update(term))
-	expectEqual(t, SizeCellCountInt(2), zigUnwrap(t, state.cursor.viewport).x)
-	expect(t, zigUnwrap(t, state.cursor.viewport).wide_tail, "state.cursor.viewport.?.wide_tail")
-	expectEqual(t, PageCellWideSpacerTail, state.cursor.cell.wide)
+	expectEqual(t, SizeCellCountInt(2), zigUnwrap(t, state.Cursor.Viewport).X)
+	expect(t, zigUnwrap(t, state.Cursor.Viewport).WideTail, "state.cursor.viewport.?.wide_tail")
+	expectEqual(t, PageCellWideSpacerTail, state.Cursor.Cell.wide)
 
 	// After the tail: the cell to the left is the tail itself.
 	rnWrite(t, term, "\x1b[4G")
 	zigTry(t, state.Update(term))
-	expect(t, !zigUnwrap(t, state.cursor.viewport).wide_tail, "!state.cursor.viewport.?.wide_tail")
+	expect(t, !zigUnwrap(t, state.Cursor.Viewport).WideTail, "!state.cursor.viewport.?.wide_tail")
 
 	// Column 0 never looks left.
 	rnWrite(t, term, "\x1b[1G")
 	zigTry(t, state.Update(term))
-	expect(t, !zigUnwrap(t, state.cursor.viewport).wide_tail, "!state.cursor.viewport.?.wide_tail")
+	expect(t, !zigUnwrap(t, state.Cursor.Viewport).WideTail, "!state.cursor.viewport.?.wide_tail")
 }
 
 // Zig: test "term51: RenderState.update: colors"
@@ -1375,56 +1375,56 @@ func TestRender_term51_RenderState_update_colors(t *testing.T) {
 	// Nothing set: palette copied, cursor color absent, background and
 	// foreground untouched (still the empty state's zero value).
 	zigTry(t, state.Update(term))
-	expect(t, !state.colors.cursor.Valid, "state.colors.cursor == null")
-	expectEqualSlices(t, term.colors.palette.current[:], state.colors.palette[:])
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, state.colors.background)
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, state.colors.foreground)
+	expect(t, !state.Colors.Cursor.Valid, "state.colors.cursor == null")
+	expectEqualSlices(t, term.Colors.Palette.Current[:], state.Colors.Palette[:])
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, state.Colors.Background)
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, state.Colors.Foreground)
 
 	// Only the background set: neither is copied.
 	rnWrite(t, term, "\x1b]11;#445566\x07")
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, state.colors.background)
-	expectEqual(t, ColorRGB{r: 0, g: 0, b: 0}, state.colors.foreground)
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, state.Colors.Background)
+	expectEqual(t, ColorRGB{R: 0, G: 0, B: 0}, state.Colors.Foreground)
 
 	// Both set.
 	rnWrite(t, term, "\x1b]10;#112233\x07")
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 0x44, g: 0x55, b: 0x66}, state.colors.background)
-	expectEqual(t, ColorRGB{r: 0x11, g: 0x22, b: 0x33}, state.colors.foreground)
+	expectEqual(t, ColorRGB{R: 0x44, G: 0x55, B: 0x66}, state.Colors.Background)
+	expectEqual(t, ColorRGB{R: 0x11, G: 0x22, B: 0x33}, state.Colors.Foreground)
 
 	// Reverse colors swap them.
 	rnWrite(t, term, "\x1b[?5h")
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 0x11, g: 0x22, b: 0x33}, state.colors.background)
-	expectEqual(t, ColorRGB{r: 0x44, g: 0x55, b: 0x66}, state.colors.foreground)
+	expectEqual(t, ColorRGB{R: 0x11, G: 0x22, B: 0x33}, state.Colors.Background)
+	expectEqual(t, ColorRGB{R: 0x44, G: 0x55, B: 0x66}, state.Colors.Foreground)
 	rnWrite(t, term, "\x1b[?5l")
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 0x44, g: 0x55, b: 0x66}, state.colors.background)
+	expectEqual(t, ColorRGB{R: 0x44, G: 0x55, B: 0x66}, state.Colors.Background)
 
 	// Cursor color set and reset.
 	rnWrite(t, term, "\x1b]12;#aabbcc\x07")
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 0xaa, g: 0xbb, b: 0xcc}, zigUnwrap(t, state.colors.cursor))
+	expectEqual(t, ColorRGB{R: 0xaa, G: 0xbb, B: 0xcc}, zigUnwrap(t, state.Colors.Cursor))
 	rnWrite(t, term, "\x1b]112\x07")
 	zigTry(t, state.Update(term))
-	expect(t, !state.colors.cursor.Valid, "state.colors.cursor == null")
+	expect(t, !state.Colors.Cursor.Valid, "state.colors.cursor == null")
 
 	// The whole palette is copied: first, last and a middle entry.
 	rnWrite(t, term, "\x1b]4;0;#010203\x07\x1b]4;128;#040506\x07\x1b]4;255;#070809\x07")
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 1, g: 2, b: 3}, state.colors.palette[0])
-	expectEqual(t, ColorRGB{r: 4, g: 5, b: 6}, state.colors.palette[128])
-	expectEqual(t, ColorRGB{r: 7, g: 8, b: 9}, state.colors.palette[255])
-	expectEqualSlices(t, term.colors.palette.current[:], state.colors.palette[:])
+	expectEqual(t, ColorRGB{R: 1, G: 2, B: 3}, state.Colors.Palette[0])
+	expectEqual(t, ColorRGB{R: 4, G: 5, B: 6}, state.Colors.Palette[128])
+	expectEqual(t, ColorRGB{R: 7, G: 8, B: 9}, state.Colors.Palette[255])
+	expectEqualSlices(t, term.Colors.Palette.Current[:], state.Colors.Palette[:])
 
 	// Defaults set through the terminal's colors (as a host would).
-	term.colors.background.Set(ColorRGB{r: 9, g: 9, b: 9})
-	term.colors.foreground.Set(ColorRGB{r: 8, g: 8, b: 8})
-	term.colors.cursor.Set(ColorRGB{r: 7, g: 7, b: 7})
+	term.Colors.Background.Set(ColorRGB{R: 9, G: 9, B: 9})
+	term.Colors.Foreground.Set(ColorRGB{R: 8, G: 8, B: 8})
+	term.Colors.Cursor.Set(ColorRGB{R: 7, G: 7, B: 7})
 	zigTry(t, state.Update(term))
-	expectEqual(t, ColorRGB{r: 9, g: 9, b: 9}, state.colors.background)
-	expectEqual(t, ColorRGB{r: 8, g: 8, b: 8}, state.colors.foreground)
-	expectEqual(t, ColorRGB{r: 7, g: 7, b: 7}, zigUnwrap(t, state.colors.cursor))
+	expectEqual(t, ColorRGB{R: 9, G: 9, B: 9}, state.Colors.Background)
+	expectEqual(t, ColorRGB{R: 8, G: 8, B: 8}, state.Colors.Foreground)
+	expectEqual(t, ColorRGB{R: 7, G: 7, B: 7}, zigUnwrap(t, state.Colors.Cursor))
 }
 
 // Zig: test "term51: RenderState.update: copies cells styles graphemes and raw rows"
@@ -1448,64 +1448,64 @@ func TestRender_term51_RenderState_update_copies_cells_styles_graphemes_and_raw_
 	// Row 0.
 	{
 		c := rnCell(&state, 0, 0)
-		expectEqual(t, uint32('A'), c.raw.Codepoint())
-		expect(t, c.raw.HasStyling(), "c.raw.hasStyling()")
-		expect(t, c.style.flags.bold, "c.style.flags.bold")
+		expectEqual(t, uint32('A'), c.Raw.Codepoint())
+		expect(t, c.Raw.HasStyling(), "c.raw.hasStyling()")
+		expect(t, c.Style.Flags.Bold, "c.style.flags.bold")
 		b := rnCell(&state, 1, 0)
-		expectEqual(t, uint32('b'), b.raw.Codepoint())
-		expect(t, !b.raw.HasStyling(), "!b.raw.hasStyling()")
+		expectEqual(t, uint32('b'), b.Raw.Codepoint())
+		expect(t, !b.Raw.HasStyling(), "!b.raw.hasStyling()")
 		g := rnCell(&state, 2, 0)
-		expectEqual(t, PageCellContentTagCodepointGrapheme, g.raw.content_tag)
-		expectEqualSlices(t, []uint32{0x301}, g.grapheme)
+		expectEqual(t, PageCellContentTagCodepointGrapheme, g.Raw.content_tag)
+		expectEqualSlices(t, []uint32{0x301}, g.Grapheme)
 		w := rnCell(&state, 3, 0)
-		expectEqual(t, uint32(0x4e2d), w.raw.Codepoint())
-		expectEqual(t, PageCellWideWide, w.raw.wide)
+		expectEqual(t, uint32(0x4e2d), w.Raw.Codepoint())
+		expectEqual(t, PageCellWideWide, w.Raw.wide)
 		tail := rnCell(&state, 4, 0)
-		expectEqual(t, PageCellWideSpacerTail, tail.raw.wide)
-		expectEqual(t, uint32(0), tail.raw.Codepoint())
-		expectEqual(t, uint32(0), rnCell(&state, 5, 0).raw.Codepoint())
+		expectEqual(t, PageCellWideSpacerTail, tail.Raw.wide)
+		expectEqual(t, uint32(0), tail.Raw.Codepoint())
+		expectEqual(t, uint32(0), rnCell(&state, 5, 0).Raw.Codepoint())
 	}
 
 	// Row 1: the styled cell, then background palette cells. The row has
 	// managed memory (a styled cell) so the cells' style is filled in.
 	{
 		s := rnCell(&state, 0, 1)
-		expect(t, s.style.flags.italic, "s.style.flags.italic")
+		expect(t, s.Style.Flags.Italic, "s.style.flags.italic")
 		for x := uint(1); x < 6; x++ {
 			c := rnCell(&state, x, 1)
-			expectEqual(t, PageCellContentTagBgColorPalette, c.raw.content_tag)
-			expectEqual(t, uint8(1), c.raw.content.color_palette)
-			expect(t, c.style.Eql(Style{bg_color: StyleColor{Tag: StyleColorPalette, Palette: 1}}), "c.style.eql(.{ .bg_color = .{ .palette = 1 } })")
+			expectEqual(t, PageCellContentTagBgColorPalette, c.Raw.content_tag)
+			expectEqual(t, uint8(1), c.Raw.content.color_palette)
+			expect(t, c.Style.Eql(Style{BgColor: StyleColor{Tag: StyleColorPalette, Palette: 1}}), "c.style.eql(.{ .bg_color = .{ .palette = 1 } })")
 		}
 	}
 
 	// Row 2: only background cells and no styled cell: the row has no
 	// managed memory, so only the raw cell is copied.
 	{
-		row := state.row_data[2].raw
+		row := state.RowData[2].Raw
 		expect(t, !row.ManagedMemory(), "!row.managedMemory()")
 		for x := uint(0); x < 6; x++ {
 			c := rnCell(&state, x, 2)
-			expectEqual(t, PageCellContentTagBgColorRgb, c.raw.content_tag)
-			expectEqual(t, uint8(1), c.raw.content.color_rgb.r)
-			expectEqual(t, uint8(2), c.raw.content.color_rgb.g)
-			expectEqual(t, uint8(3), c.raw.content.color_rgb.b)
+			expectEqual(t, PageCellContentTagBgColorRgb, c.Raw.content_tag)
+			expectEqual(t, uint8(1), c.Raw.content.color_rgb.R)
+			expectEqual(t, uint8(2), c.Raw.content.color_rgb.G)
+			expectEqual(t, uint8(3), c.Raw.content.color_rgb.B)
 		}
 	}
 
 	// Row 3.
 	for x, ch := range []uint8("plain!") {
-		expectEqual(t, uint32(ch), rnCell(&state, uint(x), 3).raw.Codepoint())
+		expectEqual(t, uint32(ch), rnCell(&state, uint(x), 3).Raw.Codepoint())
 	}
 
 	// Raw rows are copies of the page rows, with the wrap flags.
-	raws := state.row_data
-	expect(t, raws[0].raw.grapheme, "raws[0].grapheme")
-	expect(t, raws[0].raw.styled, "raws[0].styled")
-	expect(t, !raws[0].raw.wrap, "!raws[0].wrap")
-	expect(t, !raws[3].raw.styled, "!raws[3].styled")
+	raws := state.RowData
+	expect(t, raws[0].Raw.grapheme, "raws[0].grapheme")
+	expect(t, raws[0].Raw.styled, "raws[0].styled")
+	expect(t, !raws[0].Raw.wrap, "!raws[0].wrap")
+	expect(t, !raws[3].Raw.styled, "!raws[3].styled")
 	// "plain!" fills the 6 columns: a pending wrap, but not a wrapped row.
-	expect(t, !raws[3].raw.wrap, "!raws[3].wrap")
+	expect(t, !raws[3].Raw.wrap, "!raws[3].wrap")
 }
 
 // Zig: test "term51: RenderState.update: raw row wrap flags"
@@ -1519,13 +1519,13 @@ func TestRender_term51_RenderState_update_raw_row_wrap_flags(t *testing.T) {
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
 
-	raws := state.row_data
-	expect(t, raws[0].raw.wrap, "raws[0].wrap")
-	expect(t, !raws[0].raw.wrap_continuation, "!raws[0].wrap_continuation")
-	expect(t, raws[1].raw.wrap, "raws[1].wrap")
-	expect(t, raws[1].raw.wrap_continuation, "raws[1].wrap_continuation")
-	expect(t, !raws[2].raw.wrap, "!raws[2].wrap")
-	expect(t, raws[2].raw.wrap_continuation, "raws[2].wrap_continuation")
+	raws := state.RowData
+	expect(t, raws[0].Raw.wrap, "raws[0].wrap")
+	expect(t, !raws[0].Raw.wrap_continuation, "!raws[0].wrap_continuation")
+	expect(t, raws[1].Raw.wrap, "raws[1].wrap")
+	expect(t, raws[1].Raw.wrap_continuation, "raws[1].wrap_continuation")
+	expect(t, !raws[2].Raw.wrap, "!raws[2].wrap")
+	expect(t, raws[2].Raw.wrap_continuation, "raws[2].wrap_continuation")
 }
 
 // Zig: test "term51: RenderState.update: dirty rows are rebuilt and clean rows kept"
@@ -1538,30 +1538,30 @@ func TestRender_term51_RenderState_update_dirty_rows_are_rebuilt_and_clean_rows_
 	state := RenderStateEmpty
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
-	expectEqual(t, 1, len(state.row_data[0].cells[0].grapheme))
-	expect(t, state.row_data[0].cells[1].style.flags.bold, "state.row_data.items(.cells)[0].get(1).style.flags.bold")
+	expectEqual(t, 1, len(state.RowData[0].Cells[0].Grapheme))
+	expect(t, state.RowData[0].Cells[1].Style.Flags.Bold, "state.row_data.items(.cells)[0].get(1).style.flags.bold")
 	rnClean(&state)
 
 	// Mutate the clean row 1 in the render state: it must be untouched by
 	// an update that only changes row 0.
-	state.row_data[1].cells[0].raw = PageCellInit('Z')
+	state.RowData[1].Cells[0].Raw = PageCellInit('Z')
 
 	// Overwrite row 0 with plain text: the grapheme and style are gone.
 	rnWrite(t, term, "\x1b[Hxy")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{true, false, false})
-	expectEqual(t, uint32('x'), rnCell(&state, 0, 0).raw.Codepoint())
-	expectEqual(t, PageCellContentTagCodepoint, rnCell(&state, 0, 0).raw.content_tag)
-	expectEqual(t, uint32('y'), rnCell(&state, 1, 0).raw.Codepoint())
-	expect(t, !rnCell(&state, 1, 0).raw.HasStyling(), "!term51ZRsCell(&state, 1, 0).raw.hasStyling()")
+	expectEqual(t, uint32('x'), rnCell(&state, 0, 0).Raw.Codepoint())
+	expectEqual(t, PageCellContentTagCodepoint, rnCell(&state, 0, 0).Raw.content_tag)
+	expectEqual(t, uint32('y'), rnCell(&state, 1, 0).Raw.Codepoint())
+	expect(t, !rnCell(&state, 1, 0).Raw.HasStyling(), "!term51ZRsCell(&state, 1, 0).raw.hasStyling()")
 	// Row 1 keeps the sentinel and not 'k'.
-	expectEqual(t, uint32('Z'), rnCell(&state, 0, 1).raw.Codepoint())
+	expectEqual(t, uint32('Z'), rnCell(&state, 0, 1).Raw.Codepoint())
 
 	// A full redraw restores row 1 from the terminal.
-	term.flags.dirty.clear = true
+	term.Flags.Dirty.Clear = true
 	zigTry(t, state.Update(term))
-	expectEqual(t, uint32('k'), rnCell(&state, 0, 1).raw.Codepoint())
+	expectEqual(t, uint32('k'), rnCell(&state, 0, 1).Raw.Codepoint())
 }
 
 // Zig: test "term51: RenderState.update: selection rows for every selection shape"
@@ -1569,7 +1569,7 @@ func TestRender_term51_RenderState_update_selection_rows_for_every_selection_sha
 	testStdCapacity(t)
 	term := rnInit(t, 10, 4)
 	defer term.Deinit()
-	screen := term.screens.active
+	screen := term.Screens.Active
 
 	state := RenderStateEmpty
 	defer state.Deinit()
@@ -1627,15 +1627,15 @@ func TestRender_term51_RenderState_update_selection_in_a_scrolled_viewport(t *te
 	defer term.Deinit()
 	// Screen rows: a=0, b=1, c=2 (active top), d=3, e=4.
 	rnWrite(t, term, "a\r\nb\r\nc\r\nd\r\ne")
-	screen := term.screens.active
+	screen := term.Screens.Active
 
 	state := RenderStateEmpty
 	defer state.Deinit()
 
 	// Selection from screen (2,1) to (3,3).
 	zigTry(t, screen.Select(Some(SelectionInit(
-		zigUnwrap(t, screen.pages.Pin(rnScreen(2, 1))),
-		zigUnwrap(t, screen.pages.Pin(rnScreen(3, 3))),
+		zigUnwrap(t, screen.Pages.Pin(rnScreen(2, 1))),
+		zigUnwrap(t, screen.Pages.Pin(rnScreen(3, 3))),
 		false,
 	))))
 
@@ -1651,8 +1651,8 @@ func TestRender_term51_RenderState_update_selection_in_a_scrolled_viewport(t *te
 	// A selection entirely above the viewport.
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportBottom})
 	zigTry(t, screen.Select(Some(SelectionInit(
-		zigUnwrap(t, screen.pages.Pin(rnScreen(0, 0))),
-		zigUnwrap(t, screen.pages.Pin(rnScreen(5, 1))),
+		zigUnwrap(t, screen.Pages.Pin(rnScreen(0, 0))),
+		zigUnwrap(t, screen.Pages.Pin(rnScreen(5, 1))),
 		false,
 	))))
 	zigTry(t, state.Update(term))
@@ -1661,8 +1661,8 @@ func TestRender_term51_RenderState_update_selection_in_a_scrolled_viewport(t *te
 	// A selection entirely below the viewport.
 	term.ScrollViewport(TerminalScrollViewport{Tag: TerminalScrollViewportTop})
 	zigTry(t, screen.Select(Some(SelectionInit(
-		zigUnwrap(t, screen.pages.Pin(rnScreen(0, 3))),
-		zigUnwrap(t, screen.pages.Pin(rnScreen(5, 4))),
+		zigUnwrap(t, screen.Pages.Pin(rnScreen(0, 3))),
+		zigUnwrap(t, screen.Pages.Pin(rnScreen(5, 4))),
 		false,
 	))))
 	zigTry(t, state.Update(term))
@@ -1674,7 +1674,7 @@ func TestRender_term51_RenderState_update_selection_cache(t *testing.T) {
 	testStdCapacity(t)
 	term := rnInit(t, 10, 4)
 	defer term.Deinit()
-	screen := term.screens.active
+	screen := term.Screens.Active
 
 	state := RenderStateEmpty
 	defer state.Deinit()
@@ -1687,21 +1687,21 @@ func TestRender_term51_RenderState_update_selection_cache(t *testing.T) {
 	expect(t, state.selection_cache.Valid, "state.selection_cache != null")
 	expect(t, state.selection_cache.Value.tl_pin.Eql(rnPin(t, term, 0, 1)), "state.selection_cache.?.tl_pin.eql(term51ZRsPin(&t, 0, 1))")
 	expect(t, state.selection_cache.Value.br_pin.Eql(rnPin(t, term, 2, 1)), "state.selection_cache.?.br_pin.eql(term51ZRsPin(&t, 2, 1))")
-	expect(t, !state.selection_cache.Value.selection.rectangle, "!state.selection_cache.?.selection.rectangle")
+	expect(t, !state.selection_cache.Value.selection.Rectangle, "!state.selection_cache.?.selection.rectangle")
 	rnClean(&state)
 
 	// Same selection, nothing dirty: the cached result is kept and the
 	// rows are not recomputed (a sentinel survives).
-	state.row_data[1].selection = rnSel(7, 8)
+	state.RowData[1].Selection = rnSel(7, 8)
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	rnExpectSels(t, &state, []rnSelBounds{rnNil, rnSel(7, 8), rnNil, rnNil})
 
 	// Same selection but a dirty row elsewhere: the cache is used to
 	// recompute the selected rows (the sentinel is overwritten).
 	rnWrite(t, term, "\x1b[4;1Hx")
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectSels(t, &state, []rnSelBounds{rnNil, rnSel(0, 2), rnNil, rnNil})
 	rnClean(&state)
 
@@ -1716,9 +1716,9 @@ func TestRender_term51_RenderState_update_selection_cache(t *testing.T) {
 	zigTry(t, screen.Select(Some(SelectionInit(rnPin(t, term, 2, 1), rnPin(t, term, 0, 1), false))))
 	zigTry(t, state.Update(term))
 	rnClean(&state)
-	state.row_data[1].selection = rnSel(7, 8)
+	state.RowData[1].Selection = rnSel(7, 8)
 	zigTry(t, state.Update(term))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	rnExpectSels(t, &state, []rnSelBounds{rnNil, rnSel(0, 2), rnNil, rnNil})
 
 	// Changing the selection builds a new cache.
@@ -1726,7 +1726,7 @@ func TestRender_term51_RenderState_update_selection_cache(t *testing.T) {
 	zigTry(t, state.Update(term))
 	expect(t, state.selection_cache.Value.tl_pin.Eql(rnPin(t, term, 1, 2)), "state.selection_cache.?.tl_pin.eql(term51ZRsPin(&t, 1, 2))")
 	expect(t, state.selection_cache.Value.br_pin.Eql(rnPin(t, term, 3, 2)), "state.selection_cache.?.br_pin.eql(term51ZRsPin(&t, 3, 2))")
-	expect(t, state.selection_cache.Value.selection.rectangle, "state.selection_cache.?.selection.rectangle")
+	expect(t, state.selection_cache.Value.selection.Rectangle, "state.selection_cache.?.selection.rectangle")
 	rnExpectSels(t, &state, []rnSelBounds{rnNil, rnNil, rnSel(1, 3), rnNil})
 
 	// Clearing the selection leaves the (stale) cache in place.
@@ -1750,7 +1750,7 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_empty_input_is_a_no
 		hl := rnFlat(0, 0, nil)
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
-		expectEqual(t, RenderStateDirtyFalse, state.dirty)
+		expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	}
 
 	zigTry(t, state.Update(term))
@@ -1758,7 +1758,7 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_empty_input_is_a_no
 
 	// No highlights.
 	zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{}))
-	expectEqual(t, RenderStateDirtyFalse, state.dirty)
+	expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	rnAllRows(t, &state, false)
 
 	// A highlight with no chunks.
@@ -1766,7 +1766,7 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_empty_input_is_a_no
 		hl := rnFlat(0, 0, nil)
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
-		expectEqual(t, RenderStateDirtyFalse, state.dirty)
+		expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 		rnAllRows(t, &state, false)
 	}
 
@@ -1774,13 +1774,13 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_empty_input_is_a_no
 	{
 		other := rnInit(t, 10, 4)
 		defer other.Deinit()
-		other_node := rnPtrNode(t, other.screens.active.pages.pages.first, "other.screens.active.pages.pages.first.?")
+		other_node := rnPtrNode(t, other.Screens.Active.Pages.pages.first, "other.screens.active.pages.pages.first.?")
 		hl := rnFlat(1, 2, []HighlightFlattenedChunk{
-			{node: other_node, serial: 0, start: 0, end: 4},
+			{Node: other_node, Serial: 0, Start: 0, End: 4},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
-		expectEqual(t, RenderStateDirtyFalse, state.dirty)
+		expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 		rnAllRows(t, &state, false)
 		for y := range 4 {
 			expectEqual(t, 0, len(rnHighlights(&state, uint(y))))
@@ -1789,13 +1789,13 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_empty_input_is_a_no
 
 	// A chunk with an empty row range (start == end) matches nothing.
 	{
-		node := state.row_data[0].pin.node
+		node := state.RowData[0].Pin.Node
 		hl := rnFlat(1, 2, []HighlightFlattenedChunk{
-			{node: node, serial: 0, start: 2, end: 2},
+			{Node: node, Serial: 0, Start: 2, End: 2},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
-		expectEqual(t, RenderStateDirtyFalse, state.dirty)
+		expectEqual(t, RenderStateDirtyFalse, state.Dirty)
 	}
 }
 
@@ -1809,25 +1809,25 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_ranges_per_row_and_
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
 	rnClean(&state)
-	node := state.row_data[0].pin.node
+	node := state.RowData[0].Pin.Node
 
 	// Rows 1 and 2 (end is exclusive): first row from top_x to the end,
 	// last row from the start to bot_x.
 	{
 		hl := rnFlat(2, 4, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 1, end: 3},
+			{Node: node, Serial: node.serial, Start: 1, End: 3},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(7, []HighlightFlattened{hl}))
 	}
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{false, true, true, false, false})
 	expectEqual(t, 0, len(rnHighlights(&state, 0)))
 	expectEqual(t, 1, len(rnHighlights(&state, 1)))
-	expectEqual(t, uint8(7), rnHighlights(&state, 1)[0].tag)
+	expectEqual(t, uint8(7), rnHighlights(&state, 1)[0].Tag)
 	expectEqualSlices(t, []SizeCellCountInt{2, 9}, rnRange(rnHighlights(&state, 1)[0]))
 	expectEqual(t, 1, len(rnHighlights(&state, 2)))
-	expectEqual(t, uint8(7), rnHighlights(&state, 2)[0].tag)
+	expectEqual(t, uint8(7), rnHighlights(&state, 2)[0].Tag)
 	expectEqualSlices(t, []SizeCellCountInt{0, 4}, rnRange(rnHighlights(&state, 2)[0]))
 	expectEqual(t, 0, len(rnHighlights(&state, 3)))
 
@@ -1835,16 +1835,16 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_ranges_per_row_and_
 	rnClean(&state)
 	{
 		hl := rnFlat(5, 6, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 2, end: 5},
+			{Node: node, Serial: node.serial, Start: 2, End: 5},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(9, []HighlightFlattened{hl}))
 	}
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{false, false, true, true, true})
 	// Highlights accumulate: row 2 has the earlier one and the new one.
 	expectEqual(t, 2, len(rnHighlights(&state, 2)))
-	expectEqual(t, uint8(9), rnHighlights(&state, 2)[1].tag)
+	expectEqual(t, uint8(9), rnHighlights(&state, 2)[1].Tag)
 	expectEqualSlices(t, []SizeCellCountInt{5, 9}, rnRange(rnHighlights(&state, 2)[1]))
 	expectEqualSlices(t, []SizeCellCountInt{0, 9}, rnRange(rnHighlights(&state, 3)[0]))
 	expectEqualSlices(t, []SizeCellCountInt{0, 6}, rnRange(rnHighlights(&state, 4)[0]))
@@ -1853,7 +1853,7 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_ranges_per_row_and_
 	rnClean(&state)
 	{
 		hl := rnFlat(7, 3, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 0, end: 1},
+			{Node: node, Serial: node.serial, Start: 0, End: 1},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
@@ -1865,7 +1865,7 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_ranges_per_row_and_
 	rnClean(&state)
 	{
 		hl := rnFlat(1, 8, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 4, end: 5},
+			{Node: node, Serial: node.serial, Start: 4, End: 5},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
@@ -1879,11 +1879,11 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_ranges_per_row_and_
 	rnClean(&state)
 	{
 		a := rnFlat(0, 1, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 3, end: 4},
+			{Node: node, Serial: node.serial, Start: 3, End: 4},
 		})
 		// Zig-only: defer a.deinit(alloc);
 		b := rnFlat(8, 9, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 3, end: 4},
+			{Node: node, Serial: node.serial, Start: 3, End: 4},
 		})
 		// Zig-only: defer b.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(4, []HighlightFlattened{a, b}))
@@ -1893,27 +1893,27 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_ranges_per_row_and_
 	expectEqualSlices(t, []SizeCellCountInt{0, 9}, rnRange(rnHighlights(&state, 3)[0]))
 	expectEqualSlices(t, []SizeCellCountInt{0, 1}, rnRange(rnHighlights(&state, 3)[1]))
 	expectEqualSlices(t, []SizeCellCountInt{8, 9}, rnRange(rnHighlights(&state, 3)[2]))
-	expectEqual(t, uint8(4), rnHighlights(&state, 3)[1].tag)
-	expectEqual(t, uint8(4), rnHighlights(&state, 3)[2].tag)
+	expectEqual(t, uint8(4), rnHighlights(&state, 3)[1].Tag)
+	expectEqual(t, uint8(4), rnHighlights(&state, 3)[2].Tag)
 
 	// When the state is already full, it stays full.
 	rnClean(&state)
-	state.dirty = RenderStateDirtyFull
+	state.Dirty = RenderStateDirtyFull
 	{
 		hl := rnFlat(0, 0, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 0, end: 1},
+			{Node: node, Serial: node.serial, Start: 0, End: 1},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
 	}
-	expectEqual(t, RenderStateDirtyFull, state.dirty)
+	expectEqual(t, RenderStateDirtyFull, state.Dirty)
 }
 
 // Zig: test "term51: RenderState.updateHighlightsFlattened: highlight spanning two pages"
 func TestRender_term51_RenderState_updateHighlightsFlattened_highlight_spanning_two_pages(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(PageStdCapacity.cols, 10)
-	opts.max_scrollback = 10_000
+	opts.MaxScrollback = 10_000
 	term := rnInitOpts(t, opts)
 	defer term.Deinit()
 	rnFillTwoPages(t, term)
@@ -1923,23 +1923,23 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_highlight_spanning_
 	zigTry(t, state.Update(term))
 	rnClean(&state)
 
-	pins := state.row_data
-	node1 := pins[0].pin.node
-	node2 := pins[9].pin.node
+	pins := state.RowData
+	node1 := pins[0].Pin.Node
+	node2 := pins[9].Pin.Node
 	expect(t, node1 != node2, "node1 != node2")
 	capRows := node1.data.size.rows
-	last := state.cols - 1
+	last := state.Cols - 1
 
 	// Viewport rows 2..4 are the last three rows of page one and rows 5..6
 	// are the first two rows of page two.
 	hl := rnFlat(3, 6, []HighlightFlattenedChunk{
-		{node: node1, serial: node1.serial, start: capRows - 3, end: capRows},
-		{node: node2, serial: node2.serial, start: 0, end: 2},
+		{Node: node1, Serial: node1.serial, Start: capRows - 3, End: capRows},
+		{Node: node2, Serial: node2.serial, Start: 0, End: 2},
 	})
 	// Zig-only: defer hl.deinit(alloc);
 	zigTry(t, state.UpdateHighlightsFlattened(2, []HighlightFlattened{hl}))
 
-	expectEqual(t, RenderStateDirtyPartial, state.dirty)
+	expectEqual(t, RenderStateDirtyPartial, state.Dirty)
 	rnExpectRowDirty(t, &state, []bool{
 		false, false, true, true, true,
 		true, true, false, false, false,
@@ -1963,10 +1963,10 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_highlights_survive_
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
 	rnClean(&state)
-	node := state.row_data[0].pin.node
+	node := state.RowData[0].Pin.Node
 
 	hl := rnFlat(1, 2, []HighlightFlattenedChunk{
-		{node: node, serial: node.serial, start: 0, end: 2},
+		{Node: node, Serial: node.serial, Start: 0, End: 2},
 	})
 	// Zig-only: defer hl.deinit(alloc);
 	zigTry(t, state.UpdateHighlightsFlattened(3, []HighlightFlattened{hl}))
@@ -1987,7 +1987,7 @@ func TestRender_term51_RenderState_updateHighlightsFlattened_highlights_survive_
 	expectEqual(t, 0, len(rnHighlights(&state, 1)))
 
 	// A full redraw resets all of them.
-	term.flags.dirty.clear = true
+	term.Flags.Dirty.Clear = true
 	zigTry(t, state.Update(term))
 	for y := range 3 {
 		expectEqual(t, 0, len(rnHighlights(&state, uint(y))))
@@ -2009,13 +2009,13 @@ func TestRender_term51_RenderState_deinit_frees_every_kind_of_row_memory(t *test
 		term := rnInit(t, 10, 4)
 		defer term.Deinit()
 		rnWrite(t, term, "\x1b[1me\xcc\x81\x1b[0mx\r\n\x1b]8;;u\x1b\\link\x1b]8;;\x1b\\")
-		zigTry(t, term.screens.active.Select(Some(SelectionInit(rnPin(t, term, 0, 0), rnPin(t, term, 3, 1), false))))
+		zigTry(t, term.Screens.Active.Select(Some(SelectionInit(rnPin(t, term, 0, 0), rnPin(t, term, 3, 1), false))))
 
 		state := RenderStateEmpty
 		zigTry(t, state.Update(term))
-		node := state.row_data[0].pin.node
+		node := state.RowData[0].Pin.Node
 		hl := rnFlat(0, 3, []HighlightFlattenedChunk{
-			{node: node, serial: node.serial, start: 0, end: 2},
+			{Node: node, Serial: node.serial, Start: 0, End: 2},
 		})
 		// Zig-only: defer hl.deinit(alloc);
 		zigTry(t, state.UpdateHighlightsFlattened(1, []HighlightFlattened{hl}))
@@ -2033,7 +2033,7 @@ func TestRender_term51_RenderState_deinit_frees_every_kind_of_row_memory(t *test
 		zigTry(t, state.Update(term))
 		zigTry(t, term.Resize(10, 2))
 		zigTry(t, state.Update(term))
-		expectEqual(t, 2, len(state.row_data))
+		expectEqual(t, 2, len(state.RowData))
 	}
 }
 
@@ -2107,11 +2107,11 @@ func TestRender_term51_RenderState_string_soft_wrapped_rows_have_no_newline(t *t
 	// Zig-only: defer map.deinit(alloc);
 	zigTry(t, state.stringW(&w2.writer, rnMapParam(&map_)))
 	expectEqual(t, len(w2.writer.buffered()), len(map_))
-	expectEqual(t, PointCoordinate{x: 4, y: 0}, map_[4])
-	expectEqual(t, PointCoordinate{x: 0, y: 1}, map_[5])
-	expectEqual(t, PointCoordinate{x: 4, y: 1}, map_[9])
-	expectEqual(t, PointCoordinate{x: 0, y: 2}, map_[10])
-	expectEqual(t, PointCoordinate{x: 5, y: 2}, map_[15])
+	expectEqual(t, PointCoordinate{X: 4, Y: 0}, map_[4])
+	expectEqual(t, PointCoordinate{X: 0, Y: 1}, map_[5])
+	expectEqual(t, PointCoordinate{X: 4, Y: 1}, map_[9])
+	expectEqual(t, PointCoordinate{X: 0, Y: 2}, map_[10])
+	expectEqual(t, PointCoordinate{X: 5, Y: 2}, map_[15])
 }
 
 // Zig: test "term51: RenderState.string: background cells, empty state and writer errors"
@@ -2138,7 +2138,7 @@ func TestRender_term51_RenderState_string_background_cells_empty_state_and_write
 	state := RenderStateEmpty
 	defer state.Deinit()
 	zigTry(t, state.Update(term))
-	expectEqual(t, PageCellContentTagBgColorPalette, rnCell(&state, 1, 0).raw.content_tag)
+	expectEqual(t, PageCellContentTagBgColorPalette, rnCell(&state, 1, 0).Raw.content_tag)
 
 	// Background cells have no codepoint: NUL like empty cells.
 	{
@@ -2163,7 +2163,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 	defer term.Deinit()
 	rnWrite(t, term, "abc")
 
-	p := &rnPtrNode(t, term.screens.active.pages.pages.first, "t.screens.active.pages.pages.first.?").data
+	p := &rnPtrNode(t, term.Screens.Active.Pages.pages.first, "t.screens.active.pages.pages.first.?").data
 
 	// A surrogate half passes the length check and is written as U+FFFD.
 	p.GetRowAndCell(1, 0).cell.content = PageCellContent{codepoint: 0xd800}
@@ -2201,7 +2201,7 @@ func TestRender_term51_RenderState_string_unencodable_codepoints(t *testing.T) {
 		state := RenderStateEmpty
 		defer state.Deinit()
 		zigTry(t, state.Update(term))
-		expectEqualSlices(t, []uint32{0x110000}, rnCell(&state, 2, 0).grapheme)
+		expectEqualSlices(t, []uint32{0x110000}, rnCell(&state, 2, 0).Grapheme)
 		w := oscWriterAllocatingInit()
 		defer w.deinit()
 		rnExpectError(t, ErrWriteFailed, state.stringW(&w.writer, Optional[RenderStateStringMapParam]{}))
@@ -2360,13 +2360,13 @@ func TestRender_panic_update_selection_pins_not_in_the_page_list(t *testing.T) {
 
 	// The screen's selection is set directly (Screen.select would track the
 	// pins): its pins belong to the page list of another terminal.
-	screen := term.screens.active
-	screen.selection = Some(SelectionInit(
+	screen := term.Screens.Active
+	screen.Selection = Some(SelectionInit(
 		rnPin(t, other, 0, 0),
 		rnPin(t, other, 2, 1),
 		false,
 	))
-	defer func() { screen.selection = Optional[Selection]{} }()
+	defer func() { screen.Selection = Optional[Selection]{} }()
 
 	state := RenderStateEmpty
 	defer state.Deinit()
@@ -2387,7 +2387,7 @@ func TestRender_panic_linkCells_row_pin_outside_the_page(t *testing.T) {
 	zigTry(t, state.Update(term))
 
 	// A stale state: the pin of row 0 no longer names a row of its page.
-	state.row_data[0].pin.y = 60000
+	state.RowData[0].Pin.Y = 60000
 	rnExpectPanic(t, func() {
 		_, _ = state.LinkCells(rnCoord(0, 0))
 	})

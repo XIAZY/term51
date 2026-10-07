@@ -75,19 +75,19 @@ func pl5Init(t *testing.T, cols SizeCellCountInt, rows SizeCellCountInt, max_siz
 // pl5Screen, pl5Active, pl5History and pl5Viewport are the Zig literals
 // `.{ .screen = .{ .x = x, .y = y } }` and so on.
 func pl5Screen(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagScreen, Screen: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagScreen, Screen: PointCoordinate{X: x, Y: y}}
 }
 
 func pl5Active(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagActive, Active: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagActive, Active: PointCoordinate{X: x, Y: y}}
 }
 
 func pl5History(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagHistory, History: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagHistory, History: PointCoordinate{X: x, Y: y}}
 }
 
 func pl5Viewport(x SizeCellCountInt, y uint32) Point {
-	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{x: x, y: y}}
+	return Point{Tag: PointTagViewport, Viewport: PointCoordinate{X: x, Y: y}}
 }
 
 // pl5PinOf is `s.pin(pt).?`.
@@ -287,15 +287,15 @@ func pl5LFillPage(t *testing.T, page *Page) {
 	*page.GetRowAndCell(19, 4).cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'Z'}}
 
 	// Two cells share bold; one cell has italic.
-	bold, err := page.styles.Add(Style{flags: styleFlags{bold: true}})
+	bold, err := page.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 	zigTry(t, err)
 	page.styles.Use(bold)
-	italic, err := page.styles.Add(Style{flags: styleFlags{italic: true}})
+	italic, err := page.styles.Add(Style{Flags: StyleFlags{Italic: true}})
 	zigTry(t, err)
 	for _, e := range []struct {
 		x  uint
 		y  uint
-		id StyleId
+		id StyleID
 	}{
 		{1, 0, bold},
 		{2, 0, bold},
@@ -320,8 +320,8 @@ func pl5LFillPage(t *testing.T, page *Page) {
 	}
 
 	link, err := page.InsertHyperlink(Hyperlink{
-		id:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
-		uri: []uint8("https://example.com"),
+		ID:  HyperlinkHyperlinkId{Tag: HyperlinkHyperlinkIdImplicit, Implicit: 0},
+		URI: []uint8("https://example.com"),
 	})
 	zigTry(t, err)
 	{
@@ -353,9 +353,9 @@ func pl5LCheckPage(t *testing.T, page *Page) {
 		b := page.GetRowAndCell(2, 0)
 		expect(t, a.row.styled, "a.row.styled")
 		expectEqual(t, a.cell.style_id, b.cell.style_id)
-		expect(t, page.styles.Get(a.cell.style_id).flags.bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
+		expect(t, page.styles.Get(a.cell.style_id).Flags.Bold, "page.styles.get(page.memory, a.cell.style_id).flags.bold")
 		c := page.GetRowAndCell(0, 1)
-		expect(t, page.styles.Get(c.cell.style_id).flags.italic, "page.styles.get(page.memory, c.cell.style_id).flags.italic")
+		expect(t, page.styles.Get(c.cell.style_id).Flags.Italic, "page.styles.get(page.memory, c.cell.style_id).flags.italic")
 	}
 
 	expectEqual(t, uint(1), page.GraphemeCount())
@@ -430,7 +430,7 @@ func TestPl5_term51_viewportRowOffset_pin_computes_and_caches(t *testing.T) {
 	}
 	for _, cs := range cases {
 		s.viewport = PageListViewport{Tag: PageListViewportPin}
-		*s.viewport_pin = PageListPin{node: cs.node, y: cs.y}
+		*s.viewport_pin = PageListPin{Node: cs.node, Y: cs.y}
 		s.viewport_pin_row_offset = None[uint]()
 		expectEqual(t, cs.row, s.viewportRowOffset())
 		expectEqual(t, Some(cs.row), s.viewport_pin_row_offset)
@@ -456,8 +456,8 @@ func TestPl5_term51_viewportRowOffset_pin_follows_growth_and_a_cached_value_is_r
 	pl5LGrowRows(t, s, 50)
 	expectEqual(t, uint(30), s.viewportRowOffset())
 	expectEqual(t, Some[uint](30), s.viewport_pin_row_offset)
-	expectEqual(t, uint(30), s.Scrollbar().offset)
-	expectEqual(t, uint(174), s.Scrollbar().total)
+	expectEqual(t, uint(30), s.Scrollbar().Offset)
+	expectEqual(t, uint(174), s.Scrollbar().Total)
 }
 
 // Zig: test "term51: fixupViewport: active is untouched"
@@ -482,14 +482,14 @@ func TestPl5_term51_fixupViewport_pin_inside_the_active_area_becomes_active(t *t
 
 	// The first active row, with and without a cached offset.
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: third, y: 76}
+	*s.viewport_pin = PageListPin{Node: third, Y: 76}
 	s.viewport_pin_row_offset = None[uint]()
 	s.fixupViewport(5)
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// With a cache: the cache is not adjusted.
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: third, y: 99}
+	*s.viewport_pin = PageListPin{Node: third, Y: 99}
 	s.viewport_pin_row_offset = Some[uint](42)
 	s.fixupViewport(5)
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
@@ -504,7 +504,7 @@ func TestPl5_term51_fixupViewport_pin_outside_active_adjusts_the_cached_offset(t
 	defer s.Deinit()
 	third := s.pages.last
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: third, y: 75}
+	*s.viewport_pin = PageListPin{Node: third, Y: 75}
 
 	// No cache: nothing to adjust.
 	s.viewport_pin_row_offset = None[uint]()
@@ -702,8 +702,8 @@ func TestPl5_term51_grow_allocates_a_new_page_when_the_last_one_is_full(t *testi
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 
 	// The active area now spans the two pages.
-	expectEqual(t, old_last, s.GetTopLeft(PointTagActive).node)
-	expectEqual(t, SizeCellCountInt(c-23), s.GetTopLeft(PointTagActive).y)
+	expectEqual(t, old_last, s.GetTopLeft(PointTagActive).Node)
+	expectEqual(t, SizeCellCountInt(c-23), s.GetTopLeft(PointTagActive).Y)
 }
 
 // Zig: test "term51: grow: a single page is never pruned even over the max size"
@@ -755,8 +755,8 @@ func TestPl5_term51_grow_prunes_and_reuses_the_first_page_one_byte_over_the_max_
 	second := first.next
 	first_serial := first.serial
 	second_serial := second.serial
-	pl5LText(PageListPin{node: first, y: 5, x: 2}, 'F')
-	pl5LText(PageListPin{node: second, y: 5, x: 2}, 'S')
+	pl5LText(PageListPin{Node: first, Y: 5, X: 2}, 'F')
+	pl5LText(PageListPin{Node: second, Y: 5, X: 2}, 'S')
 	serial := s.page_serial
 	page_size := s.page_size
 
@@ -807,9 +807,9 @@ func TestPl5_term51_grow_pruning_needs_the_remaining_rows_to_cover_the_active_ar
 		s.rows = SizeCellCountInt(c + 2)
 
 		// Viewport state is untouched by the undone prune.
-		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: first, y: 10}})
-		expectEqual(t, uint(10), s.Scrollbar().offset)
-		tracked := pl5Track(t, s, PageListPin{node: first, y: 3, x: 4})
+		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: first, Y: 10}})
+		expectEqual(t, uint(10), s.Scrollbar().Offset)
+		tracked := pl5Track(t, s, PageListPin{Node: first, Y: 3, X: 4})
 		page_size := s.page_size
 		serial_min := s.page_serial_min
 
@@ -825,13 +825,13 @@ func TestPl5_term51_grow_pruning_needs_the_remaining_rows_to_cover_the_active_ar
 		expectEqual(t, serial_min, s.page_serial_min)
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 		expectEqual(t, Some[uint](10), s.viewport_pin_row_offset)
-		expectEqual(t, first, s.viewport_pin.node)
-		expectEqual(t, SizeCellCountInt(10), s.viewport_pin.y)
-		expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
-		expectEqual(t, first, tracked.node)
-		expectEqual(t, SizeCellCountInt(3), tracked.y)
-		expectEqual(t, SizeCellCountInt(4), tracked.x)
-		expect(t, !tracked.garbage, "!tracked.garbage")
+		expectEqual(t, first, s.viewport_pin.Node)
+		expectEqual(t, SizeCellCountInt(10), s.viewport_pin.Y)
+		expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
+		expectEqual(t, first, tracked.Node)
+		expectEqual(t, SizeCellCountInt(3), tracked.Y)
+		expectEqual(t, SizeCellCountInt(4), tracked.X)
+		expect(t, !tracked.Garbage, "!tracked.garbage")
 		s.rows = 24
 	}()
 
@@ -861,37 +861,37 @@ func TestPl5_term51_grow_pruning_moves_tracked_pins_on_the_pruned_page_to_the_ne
 	first := s.pages.first
 	second := first.next
 
-	pa := pl5Track(t, s, PageListPin{node: first, x: 5, y: 100})
-	pb := pl5Track(t, s, PageListPin{node: first, x: 7, y: SizeCellCountInt(c - 1)})
-	pc := pl5Track(t, s, PageListPin{node: second, x: 3, y: 4})
-	pd := pl5Track(t, s, PageListPin{node: second, x: 0, y: 0})
-	pd.garbage = true
+	pa := pl5Track(t, s, PageListPin{Node: first, X: 5, Y: 100})
+	pb := pl5Track(t, s, PageListPin{Node: first, X: 7, Y: SizeCellCountInt(c - 1)})
+	pc := pl5Track(t, s, PageListPin{Node: second, X: 3, Y: 4})
+	pd := pl5Track(t, s, PageListPin{Node: second, X: 0, Y: 0})
+	pd.Garbage = true
 	// The viewport pin is on the first page (viewport is active). Its
 	// garbage flag is cleared after pruning even if it was set.
-	expectEqual(t, first, s.viewport_pin.node)
-	s.viewport_pin.garbage = true
+	expectEqual(t, first, s.viewport_pin.Node)
+	s.viewport_pin.Garbage = true
 
 	pl5LForcePrune(s)
 	new := pl5GrowNode(t, s)
 	expectEqual(t, first, new)
 
 	for _, p := range []*PageListPin{pa, pb} {
-		expectEqual(t, second, p.node)
-		expectEqual(t, SizeCellCountInt(0), p.x)
-		expectEqual(t, SizeCellCountInt(0), p.y)
-		expect(t, p.garbage, "p.garbage")
+		expectEqual(t, second, p.Node)
+		expectEqual(t, SizeCellCountInt(0), p.X)
+		expectEqual(t, SizeCellCountInt(0), p.Y)
+		expect(t, p.Garbage, "p.garbage")
 	}
-	expectEqual(t, second, pc.node)
-	expectEqual(t, SizeCellCountInt(3), pc.x)
-	expectEqual(t, SizeCellCountInt(4), pc.y)
-	expect(t, !pc.garbage, "!pc.garbage")
-	expectEqual(t, second, pd.node)
-	expect(t, pd.garbage, "pd.garbage")
+	expectEqual(t, second, pc.Node)
+	expectEqual(t, SizeCellCountInt(3), pc.X)
+	expectEqual(t, SizeCellCountInt(4), pc.Y)
+	expect(t, !pc.Garbage, "!pc.garbage")
+	expectEqual(t, second, pd.Node)
+	expect(t, pd.Garbage, "pd.garbage")
 
-	expectEqual(t, second, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.x)
-	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
-	expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
+	expectEqual(t, second, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.X)
+	expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
+	expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
 	expect(t, s.viewport.Tag == PageListViewportActive, "s.viewport == .active")
 }
 
@@ -929,19 +929,19 @@ func TestPl5_term51_grow_pruning_updates_a_cached_pin_viewport_offset(t *testing
 			defer s.Deinit()
 			first := s.pages.first
 			second := first.next
-			s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: first, y: SizeCellCountInt(row_in_first)}})
+			s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: first, Y: SizeCellCountInt(row_in_first)}})
 			if row_in_first == 0 {
 				expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
 				s.viewport = PageListViewport{Tag: PageListViewportPin}
-				*s.viewport_pin = PageListPin{node: first, y: 0}
+				*s.viewport_pin = PageListPin{Node: first, Y: 0}
 			}
-			expectEqual(t, row_in_first, s.Scrollbar().offset)
+			expectEqual(t, row_in_first, s.Scrollbar().Offset)
 			pl5LForcePrune(s)
 			pl5GrowNode(t, s)
 			expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
-			expectEqual(t, second, s.viewport_pin.node)
-			expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
-			expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
+			expectEqual(t, second, s.viewport_pin.Node)
+			expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
+			expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
 		}()
 	}
 
@@ -950,8 +950,8 @@ func TestPl5_term51_grow_pruning_updates_a_cached_pin_viewport_offset(t *testing
 		s := pl5LTwoFull(t)
 		defer s.Deinit()
 		c := uint(s.pages.first.data.capacity.rows)
-		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: s.pages.first, y: SizeCellCountInt(c - 1)}})
-		expectEqual(t, c-1, s.Scrollbar().offset)
+		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: s.pages.first, Y: SizeCellCountInt(c - 1)}})
+		expectEqual(t, c-1, s.Scrollbar().Offset)
 		pl5LForcePrune(s)
 		pl5GrowNode(t, s)
 		expect(t, s.viewport.Tag == PageListViewportTop, "s.viewport == .top")
@@ -964,14 +964,14 @@ func TestPl5_term51_grow_pruning_updates_a_cached_pin_viewport_offset(t *testing
 		defer s.Deinit()
 		c := uint(s.pages.first.data.capacity.rows)
 		second := s.pages.first.next
-		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: second, y: 0}})
-		expectEqual(t, c, s.Scrollbar().offset)
+		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: second, Y: 0}})
+		expectEqual(t, c, s.Scrollbar().Offset)
 		pl5LForcePrune(s)
 		pl5GrowNode(t, s)
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 		expectEqual(t, Some[uint](0), s.viewport_pin_row_offset)
-		expectEqual(t, second, s.viewport_pin.node)
-		expectEqual(t, uint(0), s.Scrollbar().offset)
+		expectEqual(t, second, s.viewport_pin.Node)
+		expectEqual(t, uint(0), s.Scrollbar().Offset)
 	}()
 
 	// Further in: the offset is reduced.
@@ -980,13 +980,13 @@ func TestPl5_term51_grow_pruning_updates_a_cached_pin_viewport_offset(t *testing
 		defer s.Deinit()
 		c := uint(s.pages.first.data.capacity.rows)
 		second := s.pages.first.next
-		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: second, y: 50}})
-		expectEqual(t, c+50, s.Scrollbar().offset)
+		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: second, Y: 50}})
+		expectEqual(t, c+50, s.Scrollbar().Offset)
 		pl5LForcePrune(s)
 		pl5GrowNode(t, s)
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 		expectEqual(t, Some[uint](50), s.viewport_pin_row_offset)
-		expectEqual(t, uint(50), s.Scrollbar().offset)
+		expectEqual(t, uint(50), s.Scrollbar().Offset)
 	}()
 }
 
@@ -1001,15 +1001,15 @@ func TestPl5_term51_grow_pruning_a_pin_viewport_without_a_cached_offset(t *testi
 		defer s.Deinit()
 		c := uint(s.pages.first.data.capacity.rows)
 		second := s.pages.first.next
-		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: s.pages.first, y: SizeCellCountInt(c - 1)}})
+		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: s.pages.first, Y: SizeCellCountInt(c - 1)}})
 		expectEqual(t, None[uint](), s.viewport_pin_row_offset)
 		pl5LForcePrune(s)
 		pl5GrowNode(t, s)
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-		expectEqual(t, second, s.viewport_pin.node)
-		expectEqual(t, SizeCellCountInt(0), s.viewport_pin.y)
-		expect(t, !s.viewport_pin.garbage, "!s.viewport_pin.garbage")
-		expectEqual(t, uint(0), s.Scrollbar().offset)
+		expectEqual(t, second, s.viewport_pin.Node)
+		expectEqual(t, SizeCellCountInt(0), s.viewport_pin.Y)
+		expect(t, !s.viewport_pin.Garbage, "!s.viewport_pin.garbage")
+		expectEqual(t, uint(0), s.Scrollbar().Offset)
 	}()
 
 	// Pin on the surviving page and no cache.
@@ -1017,13 +1017,13 @@ func TestPl5_term51_grow_pruning_a_pin_viewport_without_a_cached_offset(t *testi
 		s := pl5LTwoFull(t)
 		defer s.Deinit()
 		second := s.pages.first.next
-		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: second, y: 70}})
+		s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: second, Y: 70}})
 		expectEqual(t, None[uint](), s.viewport_pin_row_offset)
 		pl5LForcePrune(s)
 		pl5GrowNode(t, s)
 		expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
 		expectEqual(t, None[uint](), s.viewport_pin_row_offset)
-		expectEqual(t, uint(70), s.Scrollbar().offset)
+		expectEqual(t, uint(70), s.Scrollbar().Offset)
 	}()
 }
 
@@ -1036,7 +1036,7 @@ func TestPl5_term51_grow_pruning_counts_the_rows_of_the_pruned_page_not_its_capa
 	first := s.pages.first
 
 	// Make the first page a short one: 100 rows.
-	zigTry(t, s.Split(PageListPin{node: first, y: 100}))
+	zigTry(t, s.Split(PageListPin{Node: first, Y: 100}))
 	expectEqual(t, uint(3), s.TotalPages())
 	expectEqual(t, 2*c, s.total_rows)
 
@@ -1060,7 +1060,7 @@ func TestPl5_term51_grow_a_non_standard_first_page_is_destroyed_and_a_new_page_a
 	expect(t, first_len > pageListStdSize(), "first_len > std_size")
 	expectEqual(t, first, s.pages.first)
 
-	tracked := pl5Track(t, s, PageListPin{node: first, x: 6, y: 20})
+	tracked := pl5Track(t, s, PageListPin{Node: first, X: 6, Y: 20})
 	serial := s.page_serial
 	serial_min := s.page_serial_min
 	page_size := s.page_size
@@ -1083,10 +1083,10 @@ func TestPl5_term51_grow_a_non_standard_first_page_is_destroyed_and_a_new_page_a
 	expectEqual(t, serial_min, s.page_serial_min)
 
 	// Pins on the destroyed page moved to the new top left.
-	expectEqual(t, second, tracked.node)
-	expectEqual(t, SizeCellCountInt(0), tracked.x)
-	expectEqual(t, SizeCellCountInt(0), tracked.y)
-	expect(t, tracked.garbage, "tracked.garbage")
+	expectEqual(t, second, tracked.Node)
+	expectEqual(t, SizeCellCountInt(0), tracked.X)
+	expectEqual(t, SizeCellCountInt(0), tracked.Y)
+	expect(t, tracked.Garbage, "tracked.garbage")
 }
 
 // Zig: test "term51: grow: a non-standard first page is kept when pruning would drop the active area"
@@ -1266,13 +1266,13 @@ func TestPl5_term51_increaseCapacity_tracked_pins_and_viewport_follow_the_page(t
 	second := first.next
 	third := s.pages.last
 
-	on_second_a := pl5Track(t, s, PageListPin{node: second, x: 5, y: 10})
-	on_second_b := pl5Track(t, s, PageListPin{node: second, x: 79, y: SizeCellCountInt(c - 1)})
-	on_first := pl5Track(t, s, PageListPin{node: first, x: 2, y: 3})
-	on_third := pl5Track(t, s, PageListPin{node: third, x: 1, y: 0})
-	on_second_b.garbage = true
-	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{node: second, y: 40}})
-	expectEqual(t, c+40, s.Scrollbar().offset)
+	on_second_a := pl5Track(t, s, PageListPin{Node: second, X: 5, Y: 10})
+	on_second_b := pl5Track(t, s, PageListPin{Node: second, X: 79, Y: SizeCellCountInt(c - 1)})
+	on_first := pl5Track(t, s, PageListPin{Node: first, X: 2, Y: 3})
+	on_third := pl5Track(t, s, PageListPin{Node: third, X: 1, Y: 0})
+	on_second_b.Garbage = true
+	s.Scroll(PageListScroll{Tag: PageListScrollPin, Pin: PageListPin{Node: second, Y: 40}})
+	expectEqual(t, c+40, s.Scrollbar().Offset)
 
 	new := pl5Increase(t, s, second, Some(PageListIncreaseCapacityStyles))
 
@@ -1286,32 +1286,32 @@ func TestPl5_term51_increaseCapacity_tracked_pins_and_viewport_follow_the_page(t
 	expectEqual(t, uint(3), s.TotalPages())
 
 	// Pins.
-	expectEqual(t, new, on_second_a.node)
-	expectEqual(t, SizeCellCountInt(5), on_second_a.x)
-	expectEqual(t, SizeCellCountInt(10), on_second_a.y)
-	expectEqual(t, new, on_second_b.node)
-	expectEqual(t, SizeCellCountInt(79), on_second_b.x)
-	expectEqual(t, SizeCellCountInt(c-1), on_second_b.y)
-	expect(t, on_second_b.garbage, "on_second_b.garbage")
-	expectEqual(t, first, on_first.node)
-	expectEqual(t, third, on_third.node)
+	expectEqual(t, new, on_second_a.Node)
+	expectEqual(t, SizeCellCountInt(5), on_second_a.X)
+	expectEqual(t, SizeCellCountInt(10), on_second_a.Y)
+	expectEqual(t, new, on_second_b.Node)
+	expectEqual(t, SizeCellCountInt(79), on_second_b.X)
+	expectEqual(t, SizeCellCountInt(c-1), on_second_b.Y)
+	expect(t, on_second_b.Garbage, "on_second_b.garbage")
+	expectEqual(t, first, on_first.Node)
+	expectEqual(t, third, on_third.Node)
 
 	// Viewport pin and its cached offset.
 	expect(t, s.viewport.Tag == PageListViewportPin, "s.viewport == .pin")
-	expectEqual(t, new, s.viewport_pin.node)
-	expectEqual(t, SizeCellCountInt(40), s.viewport_pin.y)
+	expectEqual(t, new, s.viewport_pin.Node)
+	expectEqual(t, SizeCellCountInt(40), s.viewport_pin.Y)
 	expectEqual(t, Some(c+40), s.viewport_pin_row_offset)
-	expectEqual(t, c+40, s.Scrollbar().offset)
+	expectEqual(t, c+40, s.Scrollbar().Offset)
 
 	// First and last pages too.
 	new_first := pl5Increase(t, s, first, None[PageListIncreaseCapacity]())
 	expectEqual(t, new_first, s.pages.first)
-	expectEqual(t, new_first, on_first.node)
+	expectEqual(t, new_first, on_first.Node)
 	expectEqual(t, new, new_first.next)
 	expect(t, new_first.prev == nil, "new_first.prev == null")
 	new_third := pl5Increase(t, s, third, None[PageListIncreaseCapacity]())
 	expectEqual(t, new_third, s.pages.last)
-	expectEqual(t, new_third, on_third.node)
+	expectEqual(t, new_third, on_third.Node)
 	expectEqual(t, new, new_third.prev)
 	expect(t, new_third.next == nil, "new_third.next == null")
 }
@@ -1321,7 +1321,7 @@ func TestPl5_term51_increaseCapacity_keeps_the_column_count_a_page_was_shrunk_to
 	testStdCapacity(t)
 	s := pl5Init(t, 20, 3, Some[uint64](0))
 	defer s.Deinit()
-	zigTry(t, s.Resize(PageListResize{cols: Some[SizeCellCountInt](10), reflow: false}))
+	zigTry(t, s.Resize(PageListResize{Cols: Some[SizeCellCountInt](10), Reflow: false}))
 	expectEqual(t, SizeCellCountInt(10), s.pages.first.data.size.cols)
 	expect(t, s.pages.first.data.capacity.cols >= 20, "s.pages.first.?.data.capacity.cols >= 20")
 
@@ -1769,9 +1769,9 @@ func pl5MnodeAt(s *PageList, idx uint) *PageListNode {
 
 func pl5MpinPos(s *PageList, p *PageListPin) pl5MPos {
 	return pl5MPos{
-		page: pl5MpageIndex(s, p.node),
-		y:    uint(p.y),
-		x:    uint(p.x),
+		page: pl5MpageIndex(s, p.Node),
+		y:    uint(p.Y),
+		x:    uint(p.X),
 	}
 }
 
@@ -1797,8 +1797,8 @@ func pl5MlocOf(sizes []uint, g uint) (page uint, y uint) {
 func pl5MglobalOf(s *PageList, p *PageListPin) uint {
 	g := uint(0)
 	for it := s.pages.first; it != nil; it = it.next {
-		if it == p.node {
-			return g + uint(p.y)
+		if it == p.Node {
+			return g + uint(p.Y)
 		}
 		g += uint(it.data.size.rows)
 	}
@@ -1958,7 +1958,7 @@ func pl5MeraseRowCheck(t *testing.T, sizes []uint, g uint, vq Optional[uint], ca
 			q2 = q - 1
 		}
 		pl5MexpectPinGlobal(t, s, sizes, pins[q], q2, 3)
-		expect(t, !pins[q].garbage, "!pins[q].garbage")
+		expect(t, !pins[q].Garbage, "!pins[q].garbage")
 	}
 
 	if vq.Valid {
@@ -2258,7 +2258,7 @@ func TestPl5_term51_eraseRow_row_metadata_moves_with_the_row_and_managed_memory_
 	// Row 0 (to be erased) has a style and a grapheme.
 	{
 		rac := p0.GetRowAndCell(0, 0)
-		id, err := p0.styles.Add(Style{flags: styleFlags{bold: true}})
+		id, err := p0.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 		zigTry(t, err)
 		rac.row.styled = true
 		rac.cell.style_id = id
@@ -2305,10 +2305,10 @@ func pl5MfillStyles(t *testing.T, p0 *Page) uint {
 	t.Helper()
 	n := uint(0)
 	for ; ; n++ {
-		id, err := p0.styles.Add(Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
-			r: uint8(n & 0xFF),
-			g: uint8(n >> 8),
-			b: 7,
+		id, err := p0.styles.Add(Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{
+			R: uint8(n & 0xFF),
+			G: uint8(n >> 8),
+			B: 7,
 		}}})
 		if err != nil {
 			break
@@ -2336,7 +2336,7 @@ func TestPl5_term51_eraseRow_clone_failure_across_a_page_boundary_returns_the_pa
 
 	// Page 1 row 0 uses a new style.
 	{
-		id, err := p1.styles.Add(Style{flags: styleFlags{bold: true}})
+		id, err := p1.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 		zigTry(t, err)
 		rac := p1.GetRowAndCell(0, 0)
 		rac.row.styled = true
@@ -2539,7 +2539,7 @@ func TestPl5_term51_eraseRowBounded_pin_on_page_row_0_of_the_erased_row_stays_an
 	pl5MexpectPinAt(t, s, prev_page, 0, 3, 2)
 
 	// Branch 2 (limit reaches the end of the page and beyond).
-	on_row.x = 5
+	on_row.X = 5
 	zigTry(t, s.EraseRowBounded(pl5Screen(0, 4), 100))
 	pl5MexpectPinAt(t, s, on_row, 1, 0, 0)
 	pl5MexpectPinAt(t, s, prev_page, 0, 3, 2)
@@ -2699,7 +2699,7 @@ func TestPl5_term51_eraseRowBounded_managed_memory_of_the_vacated_row_is_release
 	p0 := &s.pages.first.data
 
 	rac := p0.GetRowAndCell(0, 0)
-	id, err := p0.styles.Add(Style{flags: styleFlags{bold: true}})
+	id, err := p0.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 	zigTry(t, err)
 	rac.row.styled = true
 	rac.cell.style_id = id
@@ -2724,7 +2724,7 @@ func TestPl5_term51_eraseRowBounded_clone_failure_across_a_page_boundary_returns
 
 	pl5MfillStyles(t, p0)
 	{
-		id, err := p1.styles.Add(Style{flags: styleFlags{bold: true}})
+		id, err := p1.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 		zigTry(t, err)
 		rac := p1.GetRowAndCell(0, 0)
 		rac.row.styled = true
@@ -2830,7 +2830,7 @@ func pl5MeraseRowsCheck(
 			}
 			pl5MexpectPinAt(t, s, pins[q], dest, 0, 0)
 		}
-		expect(t, !pins[q].garbage, "!pins[q].garbage")
+		expect(t, !pins[q].Garbage, "!pins[q].garbage")
 	}
 	// The viewport pin started at (page 0, row 0, x 0): it is either
 	// untouched or, when on an erased row, reset to (0, 0) of the new page.
@@ -3329,7 +3329,7 @@ func TestPl5_term51_eraseRows_styles_and_graphemes_of_erased_rows_are_released(t
 	defer s.Deinit()
 	p0 := &s.pages.first.data
 
-	id, err := p0.styles.Add(Style{flags: styleFlags{bold: true}})
+	id, err := p0.styles.Add(Style{Flags: StyleFlags{Bold: true}})
 	zigTry(t, err)
 	rac := p0.GetRowAndCell(0, 1)
 	rac.row.styled = true
@@ -3370,8 +3370,8 @@ func TestPl5_term51_erasePage_middle_page(t *testing.T) {
 	pl5MexpectPinAt(t, s, mid_a, 0, 0, 0)
 	pl5MexpectPinAt(t, s, mid_b, 0, 0, 0)
 	pl5MexpectPinAt(t, s, c, 1, 2, 5)
-	expect(t, !mid_a.garbage, "!mid_a.garbage")
-	expect(t, !mid_b.garbage, "!mid_b.garbage")
+	expect(t, !mid_a.Garbage, "!mid_a.garbage")
+	expect(t, !mid_b.Garbage, "!mid_b.garbage")
 	expect(t, s.pages.first.next == s.pages.last, "s.pages.first.?.next == s.pages.last")
 }
 
@@ -3467,10 +3467,10 @@ func pl5MexpectPinIs(t *testing.T, s *PageList, sizes []uint, got Optional[PageL
 	}
 	p := got.Value
 	page, y := pl5MlocOf(sizes, g)
-	expectEqual(t, pl5MnodeAt(s, page), p.node)
-	expectEqual(t, y, uint(p.y))
-	expectEqual(t, x, uint(p.x))
-	expect(t, !p.garbage, "!p.garbage")
+	expectEqual(t, pl5MnodeAt(s, page), p.Node)
+	expectEqual(t, y, uint(p.Y))
+	expectEqual(t, x, uint(p.X))
+	expect(t, !p.Garbage, "!p.garbage")
 }
 
 // Zig: test "term51: pin: screen tag maps every row and rejects out-of-range points"
@@ -3586,9 +3586,9 @@ func TestPl5_term51_pin_single_row_and_single_column_lists(t *testing.T) {
 	s := pl5Init(t, 1, 1, None[uint64]())
 	defer s.Deinit()
 	p := pl5PinOf(t, s, pl5Active(0, 0))
-	expectEqual(t, s.pages.first, p.node)
-	expectEqual(t, uint(0), uint(p.y))
-	expectEqual(t, uint(0), uint(p.x))
+	expectEqual(t, s.pages.first, p.Node)
+	expectEqual(t, uint(0), uint(p.Y))
+	expectEqual(t, uint(0), uint(p.X))
 	expect(t, !s.Pin(pl5Active(1, 0)).Valid, "s.pin(.{ .active = .{ .x = 1 } }) == null")
 	expect(t, !s.Pin(pl5Active(0, 1)).Valid, "s.pin(.{ .active = .{ .y = 1 } }) == null")
 	expect(t, !s.Pin(pl5Screen(0, 1)).Valid, "s.pin(.{ .screen = .{ .y = 1 } }) == null")
@@ -3633,14 +3633,14 @@ func TestPl5_term51_trackPin_creates_an_independent_pin_with_the_same_location(t
 	tr := pl5Track(t, s, orig)
 	expect(t, tr != &orig, "t != &orig")
 	expect(t, tr != s.viewport_pin, "t != s.viewport_pin")
-	expectEqual(t, orig.node, tr.node)
-	expectEqual(t, orig.y, tr.y)
-	expectEqual(t, orig.x, tr.x)
-	expect(t, !tr.garbage, "!t.garbage")
+	expectEqual(t, orig.Node, tr.Node)
+	expectEqual(t, orig.Y, tr.Y)
+	expectEqual(t, orig.X, tr.X)
+	expect(t, !tr.Garbage, "!t.garbage")
 
 	// Changing the original does not change the tracked pin.
-	orig.x = 0
-	orig.y = 0
+	orig.X = 0
+	orig.Y = 0
 	pl5MexpectPinAt(t, s, tr, 1, 1, 3)
 
 	// The tracked pin is in the list, after the viewport pin.
@@ -3667,9 +3667,9 @@ func TestPl5_term51_trackPin_keeps_a_pin_s_garbage_flag(t *testing.T) {
 	s := pl5Init(t, 6, 5, None[uint64]())
 	defer s.Deinit()
 	p := pl5PinOf(t, s, pl5Active(0, 0))
-	p.garbage = true
+	p.Garbage = true
 	tr := pl5Track(t, s, p)
-	expect(t, tr.garbage, "t.garbage")
+	expect(t, tr.Garbage, "t.garbage")
 }
 
 // Zig: test "term51: untrackPin: removes the pin and keeps the others (swap remove order)"
@@ -3756,8 +3756,8 @@ func TestPl5_term51_trackedPins_returns_the_live_keys_in_insertion_order(t *test
 	expect(t, keys[1] == a, "keys[1] == a")
 	expect(t, keys[2] == b, "keys[2] == b")
 	// The slice aliases the pins themselves (writes show through).
-	a.x = 4
-	expectEqual(t, uint(4), uint(keys[1].x))
+	a.X = 4
+	expectEqual(t, uint(4), uint(keys[1].X))
 }
 
 // Zig: test "term51: pinIsValid: bounds against the page's size, not its capacity"
@@ -3770,31 +3770,31 @@ func TestPl5_term51_pinIsValid_bounds_against_the_page_s_size_not_its_capacity(t
 	n2 := pl5MnodeAt(s, 2)
 
 	// valid corners
-	expect(t, s.PinIsValid(PageListPin{node: n0}), "s.pinIsValid(.{ .node = n0 })")
-	expect(t, s.PinIsValid(PageListPin{node: n0, y: 3, x: 5}), "s.pinIsValid(.{ .node = n0, .y = 3, .x = 5 })")
-	expect(t, s.PinIsValid(PageListPin{node: n1, y: 2, x: 5}), "s.pinIsValid(.{ .node = n1, .y = 2, .x = 5 })")
-	expect(t, s.PinIsValid(PageListPin{node: n2, y: 4, x: 5}), "s.pinIsValid(.{ .node = n2, .y = 4, .x = 5 })")
+	expect(t, s.PinIsValid(PageListPin{Node: n0}), "s.pinIsValid(.{ .node = n0 })")
+	expect(t, s.PinIsValid(PageListPin{Node: n0, Y: 3, X: 5}), "s.pinIsValid(.{ .node = n0, .y = 3, .x = 5 })")
+	expect(t, s.PinIsValid(PageListPin{Node: n1, Y: 2, X: 5}), "s.pinIsValid(.{ .node = n1, .y = 2, .x = 5 })")
+	expect(t, s.PinIsValid(PageListPin{Node: n2, Y: 4, X: 5}), "s.pinIsValid(.{ .node = n2, .y = 4, .x = 5 })")
 	// one past the rows / columns of each page
-	expect(t, !s.PinIsValid(PageListPin{node: n0, y: 4}), "!s.pinIsValid(.{ .node = n0, .y = 4 })")
-	expect(t, !s.PinIsValid(PageListPin{node: n1, y: 3}), "!s.pinIsValid(.{ .node = n1, .y = 3 })")
-	expect(t, !s.PinIsValid(PageListPin{node: n2, y: 5}), "!s.pinIsValid(.{ .node = n2, .y = 5 })")
-	expect(t, !s.PinIsValid(PageListPin{node: n0, x: 6}), "!s.pinIsValid(.{ .node = n0, .x = 6 })")
-	expect(t, !s.PinIsValid(PageListPin{node: n2, y: 4, x: 6}), "!s.pinIsValid(.{ .node = n2, .y = 4, .x = 6 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n0, Y: 4}), "!s.pinIsValid(.{ .node = n0, .y = 4 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n1, Y: 3}), "!s.pinIsValid(.{ .node = n1, .y = 3 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n2, Y: 5}), "!s.pinIsValid(.{ .node = n2, .y = 5 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n0, X: 6}), "!s.pinIsValid(.{ .node = n0, .x = 6 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n2, Y: 4, X: 6}), "!s.pinIsValid(.{ .node = n2, .y = 4, .x = 6 })")
 	// far out of range
-	expect(t, !s.PinIsValid(PageListPin{node: n0, y: 1000}), "!s.pinIsValid(.{ .node = n0, .y = 1000 })")
-	expect(t, !s.PinIsValid(PageListPin{node: n0, x: 1000}), "!s.pinIsValid(.{ .node = n0, .x = 1000 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n0, Y: 1000}), "!s.pinIsValid(.{ .node = n0, .y = 1000 })")
+	expect(t, !s.PinIsValid(PageListPin{Node: n0, X: 1000}), "!s.pinIsValid(.{ .node = n0, .x = 1000 })")
 	// The page capacity is larger than its size: row 4 of page 0 exists in
 	// memory but is not valid.
 	expect(t, n0.data.capacity.rows > 4, "n0.data.capacity.rows > 4")
 
 	// garbage does not matter
-	expect(t, s.PinIsValid(PageListPin{node: n1, garbage: true}), "s.pinIsValid(.{ .node = n1, .garbage = true })")
+	expect(t, s.PinIsValid(PageListPin{Node: n1, Garbage: true}), "s.pinIsValid(.{ .node = n1, .garbage = true })")
 
 	// A node of another list is not valid for this list.
 	other := pl5Init(t, 6, 5, None[uint64]())
 	defer other.Deinit()
-	expect(t, !s.PinIsValid(PageListPin{node: other.pages.first}), "!s.pinIsValid(.{ .node = other.pages.first.? })")
-	expect(t, other.PinIsValid(PageListPin{node: other.pages.first}), "other.pinIsValid(.{ .node = other.pages.first.? })")
+	expect(t, !s.PinIsValid(PageListPin{Node: other.pages.first}), "!s.pinIsValid(.{ .node = other.pages.first.? })")
+	expect(t, other.PinIsValid(PageListPin{Node: other.pages.first}), "other.pinIsValid(.{ .node = other.pages.first.? })")
 }
 
 // Zig: test "term51: pinIsActive: boundary of the active area"
@@ -3807,13 +3807,13 @@ func TestPl5_term51_pinIsActive_boundary_of_the_active_area(t *testing.T) {
 		s := pl5Mbuild(t, 6, 5, sizes)
 		defer s.Deinit()
 		for y := 0; y < 4; y++ {
-			expect(t, !s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 0), y: SizeCellCountInt(y)}), "!s.pinIsActive(.{ .node = nodeAt(0), .y = y })")
+			expect(t, !s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 0), Y: SizeCellCountInt(y)}), "!s.pinIsActive(.{ .node = nodeAt(0), .y = y })")
 		}
 		for y := 0; y < 3; y++ {
-			expect(t, !s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 1), y: SizeCellCountInt(y)}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = y })")
+			expect(t, !s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 1), Y: SizeCellCountInt(y)}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = y })")
 		}
 		for y := 0; y < 5; y++ {
-			expect(t, s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 2), y: SizeCellCountInt(y)}), "s.pinIsActive(.{ .node = nodeAt(2), .y = y })")
+			expect(t, s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 2), Y: SizeCellCountInt(y)}), "s.pinIsActive(.{ .node = nodeAt(2), .y = y })")
 		}
 	}()
 	// 6 active rows: active starts at row 2 of page 1 (straddles pages).
@@ -3821,33 +3821,33 @@ func TestPl5_term51_pinIsActive_boundary_of_the_active_area(t *testing.T) {
 		s := pl5Mbuild(t, 6, 6, sizes)
 		defer s.Deinit()
 		for y := 0; y < 4; y++ {
-			expect(t, !s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 0), y: SizeCellCountInt(y)}), "!s.pinIsActive(.{ .node = nodeAt(0), .y = y })")
+			expect(t, !s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 0), Y: SizeCellCountInt(y)}), "!s.pinIsActive(.{ .node = nodeAt(0), .y = y })")
 		}
-		expect(t, !s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 1), y: 0}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = 0 })")
-		expect(t, !s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 1), y: 1}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = 1 })")
-		expect(t, s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 1), y: 2}), "s.pinIsActive(.{ .node = nodeAt(1), .y = 2 })")
+		expect(t, !s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 1), Y: 0}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = 0 })")
+		expect(t, !s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 1), Y: 1}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = 1 })")
+		expect(t, s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 1), Y: 2}), "s.pinIsActive(.{ .node = nodeAt(1), .y = 2 })")
 		for y := 0; y < 5; y++ {
-			expect(t, s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 2), y: SizeCellCountInt(y)}), "s.pinIsActive(.{ .node = nodeAt(2), .y = y })")
+			expect(t, s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 2), Y: SizeCellCountInt(y)}), "s.pinIsActive(.{ .node = nodeAt(2), .y = y })")
 		}
 		// x is ignored
-		expect(t, s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 1), y: 2, x: 5}), "s.pinIsActive(.{ .node = nodeAt(1), .y = 2, .x = 5 })")
-		expect(t, !s.pinIsActive(PageListPin{node: pl5MnodeAt(s, 1), y: 1, x: 5}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = 1, .x = 5 })")
+		expect(t, s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 1), Y: 2, X: 5}), "s.pinIsActive(.{ .node = nodeAt(1), .y = 2, .x = 5 })")
+		expect(t, !s.pinIsActive(PageListPin{Node: pl5MnodeAt(s, 1), Y: 1, X: 5}), "!s.pinIsActive(.{ .node = nodeAt(1), .y = 1, .x = 5 })")
 	}()
 	// Active area inside a single page with history above it.
 	func() {
 		s := pl5Mbuild(t, 6, 4, []uint{9})
 		defer s.Deinit()
-		expect(t, !s.pinIsActive(PageListPin{node: s.pages.first, y: 4}), "!s.pinIsActive(.{ .node = s.pages.first.?, .y = 4 })")
-		expect(t, s.pinIsActive(PageListPin{node: s.pages.first, y: 5}), "s.pinIsActive(.{ .node = s.pages.first.?, .y = 5 })")
-		expect(t, s.pinIsActive(PageListPin{node: s.pages.first, y: 8}), "s.pinIsActive(.{ .node = s.pages.first.?, .y = 8 })")
-		expect(t, !s.pinIsActive(PageListPin{node: s.pages.first, y: 0}), "!s.pinIsActive(.{ .node = s.pages.first.?, .y = 0 })")
+		expect(t, !s.pinIsActive(PageListPin{Node: s.pages.first, Y: 4}), "!s.pinIsActive(.{ .node = s.pages.first.?, .y = 4 })")
+		expect(t, s.pinIsActive(PageListPin{Node: s.pages.first, Y: 5}), "s.pinIsActive(.{ .node = s.pages.first.?, .y = 5 })")
+		expect(t, s.pinIsActive(PageListPin{Node: s.pages.first, Y: 8}), "s.pinIsActive(.{ .node = s.pages.first.?, .y = 8 })")
+		expect(t, !s.pinIsActive(PageListPin{Node: s.pages.first, Y: 0}), "!s.pinIsActive(.{ .node = s.pages.first.?, .y = 0 })")
 	}()
 	// Whole list active.
 	func() {
 		s := pl5Mbuild(t, 6, 9, []uint{4, 5})
 		defer s.Deinit()
-		expect(t, s.pinIsActive(PageListPin{node: s.pages.first}), "s.pinIsActive(.{ .node = s.pages.first.? })")
-		expect(t, s.pinIsActive(PageListPin{node: s.pages.last}), "s.pinIsActive(.{ .node = s.pages.last.? })")
+		expect(t, s.pinIsActive(PageListPin{Node: s.pages.first}), "s.pinIsActive(.{ .node = s.pages.first.? })")
+		expect(t, s.pinIsActive(PageListPin{Node: s.pages.last}), "s.pinIsActive(.{ .node = s.pages.last.? })")
 	}()
 	// A node of another list is not active.
 	func() {
@@ -3855,7 +3855,7 @@ func TestPl5_term51_pinIsActive_boundary_of_the_active_area(t *testing.T) {
 		defer s.Deinit()
 		other := pl5Init(t, 6, 5, None[uint64]())
 		defer other.Deinit()
-		expect(t, !s.pinIsActive(PageListPin{node: other.pages.first}), "!s.pinIsActive(.{ .node = other.pages.first.? })")
+		expect(t, !s.pinIsActive(PageListPin{Node: other.pages.first}), "!s.pinIsActive(.{ .node = other.pages.first.? })")
 	}()
 }
 
@@ -3868,24 +3868,24 @@ func TestPl5_term51_pinIsTop_only_row_0_of_the_first_page(t *testing.T) {
 	n1 := pl5MnodeAt(s, 1)
 	n2 := pl5MnodeAt(s, 2)
 
-	expect(t, s.pinIsTop(PageListPin{node: n0}), "s.pinIsTop(.{ .node = n0 })")
+	expect(t, s.pinIsTop(PageListPin{Node: n0}), "s.pinIsTop(.{ .node = n0 })")
 	// x is ignored
-	expect(t, s.pinIsTop(PageListPin{node: n0, x: 5}), "s.pinIsTop(.{ .node = n0, .x = 5 })")
-	expect(t, !s.pinIsTop(PageListPin{node: n0, y: 1}), "!s.pinIsTop(.{ .node = n0, .y = 1 })")
-	expect(t, !s.pinIsTop(PageListPin{node: n0, y: 3}), "!s.pinIsTop(.{ .node = n0, .y = 3 })")
-	expect(t, !s.pinIsTop(PageListPin{node: n1}), "!s.pinIsTop(.{ .node = n1 })")
-	expect(t, !s.pinIsTop(PageListPin{node: n2}), "!s.pinIsTop(.{ .node = n2 })")
-	expect(t, !s.pinIsTop(PageListPin{node: n1, y: 1}), "!s.pinIsTop(.{ .node = n1, .y = 1 })")
+	expect(t, s.pinIsTop(PageListPin{Node: n0, X: 5}), "s.pinIsTop(.{ .node = n0, .x = 5 })")
+	expect(t, !s.pinIsTop(PageListPin{Node: n0, Y: 1}), "!s.pinIsTop(.{ .node = n0, .y = 1 })")
+	expect(t, !s.pinIsTop(PageListPin{Node: n0, Y: 3}), "!s.pinIsTop(.{ .node = n0, .y = 3 })")
+	expect(t, !s.pinIsTop(PageListPin{Node: n1}), "!s.pinIsTop(.{ .node = n1 })")
+	expect(t, !s.pinIsTop(PageListPin{Node: n2}), "!s.pinIsTop(.{ .node = n2 })")
+	expect(t, !s.pinIsTop(PageListPin{Node: n1, Y: 1}), "!s.pinIsTop(.{ .node = n1, .y = 1 })")
 
 	other := pl5Init(t, 6, 5, None[uint64]())
 	defer other.Deinit()
-	expect(t, !s.pinIsTop(PageListPin{node: other.pages.first}), "!s.pinIsTop(.{ .node = other.pages.first.? })")
+	expect(t, !s.pinIsTop(PageListPin{Node: other.pages.first}), "!s.pinIsTop(.{ .node = other.pages.first.? })")
 
 	// A single page list.
 	one := pl5Init(t, 6, 5, None[uint64]())
 	defer one.Deinit()
-	expect(t, one.pinIsTop(PageListPin{node: one.pages.first}), "one.pinIsTop(.{ .node = one.pages.first.? })")
-	expect(t, !one.pinIsTop(PageListPin{node: one.pages.first, y: 4}), "!one.pinIsTop(.{ .node = one.pages.first.?, .y = 4 })")
+	expect(t, one.pinIsTop(PageListPin{Node: one.pages.first}), "one.pinIsTop(.{ .node = one.pages.first.? })")
+	expect(t, !one.pinIsTop(PageListPin{Node: one.pages.first, Y: 4}), "!one.pinIsTop(.{ .node = one.pages.first.?, .y = 4 })")
 }
 
 // Zig: test "term51: pointFromPin: every tag over every row of a multi-page list"
@@ -3898,7 +3898,7 @@ func TestPl5_term51_pointFromPin_every_tag_over_every_row_of_a_multi_page_list(t
 	defer s.Deinit()
 	for g := uint(0); g < 12; g++ {
 		page, y := pl5MlocOf(sizes, g)
-		p := PageListPin{node: pl5MnodeAt(s, page), y: SizeCellCountInt(y), x: 2}
+		p := PageListPin{Node: pl5MnodeAt(s, page), Y: SizeCellCountInt(y), X: 2}
 
 		expectEqualPoint(t, pl5Screen(2, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 		// history counts from the first row and has no upper bound
@@ -3916,7 +3916,7 @@ func TestPl5_term51_pointFromPin_every_tag_over_every_row_of_a_multi_page_list(t
 	s.viewport = PageListViewport{Tag: PageListViewportTop}
 	for g := uint(0); g < 12; g++ {
 		page, y := pl5MlocOf(sizes, g)
-		p := PageListPin{node: pl5MnodeAt(s, page), y: SizeCellCountInt(y), x: 0}
+		p := PageListPin{Node: pl5MnodeAt(s, page), Y: SizeCellCountInt(y), X: 0}
 		expectEqualPoint(t, pl5Viewport(0, uint32(g)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
 	}
 
@@ -3925,7 +3925,7 @@ func TestPl5_term51_pointFromPin_every_tag_over_every_row_of_a_multi_page_list(t
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
 	for g := uint(0); g < 12; g++ {
 		page, y := pl5MlocOf(sizes, g)
-		p := PageListPin{node: pl5MnodeAt(s, page), y: SizeCellCountInt(y), x: 1}
+		p := PageListPin{Node: pl5MnodeAt(s, page), Y: SizeCellCountInt(y), X: 1}
 		if g >= 5 {
 			expectEqualPoint(t, pl5Viewport(1, uint32(g-5)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
 		} else {
@@ -3945,15 +3945,15 @@ func TestPl5_term51_pointFromPin_active_area_straddling_two_pages(t *testing.T) 
 	n1 := pl5MnodeAt(s, 1)
 	n2 := pl5MnodeAt(s, 2)
 
-	expect(t, !s.PointFromPin(PointTagActive, PageListPin{node: n0}).Valid, "s.pointFromPin(.active, .{ .node = n0 }) == null")
-	expect(t, !s.PointFromPin(PointTagActive, PageListPin{node: n0, y: 3}).Valid, "s.pointFromPin(.active, .{ .node = n0, .y = 3 }) == null")
-	expect(t, !s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 0}).Valid, "s.pointFromPin(.active, .{ .node = n1, .y = 0 }) == null")
+	expect(t, !s.PointFromPin(PointTagActive, PageListPin{Node: n0}).Valid, "s.pointFromPin(.active, .{ .node = n0 }) == null")
+	expect(t, !s.PointFromPin(PointTagActive, PageListPin{Node: n0, Y: 3}).Valid, "s.pointFromPin(.active, .{ .node = n0, .y = 3 }) == null")
+	expect(t, !s.PointFromPin(PointTagActive, PageListPin{Node: n1, Y: 0}).Valid, "s.pointFromPin(.active, .{ .node = n1, .y = 0 }) == null")
 	// tl.y > p.y is outside; tl.y == p.y is the first row
-	expect(t, !s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 1}).Valid, "s.pointFromPin(.active, .{ .node = n1, .y = 1 }) == null")
-	expectEqualPoint(t, pl5Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n1, y: 2, x: 3})))
+	expect(t, !s.PointFromPin(PointTagActive, PageListPin{Node: n1, Y: 1}).Valid, "s.pointFromPin(.active, .{ .node = n1, .y = 1 }) == null")
+	expectEqualPoint(t, pl5Active(3, 0), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{Node: n1, Y: 2, X: 3})))
 	// Later pages add the rows remaining in the first page of the area (1).
-	expectEqualPoint(t, pl5Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n2, y: 0})))
-	expectEqualPoint(t, pl5Active(5, 5), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{node: n2, y: 4, x: 5})))
+	expectEqualPoint(t, pl5Active(0, 1), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{Node: n2, Y: 0})))
+	expectEqualPoint(t, pl5Active(5, 5), zigUnwrap(t, s.PointFromPin(PointTagActive, PageListPin{Node: n2, Y: 4, X: 5})))
 }
 
 // Zig: test "term51: pointFromPin: pins are not bounds checked and foreign nodes are rejected"
@@ -3966,15 +3966,15 @@ func TestPl5_term51_pointFromPin_pins_are_not_bounds_checked_and_foreign_nodes_a
 	n1 := pl5MnodeAt(s, 1)
 
 	// y and x beyond the page are passed through (screen: page 1 starts at 4)
-	expectEqualPoint(t, pl5Screen(100, 13), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n1, y: 9, x: 100})))
-	expectEqualPoint(t, pl5Screen(0, 9), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n0, y: 9})))
+	expectEqualPoint(t, pl5Screen(100, 13), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{Node: n1, Y: 9, X: 100})))
+	expectEqualPoint(t, pl5Screen(0, 9), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{Node: n0, Y: 9})))
 	// garbage is ignored
-	expectEqualPoint(t, pl5Screen(0, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{node: n1, garbage: true})))
+	expectEqualPoint(t, pl5Screen(0, 4), zigUnwrap(t, s.PointFromPin(PointTagScreen, PageListPin{Node: n1, Garbage: true})))
 
 	// A node of another list is never found.
 	other := pl5Init(t, 6, 5, None[uint64]())
 	defer other.Deinit()
-	foreign := PageListPin{node: other.pages.first}
+	foreign := PageListPin{Node: other.pages.first}
 	expect(t, !s.PointFromPin(PointTagScreen, foreign).Valid, "s.pointFromPin(.screen, foreign) == null")
 	expect(t, !s.PointFromPin(PointTagHistory, foreign).Valid, "s.pointFromPin(.history, foreign) == null")
 	expect(t, !s.PointFromPin(PointTagActive, foreign).Valid, "s.pointFromPin(.active, foreign) == null")
@@ -3989,7 +3989,7 @@ func TestPl5_term51_pointFromPin_single_page_lists_and_history_without_scrollbac
 	defer s.Deinit()
 	n := s.pages.first
 	for y := uint(0); y < 5; y++ {
-		p := PageListPin{node: n, y: SizeCellCountInt(y), x: 5}
+		p := PageListPin{Node: n, Y: SizeCellCountInt(y), X: 5}
 		expectEqualPoint(t, pl5Active(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagActive, p)))
 		expectEqualPoint(t, pl5Screen(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagScreen, p)))
 		expectEqualPoint(t, pl5Viewport(5, uint32(y)), zigUnwrap(t, s.PointFromPin(PointTagViewport, p)))
@@ -4000,8 +4000,8 @@ func TestPl5_term51_pointFromPin_single_page_lists_and_history_without_scrollbac
 	s2 := pl5Mbuild(t, 6, 5, []uint{9})
 	defer s2.Deinit()
 	n2 := s2.pages.first
-	expect(t, !s2.PointFromPin(PointTagActive, PageListPin{node: n2, y: 3}).Valid, "s2.pointFromPin(.active, .{ .node = n2, .y = 3 }) == null")
-	expectEqualPoint(t, pl5Active(0, 0), zigUnwrap(t, s2.PointFromPin(PointTagActive, PageListPin{node: n2, y: 4})))
+	expect(t, !s2.PointFromPin(PointTagActive, PageListPin{Node: n2, Y: 3}).Valid, "s2.pointFromPin(.active, .{ .node = n2, .y = 3 }) == null")
+	expectEqualPoint(t, pl5Active(0, 0), zigUnwrap(t, s2.PointFromPin(PointTagActive, PageListPin{Node: n2, Y: 4})))
 }
 
 // Zig: test "term51: getCell: every row and column in every tag"
@@ -4016,43 +4016,43 @@ func TestPl5_term51_getCell_every_row_and_column_in_every_tag(t *testing.T) {
 		node := pl5MnodeAt(s, page)
 		for x := uint(0); x < 6; x++ {
 			c := zigUnwrap(t, s.GetCell(pl5Screen(SizeCellCountInt(x), uint32(g))))
-			expectEqual(t, node, c.node)
-			expectEqual(t, ly, uint(c.row_idx))
-			expectEqual(t, x, uint(c.col_idx))
+			expectEqual(t, node, c.Node)
+			expectEqual(t, ly, uint(c.RowIdx))
+			expectEqual(t, x, uint(c.ColIdx))
 			rac := node.data.GetRowAndCell(x, ly)
-			expect(t, c.row == rac.row, "c.row == rac.row")
-			expect(t, c.cell == rac.cell, "c.cell == rac.cell")
-			expectEqual(t, uint32(g+1), c.cell.Codepoint())
+			expect(t, c.Row == rac.row, "c.row == rac.row")
+			expect(t, c.Cell == rac.cell, "c.cell == rac.cell")
+			expectEqual(t, uint32(g+1), c.Cell.Codepoint())
 
 			// history addresses the same rows from the first row
 			h := zigUnwrap(t, s.GetCell(pl5History(SizeCellCountInt(x), uint32(g))))
-			expect(t, h.cell == c.cell, "h.cell == c.cell")
-			expect(t, h.row == c.row, "h.row == c.row")
+			expect(t, h.Cell == c.Cell, "h.cell == c.cell")
+			expect(t, h.Row == c.Row, "h.row == c.row")
 		}
 	}
 
 	// active y=0 is global row 7
 	{
 		c := zigUnwrap(t, s.GetCell(pl5Active(1, 0)))
-		expectEqual(t, pl5MnodeAt(s, 2), c.node)
-		expectEqual(t, uint(0), uint(c.row_idx))
-		expectEqual(t, uint(1), uint(c.col_idx))
-		expectEqual(t, uint32(8), c.cell.Codepoint())
+		expectEqual(t, pl5MnodeAt(s, 2), c.Node)
+		expectEqual(t, uint(0), uint(c.RowIdx))
+		expectEqual(t, uint(1), uint(c.ColIdx))
+		expectEqual(t, uint32(8), c.Cell.Codepoint())
 	}
 	// viewport (active) y=4 is global row 11
 	{
 		c := zigUnwrap(t, s.GetCell(pl5Viewport(5, 4)))
-		expectEqual(t, uint(4), uint(c.row_idx))
-		expectEqual(t, uint32(12), c.cell.Codepoint())
+		expectEqual(t, uint(4), uint(c.RowIdx))
+		expectEqual(t, uint32(12), c.Cell.Codepoint())
 	}
 	// pinned viewport at row 5
 	*s.viewport_pin = pl5PinOf(t, s, pl5Screen(0, 5))
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
 	{
 		c := zigUnwrap(t, s.GetCell(pl5Viewport(0, 0)))
-		expectEqual(t, pl5MnodeAt(s, 1), c.node)
-		expectEqual(t, uint(1), uint(c.row_idx))
-		expectEqual(t, uint32(6), c.cell.Codepoint())
+		expectEqual(t, pl5MnodeAt(s, 1), c.Node)
+		expectEqual(t, uint(1), uint(c.RowIdx))
+		expectEqual(t, uint32(6), c.Cell.Codepoint())
 	}
 }
 
@@ -4079,8 +4079,8 @@ func TestPl5_term51_getCell_returned_pointers_address_the_live_cell_and_row(t *t
 	defer s.Deinit()
 
 	c := zigUnwrap(t, s.GetCell(pl5Screen(2, 5)))
-	*c.cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'Z'}}
-	c.row.wrap = true
+	*c.Cell = PageCell{content_tag: PageCellContentTagCodepoint, content: PageCellContent{codepoint: 'Z'}}
+	c.Row.wrap = true
 	page := &pl5MnodeAt(s, 1).data
 	expectEqual(t, uint32('Z'), page.GetRowAndCell(2, 1).cell.Codepoint())
 	expect(t, page.GetRow(1).wrap, "page.getRow(1).wrap")
@@ -4089,7 +4089,7 @@ func TestPl5_term51_getCell_returned_pointers_address_the_live_cell_and_row(t *t
 	s.ClearDirty()
 	c2 := zigUnwrap(t, s.GetCell(pl5Screen(0, 5)))
 	expect(t, !c2.IsDirty(), "!c2.isDirty()")
-	c2.row.dirty = true
+	c2.Row.dirty = true
 	expect(t, c2.IsDirty(), "c2.isDirty()")
 	expect(t, zigUnwrap(t, s.GetCell(pl5Screen(3, 5))).IsDirty(), "s.getCell(.{ .screen = .{ .x = 3, .y = 5 } }).?.isDirty()")
 	expect(t, !zigUnwrap(t, s.GetCell(pl5Screen(3, 6))).IsDirty(), "!s.getCell(.{ .screen = .{ .x = 3, .y = 6 } }).?.isDirty()")
@@ -4130,17 +4130,17 @@ func TestPl5_term51_Pin_rowAndCell_returns_the_row_and_cell_at_the_pin_position(
 	node := s.pages.first
 	page := &node.data
 
-	p := PageListPin{node: node, y: 2, x: 3}
+	p := PageListPin{Node: node, Y: 2, X: 3}
 	rac := p.RowAndCell()
 	want := page.GetRowAndCell(3, 2)
 	expect(t, rac.row == want.row, "rac.row == want.row")
 	expect(t, rac.cell == want.cell, "rac.cell == want.cell")
 
 	// Different x or y give different pointers.
-	px := PageListPin{node: node, y: 2, x: 2}
+	px := PageListPin{Node: node, Y: 2, X: 2}
 	expect(t, px.RowAndCell().row == rac.row, "px.rowAndCell().row == rac.row")
 	expect(t, px.RowAndCell().cell != rac.cell, "px.rowAndCell().cell != rac.cell")
-	py := PageListPin{node: node, y: 1, x: 3}
+	py := PageListPin{Node: node, Y: 1, X: 3}
 	expect(t, py.RowAndCell().row != rac.row, "py.rowAndCell().row != rac.row")
 	expect(t, py.RowAndCell().cell != rac.cell, "py.rowAndCell().cell != rac.cell")
 
@@ -4153,9 +4153,9 @@ func TestPl5_term51_Pin_rowAndCell_returns_the_row_and_cell_at_the_pin_position(
 	expect(t, !page.GetRowAndCell(0, 3).row.wrap, "!page.getRowAndCell(0, 3).row.wrap")
 
 	// Corners.
-	tl := PageListPin{node: node}
+	tl := PageListPin{Node: node}
 	expect(t, tl.RowAndCell().cell == page.GetRowAndCell(0, 0).cell, "tl.rowAndCell().cell == page.getRowAndCell(0, 0).cell")
-	br := PageListPin{node: node, y: 3, x: 4}
+	br := PageListPin{Node: node, Y: 3, X: 4}
 	expect(t, br.RowAndCell().cell == page.GetRowAndCell(4, 3).cell, "br.rowAndCell().cell == page.getRowAndCell(4, 3).cell")
 	expect(t, br.RowAndCell().row == page.GetRowAndCell(4, 3).row, "br.rowAndCell().row == page.getRowAndCell(4, 3).row")
 }
@@ -4172,15 +4172,15 @@ func TestPl5_term51_Pin_rowAndCell_uses_the_page_of_the_pin_node(t *testing.T) {
 	*first.data.GetRowAndCell(1, 0).cell = PageCellInit('A')
 	*last.data.GetRowAndCell(1, 0).cell = PageCellInit('B')
 
-	pf := PageListPin{node: first, x: 1}
-	pl := PageListPin{node: last, x: 1}
+	pf := PageListPin{Node: first, X: 1}
+	pl := PageListPin{Node: last, X: 1}
 	expectEqual(t, uint32('A'), pf.RowAndCell().cell.content.codepoint)
 	expectEqual(t, uint32('B'), pl.RowAndCell().cell.content.codepoint)
 	expect(t, pf.RowAndCell().cell == first.data.GetRowAndCell(1, 0).cell, "pf.rowAndCell().cell == first.data.getRowAndCell(1, 0).cell")
 	expect(t, pl.RowAndCell().cell == last.data.GetRowAndCell(1, 0).cell, "pl.rowAndCell().cell == last.data.getRowAndCell(1, 0).cell")
 
 	// Last row of the (full) last page.
-	bottom := PageListPin{node: last, y: last.data.size.rows - 1, x: 9}
+	bottom := PageListPin{Node: last, Y: last.data.size.rows - 1, X: 9}
 	expect(t, bottom.RowAndCell().row == last.data.GetRowAndCell(9, uint(last.data.size.rows)-1).row, "bottom.rowAndCell().row == last.data.getRowAndCell(9, last.data.size.rows - 1).row")
 }
 
@@ -4200,7 +4200,7 @@ func TestPl5_term51_Pin_cells_all_left_and_right_subsets(t *testing.T) {
 	}
 
 	base := page.GetRowAndCell(0, 1).cell
-	p := PageListPin{node: node, y: 1, x: 2}
+	p := PageListPin{Node: node, Y: 1, X: 2}
 
 	all := p.Cells(PageListPinCellSubsetAll)
 	expectEqual(t, 6, len(all))
@@ -4229,12 +4229,12 @@ func TestPl5_term51_Pin_cells_first_and_last_column_boundaries(t *testing.T) {
 	defer s.Deinit()
 	node := s.pages.first
 
-	first := PageListPin{node: node, y: 2, x: 0}
+	first := PageListPin{Node: node, Y: 2, X: 0}
 	expectEqual(t, 6, len(first.Cells(PageListPinCellSubsetAll)))
 	expectEqual(t, 1, len(first.Cells(PageListPinCellSubsetLeft)))
 	expectEqual(t, 6, len(first.Cells(PageListPinCellSubsetRight)))
 
-	last := PageListPin{node: node, y: 2, x: 5}
+	last := PageListPin{Node: node, Y: 2, X: 5}
 	expectEqual(t, 6, len(last.Cells(PageListPinCellSubsetAll)))
 	expectEqual(t, 6, len(last.Cells(PageListPinCellSubsetLeft)))
 	expectEqual(t, 1, len(last.Cells(PageListPinCellSubsetRight)))
@@ -4252,7 +4252,7 @@ func TestPl5_term51_Pin_grapheme_null_without_graphemes_and_extra_codepoints_wit
 	// Plain cell: no graphemes.
 	plain := page.GetRowAndCell(0, 0)
 	*plain.cell = PageCellInit('A')
-	p0 := PageListPin{node: node}
+	p0 := PageListPin{Node: node}
 	expect(t, !p0.Grapheme(plain.cell).Valid, "p0.grapheme(plain.cell) == null")
 
 	// Empty cell: no graphemes.
@@ -4263,7 +4263,7 @@ func TestPl5_term51_Pin_grapheme_null_without_graphemes_and_extra_codepoints_wit
 	one := page.GetRowAndCell(2, 1)
 	*one.cell = PageCellInit('e')
 	zigTry(t, page.AppendGrapheme(one.row, one.cell, 0x0301))
-	p1 := PageListPin{node: node, y: 1, x: 2}
+	p1 := PageListPin{Node: node, Y: 1, X: 2}
 	got1 := zigUnwrap(t, p1.Grapheme(one.cell))
 	expectEqual(t, 1, len(got1))
 	expectEqual(t, uint32(0x0301), got1[0])
@@ -4293,7 +4293,7 @@ func TestPl5_term51_Pin_grapheme_looks_up_in_the_page_of_the_pin_node(t *testing
 	*rac.cell = PageCellInit('x')
 	zigTry(t, last.data.AppendGrapheme(rac.row, rac.cell, 0x0300))
 
-	p := PageListPin{node: last, y: 7, x: 4}
+	p := PageListPin{Node: last, Y: 7, X: 4}
 	got := zigUnwrap(t, p.Grapheme(rac.cell))
 	expectEqual(t, 1, len(got))
 	expectEqual(t, uint32(0x0300), got[0])
@@ -4305,9 +4305,9 @@ func TestPl5_term51_Pin_style_default_style_id_gives_the_default_style(t *testin
 	s := pl5Init(t, 5, 3, None[uint64]())
 	defer s.Deinit()
 	node := s.pages.first
-	p := PageListPin{node: node}
+	p := PageListPin{Node: node}
 	cell := node.data.GetRowAndCell(0, 0).cell
-	expectEqual(t, StyleDefaultId, cell.style_id)
+	expectEqual(t, StyleDefaultID, cell.style_id)
 	st := p.Style(cell)
 	expect(t, st.Default(), "st.default()")
 	expect(t, st.Eql(Style{}), "st.eql(.{})")
@@ -4321,13 +4321,13 @@ func TestPl5_term51_Pin_style_non_default_style_id_returns_the_page_style(t *tes
 	node := s.pages.first
 	page := &node.data
 
-	bold := Style{flags: styleFlags{bold: true}}
-	red := Style{fg_color: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{r: 255, g: 1, b: 2}}}
+	bold := Style{Flags: StyleFlags{Bold: true}}
+	red := Style{FgColor: StyleColor{Tag: StyleColorRgb, Rgb: ColorRGB{R: 255, G: 1, B: 2}}}
 	bold_id, err := page.styles.Add(bold)
 	zigTry(t, err)
 	red_id, err := page.styles.Add(red)
 	zigTry(t, err)
-	expect(t, bold_id != StyleDefaultId, "bold_id != stylepkg.default_id")
+	expect(t, bold_id != StyleDefaultID, "bold_id != stylepkg.default_id")
 	expect(t, red_id != bold_id, "red_id != bold_id")
 
 	a := page.GetRowAndCell(1, 1)
@@ -4344,14 +4344,14 @@ func TestPl5_term51_Pin_style_non_default_style_id_returns_the_page_style(t *tes
 		style_id:    red_id,
 	}
 
-	p := PageListPin{node: node, y: 1, x: 1}
+	p := PageListPin{Node: node, Y: 1, X: 1}
 	sa := p.Style(a.cell)
 	expect(t, sa.Eql(bold), "sa.eql(bold)")
-	expect(t, sa.flags.bold, "sa.flags.bold")
+	expect(t, sa.Flags.Bold, "sa.flags.bold")
 	expect(t, !sa.Default(), "!sa.default()")
 	sb := p.Style(b.cell)
 	expect(t, sb.Eql(red), "sb.eql(red)")
-	expect(t, !sb.flags.bold, "!sb.flags.bold")
+	expect(t, !sb.Flags.Bold, "!sb.flags.bold")
 
 	// The lookup is by the cell, not the pin position.
 	expect(t, p.Style(page.GetRowAndCell(0, 0).cell).Default(), "p.style(page.getRowAndCell(0, 0).cell).default()")
@@ -4366,8 +4366,8 @@ func TestPl5_term51_Pin_isDirty_page_dirty_row_dirty_or_clean(t *testing.T) {
 	page := &node.data
 	s.ClearDirty()
 
-	p0 := PageListPin{node: node, y: 0, x: 0}
-	p2 := PageListPin{node: node, y: 2, x: 4}
+	p0 := PageListPin{Node: node, Y: 0, X: 0}
+	p2 := PageListPin{Node: node, Y: 2, X: 4}
 	expect(t, !p0.IsDirty(), "!p0.isDirty()")
 	expect(t, !p2.IsDirty(), "!p2.isDirty()")
 
@@ -4375,16 +4375,16 @@ func TestPl5_term51_Pin_isDirty_page_dirty_row_dirty_or_clean(t *testing.T) {
 	page.GetRowAndCell(0, 2).row.dirty = true
 	expect(t, !p0.IsDirty(), "!p0.isDirty()")
 	expect(t, p2.IsDirty(), "p2.isDirty()")
-	expect(t, (PageListPin{node: node, y: 2, x: 0}).IsDirty(), "(Pin{ .node = node, .y = 2, .x = 0 }).isDirty()")
-	expect(t, !(PageListPin{node: node, y: 1, x: 4}).IsDirty(), "!(Pin{ .node = node, .y = 1, .x = 4 }).isDirty()")
-	expect(t, !(PageListPin{node: node, y: 3, x: 4}).IsDirty(), "!(Pin{ .node = node, .y = 3, .x = 4 }).isDirty()")
+	expect(t, (PageListPin{Node: node, Y: 2, X: 0}).IsDirty(), "(Pin{ .node = node, .y = 2, .x = 0 }).isDirty()")
+	expect(t, !(PageListPin{Node: node, Y: 1, X: 4}).IsDirty(), "!(Pin{ .node = node, .y = 1, .x = 4 }).isDirty()")
+	expect(t, !(PageListPin{Node: node, Y: 3, X: 4}).IsDirty(), "!(Pin{ .node = node, .y = 3, .x = 4 }).isDirty()")
 
 	// A dirty page affects every pin.
 	page.GetRowAndCell(0, 2).row.dirty = false
 	page.dirty = true
 	expect(t, p0.IsDirty(), "p0.isDirty()")
 	expect(t, p2.IsDirty(), "p2.isDirty()")
-	expect(t, (PageListPin{node: node, y: 3, x: 1}).IsDirty(), "(Pin{ .node = node, .y = 3, .x = 1 }).isDirty()")
+	expect(t, (PageListPin{Node: node, Y: 3, X: 1}).IsDirty(), "(Pin{ .node = node, .y = 3, .x = 1 }).isDirty()")
 }
 
 // ---------------------------------------------------------------------------
@@ -4399,7 +4399,7 @@ func TestPl5_panic_viewportRowOffset_pin_node_not_in_list(t *testing.T) {
 	s := pl5Init(t, 80, 24, None[uint64]())
 	other := pl5Init(t, 80, 24, None[uint64]())
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: other.pages.first}
+	*s.viewport_pin = PageListPin{Node: other.pages.first}
 	s.viewport_pin_row_offset = None[uint]()
 	pl5ExpectPanic(t, func() { s.viewportRowOffset() })
 }
@@ -4409,7 +4409,7 @@ func TestPl5_panic_viewportRowOffset_pin_row_beyond_the_page(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	s.viewport = PageListViewport{Tag: PageListViewportPin}
-	*s.viewport_pin = PageListPin{node: s.pages.first, y: 24}
+	*s.viewport_pin = PageListPin{Node: s.pages.first, Y: 24}
 	s.viewport_pin_row_offset = None[uint]()
 	pl5ExpectPanic(t, func() { s.viewportRowOffset() })
 }
@@ -4547,7 +4547,7 @@ func TestPl5_panic_trackPin_pin_of_another_list(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	other := pl5Init(t, 80, 24, None[uint64]())
-	pl5ExpectPanic(t, func() { s.TrackPin(PageListPin{node: other.pages.first}) })
+	pl5ExpectPanic(t, func() { s.TrackPin(PageListPin{Node: other.pages.first}) })
 }
 
 // Go-only: panic test: trackPin: pin row beyond the page's size: assert(self.pinIsValid(p))
@@ -4555,7 +4555,7 @@ func TestPl5_panic_trackPin_pin_beyond_the_page(t *testing.T) {
 	setPageSlowRuntimeSafety(t, true)
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
-	pl5ExpectPanic(t, func() { s.TrackPin(PageListPin{node: s.pages.first, y: 24}) })
+	pl5ExpectPanic(t, func() { s.TrackPin(PageListPin{Node: s.pages.first, Y: 24}) })
 }
 
 // Go-only: panic test: untrackPin: the viewport pin: assert(p != self.viewport_pin)
@@ -4585,7 +4585,7 @@ func TestPl5_panic_getCell_column_beyond_the_page(t *testing.T) {
 func TestPl5_panic_Pin_rowAndCell_row_beyond_the_page(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: s.pages.first, y: 24}
+	p := PageListPin{Node: s.pages.first, Y: 24}
 	pl5ExpectPanic(t, func() { p.RowAndCell() })
 }
 
@@ -4593,7 +4593,7 @@ func TestPl5_panic_Pin_rowAndCell_row_beyond_the_page(t *testing.T) {
 func TestPl5_panic_Pin_rowAndCell_column_beyond_the_page(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: s.pages.first, x: 80}
+	p := PageListPin{Node: s.pages.first, X: 80}
 	pl5ExpectPanic(t, func() { p.RowAndCell() })
 }
 
@@ -4601,7 +4601,7 @@ func TestPl5_panic_Pin_rowAndCell_column_beyond_the_page(t *testing.T) {
 func TestPl5_panic_Pin_cells_row_beyond_the_page(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: s.pages.first, y: 24}
+	p := PageListPin{Node: s.pages.first, Y: 24}
 	pl5ExpectPanic(t, func() { p.Cells(PageListPinCellSubsetAll) })
 }
 
@@ -4610,7 +4610,7 @@ func TestPl5_panic_Pin_isDirty_row_beyond_the_page(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
 	s.ClearDirty()
-	p := PageListPin{node: s.pages.first, y: 24}
+	p := PageListPin{Node: s.pages.first, Y: 24}
 	pl5ExpectPanic(t, func() { p.IsDirty() })
 }
 
@@ -4618,7 +4618,7 @@ func TestPl5_panic_Pin_isDirty_row_beyond_the_page(t *testing.T) {
 func TestPl5_panic_Pin_markDirty_row_beyond_the_page(t *testing.T) {
 	testStdCapacity(t)
 	s := pl5Init(t, 80, 24, None[uint64]())
-	p := PageListPin{node: s.pages.first, y: 24}
+	p := PageListPin{Node: s.pages.first, Y: 24}
 	pl5ExpectPanic(t, func() { p.MarkDirty() })
 }
 
@@ -4629,7 +4629,7 @@ func TestPl5_panic_Pin_style_unused_style_id(t *testing.T) {
 	node := s.pages.first
 	cell := node.data.GetRowAndCell(0, 0).cell
 	cell.style_id = 1
-	p := PageListPin{node: node}
+	p := PageListPin{Node: node}
 	pl5ExpectPanic(t, func() { p.Style(cell) })
 }
 
@@ -4640,6 +4640,6 @@ func TestPl5_panic_Pin_style_style_id_beyond_the_set(t *testing.T) {
 	node := s.pages.first
 	cell := node.data.GetRowAndCell(0, 0).cell
 	cell.style_id = math.MaxUint16
-	p := PageListPin{node: node}
+	p := PageListPin{Node: node}
 	pl5ExpectPanic(t, func() { p.Style(cell) })
 }

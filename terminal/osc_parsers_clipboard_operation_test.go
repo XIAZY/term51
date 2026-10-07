@@ -17,7 +17,7 @@ import (
 
 // Zig: test "OSC 52: get/set clipboard"
 func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "52;s;?"
 	for i := 0; i < len(input); i++ {
@@ -32,7 +32,7 @@ func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard(t *testing.T) {
 
 // Zig: test "OSC 52: get/set clipboard (optional parameter)"
 func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard_optional_parameter(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "52;;?"
 	for i := 0; i < len(input); i++ {
@@ -47,7 +47,7 @@ func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard_optional_paramete
 
 // Zig: test "OSC 52: get/set clipboard with allocator"
 func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard_with_allocator(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 
 	input := "52;s;?"
@@ -63,7 +63,7 @@ func TestOSCParsersClipboardOperation_OSC_52_get_set_clipboard_with_allocator(t 
 
 // Zig: test "OSC 52: clear clipboard"
 func TestOSCParsersClipboardOperation_OSC_52_clear_clipboard(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	defer p.Deinit()
 
 	input := "52;;"
@@ -80,7 +80,7 @@ func TestOSCParsersClipboardOperation_OSC_52_clear_clipboard(t *testing.T) {
 // Zig: test "term51: parse: kind and data"
 func TestOSCParsersClipboardOperation_term51_parse_kind_and_data(t *testing.T) {
 	for _, term := range oscA_terms {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;p;aGVsbG8=")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
@@ -92,7 +92,7 @@ func TestOSCParsersClipboardOperation_term51_parse_kind_and_data(t *testing.T) {
 
 // Zig: test "term51: parse: missing separator after 52 is invalid"
 func TestOSCParsersClipboardOperation_term51_parse_missing_separator_after_52_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "52")
 	expect(t, p.state == OSCParserState52, "p.state == .@\"52\"")
 	expect(t, OSCParsersClipboardOperationParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -101,7 +101,7 @@ func TestOSCParsersClipboardOperation_term51_parse_missing_separator_after_52_is
 
 // Zig: test "term51: parse: empty data is invalid"
 func TestOSCParsersClipboardOperation_term51_parse_empty_data_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "52;")
 	expect(t, OSCParsersClipboardOperationParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 	expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -110,14 +110,14 @@ func TestOSCParsersClipboardOperation_term51_parse_empty_data_is_invalid(t *test
 // Zig: test "term51: parse: empty kind defaults to c"
 func TestOSCParsersClipboardOperation_term51_parse_empty_kind_defaults_to_c(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;;")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
 		expectEqualStrings(t, "", string(cmd.ClipboardContents.Data))
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;;YQ==")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
@@ -125,7 +125,7 @@ func TestOSCParsersClipboardOperation_term51_parse_empty_kind_defaults_to_c(t *t
 	}
 	{
 		// Only the first semicolon is consumed.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;;;x")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
@@ -143,7 +143,7 @@ func TestOSCParsersClipboardOperation_term51_parse_kind_without_a_following_sepa
 		"52;pc;?",
 		"52;abc",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, input)
 		expect(t, OSCParsersClipboardOperationParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -153,7 +153,7 @@ func TestOSCParsersClipboardOperation_term51_parse_kind_without_a_following_sepa
 // Zig: test "term51: parse: any single byte is accepted as the kind"
 func TestOSCParsersClipboardOperation_term51_parse_any_single_byte_is_accepted_as_the_kind(t *testing.T) {
 	for _, kind := range []string{"c", "s", "p", "q", "0", "7", "Z", " ", "\x00", "\xff"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;"+kind+";?")
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyClipboardContents, "cmd == .clipboard_contents")
@@ -164,7 +164,7 @@ func TestOSCParsersClipboardOperation_term51_parse_any_single_byte_is_accepted_a
 
 // Zig: test "term51: parse: data is not validated and keeps semicolons"
 func TestOSCParsersClipboardOperation_term51_parse_data_is_not_validated_and_keeps_semicolons(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "52;c;not base64!;x\x01\xff")
 	cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 	expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
@@ -177,7 +177,7 @@ func TestOSCParsersClipboardOperation_term51_parse_buffer_limit_without_allocato
 	// plus the NUL terminator must fit in MAX_BUF.
 	{
 		data := strings.Repeat("A", OSCParserMAX_BUF-3)
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;c;"+data)
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))
 		expectEqual(t, uint8('c'), cmd.ClipboardContents.Kind)
@@ -185,7 +185,7 @@ func TestOSCParsersClipboardOperation_term51_parse_buffer_limit_without_allocato
 	}
 	{
 		data := strings.Repeat("A", OSCParserMAX_BUF-2)
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscA_term51Feed(&p, "52;c;"+data)
 		expect(t, p.state == OSCParserState52, "p.state == .@\"52\"")
 		expect(t, OSCParsersClipboardOperationParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -197,7 +197,7 @@ func TestOSCParsersClipboardOperation_term51_parse_buffer_limit_without_allocato
 func TestOSCParsersClipboardOperation_term51_parse_no_buffer_limit_with_allocator(t *testing.T) {
 	for _, n := range []int{OSCParserMAX_BUF - 2, OSCParserMAX_BUF, OSCParserMAX_BUF*4 + 1} {
 		data := strings.Repeat("A", n)
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "52;s;"+data)
 		cmd := *oscA_unwrapPtr(t, OSCParsersClipboardOperationParse(&p, None[uint8]()))

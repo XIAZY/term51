@@ -147,7 +147,7 @@ func oscA_parseResetDynamicColor(t *testing.T, color ColorDynamic, it *oscParser
 
 // Zig: test "OSC 4: empty param"
 func TestOSCParsersColor_OSC_4_empty_param(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "4;;"
 	for i := 0; i < len(input); i++ {
@@ -403,7 +403,7 @@ func TestOSCParsersColor_OSC_110_OSC_111_OSC_112_OSC_113_OSC_114_OSC_115_OSC_116
 
 // Zig: test "term51: parse: no allocator is invalid"
 func TestOSCParsersColor_term51_parse_no_allocator_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscA_term51Feed(&p, "4")
 	expect(t, p.state == OSCParserState4, "p.state == .@\"4\"")
 	expect(t, OSCParsersColorParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -413,7 +413,7 @@ func TestOSCParsersColor_term51_parse_no_allocator_is_invalid(t *testing.T) {
 
 // Zig: test "term51: parse: a state that is not a color OSC is invalid"
 func TestOSCParsersColor_term51_parse_a_state_that_is_not_a_color_OSC_is_invalid(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscA_term51Feed(&p, "0;red")
 	expect(t, p.state == OSCParserState0, "p.state == .@\"0\"")
@@ -457,7 +457,7 @@ func TestOSCParsersColor_term51_parse_operation_for_every_state_without_a_separa
 		{"118", OSCParsersColorOperationOsc118, Some(oscA_colReset(oscA_colDynamic(ColorDynamicTektronixCursor)))},
 		{"119", OSCParsersColorOperationOsc119, Some(oscA_colReset(oscA_colDynamic(ColorDynamicHighlightForeground)))},
 	} {
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, c.input)
 		expect(t, p.writer == nil, "p.writer == null")
@@ -477,7 +477,7 @@ func TestOSCParsersColor_term51_parse_operation_for_every_state_without_a_separa
 // Zig: test "term51: parse: a separator with no body behaves like no separator"
 func TestOSCParsersColor_term51_parse_a_separator_with_no_body_behaves_like_no_separator(t *testing.T) {
 	{
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "104;")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
@@ -487,7 +487,7 @@ func TestOSCParsersColor_term51_parse_a_separator_with_no_body_behaves_like_no_s
 		expectEqual(t, OSCParsersColorRequest{Tag: OSCParsersColorRequestResetPalette}, *cmd.ColorOperation.Requests.at(0))
 	}
 	{
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "4;")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
@@ -511,7 +511,7 @@ func TestOSCParsersColor_term51_parse_terminator_is_recorded(t *testing.T) {
 		{Some[uint8](0x9c), OSCTerminatorSt},
 		{Some[uint8](0), OSCTerminatorSt},
 	} {
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "10;?")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, c.term))
@@ -525,7 +525,7 @@ func TestOSCParsersColor_term51_parse_terminator_is_recorded(t *testing.T) {
 
 // Zig: test "term51: parse: OSC 4 with several requests"
 func TestOSCParsersColor_term51_parse_OSC_4_with_several_requests(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscA_term51Feed(&p, "4;1;red;2;?;256;#0000ff")
 	cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, Some[uint8](0x07)))
@@ -541,7 +541,7 @@ func TestOSCParsersColor_term51_parse_OSC_4_with_several_requests(t *testing.T) 
 // Zig: test "term51: parse: OSC 5 and OSC 104 through the parser"
 func TestOSCParsersColor_term51_parse_OSC_5_and_OSC_104_through_the_parser(t *testing.T) {
 	{
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "5;4;?")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
@@ -551,7 +551,7 @@ func TestOSCParsersColor_term51_parse_OSC_5_and_OSC_104_through_the_parser(t *te
 		expectEqual(t, oscA_colQuery(oscA_colSpecial(ColorSpecialItalic)), *cmd.ColorOperation.Requests.at(0))
 	}
 	{
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "104;7;260")
 		cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
@@ -567,7 +567,7 @@ func TestOSCParsersColor_term51_parse_OSC_5_and_OSC_104_through_the_parser(t *te
 func TestOSCParsersColor_term51_parse_OSC_105_is_not_reachable_through_the_parser(t *testing.T) {
 	// Operation.osc_105 exists and parseColor handles it, but the state
 	// machine has no "105" state: the '5' after "10" is rejected.
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscA_term51Feed(&p, "105")
 	expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -577,7 +577,7 @@ func TestOSCParsersColor_term51_parse_OSC_105_is_not_reachable_through_the_parse
 
 // Zig: test "term51: parse: unparseable body still yields a command"
 func TestOSCParsersColor_term51_parse_unparseable_body_still_yields_a_command(t *testing.T) {
-	p := OSCParserInit(oscA_testingAllocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscA_term51Feed(&p, "4;bogus;data")
 	cmd := oscA_unwrapPtr(t, OSCParsersColorParse(&p, None[uint8]()))
@@ -593,7 +593,7 @@ func TestOSCParsersColor_term51_parse_buffer_limit(t *testing.T) {
 	body := strings.Repeat("0;?;", OSCParserMAX_BUF/4)
 	assert(len(body) == OSCParserMAX_BUF)
 	{
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "4;"+body)
 		expect(t, p.state == OSCParserState4, "p.state == .@\"4\"")
@@ -603,7 +603,7 @@ func TestOSCParsersColor_term51_parse_buffer_limit(t *testing.T) {
 		expectEqual(t, oscA_colQuery(oscA_colPalette(0)), *cmd.ColorOperation.Requests.at(OSCParserMAX_BUF/4 - 1))
 	}
 	{
-		p := OSCParserInit(oscA_testingAllocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscA_term51Feed(&p, "4;"+body+"1")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")

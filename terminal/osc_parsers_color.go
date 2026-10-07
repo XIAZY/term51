@@ -101,7 +101,7 @@ var oscParsersColorOperationNames = [oscParsersColorOperationCount]string{
 func OSCParsersColorParse(parser *OSCParser, terminator_ch Optional[uint8]) *OSCCommand {
 	// Zig: `const alloc = parser.alloc orelse ...`. The allocator itself is
 	// not passed on (parseColor drops its allocator parameter).
-	if parser.alloc == nil {
+	if !parser.alloc {
 		parser.state = OSCParserStateInvalid
 		return nil
 	}

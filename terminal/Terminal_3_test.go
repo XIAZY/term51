@@ -3014,7 +3014,7 @@ func TestTm3_term51_vtStream_the_stream_is_given_the_terminal_allocator_for_long
 	defer s.Deinit()
 	// osc_parser.alloc is `any` in Go: nil is Zig's null, any other value is
 	// "an allocator was provided".
-	expect(t, s.parser.osc_parser.alloc != nil, "s.parser.osc_parser.alloc != null")
+	expect(t, s.parser.osc_parser.alloc, "s.parser.osc_parser.alloc != null")
 	// Zig-only: try std.testing.expect(s.parser.osc_parser.alloc.?.ptr == std.testing.allocator.ptr);
 
 	// An OSC payload far larger than the fixed OSC buffer must be accepted

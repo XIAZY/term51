@@ -5,7 +5,7 @@
 // defined in Parser_test.go.
 //
 // Translation notes:
-//   - `.init(null)` is OSCParserInit(nil); `p.next(ch)` is p.Next(ch);
+//   - `.init(null)` is OSCParserInit(false); `p.next(ch)` is p.Next(ch);
 //     `p.end(null)` is p.End(None[uint8]()).
 //   - `parse(&p, null).?.*` is oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(...)),
 //     which fails on nil and copies the command out.
@@ -45,7 +45,7 @@ func oscB_mouse_shape_at(s []uint8, i int) uint8 {
 
 // Zig: test "OSC 22: pointer cursor"
 func TestOSCParsersMouseShape_OSC_22_pointer_cursor(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "22;pointer"
 	for _, ch := range []uint8(input) {
@@ -60,7 +60,7 @@ func TestOSCParsersMouseShape_OSC_22_pointer_cursor(t *testing.T) {
 // Zig: test "term51: parse: basic shape name"
 func TestOSCParsersMouseShape_term51_parse_basic_shape_name(t *testing.T) {
 	for _, term := range []Optional[uint8]{None[uint8](), Some[uint8](0x07), Some[uint8](0x1b)} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_mouse_shape_term51Feed(&p, []uint8("22;text"))
 		cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyMouseShape, "cmd == .mouse_shape")
@@ -71,7 +71,7 @@ func TestOSCParsersMouseShape_term51_parse_basic_shape_name(t *testing.T) {
 
 // Zig: test "term51: parse: missing separator is invalid"
 func TestOSCParsersMouseShape_term51_parse_missing_separator_is_invalid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_mouse_shape_term51Feed(&p, []uint8("22"))
 	expect(t, p.state == OSCParserState22, "p.state == .@\"22\"")
 	expect(t, OSCParsersMouseShapeParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -80,7 +80,7 @@ func TestOSCParsersMouseShape_term51_parse_missing_separator_is_invalid(t *testi
 
 // Zig: test "term51: parse: empty shape name"
 func TestOSCParsersMouseShape_term51_parse_empty_shape_name(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_mouse_shape_term51Feed(&p, []uint8("22;"))
 	cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyMouseShape, "cmd == .mouse_shape")
@@ -91,7 +91,7 @@ func TestOSCParsersMouseShape_term51_parse_empty_shape_name(t *testing.T) {
 func TestOSCParsersMouseShape_term51_parse_the_value_is_not_validated(t *testing.T) {
 	// Unknown names, upper case, semicolons and invalid UTF-8 are all
 	// returned as-is.
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_mouse_shape_term51Feed(&p, []uint8("22;Not A Cursor;x\xff"))
 	cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, None[uint8]()))
 	expectEqualSlices(t, []uint8("Not A Cursor;x\xff"), cmd.MouseShape.Value)
@@ -100,13 +100,13 @@ func TestOSCParsersMouseShape_term51_parse_the_value_is_not_validated(t *testing
 // Zig: test "term51: parse: buffer limit"
 func TestOSCParsersMouseShape_term51_parse_buffer_limit(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_mouse_shape_term51Feed(&p, []uint8("22;"+strings.Repeat("a", OSCParserMAX_BUF-1)))
 		cmd := oscB_mouse_shape_unwrap(t, OSCParsersMouseShapeParse(&p, None[uint8]()))
 		expectEqual(t, OSCParserMAX_BUF-1, len(cmd.MouseShape.Value))
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_mouse_shape_term51Feed(&p, []uint8("22;"+strings.Repeat("a", OSCParserMAX_BUF)))
 		expect(t, p.state == OSCParserState22, "p.state == .@\"22\"")
 		expect(t, OSCParsersMouseShapeParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")

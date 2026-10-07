@@ -592,11 +592,11 @@ func StreamInit[H StreamHandler](h H) Stream[H] {
 // supports heap allocation as necessary.
 //
 // Zig: `alloc` is an Allocator that is stored in parser.osc_parser.alloc.
-// As for OSCParserInit, nothing is allocated through it; nil is Zig's null
-// and any other value is "an allocator was provided".
-func StreamInitAlloc[H StreamHandler](alloc any, h H) Stream[H] {
+// Go needs no allocator; the stream's OSC parser is told it may grow its
+// buffers (OSCParserInit(true)).
+func StreamInitAlloc[H StreamHandler](h H) Stream[H] {
 	var self = StreamInit(h)
-	self.parser.osc_parser.alloc = alloc
+	self.parser.osc_parser.alloc = true
 	return self
 }
 

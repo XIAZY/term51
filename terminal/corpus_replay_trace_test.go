@@ -123,14 +123,14 @@ func runTrace(ops []replayOp, mode feedMode, kind replayKind, w *bytes.Buffer) e
 		if kind == replayKindActionsNoalloc {
 			stream = StreamInit(handler)
 		} else {
-			stream = StreamInitAlloc(replayAllocator{}, handler)
+			stream = StreamInitAlloc(handler)
 		}
 		defer stream.Deinit()
 	}
 	defer handler.flush()
 	parser := ParserInit()
 	defer parser.Deinit()
-	parser.osc_parser.alloc = replayAllocator{}
+	parser.osc_parser.alloc = true
 
 	var feedIdx uint
 	for _, op := range ops {

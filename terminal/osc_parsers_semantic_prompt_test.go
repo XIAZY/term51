@@ -6,8 +6,8 @@
 // oscB_sp_.
 //
 // Translation notes:
-//   - `var p: Parser = .init(null)` is OSCParserInit(nil), and
-//     `.init(testing.allocator)` is OSCParserInit(oscB_sp_allocator), a non-nil
+//   - `var p: Parser = .init(null)` is OSCParserInit(false), and
+//     `.init(testing.allocator)` is OSCParserInit(true), a non-nil
 //     value (the parser only records whether an allocator was given).
 //   - `p.end(null).?.*` is oscB_sp_zigUnwrapPtr(t, p.End(None[uint8]())): the
 //     optional pointer is a *OSCCommand, nil is null.
@@ -53,7 +53,7 @@ func oscB_sp_written(w *oscWriterAllocating) string {
 
 // Zig: test "OSC 133: end_input_start_output"
 func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -67,7 +67,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output(t *testing.T) {
 
 // Zig: test "OSC 133: end_input_start_output extra contents"
 func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_extra_contents(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;Cextra"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -77,7 +77,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_extra_contents(
 
 // Zig: test "OSC 133: end_input_start_output with options"
 func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_options(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;aid=foo"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -93,7 +93,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline(t 
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline=echo bobr kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -111,7 +111,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_3(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline=echo bobr\\nkurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -128,7 +128,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_4(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline=$'echo bobr kurwa'"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -146,7 +146,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_5(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline='echo bobr kurwa'"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -164,7 +164,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_6(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline='echo bobr kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -181,7 +181,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_7(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline=$'echo bobr kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -198,7 +198,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_8(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline=$'"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -215,7 +215,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_9(
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline="
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -233,7 +233,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -251,7 +251,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr%20kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -269,7 +269,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr%3bkurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -287,7 +287,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr%3kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -304,7 +304,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr%kurwa"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -321,7 +321,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr kurwa%20"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -339,7 +339,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr kurwa%2"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -356,7 +356,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 	var w oscWriterAllocating
 	// Zig-only: defer w.deinit();
 
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;C;cmdline_url=echo bobr kurwa%"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -370,7 +370,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_input_start_output_with_cmdline_ur
 
 // Zig: test "OSC 133: fresh_line"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;L"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -384,7 +384,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line(t *testing.T) {
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_extra_contents(t *testing.T) {
 	// Random
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		input := "133;Lol"
 		for _, ch := range []uint8(input) {
 			p.Next(ch)
@@ -394,7 +394,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_extra_contents(t *testing.T
 
 	// Options
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		input := "133;L;aid=foo"
 		for _, ch := range []uint8(input) {
 			p.Next(ch)
@@ -405,7 +405,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_extra_contents(t *testing.T
 
 // Zig: test "OSC 133: fresh_line_new_prompt"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -419,7 +419,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt(t *testing.T) {
 
 // Zig: test "OSC 133: fresh_line_new_prompt with aid"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_aid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;aid=14"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -432,7 +432,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_aid(t *test
 
 // Zig: test "OSC 133: fresh_line_new_prompt with '=' in aid"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_in_aid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;aid=a=b"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -445,7 +445,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_in_aid(t *t
 
 // Zig: test "OSC 133: fresh_line_new_prompt with cl=line"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_cl_line(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;cl=line"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -458,7 +458,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_cl_line(t *
 
 // Zig: test "OSC 133: fresh_line_new_prompt with cl=m"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_cl_m(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;cl=m"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -471,7 +471,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_cl_m(t *tes
 
 // Zig: test "OSC 133: fresh_line_new_prompt with invalid cl"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_invalid_cl(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;cl=invalid"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -484,7 +484,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_invalid_cl(
 
 // Zig: test "OSC 133: fresh_line_new_prompt with trailing ;"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_trailing(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -496,7 +496,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_trailing(t 
 
 // Zig: test "OSC 133: fresh_line_new_prompt with bare key"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_bare_key(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;barekey"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -510,7 +510,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_bare_key(t 
 
 // Zig: test "OSC 133: fresh_line_new_prompt with multiple options"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_multiple_options(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;aid=foo;cl=line"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -524,7 +524,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_multiple_op
 
 // Zig: test "OSC 133: fresh_line_new_prompt default redraw"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_default_redraw(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -537,7 +537,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_default_redraw(t
 
 // Zig: test "OSC 133: fresh_line_new_prompt with redraw=0"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_redraw_0(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;redraw=0"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -550,7 +550,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_redraw_0(t 
 
 // Zig: test "OSC 133: fresh_line_new_prompt with redraw=1"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_redraw_1(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;redraw=1"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -563,7 +563,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_redraw_1(t 
 
 // Zig: test "OSC 133: fresh_line_new_prompt with invalid redraw"
 func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_invalid_redraw(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;A;redraw=x"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -576,7 +576,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_fresh_line_new_prompt_with_invalid_red
 
 // Zig: test "OSC 133: prompt_start"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;P"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -589,7 +589,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start(t *testing.T) {
 
 // Zig: test "OSC 133: prompt_start with k=i"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_i(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;P;k=i"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -602,7 +602,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_i(t *testing.T) {
 
 // Zig: test "OSC 133: prompt_start with k=r"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_r(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;P;k=r"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -615,7 +615,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_r(t *testing.T) {
 
 // Zig: test "OSC 133: prompt_start with k=c"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_c(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;P;k=c"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -628,7 +628,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_c(t *testing.T) {
 
 // Zig: test "OSC 133: prompt_start with k=s"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_s(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;P;k=s"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -641,7 +641,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_k_s(t *testing.T) {
 
 // Zig: test "OSC 133: prompt_start with invalid k"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_invalid_k(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;P;k=x"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -654,7 +654,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_with_invalid_k(t *testing
 
 // Zig: test "OSC 133: prompt_start extra contents"
 func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_extra_contents(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;Pextra"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -664,7 +664,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_prompt_start_extra_contents(t *testing
 
 // Zig: test "OSC 133: new_command"
 func TestOSCParsersSemanticPrompt_OSC_133_new_command(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;N"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -678,7 +678,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command(t *testing.T) {
 
 // Zig: test "OSC 133: new_command with aid"
 func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_aid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;N;aid=foo"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -691,7 +691,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_aid(t *testing.T) {
 
 // Zig: test "OSC 133: new_command with cl=line"
 func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_cl_line(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;N;cl=line"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -704,7 +704,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_cl_line(t *testing.T)
 
 // Zig: test "OSC 133: new_command with multiple options"
 func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_multiple_options(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;N;aid=foo;cl=line"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -718,7 +718,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_with_multiple_options(t *t
 
 // Zig: test "OSC 133: new_command extra contents"
 func TestOSCParsersSemanticPrompt_OSC_133_new_command_extra_contents(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;Nextra"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -728,7 +728,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_new_command_extra_contents(t *testing.
 
 // Zig: test "OSC 133: end_prompt_start_input"
 func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;B"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -740,7 +740,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input(t *testing.T) {
 
 // Zig: test "OSC 133: end_prompt_start_input extra contents"
 func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_extra_contents(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;Bextra"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -750,7 +750,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_extra_contents(
 
 // Zig: test "OSC 133: end_prompt_start_input with options"
 func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_with_options(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;B;aid=foo"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -763,7 +763,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_with_options(t 
 
 // Zig: test "OSC 133: end_prompt_start_input_terminate_eol"
 func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;I"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -775,7 +775,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol(t
 
 // Zig: test "OSC 133: end_prompt_start_input_terminate_eol extra contents"
 func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol_extra_contents(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;Iextra"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -785,7 +785,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol_e
 
 // Zig: test "OSC 133: end_prompt_start_input_terminate_eol with options"
 func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol_with_options(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;I;aid=foo"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -798,7 +798,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_prompt_start_input_terminate_eol_w
 
 // Zig: test "OSC 133: end_command"
 func TestOSCParsersSemanticPrompt_OSC_133_end_command(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;D"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -813,7 +813,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_command(t *testing.T) {
 
 // Zig: test "OSC 133: end_command extra contents"
 func TestOSCParsersSemanticPrompt_OSC_133_end_command_extra_contents(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;Dextra"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -823,7 +823,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_command_extra_contents(t *testing.
 
 // Zig: test "OSC 133: end_command with exit code 0"
 func TestOSCParsersSemanticPrompt_OSC_133_end_command_with_exit_code_0(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;D;0"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -836,7 +836,7 @@ func TestOSCParsersSemanticPrompt_OSC_133_end_command_with_exit_code_0(t *testin
 
 // Zig: test "OSC 133: end_command with exit code and aid"
 func TestOSCParsersSemanticPrompt_OSC_133_end_command_with_exit_code_and_aid(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	input := "133;D;12;aid=foo"
 	for _, ch := range []uint8(input) {
 		p.Next(ch)
@@ -1228,14 +1228,14 @@ func TestOSCParsersSemanticPrompt_term51_Command_writeCommandLine_cmdline_takes_
 // Zig: test "term51: parse: missing separator and empty data are invalid"
 func TestOSCParsersSemanticPrompt_term51_parse_missing_separator_and_empty_data_are_invalid(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133")
 		expect(t, p.writer == nil, "p.writer == null")
 		expect(t, OSCParsersSemanticPromptParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;")
 		expect(t, p.state == OSCParserState133, "p.state == .@\"133\"")
 		expect(t, OSCParsersSemanticPromptParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -1260,7 +1260,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_every_command_letter(t *testing.T
 		for _, term := range []Optional[uint8]{None[uint8](), Some(uint8(0x07)), Some(uint8(0x1b))} {
 			// The letter alone.
 			{
-				p := OSCParserInit(nil)
+				p := OSCParserInit(false)
 				oscB_sp_term51Feed(&p, "133;"+c.letter)
 				cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, term))
 				expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
@@ -1269,7 +1269,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_every_command_letter(t *testing.T
 			}
 			// The letter and a separator with nothing after it.
 			{
-				p := OSCParserInit(nil)
+				p := OSCParserInit(false)
 				oscB_sp_term51Feed(&p, "133;"+c.letter+";")
 				cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, term))
 				expectEqual(t, c.action, cmd.SemanticPrompt.Action)
@@ -1277,7 +1277,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_every_command_letter(t *testing.T
 			}
 			// Options are everything after the separator, unparsed.
 			{
-				p := OSCParserInit(nil)
+				p := OSCParserInit(false)
 				oscB_sp_term51Feed(&p, "133;"+c.letter+";aid=1;;junk\x00\x01\xff;")
 				cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, term))
 				expectEqual(t, c.action, cmd.SemanticPrompt.Action)
@@ -1287,7 +1287,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_every_command_letter(t *testing.T
 		}
 		// Anything other than ';' after the letter is invalid.
 		for _, suffix := range []string{"x", " ", "=", c.letter, " ;aid=1"} {
-			p := OSCParserInit(nil)
+			p := OSCParserInit(false)
 			oscB_sp_term51Feed(&p, "133;"+c.letter+suffix)
 			expect(t, OSCParsersSemanticPromptParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 			expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -1298,7 +1298,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_every_command_letter(t *testing.T
 // Zig: test "term51: parse: L takes no options at all"
 func TestOSCParsersSemanticPrompt_term51_parse_L_takes_no_options_at_all(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;L")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeySemanticPrompt, "cmd == .semantic_prompt")
@@ -1307,7 +1307,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_L_takes_no_options_at_all(t *test
 	}
 	// Unlike the other letters, not even a bare separator is allowed.
 	for _, input := range []string{"133;L;", "133;L;aid=1", "133;Lx", "133;LL"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, input)
 		expect(t, OSCParsersSemanticPromptParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -1333,7 +1333,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_unknown_and_lower_case_letters_ar
 		"133;\x00",
 		"133;aid=1",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, input)
 		expect(t, OSCParsersSemanticPromptParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -1343,7 +1343,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_unknown_and_lower_case_letters_ar
 // Zig: test "term51: parse: exit code position"
 func TestOSCParsersSemanticPrompt_term51_parse_exit_code_position(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;D;0;aid=x")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
 		expectEqual(t, Some(int32(0)), cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode)
@@ -1351,21 +1351,21 @@ func TestOSCParsersSemanticPrompt_term51_parse_exit_code_position(t *testing.T) 
 	}
 	{
 		// Not the first field: not found.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;D;aid=x;0")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
 		expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode.Valid, "cmd.semantic_prompt.readOption(.exit_code) == null")
 		expectEqualStrings(t, "x", string(zigUnwrap(t, cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionAid).Aid)))
 	}
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;D")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
 		expect(t, !cmd.SemanticPrompt.ReadOption(OSCParsersSemanticPromptOptionExitCode).ExitCode.Valid, "cmd.semantic_prompt.readOption(.exit_code) == null")
 	}
 	{
 		// The exit code is not tied to the D command.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;A;5")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
 		expectEqual(t, OSCParsersSemanticPromptCommandActionFreshLineNewPrompt, cmd.SemanticPrompt.Action)
@@ -1379,7 +1379,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_buffer_limit(t *testing.T) {
 	const prefix = "A;aid="
 	{
 		value := strings.Repeat("v", OSCParserMAX_BUF-len(prefix))
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_sp_term51Feed(&p, "133;"+prefix+value)
 		expect(t, p.state == OSCParserState133, "p.state == .@\"133\"")
 		cmd := oscB_sp_zigUnwrapPtr(t, OSCParsersSemanticPromptParse(&p, None[uint8]()))
@@ -1389,7 +1389,7 @@ func TestOSCParsersSemanticPrompt_term51_parse_buffer_limit(t *testing.T) {
 	{
 		// One more byte overflows while feeding; an allocator does not help.
 		value := strings.Repeat("v", OSCParserMAX_BUF-len(prefix)+1)
-		p := OSCParserInit(oscB_sp_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_sp_term51Feed(&p, "133;"+prefix+value)
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")

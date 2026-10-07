@@ -5,9 +5,9 @@
 // Parser_test.go.
 //
 // Translation notes:
-//   - `Parser.init(testing.allocator)` is OSCParserInit(oscB_kcp_allocator),
+//   - `Parser.init(testing.allocator)` is OSCParserInit(true),
 //     any non-nil value ("an allocator was provided"); `Parser.init(null)` is
-//     OSCParserInit(nil). The leak check of testing.allocator has no Go
+//     OSCParserInit(false). The leak check of testing.allocator has no Go
 //     counterpart; `defer p.deinit()` is kept as defer p.Deinit(). Zig's
 //     `defer` inside a loop body runs at the end of each iteration; Go's
 //     defer runs when the test function returns.
@@ -68,7 +68,7 @@ func oscB_kcp_str(t *testing.T, o Optional[[]uint8]) string {
 
 // Zig: test "OSC: 5522: empty metadata and missing payload"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_metadata_and_missing_payload(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;"
 	oscB_kcp_feed(&p, input)
@@ -88,7 +88,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_metadata_and_missing_pa
 
 // Zig: test "OSC: 5522: empty metadata and empty payload"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_metadata_and_empty_payload(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;;"
 	oscB_kcp_feed(&p, input)
@@ -108,7 +108,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_metadata_and_empty_payl
 
 // Zig: test "OSC: 5522: non-empty metadata and payload"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_non_empty_metadata_and_payload(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read;dGV4dC9wbGFpbg=="
 	oscB_kcp_feed(&p, input)
@@ -128,7 +128,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_non_empty_metadata_and_payloa
 
 // Zig: test "OSC: 5522: empty id"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_id(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;id="
 	oscB_kcp_feed(&p, input)
@@ -139,7 +139,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_empty_id(t *testing.T) {
 
 // Zig: test "OSC: 5522: valid id"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_valid_id(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;id=5c076ad9-d36f-4705-847b-d4dbf356cc0d"
 	oscB_kcp_feed(&p, input)
@@ -150,7 +150,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_valid_id(t *testing.T) {
 
 // Zig: test "OSC: 5522: invalid id"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_invalid_id(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;id=*42*"
 	oscB_kcp_feed(&p, input)
@@ -161,7 +161,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_invalid_id(t *testing.T) {
 
 // Zig: test "OSC: 5522: invalid status"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_invalid_status(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;status=BOBR"
 	oscB_kcp_feed(&p, input)
@@ -172,7 +172,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_invalid_status(t *testing.T) 
 
 // Zig: test "OSC: 5522: valid status"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_valid_status(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;status=DONE"
 	oscB_kcp_feed(&p, input)
@@ -183,7 +183,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_valid_status(t *testing.T) {
 
 // Zig: test "OSC: 5522: invalid location"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_invalid_location(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;loc=bobr"
 	oscB_kcp_feed(&p, input)
@@ -194,7 +194,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_invalid_location(t *testing.T
 
 // Zig: test "OSC: 5522: valid location"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_valid_location(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;loc=primary"
 	oscB_kcp_feed(&p, input)
@@ -205,7 +205,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_valid_location(t *testing.T) 
 
 // Zig: test "OSC: 5522: password 1"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_password_1(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;pw=R2hvc3R0eQ==:name=Qk9CUiBLVVJXQQ=="
 	oscB_kcp_feed(&p, input)
@@ -217,7 +217,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_password_1(t *testing.T) {
 
 // Zig: test "OSC: 5522: password 2"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_password_2(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;password=R2hvc3R0eQ=="
 	oscB_kcp_feed(&p, input)
@@ -228,7 +228,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_password_2(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 1"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_1(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=OK"
 	oscB_kcp_feed(&p, input)
@@ -247,7 +247,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_1(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 2"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_2(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:mime=dGV4dC9wbGFpbg==;R2hvc3R0eQ=="
 	oscB_kcp_feed(&p, input)
@@ -266,7 +266,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_2(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 3"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_3(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=OK"
 	oscB_kcp_feed(&p, input)
@@ -285,7 +285,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_3(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 4"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_4(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=write"
 	oscB_kcp_feed(&p, input)
@@ -304,7 +304,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_4(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 5"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_5(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=wdata:mime=dGV4dC9wbGFpbg==;R2hvc3R0eQ=="
 	oscB_kcp_feed(&p, input)
@@ -323,7 +323,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_5(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 6"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_6(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=wdata"
 	oscB_kcp_feed(&p, input)
@@ -342,7 +342,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_6(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 7"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_7(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=write:status=DONE"
 	oscB_kcp_feed(&p, input)
@@ -361,7 +361,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_7(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 8"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_8(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=write:status=EPERM"
 	oscB_kcp_feed(&p, input)
@@ -380,7 +380,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_8(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 9"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_9(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=walias:mime=dGV4dC9wbGFpbg==;dGV4dC9odG1sIGFwcGxpY2F0aW9uL2pzb24="
 	oscB_kcp_feed(&p, input)
@@ -399,7 +399,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_9(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 10"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_10(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=OK:password=Qk9CUiBLVVJXQQ=="
 	oscB_kcp_feed(&p, input)
@@ -418,7 +418,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_10(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 11"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_11(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg=="
 	oscB_kcp_feed(&p, input)
@@ -437,7 +437,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_11(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 12"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_12(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:mime=dGV4dC9wbGFpbg==:password=Qk9CUiBLVVJXQQ=="
 	oscB_kcp_feed(&p, input)
@@ -456,7 +456,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_12(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 13"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_13(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=OK"
 	oscB_kcp_feed(&p, input)
@@ -475,7 +475,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_13(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 14"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_14(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;Qk9CUiBLVVJXQQ=="
 	oscB_kcp_feed(&p, input)
@@ -494,7 +494,7 @@ func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_14(t *testing.T) {
 
 // Zig: test "OSC: 5522: example 15"
 func TestOSCParsersKittyClipboardProtocol_OSC_5522_example_15(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	input := "5522;type=read:status=OK"
 	oscB_kcp_feed(&p, input)
@@ -821,7 +821,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_OSC_readOption_reads_from_the_m
 
 // Zig: test "term51: parse: missing separator after 5522 is invalid"
 func TestOSCParsersKittyClipboardProtocol_term51_parse_missing_separator_after_5522_is_invalid(t *testing.T) {
-	p := OSCParserInit(oscB_kcp_allocator)
+	p := OSCParserInit(true)
 	defer p.Deinit()
 	oscB_kcp_feed(&p, "5522")
 	expect(t, p.state == OSCParserState5522, "p.state == .@\"5522\"")
@@ -847,7 +847,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_metadata_and_payload_spli
 		// neither part is validated
 		{"5522;\x01\xff;\x00\x80", "\x01\xff", Some("\x00\x80")},
 	} {
-		p := OSCParserInit(oscB_kcp_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kcp_feed(&p, c.input)
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, None[uint8]()))
@@ -874,7 +874,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_terminator_is_recorded(t 
 		{Some[uint8]('\\'), OSCTerminatorSt},
 		{Some[uint8](0x9c), OSCTerminatorSt},
 	} {
-		p := OSCParserInit(oscB_kcp_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kcp_feed(&p, "5522;type=read;x")
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, c.ch))
@@ -889,7 +889,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_buffer_limit_without_allo
 	prefix := "type=wdata;"
 	{
 		payload := strings.Repeat("A", OSCParserMAX_BUF-len(prefix))
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kcp_feed(&p, "5522;"+prefix+payload)
 		expect(t, p.state == OSCParserState5522, "p.state == .@\"5522\"")
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, None[uint8]()))
@@ -898,7 +898,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_buffer_limit_without_allo
 	}
 	{
 		payload := strings.Repeat("A", OSCParserMAX_BUF-len(prefix)+1)
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kcp_feed(&p, "5522;"+prefix+payload)
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
 		expect(t, p.End(None[uint8]()) == nil, "p.end(null) == null")
@@ -910,7 +910,7 @@ func TestOSCParsersKittyClipboardProtocol_term51_parse_no_buffer_limit_with_allo
 	prefix := "type=wdata;"
 	for _, n := range []int{OSCParserMAX_BUF - len(prefix) + 1, OSCParserMAX_BUF, OSCParserMAX_BUF*4 + 1} {
 		payload := strings.Repeat("A", n)
-		p := OSCParserInit(oscB_kcp_allocator)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kcp_feed(&p, "5522;"+prefix+payload)
 		cmd := oscB_kcp_deref(t, OSCParsersKittyClipboardProtocolParse(&p, Some[uint8](0x07)))

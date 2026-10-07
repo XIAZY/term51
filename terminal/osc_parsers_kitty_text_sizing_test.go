@@ -5,8 +5,8 @@
 // defined in Parser_test.go and dcs_test.go.
 //
 // Translation notes:
-//   - `.init(testing.allocator)` is OSCParserInit(oscB_kts_alloc), any non-nil
-//     value; `.init(null)` is OSCParserInit(nil). The leak check of
+//   - `.init(testing.allocator)` is OSCParserInit(true), any non-nil
+//     value; `.init(null)` is OSCParserInit(false). The leak check of
 //     testing.allocator has no Go counterpart; the `defer p.deinit()` calls
 //     are kept.
 //   - `p.next(ch)` is p.Next(ch); `p.end('\x1b')` is p.End(Some[uint8](0x1b)).
@@ -85,7 +85,7 @@ func oscB_kts_term51ExpectFields(
 
 // Zig: test "OSC 66: empty parameters"
 func TestOSCParsersKittyTextSizing_OSC_66_empty_parameters(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;;bobr"
 	for _, ch := range []uint8(input) {
@@ -100,7 +100,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_empty_parameters(t *testing.T) {
 
 // Zig: test "OSC 66: single parameter"
 func TestOSCParsersKittyTextSizing_OSC_66_single_parameter(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;s=2;kurwa"
 	for _, ch := range []uint8(input) {
@@ -115,7 +115,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_single_parameter(t *testing.T) {
 
 // Zig: test "OSC 66: multiple parameters"
 func TestOSCParsersKittyTextSizing_OSC_66_multiple_parameters(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;s=2:w=7:n=13:d=15:v=1:h=2;long"
 	for _, ch := range []uint8(input) {
@@ -135,7 +135,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_multiple_parameters(t *testing.T) {
 
 // Zig: test "OSC 66: scale is zero"
 func TestOSCParsersKittyTextSizing_OSC_66_scale_is_zero(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;s=0;nope"
 	for _, ch := range []uint8(input) {
@@ -149,7 +149,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_scale_is_zero(t *testing.T) {
 
 // Zig: test "OSC 66: invalid parameters"
 func TestOSCParsersKittyTextSizing_OSC_66_invalid_parameters(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	for _, ch := range []uint8("66;w=8:v=3:n=16;") {
 		p.Next(ch)
@@ -164,7 +164,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_invalid_parameters(t *testing.T) {
 
 // Zig: test "OSC 66: UTF-8"
 func TestOSCParsersKittyTextSizing_OSC_66_UTF_8(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;;👻魑魅魍魉ゴースッティ"
 	for _, ch := range []uint8(input) {
@@ -178,7 +178,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_UTF_8(t *testing.T) {
 
 // Zig: test "OSC 66: unsafe UTF-8"
 func TestOSCParsersKittyTextSizing_OSC_66_unsafe_UTF_8(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;;\n"
 	for _, ch := range []uint8(input) {
@@ -190,7 +190,7 @@ func TestOSCParsersKittyTextSizing_OSC_66_unsafe_UTF_8(t *testing.T) {
 
 // Zig: test "OSC 66: overlong UTF-8"
 func TestOSCParsersKittyTextSizing_OSC_66_overlong_UTF_8(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 
 	input := "66;;" + strings.Repeat("bobr", 1025)
 	for _, ch := range []uint8(input) {
@@ -331,7 +331,7 @@ func TestOSCParsersKittyTextSizing_term51_OSC_update_number_formats_accepted_by_
 func TestOSCParsersKittyTextSizing_term51_parse_missing_separators_are_invalid(t *testing.T) {
 	// No ';' after 66, or no ';' between the metadata and the payload.
 	for _, input := range []string{"66", "66;", "66;s=2", "66;text"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, input)
 		expect(t, p.state == OSCParserState66, "p.state == .@\"66\"")
 		expect(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
@@ -342,7 +342,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_missing_separators_are_invalid(t
 // Zig: test "term51: parse: empty metadata and empty text"
 func TestOSCParsersKittyTextSizing_term51_parse_empty_metadata_and_empty_text(t *testing.T) {
 	for _, term := range []Optional[uint8]{None[uint8](), Some[uint8](0x07), Some[uint8](0x1b)} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;;")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, term))
 		expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
@@ -355,7 +355,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_empty_metadata_and_empty_text(t 
 // Zig: test "term51: parse: every parameter"
 func TestOSCParsersKittyTextSizing_term51_parse_every_parameter(t *testing.T) {
 	{
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;s=7:w=7:n=15:d=15:v=2:h=2;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 7, 7, 15, 15, OSCParsersKittyTextSizingVAlignCenter, OSCParsersKittyTextSizingHAlignCenter)
@@ -363,7 +363,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_every_parameter(t *testing.T) {
 	}
 	{
 		// The order of parameters does not matter.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;h=1:v=1:d=3:n=2:w=4:s=5;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 5, 4, 2, 3, OSCParsersKittyTextSizingVAlignBottom, OSCParsersKittyTextSizingHAlignRight)
@@ -372,7 +372,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_every_parameter(t *testing.T) {
 
 // Zig: test "term51: parse: out of range parameters keep the defaults"
 func TestOSCParsersKittyTextSizing_term51_parse_out_of_range_parameters_keep_the_defaults(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_kts_term51Feed(&p, "66;s=8:w=8:n=16:d=16:v=3:h=3;x")
 	cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 	expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
@@ -401,7 +401,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_malformed_parameters_are_skipped
 		"66;:;x",
 		"66;:::;x",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, input)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		expect(t, cmd.Tag == OSCCommandKeyKittyTextSizing, "cmd == .kitty_text_sizing")
@@ -412,7 +412,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_malformed_parameters_are_skipped
 
 // Zig: test "term51: parse: a malformed parameter does not affect the others"
 func TestOSCParsersKittyTextSizing_term51_parse_a_malformed_parameter_does_not_affect_the_others(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_kts_term51Feed(&p, "66;:bogus:s=3::x=1:w=9:n=4:;x")
 	cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 	oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 3, 0, 4, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
@@ -422,14 +422,14 @@ func TestOSCParsersKittyTextSizing_term51_parse_a_malformed_parameter_does_not_a
 func TestOSCParsersKittyTextSizing_term51_parse_repeated_parameters(t *testing.T) {
 	{
 		// The last valid value wins.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;s=2:s=3;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		expectEqual(t, uint8(3), cmd.KittyTextSizing.Scale)
 	}
 	{
 		// An invalid later value does not undo an earlier one.
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;s=2:s=9:s=0:s=;x")
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
@@ -438,7 +438,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_repeated_parameters(t *testing.T
 
 // Zig: test "term51: parse: only the text between the first and second equals is the value"
 func TestOSCParsersKittyTextSizing_term51_parse_only_the_text_between_the_first_and_second_equals_is_the_value(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_kts_term51Feed(&p, "66;s=2=3:w=4=junk;x")
 	cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 	oscB_kts_term51ExpectFields(t, cmd.KittyTextSizing, 2, 4, 0, 0, OSCParsersKittyTextSizingVAlignTop, OSCParsersKittyTextSizingHAlignLeft)
@@ -446,7 +446,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_only_the_text_between_the_first_
 
 // Zig: test "term51: parse: later semicolons belong to the text"
 func TestOSCParsersKittyTextSizing_term51_parse_later_semicolons_belong_to_the_text(t *testing.T) {
-	p := OSCParserInit(nil)
+	p := OSCParserInit(false)
 	oscB_kts_term51Feed(&p, "66;s=2;a;b:c=d;")
 	cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 	expectEqual(t, uint8(2), cmd.KittyTextSizing.Scale)
@@ -458,7 +458,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_text_must_be_escape_code_safe_UT
 	// Accepted: printable ASCII, U+00A0 (first code point after C1) and
 	// multi-byte sequences.
 	for _, text := range []string{" ", "~", "\xc2\xa0", "\xe2\x82\xac", "\xf4\x8f\xbf\xbf"} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		expectEqualStrings(t, text, string(cmd.KittyTextSizing.Text))
@@ -483,7 +483,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_text_must_be_escape_code_safe_UT
 		"\xed\xa0\x80",
 		"\xf4\x90\x80\x80",
 	} {
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;s=2;"+text)
 		expect(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")
 		expect(t, p.state == OSCParserStateInvalid, "p.state == .invalid")
@@ -495,7 +495,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_payload_length_limit_with_alloca
 	expectEqual(t, 4096, OSCParsersKittyTextSizingMaxPayloadLength)
 	{
 		text := strings.Repeat("a", OSCParsersKittyTextSizingMaxPayloadLength)
-		p := OSCParserInit(oscB_kts_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kts_term51Feed(&p, "66;s=2;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
@@ -504,7 +504,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_payload_length_limit_with_alloca
 	}
 	{
 		text := strings.Repeat("a", OSCParsersKittyTextSizingMaxPayloadLength+1)
-		p := OSCParserInit(oscB_kts_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kts_term51Feed(&p, "66;s=2;"+text)
 		expect(t, p.state == OSCParserState66, "p.state == .@\"66\"")
@@ -516,7 +516,7 @@ func TestOSCParsersKittyTextSizing_term51_parse_payload_length_limit_with_alloca
 		// payload: long metadata does not count.
 		text := strings.Repeat("\xe2\x82\xac", 1365) + "a"
 		expectEqual(t, OSCParsersKittyTextSizingMaxPayloadLength, len(text))
-		p := OSCParserInit(oscB_kts_alloc)
+		p := OSCParserInit(true)
 		defer p.Deinit()
 		oscB_kts_term51Feed(&p, "66;"+strings.Repeat("s=2:", 100)+"w=3;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
@@ -532,14 +532,14 @@ func TestOSCParsersKittyTextSizing_term51_parse_buffer_limit_without_allocator(t
 	// max_payload_length.
 	{
 		text := strings.Repeat("a", OSCParserMAX_BUF-2)
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;;"+text)
 		cmd := oscB_kts_unwrap(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()))
 		expectEqualStrings(t, text, string(cmd.KittyTextSizing.Text))
 	}
 	{
 		text := strings.Repeat("a", OSCParserMAX_BUF-1)
-		p := OSCParserInit(nil)
+		p := OSCParserInit(false)
 		oscB_kts_term51Feed(&p, "66;;"+text)
 		expect(t, p.state == OSCParserState66, "p.state == .@\"66\"")
 		expect(t, OSCParsersKittyTextSizingParse(&p, None[uint8]()) == nil, "parse(&p, null) == null")

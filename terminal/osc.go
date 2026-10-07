@@ -1116,12 +1116,12 @@ type OSCParser struct {
 	// This only applies to some commands (e.g. OSC 52) that can
 	// reasonably exceed MAX_BUF.
 	//
-	// Zig: ?Allocator. Allocator parameters are dropped in the port, but
-	// whether this one is null changes what the parser accepts
-	// (ensureAllocator, writeToAllocating, the colour parsers), so the
-	// field is kept: nil is Zig's null, any other value is "an allocator
-	// was provided". Nothing is ever allocated through it.
-	alloc any
+	// Zig: ?Allocator. Go allocates without an allocator, but whether
+	// upstream's is null changes what the parser accepts (ensureAllocator,
+	// writeToAllocating, the colour parsers), so the choice is kept as a
+	// bool: false is Zig's null (commands that need to grow a buffer are
+	// refused), true is "an allocator was provided".
+	alloc bool
 
 	// Current state of the parser.
 	state OSCParserState
@@ -1267,7 +1267,7 @@ var oscParserStateNames = [oscParserStateCount]string{
 // OSCParserInit is osc.Parser.init.
 //
 // Zig leaves `buffer` undefined; Go zeroes it.
-func OSCParserInit(alloc any) OSCParser {
+func OSCParserInit(alloc bool) OSCParser {
 	var result = OSCParser{
 		alloc:      alloc,
 		state:      OSCParserStateStart,
@@ -1298,7 +1298,7 @@ func (self *OSCParser) Reset() {
 		// Zig: v.deinit(self.alloc orelse break :kitty_color_protocol).
 		// The allocator argument is dropped; without an allocator
 		// nothing is freed.
-		if self.alloc != nil {
+		if self.alloc {
 			self.command.KittyColorProtocol.Deinit()
 		}
 	case OSCCommandKeyChangeWindowIcon,
@@ -1341,7 +1341,7 @@ func (self *OSCParser) Reset() {
 // allocator. If we don't, set the state to invalid so that any additional
 // OSC data is discarded.
 func (self *OSCParser) ensureAllocator() bool {
-	if self.alloc != nil {
+	if self.alloc {
 		return true
 	}
 	warn("osc", "An allocator is required to process OSC %s but none was provided.", self.state.String())
@@ -1361,7 +1361,7 @@ func (self *OSCParser) writeToFixed() {
 // or setting up the allocator fails, fall back to writing to a fixed buffer
 // and hope that it's big enough.
 func (self *OSCParser) writeToAllocating() {
-	if self.alloc == nil {
+	if !self.alloc {
 		// We don't have an allocator - fall back to a fixed buffer and hope
 		// that it's big enough.
 		self.writeToFixed()

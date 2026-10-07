@@ -9,7 +9,7 @@
 //   - The Zig variable `t` (the Terminal) is `tm` in Go, because `t` is the
 //     *testing.T. `var s: Stream = .initAlloc(testing.allocator, .init(&t))`
 //     is `h := StreamReadonlyHandlerInit(&tm)` and
-//     `s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)`;
+//     `s := StreamInitAlloc[*StreamReadonlyHandler](&h)`;
 //     `s.handler` is then the pointer &h. sroAllocator stands in for
 //     testing.allocator (any non-nil value is "an allocator was provided").
 //   - `h.vt(.tag, value)` is `h.Vt(tag, action)` with the whole StreamAction:
@@ -472,7 +472,7 @@ func TestStreamReadonly_basic_print(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("Hello")))
@@ -493,7 +493,7 @@ func TestStreamReadonly_cursor_movement(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Move cursor using escape sequences
@@ -515,7 +515,7 @@ func TestStreamReadonly_erase_operations(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Print some text
@@ -541,7 +541,7 @@ func TestStreamReadonly_tabs(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("A\tB")))
@@ -561,7 +561,7 @@ func TestStreamReadonly_modes(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Test wraparound mode
@@ -580,7 +580,7 @@ func TestStreamReadonly_scrolling_regions(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set scrolling region from line 5 to 20
@@ -599,7 +599,7 @@ func TestStreamReadonly_charsets(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Configure G0 as DEC special graphics
@@ -620,7 +620,7 @@ func TestStreamReadonly_alt_screen(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Write to primary screen
@@ -652,7 +652,7 @@ func TestStreamReadonly_cursor_save_and_restore(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Move cursor to 10,15
@@ -682,7 +682,7 @@ func TestStreamReadonly_attributes(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set bold and write text
@@ -703,7 +703,7 @@ func TestStreamReadonly_DECALN_screen_alignment(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Run DECALN
@@ -728,7 +728,7 @@ func TestStreamReadonly_full_reset(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Make some changes
@@ -756,7 +756,7 @@ func TestStreamReadonly_ignores_query_actions(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// These should be ignored without error
@@ -780,7 +780,7 @@ func TestStreamReadonly_OSC_4_set_and_reset_palette(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Save default color
@@ -807,7 +807,7 @@ func TestStreamReadonly_OSC_104_reset_all_palette_colors(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set multiple colors
@@ -836,7 +836,7 @@ func TestStreamReadonly_OSC_10_set_and_reset_foreground_color(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Initially unset
@@ -862,7 +862,7 @@ func TestStreamReadonly_OSC_11_set_and_reset_background_color(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set background to green
@@ -885,7 +885,7 @@ func TestStreamReadonly_OSC_12_set_and_reset_cursor_color(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set cursor to blue
@@ -908,7 +908,7 @@ func TestStreamReadonly_kitty_color_protocol_set_palette(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set palette color 5 to magenta using kitty protocol
@@ -928,7 +928,7 @@ func TestStreamReadonly_kitty_color_protocol_reset_palette(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set and then reset palette color
@@ -949,7 +949,7 @@ func TestStreamReadonly_kitty_color_protocol_set_foreground(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set foreground using kitty protocol
@@ -968,7 +968,7 @@ func TestStreamReadonly_kitty_color_protocol_set_background(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set background using kitty protocol
@@ -987,7 +987,7 @@ func TestStreamReadonly_kitty_color_protocol_set_cursor(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set cursor using kitty protocol
@@ -1006,7 +1006,7 @@ func TestStreamReadonly_kitty_color_protocol_reset_foreground(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set and reset foreground
@@ -1026,7 +1026,7 @@ func TestStreamReadonly_palette_dirty_flag_set_on_color_change(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Clear dirty flag
@@ -1055,7 +1055,7 @@ func TestStreamReadonly_semantic_prompt_fresh_line(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("Hello")))
@@ -1072,7 +1072,7 @@ func TestStreamReadonly_semantic_prompt_fresh_line_new_prompt(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Write some text and then send OSC 133;A (fresh_line_new_prompt)
@@ -1100,7 +1100,7 @@ func TestStreamReadonly_semantic_prompt_end_of_input_then_start_output(t *testin
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Write some text and then send OSC 133;A (fresh_line_new_prompt)
@@ -1121,7 +1121,7 @@ func TestStreamReadonly_semantic_prompt_prompt_start(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Write some text
@@ -1142,7 +1142,7 @@ func TestStreamReadonly_semantic_prompt_new_command(t *testing.T) {
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Write some text
@@ -1164,7 +1164,7 @@ func TestStreamReadonly_semantic_prompt_new_command_at_column_zero(t *testing.T)
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// OSC 133;N when already at column 0 should stay on same line
@@ -1182,7 +1182,7 @@ func TestStreamReadonly_semantic_prompt_end_prompt_start_input_terminate_eol_cle
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Set input terminated by EOL
@@ -1206,7 +1206,7 @@ func TestStreamReadonly_stream_CSI_W_with_intermediate_but_no_params(t *testing.
 	defer tm.Deinit()
 
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("\x1b[?W")))
@@ -1388,7 +1388,7 @@ func TestStreamReadonly_term51_Handler_vt_ignored_sequences_through_a_stream_lea
 	tm := sroNew(t, 20, 6)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
 
@@ -1652,7 +1652,7 @@ func TestStreamReadonly_term51_Handler_vt_tabs_through_a_stream_HT_CHT_CBT(t *te
 	tm := sroNew(t, 40, 3)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("\t")))
@@ -2697,7 +2697,7 @@ func TestStreamReadonly_term51_Handler_vt_unknown_modes_and_ANSI_versus_DEC_mode
 	tm := sroNew(t, 20, 10)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
 
@@ -5677,7 +5677,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_the_request_list_stays_own
 	tm := sroNew(t, 10, 3)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Two requests fit the preallocated segment, three do not.
@@ -5700,7 +5700,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_4_through_a_stream(t *
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]4;1;rgb:ff/00/00;2;#00ff00\x1b\\")
@@ -5758,7 +5758,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_5_special_colors_have_
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
 	tm.Flags.Dirty.Palette = false
@@ -5776,7 +5776,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_10_11_and_12_set_succe
 	tm := sroNew(t, 10, 3)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]10;rgb:11/22/33\x1b\\")
@@ -5832,7 +5832,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_13_to_19_are_ignored(t
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 	sroBusy(t, &tm, s.handler)
 	tm.Flags.Dirty.Palette = false
@@ -5851,7 +5851,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_104_resets_palette_ent
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]4;1;red;2;red;3;red;4;red;5;red\x07")
@@ -5901,7 +5901,7 @@ func TestStreamReadonly_term51_Handler_colorOperation_OSC_110_111_and_112_reset_
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	sroSend(t, &s, "\x1b]10;red;green;blue\x07")
@@ -5961,7 +5961,7 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_OSC_21_through_a_stre
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]21;1=rgb:ff/00/00;foreground=#112233\x1b\\")))
@@ -6006,7 +6006,7 @@ func TestStreamReadonly_term51_Handler_kittyColorOperation_OSC_21_skips_invalid_
 	tm := sroNewWithDefaults(t)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// Out of range index, unknown name, wrong case, bad color, missing key:
@@ -6037,7 +6037,7 @@ func TestStreamReadonly_term51_Handler_vt_charset_sequences_through_a_stream(t *
 	tm := sroNew(t, 20, 3)
 	defer tm.Deinit()
 	h := StreamReadonlyHandlerInit(&tm)
-	s := StreamInitAlloc[*StreamReadonlyHandler](sroAllocator, &h)
+	s := StreamInitAlloc[*StreamReadonlyHandler](&h)
 	defer s.Deinit()
 
 	// ESC ( 0 designates DEC special graphics into G0.

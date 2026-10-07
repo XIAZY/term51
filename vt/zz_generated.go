@@ -1810,9 +1810,7 @@ type StreamHandler = terminal.StreamHandler
 type StreamHandlerVtRaw = terminal.StreamHandlerVtRaw
 
 // StreamInitAlloc is [terminal.StreamInitAlloc].
-func StreamInitAlloc[H StreamHandler](alloc any, h H) Stream[H] {
-	return terminal.StreamInitAlloc[H](alloc, h)
-}
+func StreamInitAlloc[H StreamHandler](h H) Stream[H] { return terminal.StreamInitAlloc[H](h) }
 
 // StringMap is [terminal.StringMap].
 type StringMap = terminal.StringMap

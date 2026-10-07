@@ -18,7 +18,7 @@
 //     stream holds the pointer, which the test keeps (`s.handler`).
 //   - `var s: Stream(H) = .init(.{})` is `s := StreamInit(&H{})`;
 //     `.initAlloc(testing.allocator, &rec)` is
-//     StreamInitAlloc(strA_allocator, &rec), a non-nil value (docs/mapping.md:
+//     StreamInitAlloc(&rec), a non-nil value (docs/mapping.md:
 //     the field `alloc` keeps only whether an allocator was provided).
 //   - Zig's `.{}` of the recording handler (log_prints defaults to true) is
 //     strA_recorderInit(true), `.{ .log_prints = false }` is
@@ -1697,7 +1697,7 @@ func TestStream_term51_Stream_init_starts_in_the_ground_state_with_no_allocator(
 	expectEqual(t, uint16(0), s.parser.param_acc)
 	expectEqual(t, uint8(0), s.parser.param_acc_idx)
 	expectEqual(t, 0, s.parser.params_sep.count())
-	expect(t, s.parser.osc_parser.alloc == nil, "s.parser.osc_parser.alloc == null")
+	expect(t, !s.parser.osc_parser.alloc, "s.parser.osc_parser.alloc == null")
 	expectEqual(t, OSCParserStateStart, s.parser.osc_parser.state)
 	expectEqualStrings(t, "", strA_recText(&rec))
 }
@@ -1758,13 +1758,14 @@ func TestStream_term51_Stream_init_a_stream_without_an_allocator_drops_OSC_seque
 func TestStream_term51_Stream_initAlloc_stores_the_allocator_in_the_OSC_parser_and_is_otherwise_like_init(t *testing.T) {
 	rec := strA_recorderInit(true)
 	// Zig-only: defer term51ARecRelease(&rec);
-	s := StreamInitAlloc(strA_allocator, &rec)
+	s := StreamInitAlloc(&rec)
 	defer s.Deinit()
 
 	expect(t, s.handler == &rec, "s.handler == &rec")
-	expect(t, s.parser.osc_parser.alloc != nil, "s.parser.osc_parser.alloc != null")
+	expect(t, s.parser.osc_parser.alloc, "s.parser.osc_parser.alloc != null")
 	// Zig compares the vtable pointers of the two allocators.
-	expectEqual(t, strA_allocator, s.parser.osc_parser.alloc)
+	// Zig: expectEqual(testing.allocator.vtable, ...alloc.?.vtable). Go keeps
+	// only whether there is one.
 	expectEqual(t, ParserStateGround, s.parser.state)
 	expectEqual(t, uint8(0), s.utf8decoder.state)
 	expectEqual(t, uint8(0), s.parser.params_idx)
@@ -1777,7 +1778,7 @@ func TestStream_term51_Stream_initAlloc_stores_the_allocator_in_the_OSC_parser_a
 func TestStream_term51_Stream_initAlloc_OSC_sequences_that_need_an_allocator_are_processed(t *testing.T) {
 	rec := strA_recorderInit(true)
 	// Zig-only: defer term51ARecRelease(&rec);
-	s := StreamInitAlloc(strA_allocator, &rec)
+	s := StreamInitAlloc(&rec)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;1;rgb:ff/00/00\x07")))
@@ -1836,7 +1837,7 @@ func TestStream_term51_Stream_initAlloc_large_OSC_52_payloads_are_accepted_only_
 	{
 		rec := strA_recorderInit(true)
 		// Zig-only: defer term51ARecRelease(&rec);
-		s := StreamInitAlloc(strA_allocator, &rec)
+		s := StreamInitAlloc(&rec)
 		defer s.Deinit()
 		zigTry(t, s.NextSlice([]uint8(input)))
 		expectEqualStrings(t, expected, strA_recText(&rec))
@@ -1883,7 +1884,7 @@ func TestStream_term51_Stream_initAlloc_OSC_titles_longer_than_the_fixed_buffer_
 
 	rec := strA_recorderInit(true)
 	// Zig-only: defer term51ARecRelease(&rec);
-	s := StreamInitAlloc(strA_allocator, &rec)
+	s := StreamInitAlloc(&rec)
 	defer s.Deinit()
 	zigTry(t, s.NextSlice([]uint8(input)))
 	expectEqualStrings(t, "", strA_recText(&rec))
@@ -1915,7 +1916,7 @@ func TestStream_term51_Stream_deinit_frees_OSC_state_that_was_still_being_collec
 	// the parser is not released by deinit.
 	rec := strA_recorderInit(true)
 	// Zig-only: defer term51ARecRelease(&rec);
-	s := StreamInitAlloc(strA_allocator, &rec)
+	s := StreamInitAlloc(&rec)
 	zigTry(t, s.NextSlice([]uint8("\x1b]52;c;QUJD")))
 	expect(t, s.parser.osc_parser.allocating.Valid, "s.parser.osc_parser.allocating != null")
 	s.Deinit()
@@ -3848,7 +3849,7 @@ func TestStream_term51_Stream_nextSlice_a_large_OSC_52_payload_spans_several_chu
 	{
 		rec := strA_recorderInit(true)
 		// Zig-only: defer term51ARecRelease(&rec);
-		s := StreamInitAlloc(strA_allocator, &rec)
+		s := StreamInitAlloc(&rec)
 		defer s.Deinit()
 		zigTry(t, s.NextSlice(input))
 		expectEqualStrings(t, expected, strA_recText(&rec))
@@ -3858,7 +3859,7 @@ func TestStream_term51_Stream_nextSlice_a_large_OSC_52_payload_spans_several_chu
 	{
 		rec := strA_recorderInit(true)
 		// Zig-only: defer term51ARecRelease(&rec);
-		s := StreamInitAlloc(strA_allocator, &rec)
+		s := StreamInitAlloc(&rec)
 		defer s.Deinit()
 		var cp_buf [4096]uint32
 		i := 0
@@ -3877,7 +3878,7 @@ func TestStream_term51_Stream_nextSlice_a_large_OSC_52_payload_spans_several_chu
 	{
 		rec := strA_recorderInit(true)
 		// Zig-only: defer term51ARecRelease(&rec);
-		s := StreamInitAlloc(strA_allocator, &rec)
+		s := StreamInitAlloc(&rec)
 		defer s.Deinit()
 		zigTry(t, s.NextSlice(input[0:len(input)-3]))
 		expectEqualStrings(t, "print 61\nprint 62\n", strA_recText(&rec))
@@ -4805,7 +4806,7 @@ func TestStream_term51_Stream_oscDispatch_parsed_commands_that_are_ignored_never
 	for _, c := range cases {
 		// Check the parsed command kind...
 		{
-			p := OSCParserInit(strA_allocator)
+			p := OSCParserInit(true)
 			defer p.Deinit()
 			for _, ch := range []uint8(c.first) {
 				p.Next(ch)
@@ -4880,7 +4881,7 @@ func TestStream_term51_Stream_oscDispatch_commands_through_the_byte_stream(t *te
 func TestStream_term51_Stream_oscDispatch_colour_commands_through_the_byte_stream_keep_the_terminator_used(t *testing.T) {
 	rec := strA_recorderInit(true)
 	// Zig-only: defer term51ARecRelease(&rec);
-	s := StreamInitAlloc(strA_allocator, &rec)
+	s := StreamInitAlloc(&rec)
 	defer s.Deinit()
 
 	zigTry(t, s.NextSlice([]uint8("\x1b]10;?\x07")))

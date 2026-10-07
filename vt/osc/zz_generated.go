@@ -159,7 +159,7 @@ type CommandTag = terminal.OSCCommandTag
 func EncodingIsSafeUtf8(s []uint8) bool { return terminal.OSCEncodingIsSafeUtf8(s) }
 
 // NewParser is [terminal.OSCParserInit].
-func NewParser(alloc any) Parser { return terminal.OSCParserInit(alloc) }
+func NewParser(alloc bool) Parser { return terminal.OSCParserInit(alloc) }
 
 // NewParsersKittyClipboardProtocolLocation is [terminal.OSCParsersKittyClipboardProtocolLocationInit].
 func NewParsersKittyClipboardProtocolLocation(str []uint8) terminal.Optional[ParsersKittyClipboardProtocolLocation] {

@@ -1,15 +1,15 @@
 # On the phone
 
-The app shows the terminal one way: a column of Cascades text labels, one
-per row (`assets/main.qml`, `internal/textgrid`). Everything below the page
+The app shows the terminal one way: drawn with OpenGL ES 3.0 in a window of
+its own that sits in the page (`internal/gpu`, `internal/cells`,
+`assets/main.qml`). Everything below the page
 is tested on the development machine with real shells; the page itself can
 only be seen on the phone.
 
 Build with `GOQNX=<go-qnx> tools/build.sh`; install with
 `tools/install.sh <ssh-host>` (the app must be closed: the phone does not
 replace an open app). The settings are `data/settings.conf` in the app's
-sandbox (`internal/settings`); `logInput = true` there writes every key and
-text command to `data/term51.log`.
+sandbox (`internal/settings`); the log is `data/term51.log`.
 
 ## Seen to work (2026-10-07, first run)
 
@@ -42,14 +42,32 @@ text command to `data/term51.log`.
   `exit` from two threads (`os.Exit` is that on this system). It now ends in
   one place, on the main thread after the Cascades event loop has returned
   (`main.go`). This was not the cause of the hang above.
+- **Half of each cell was missing in the right third of the window**
+  (2026-10-07, the first GPU build, 69ed2e3). With a 60-column test table
+  every cell in columns 40 to 59 was shown without its upper-left triangle,
+  the first of the two that make a cell; columns 0 to 39 were whole. The
+  cells' corners were then computed from `gl_VertexID`, with no per-vertex
+  attribute at all. Changed: the corners come from a per-vertex attribute, a
+  fixed buffer of four corners (`internal/gpu`). With that (9b02a81) the
+  screen is whole to the right edge. The loss could not be reproduced by a
+  stand-alone program with the same drawing code that reads its pixels
+  back, so it is recorded as gone with the change, not as explained.
+- **After a resize only the old part of the picture was shown.** The window
+  system keeps the part of the buffer it shows (the source size) at the
+  first buffers' size. Changed: it is set with every new set of buffers.
+- **The page's first size is not its last.** The page reports its place for
+  the terminal in pixels, and correctly, but the first report comes before
+  the page has settled (948 high, then 804, then 828), and Cascades slides
+  the window to a new size over several frames, so the window's own size
+  lags what the page has said.
 
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is
    typed twice (characters come from the field, other keys from key
    events).
-2. What the keyboard delivers for Alt, Shift and the symbol key
-   (`logInput`), against what `internal/keys` assumes.
+2. What the keyboard delivers for Alt, Shift and the symbol key, against
+   what `internal/keys` assumes.
 3. The key bar: sticky Ctrl and Alt, Esc, Tab, the arrows; an Enter typed
    after tapping a button reaches the shell.
 4. Colours: a background colour inside a row, the cursor as an inverted

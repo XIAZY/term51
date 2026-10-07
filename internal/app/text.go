@@ -2,15 +2,16 @@ package app
 
 import (
 	"log"
+	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/XIAZY/libghostty-vt-go/vt"
 
+	"term51/internal/cells"
 	"term51/internal/keys"
 	"term51/internal/session"
-	"term51/internal/textgrid"
 )
 
 // copyLimit is the most text Copy hands to the page: the text travels as
@@ -18,9 +19,15 @@ import (
 // scrollback can be megabytes. The end of the selection is kept.
 const copyLimit = 512 << 10
 
-// textFrame is how often, at most, the labels are updated: Cascades lays a
-// label out again for every change, so bursts of output are merged.
+// textFrame is how often, at most, the screen is drawn: bursts of output
+// are merged into one frame.
 const textFrame = 33 * time.Millisecond
+
+// sizeQuiet is how long the page's size must have stayed the same before
+// the window and the shells are resized: the page reports two or three
+// sizes while the on-screen keyboard rows slide in or out, and each resize
+// makes the window's buffers again and reflows every shell.
+const sizeQuiet = 150 * time.Millisecond
 
 // tab is one shell.
 type tab struct {
@@ -68,15 +75,29 @@ func (t *tab) follow(out chan<- news) {
 	}
 }
 
-// Run serves the page until the last shell has exited: QML measures its
-// monospace font and says how many cells fit ("grid"); Go answers with the
-// rows that changed, as rich text for the page's labels. It holds any
-// number of tabs, one shown. It returns the reason it ended.
+// Run serves the page until the last shell has exited. The page says where
+// the terminal goes and how big it is ("window", then "size"); the loop
+// opens the screen there, makes the character sheet for the display, and
+// from then on draws the shown shell's terminal whenever it changes. It
+// holds any number of tabs, one shown. It returns the reason it ended.
 func (a *App) Run() error {
+	// The screen's OpenGL context belongs to one thread.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var scr Screen
+	defer func() {
+		if scr != nil {
+			scr.Close()
+		}
+	}()
+	var sheet *cells.Sheet // the character shapes, shared by all tabs
+	var table cells.Table  // the shown tab's cells
+	bg := a.cfg.SessionTheme().Background
+	winW, winH := 0, 0 // the window in pixels
+
 	var tabs []*tab
 	cur := -1
 	inbox := make(chan news, 16)
-	var grid textgrid.Grid
 	rs := vt.RenderStateEmpty()
 	cols, rows, cw, ch := 0, 0, 0, 0
 
@@ -98,7 +119,7 @@ func (a *App) Run() error {
 		for i, t := range tabs {
 			titles[i] = t.title
 		}
-		st := map[string]any{"tabs": titles, "current": cur, "cols": cols, "rows": rows, "ctrl": stickyCtrl, "alt": stickyAlt}
+		st := map[string]any{"tabs": titles, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt}
 		if cur >= 0 {
 			st["title"] = tabs[cur].title
 		}
@@ -122,16 +143,24 @@ func (a *App) Run() error {
 		if err := tabs[cur].sess.Snapshot(&rs); err != nil {
 			return
 		}
-		changed := grid.Update(&rs)
-		if len(changed) == 0 {
+		// Update draws the characters it meets for the first time into
+		// the sheet, so the sheet's new part is taken after it.
+		first, end := table.Update(&rs, sheet)
+		fresh := sheet.TakeDirty()
+		if !fresh.Empty() {
+			scr.Sheet(sheet.Pix, fresh.Min.X, fresh.Min.Y, fresh.Dx(), fresh.Dy())
+		}
+		if first == end && fresh.Empty() {
 			return
 		}
-		a.event(map[string]any{"rows": changed, "count": len(rs.RowData)})
+		if err := scr.Frame(table.Data, first, end); err != nil {
+			log.Printf("app: %v", err)
+		}
 	}
-	// show makes tab i the one on screen: every row is sent again.
+	// show makes tab i the one on screen: its whole table is drawn.
 	show := func(i int) {
 		cur = i
-		grid = textgrid.Grid{}
+		table = cells.Table{}
 		sticky()
 		tell()
 		post()
@@ -197,36 +226,80 @@ func (a *App) Run() error {
 		sticky()
 	}
 
+	// fit makes the window, the grid and the shells fit the place the page
+	// last reported (want).
+	var want Command
+	fit := func() error {
+		c := want
+		w, h := num(c.Args["w"]), num(c.Args["h"])
+		if scr != nil && w == winW && h == winH {
+			return nil // the page came back to the size the window has
+		}
+		winW, winH = w, h
+		if scr == nil {
+			group, _ := c.Args["group"].(string)
+			id, _ := c.Args["id"].(string)
+			s, err := a.open(group, id, w, h)
+			if err != nil {
+				log.Printf("app: %v", err)
+				a.notice("The screen could not be opened: " + err.Error())
+				return nil
+			}
+			scr = s
+			// The font size is in points: real ones, by the display's
+			// dots per inch.
+			sheet, err = cells.NewSheet(a.fonts, a.cfg.FontPt*float64(scr.DPI())/72)
+			if err != nil {
+				return err
+			}
+			cw, ch = sheet.CellSize()
+		} else if err := scr.Resize(w, h); err != nil {
+			log.Printf("app: %v", err)
+			return nil
+		}
+		nc, nr := sheet.Grid(w, h)
+		scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
+		table = cells.Table{} // the screen's table is new: all of it goes again
+		switch {
+		case len(tabs) == 0:
+			// The first size starts the first shell.
+			cols, rows = nc, nr
+			if t := open(); t != nil {
+				tabs = append(tabs, t)
+				show(0)
+			}
+		case nc != cols || nr != rows:
+			cols, rows = nc, nr
+			for _, t := range tabs {
+				if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
+					log.Printf("app: %v", err)
+				}
+			}
+			tell()
+			post() // the reflowed screen, without waiting for output
+		default:
+			post()
+		}
+		return nil
+	}
+
 	var pending <-chan time.Time // set while an update is due
+	var quiet <-chan time.Time   // set while a new size waits to be used
 	for {
 		select {
 		case c := <-a.cmds:
-			if c.Name == "grid" {
-				nc, nr := num(c.Args["cols"]), num(c.Args["rows"])
-				if nc == cols && nr == rows && len(tabs) > 0 {
-					break
-				}
-				cols, rows, cw, ch = nc, nr, num(c.Args["cw"]), num(c.Args["ch"])
-				if len(tabs) == 0 {
-					// The first size starts the first shell.
-					if t := open(); t != nil {
-						tabs = append(tabs, t)
-						show(0)
+			if c.Name == "window" || c.Name == "size" {
+				// The page's place for the terminal, in pixels. The first
+				// one creates the window at once; a later one resizes it
+				// when no other has followed for sizeQuiet.
+				want = c
+				if scr == nil {
+					if err := fit(); err != nil {
+						return err
 					}
-					break
+				} else {
+					quiet = time.After(sizeQuiet)
 				}
-				for _, t := range tabs {
-					if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
-						log.Printf("app: %v", err)
-					}
-				}
-				tell()
-				post() // the reflowed screen, without waiting for output
-				break
-			}
-			if c.Name == "ready" {
-				// The page is up: give it what it needs before it measures.
-				a.state(map[string]any{"fontPt": a.cfg.FontPt})
 				break
 			}
 			if c.Name == "quit" {
@@ -237,9 +310,6 @@ func (a *App) Run() error {
 				break // nothing to act on before the first shell
 			}
 			sess := tabs[cur].sess
-			if a.cfg.LogInput {
-				log.Printf("input: %s %v", c.Name, c.Args)
-			}
 			switch c.Name {
 			case "text":
 				// Characters from the page's input field (the physical keys
@@ -356,6 +426,17 @@ func (a *App) Run() error {
 				} else {
 					pending = time.After(textFrame - since)
 				}
+			}
+		case <-quiet:
+			if len(a.cmds) > 0 {
+				// More from the page is waiting, perhaps a newer size:
+				// that first.
+				quiet = time.After(sizeQuiet)
+				break
+			}
+			quiet = nil
+			if err := fit(); err != nil {
+				return err
 			}
 		case <-pending:
 			pending = nil

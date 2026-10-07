@@ -1,13 +1,11 @@
 import bb.cascades 1.4
 import bb.system 1.2
 
-// The terminal as a column of text labels, one per row, in a monospace
-// font. Go sends the rows that changed as rich text; this page only shows
-// them.
-//
-// The size of a cell is measured, not assumed: a hidden label holds 80
-// characters, and its laid-out size gives the width of one and the height
-// of a row.
+// The terminal page: a key bar with the keys the phone's keyboard lacks, the
+// terminal, and a hidden input field. The terminal itself is not drawn by
+// Cascades: Go draws it with OpenGL into a window of its own, and the
+// ForeignWindowControl below is the place in the page where that window
+// shows.
 Page {
     id: page
 
@@ -17,14 +15,9 @@ Page {
     property int tabCount: 1
     property int tabIndex: 0
 
-    property real fontPt: 7          // the labels' font size, in points (from the settings)
-    property real cellW: 0
+    property bool created: false     // the terminal's window has been asked for
+    property real cellW: 0           // a cell in pixels, from Go
     property real cellH: 0
-    property real areaW: 0
-    property real areaH: 0
-    property int cols: 0
-    property int rows: 0
-    property variant labels: []
 
     function send(name, args) { bridge.send(name, JSON.stringify(args || {})) }
 
@@ -33,44 +26,27 @@ Page {
                  shift: event.shiftPressed, ctrl: event.ctrlPressed, alt: event.altPressed }
     }
 
-    // Tells Go how many cells fit, once both the cell and the area are known.
-    function fit() {
-        if (cellW <= 0 || cellH <= 0 || areaW <= 0 || areaH <= 0)
+    // Tells Go where the terminal goes and how big it is: the first time
+    // it creates the window, afterwards it resizes it.
+    function sized(frame) {
+        if (frame.width <= 0 || frame.height <= 0)
             return
-        var c = Math.max(1, Math.floor(areaW / cellW))
-        var r = Math.max(1, Math.floor(areaH / cellH))
-        if (c == cols && r == rows)
-            return
-        cols = c
-        rows = r
-        send("grid", { cols: c, rows: r, cw: Math.round(cellW), ch: Math.round(cellH) })
-    }
-
-    // Makes the column hold exactly n labels.
-    function setCount(n) {
-        var ls = labels
-        while (ls.length < n) {
-            var l = rowLabel.createObject()
-            grid.add(l)
-            ls.push(l)
+        if (!created) {
+            created = true
+            send("window", { group: fwc.windowGroup, id: fwc.windowId, w: frame.width, h: frame.height })
+        } else {
+            send("size", { w: frame.width, h: frame.height })
         }
-        while (ls.length > n) {
-            var last = ls.pop()
-            grid.remove(last)
-            last.destroy()
-        }
-        labels = ls
     }
 
     onCreationCompleted: {
-        input.requestFocus()
-        page.send("ready")
         bridge.state.connect(function(json) {
             var s = JSON.parse(json)
             if (s.ctrl !== undefined) page.ctrl = s.ctrl
             if (s.alt !== undefined) page.alt = s.alt
             if (s.title !== undefined) page.termTitle = s.title
-            if (s.fontPt !== undefined) page.fontPt = s.fontPt
+            if (s.cw !== undefined) page.cellW = s.cw
+            if (s.ch !== undefined) page.cellH = s.ch
             if (s.tabs !== undefined) page.tabCount = s.tabs.length
             if (s.current !== undefined) page.tabIndex = s.current
         })
@@ -83,16 +59,6 @@ Page {
             if (e.notice !== undefined) {
                 toast.body = e.notice
                 toast.show()
-                return
-            }
-            if (e.rows === undefined)
-                return
-            if (e.count != page.labels.length)
-                page.setCount(e.count)
-            var ls = page.labels // read once: each access converts the list
-            for (var i = 0; i < e.rows.length; i++) {
-                var row = e.rows[i]
-                ls[row.y].text = "<html>" + row.html + "</html>"
             }
         })
     }
@@ -140,33 +106,30 @@ Page {
         }
     ]
 
-    // Characters come through the input field at the bottom of the page (so
-    // that the phone shows its on-screen keyboard rows, and symbols can be
-    // typed). The field always has the focus; its key listener sends only
-    // the keys that are not characters: Backspace, Tab, Escape, the arrows.
-    // Enter is the field's "submitted".
+    // Keys reach the shell in one of two ways. Until the terminal is
+    // tapped nothing has the focus, and the page's key listener below sends
+    // every key. A tap gives the hidden input field the focus, which makes
+    // the phone show its on-screen keyboard rows (so that symbols can be
+    // typed); then characters come through the field, its key listener
+    // sends only the keys that are not characters (Backspace, Tab, Escape,
+    // the arrows), and Enter is the field's "submitted".
     function isCharacterKey(event) {
         var k = event.key
         if (k == 13 || k == 10 || k == 0xF00D)
             return true // Enter: handled by the input field
         return k >= 0x20 && k != 0x7F && k < 0xF000
     }
-    attachedObjects: [
-        SystemToast { id: toast },
-        ComponentDefinition {
-            id: rowLabel
-            Label {
-                multiline: false
-                textFormat: TextFormat.Html
-                textStyle.fontFamily: "Monospace"
-                textStyle.fontSize: FontSize.PointValue
-                textStyle.fontSizeValue: page.fontPt
-                topMargin: 0
-                bottomMargin: 0
-                horizontalAlignment: HorizontalAlignment.Left
-            }
+    keyListeners: KeyListener {
+        onKeyPressed: {
+            if (!input.focused)
+                page.send("key", page.keyArgs(event, true))
         }
-    ]
+        onKeyReleased: {
+            if (!input.focused)
+                page.send("key", page.keyArgs(event, false))
+        }
+    }
+    attachedObjects: SystemToast { id: toast }
 
     Container {
         layout: StackLayout {}
@@ -206,69 +169,54 @@ Page {
                      onClicked: page.send("bar", { name: "right" }) }
         }
 
-        // The measuring label: 80 characters, never shown (it is invisible
-        // but still takes a row of space above the grid).
-        Label {
-            id: probe
-            text: "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
-            multiline: false
-            textStyle.fontFamily: "Monospace"
-            textStyle.fontSize: FontSize.PointValue
-            textStyle.fontSizeValue: page.fontPt
-            topMargin: 0
-            bottomMargin: 0
-            opacity: 0
-            horizontalAlignment: HorizontalAlignment.Left
-            attachedObjects: LayoutUpdateHandler {
-                onLayoutFrameChanged: {
-                    page.cellW = layoutFrame.width / 80
-                    page.cellH = layoutFrame.height
-                    page.fit()
-                }
-            }
-        }
-
-        // The terminal: one label per row. A vertical drag scrolls the
-        // scrollback.
-        Container {
-            id: grid
-            layout: StackLayout {}
+        // The terminal. Position, Size and Visible: Cascades keeps Go's
+        // window over this control's area. A vertical drag scrolls the
+        // scrollback; a long press selects the word under the finger; a
+        // tap brings up the on-screen keyboard rows (the phone's own swipe
+        // down puts them away).
+        ForeignWindowControl {
+            id: fwc
+            windowId: "term51"
+            updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
             horizontalAlignment: HorizontalAlignment.Fill
             layoutProperties: StackLayoutProperties { spaceQuota: 1 }
             property real touchY: 0
             attachedObjects: LayoutUpdateHandler {
-                onLayoutFrameChanged: {
-                    page.areaW = layoutFrame.width
-                    page.areaH = layoutFrame.height
-                    page.fit()
-                }
+                onLayoutFrameChanged: page.sized(layoutFrame)
             }
-            // A long press selects the word under the finger.
-            gestureHandlers: LongPressHandler {
-                onLongPressed: {
-                    if (page.cellW > 0 && page.cellH > 0)
-                        page.send("selectword", { x: Math.floor(event.x / page.cellW), y: Math.floor(event.y / page.cellH) })
+            gestureHandlers: [
+                LongPressHandler {
+                    onLongPressed: {
+                        if (page.cellW > 0 && page.cellH > 0)
+                            page.send("selectword", { x: Math.floor(event.x / page.cellW), y: Math.floor(event.y / page.cellH) })
+                    }
+                },
+                TapHandler {
+                    onTapped: input.requestFocus()
                 }
-            }
+            ]
             onTouch: {
                 if (event.isDown()) {
-                    grid.touchY = event.localY
+                    fwc.touchY = event.localY
                 } else if (event.isMove() && page.cellH > 0) {
-                    var d = Math.floor((event.localY - grid.touchY) / page.cellH)
+                    var d = Math.floor((event.localY - fwc.touchY) / page.cellH)
                     if (d != 0) {
                         page.send("scroll", { rows: -d })
-                        grid.touchY += d * page.cellH
+                        fwc.touchY += d * page.cellH
                     }
                 }
             }
         }
 
-        // The input field: it holds the focus, so the phone shows its
-        // on-screen keyboard rows as for any text field. What is typed goes
-        // to the shell at once and the field is emptied.
+        // The input field: while it has the focus the phone shows its
+        // on-screen keyboard rows, as for any text field. What is typed
+        // goes to the shell at once and the field is emptied. It is not
+        // seen and takes no room: the terminal reaches the bottom of the
+        // page.
         TextField {
             id: input
-            hintText: "type here"
+            opacity: 0
+            maxHeight: 0
             horizontalAlignment: HorizontalAlignment.Fill
             inputMode: TextFieldInputMode.Text
             input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff

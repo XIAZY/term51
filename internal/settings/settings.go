@@ -39,9 +39,6 @@ import (
 
 // Settings is everything the user can set.
 type Settings struct {
-	// LogInput writes every key and text command from the page to the log,
-	// to see what the phone really delivers.
-	LogInput bool
 	// FontPt is the size of the terminal's text, in points.
 	FontPt float64
 
@@ -268,7 +265,6 @@ func textField(name, comment string, p func(*Settings) *string) field {
 
 // fields is every setting, in the order the file is written.
 var fields = []field{
-	boolField("logInput", "Write every key and text command from the page to the log (to see what the phone delivers).", func(s *Settings) *bool { return &s.LogInput }),
 	{"fontPt", "The size of the terminal's text, in points.",
 		func(s *Settings, v string) error {
 			f, err := strconv.ParseFloat(v, 64)

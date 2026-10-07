@@ -7,18 +7,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XIAZY/libghostty-vt-go/vt"
+	"golang.org/x/image/font/gofont/gomono"
+	"golang.org/x/image/font/gofont/gomonobold"
+	"golang.org/x/image/font/gofont/gomonobolditalic"
+	"golang.org/x/image/font/gofont/gomonoitalic"
+	"golang.org/x/image/font/opentype"
+
+	"term51/internal/cells"
 	"term51/internal/settings"
 )
 
-// page stands in for the QML page: it keeps the merged state and the text of
-// every row, as the labels would.
+// page stands in for the QML page: it keeps the merged state, the clipboard
+// and the notices. The terminal itself is on the screen (scr).
 type page struct {
 	mu        sync.Mutex
 	state     map[string]any
-	rows      map[int]string
-	count     int
 	clipboard string
 	notices   []string
+	scr       *screen
 }
 
 func (p *page) State(js string) {
@@ -35,11 +42,6 @@ func (p *page) State(js string) {
 
 func (p *page) Event(js string) {
 	var e struct {
-		Rows []struct {
-			Y    int    `json:"y"`
-			HTML string `json:"html"`
-		} `json:"rows"`
-		Count     int     `json:"count"`
 		Clipboard *string `json:"clipboard"`
 		Notice    *string `json:"notice"`
 	}
@@ -54,39 +56,155 @@ func (p *page) Event(js string) {
 	if e.Notice != nil {
 		p.notices = append(p.notices, *e.Notice)
 	}
-	if e.Rows != nil {
-		if e.Count != p.count {
-			p.count = e.Count
-			p.rows = map[int]string{}
+}
+
+// screen is what the page shows of the terminal: the text on the screen.
+func (p *page) screen() string { return p.scr.text() }
+
+// screen stands in for the window: it keeps what the app hands over, the
+// character sheet and the cell table, exactly as the GPU would hold them.
+type screen struct {
+	mu         sync.Mutex
+	w, h       int
+	cols, rows int
+	cw, ch     int
+	sheet      []byte
+	table      []byte
+	frames     int
+	resizes    int
+	shapes     map[string]rune // a slot's pixels -> the character, for text
+}
+
+// testDPI makes the default 7 point font 14 pixels.
+const testDPI = 144
+
+func testFonts(t *testing.T) cells.Fonts {
+	t.Helper()
+	parse := func(ttf []byte) *opentype.Font {
+		f, err := opentype.Parse(ttf)
+		if err != nil {
+			t.Fatal(err)
 		}
-		for _, r := range e.Rows {
-			p.rows[r.Y] = r.HTML
-		}
+		return f
+	}
+	return cells.Fonts{Faces: [4]*opentype.Font{parse(gomono.TTF), parse(gomonobold.TTF), parse(gomonoitalic.TTF), parse(gomonobolditalic.TTF)}}
+}
+
+// newScreen makes the stand-in. To read text back from what it is handed,
+// it learns what each printable ASCII character looks like: it draws them
+// through a sheet and table of its own, with the same fonts and size as the
+// app's, and remembers each one's pixels.
+func newScreen(t *testing.T, fonts cells.Fonts, sizePx float64) *screen {
+	t.Helper()
+	ref, err := cells.NewSheet(fonts, sizePx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &screen{sheet: make([]byte, cells.SheetSize*cells.SheetSize), shapes: map[string]rune{}}
+	s.cw, s.ch = ref.CellSize()
+
+	var printable []byte
+	for c := byte('!'); c <= '~'; c++ {
+		printable = append(printable, c)
+	}
+	term, err := vt.NewTerminal(vt.TerminalOptions{Cols: 100, Rows: 1, Colors: vt.TerminalColorsDefault(), DefaultModes: vt.NewModePacked()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer term.Deinit()
+	stream := term.VtStream()
+	if err := stream.NextSlice(printable); err != nil {
+		t.Fatal(err)
+	}
+	rs := vt.RenderStateEmpty()
+	if err := rs.Update(&term); err != nil {
+		t.Fatal(err)
+	}
+	var table cells.Table
+	table.Update(&rs, ref)
+	for i, c := range printable {
+		slot := int(table.Data[i*cells.RecordSize]) | int(table.Data[i*cells.RecordSize+1])<<8
+		s.shapes[slotPixels(ref.Pix, slot, ref.PerRow, s.cw, s.ch)] = rune(c)
+	}
+	return s
+}
+
+// slotPixels is the pixels of one slot of a sheet.
+func slotPixels(sheet []byte, slot, perRow, cw, ch int) string {
+	x0, y0 := slot%perRow*cw, slot/perRow*ch
+	var b []byte
+	for y := y0; y < y0+ch; y++ {
+		b = append(b, sheet[y*cells.SheetSize+x0:y*cells.SheetSize+x0+cw]...)
+	}
+	return string(b)
+}
+
+func (s *screen) Resize(w, h int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.w, s.h = w, h
+	s.resizes++
+	return nil
+}
+
+func (s *screen) DPI() int { return testDPI }
+
+func (s *screen) Grid(cols, rows, cellW, cellH int, r, g, b uint8) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cols, s.rows, s.cw, s.ch = cols, rows, cellW, cellH
+	s.table = make([]byte, cols*rows*cells.RecordSize) // new storage, as on the GPU
+}
+
+func (s *screen) Sheet(sheet []byte, x, y, w, h int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for row := y; row < y+h; row++ {
+		copy(s.sheet[row*cells.SheetSize+x:row*cells.SheetSize+x+w], sheet[row*cells.SheetSize+x:])
 	}
 }
 
-// screen is the page's text with the markup removed.
-func (p *page) screen() string {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (s *screen) Frame(table []byte, lo, hi int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	copy(s.table[lo:hi], table[lo:hi])
+	s.frames++
+	return nil
+}
+
+func (s *screen) Close() {}
+
+// size is the grid as last set.
+func (s *screen) size() (cols, rows int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cols, s.rows
+}
+
+// text reads the screen: each cell's slot is looked up in the sheet the
+// screen was handed, and its pixels matched with the characters it knows.
+// A shape it does not know reads as "?".
+func (s *screen) text() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var sb strings.Builder
-	for y := 0; y < p.count; y++ {
-		inTag := false
-		for _, r := range p.rows[y] {
-			switch {
-			case r == '<':
-				inTag = true
-			case r == '>':
-				inTag = false
-			case !inTag && r == ' ':
+	for y := 0; y < s.rows; y++ {
+		for x := 0; x < s.cols; x++ {
+			rec := s.table[(y*s.cols+x)*cells.RecordSize:]
+			slot := int(rec[0]) | int(rec[1])<<8
+			if slot == 0 {
 				sb.WriteByte(' ')
-			case !inTag:
-				sb.WriteRune(r)
+				continue
+			}
+			if c, ok := s.shapes[slotPixels(s.sheet, slot, cells.SheetSize/s.cw, s.cw, s.ch)]; ok {
+				sb.WriteRune(c)
+			} else {
+				sb.WriteByte('?')
 			}
 		}
 		sb.WriteByte('\n')
 	}
-	return strings.NewReplacer("&lt;", "<", "&gt;", ">", "&amp;", "&", "&quot;", `"`).Replace(sb.String())
+	return sb.String()
 }
 
 func (p *page) get(key string) any {
@@ -113,14 +231,20 @@ func wait(t *testing.T, what string, cond func() bool) {
 
 func startApp(t *testing.T) (*App, *page, chan error) {
 	t.Helper()
-	p := &page{state: map[string]any{}, rows: map[int]string{}}
-	debugPage = p
 	cfg := settings.Default()
 	cfg.Shell, cfg.Args = "/bin/bash", []string{"--norc", "--noprofile"}
-	a := New(cfg, p)
+	fonts := testFonts(t)
+	scr := newScreen(t, fonts, cfg.FontPt*testDPI/72)
+	p := &page{state: map[string]any{}, scr: scr}
+	debugPage = p
+	a := New(cfg, p, func(group, id string, w, h int) (Screen, error) {
+		scr.Resize(w, h)
+		return scr, nil
+	}, fonts)
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
-	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 40.0, "rows": 8.0, "cw": 10.0, "ch": 20.0}})
+	// The page's place for the terminal: 40 by 8 cells and a few pixels over.
+	a.Send(Command{Name: "window", Args: map[string]any{"group": "g", "id": "term51", "w": float64(40*scr.cw + 3), "h": float64(8*scr.ch + 5)}})
 	wait(t, "the first prompt", func() bool { return strings.Contains(p.screen(), "$") })
 	return a, p, done
 }
@@ -136,8 +260,8 @@ func TestTextFrontEndShowsTheShell(t *testing.T) {
 	a, p, done := startApp(t)
 	typeLine(a, "echo one-$((40+2))")
 	wait(t, "the command's output", func() bool { return strings.Contains(p.screen(), "one-42") })
-	if p.count != 8 {
-		t.Errorf("the page has %d rows, want 8", p.count)
+	if cols, rows := p.scr.size(); cols != 40 || rows != 8 {
+		t.Errorf("the screen is %d by %d cells, want 40 by 8", cols, rows)
 	}
 
 	// The key bar: sticky Ctrl, then a "d" from the keyboard, ends the shell,
@@ -214,12 +338,23 @@ func TestCopyAndResize(t *testing.T) {
 		return strings.Contains(p.clipboard, "copy-me")
 	})
 
-	a.Send(Command{Name: "grid", Args: map[string]any{"cols": 30.0, "rows": 5.0, "cw": 10.0, "ch": 20.0}})
-	wait(t, "the resized page", func() bool {
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		return p.count == 5 && p.state["cols"] == 30.0
+	// The sizes of one slide of the on-screen rows, close together, are
+	// one resize: to the last of them.
+	p.scr.mu.Lock()
+	before := p.scr.resizes
+	p.scr.mu.Unlock()
+	for _, rows := range []int{9, 7, 5} {
+		a.Send(Command{Name: "size", Args: map[string]any{"w": float64(30 * p.scr.cw), "h": float64(rows * p.scr.ch)}})
+	}
+	wait(t, "the resized screen", func() bool {
+		cols, rows := p.scr.size()
+		return cols == 30 && rows == 5 && p.get("cols") == 30.0
 	})
+	p.scr.mu.Lock()
+	if n := p.scr.resizes - before; n != 1 {
+		t.Errorf("three sizes close together resized the screen %d times, want once", n)
+	}
+	p.scr.mu.Unlock()
 	typeLine(a, "stty size")
 	wait(t, "the shell's new size", func() bool { return strings.Contains(p.screen(), "5 30") })
 

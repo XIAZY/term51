@@ -110,8 +110,9 @@ Page {
         }
     }
 
-    // The app's menu. BlackBerry 10 has icons of its own for closing and
-    // for settings; the other three are ours (tools/icons).
+    // The app's menu. BlackBerry 10 has an icon of its own for settings;
+    // the other four are ours (tools/icons). (The system's delete item,
+    // which has an icon too, is not accepted in an app menu.)
     Menu.definition: MenuDefinition {
         actions: [
             ActionItem {
@@ -119,8 +120,9 @@ Page {
                 imageSource: "asset:///images/newtab.png"
                 onTriggered: page.send("newtab")
             },
-            DeleteActionItem {
+            ActionItem {
                 title: "Close tab"
+                imageSource: "asset:///images/closetab.png"
                 onTriggered: page.send("closetab")
             },
             ActionItem {

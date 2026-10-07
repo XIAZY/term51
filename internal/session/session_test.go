@@ -193,3 +193,32 @@ func TestLargeOutput(t *testing.T) {
 	s := start(t, `head -c 300000 /dev/zero | tr '\0' 'x'; printf '\r\nEND'; sleep 5`)
 	waitText(t, s, "END")
 }
+
+// The theme's colours are the terminal's defaults, so a program that asks
+// for the background colour gets it.
+func TestThemeColoursAreReported(t *testing.T) {
+	s := start(t, `stty raw -echo
+printf '\033]11;?\033\\'; IFS= read -r -d '\' bg
+printf '\r\nbg=%s' "${bg#??}"; sleep 5`)
+	text := waitText(t, s, "bg=")
+	if !strings.Contains(text, "bg=11;rgb:1010/1414/1818") {
+		t.Errorf("screen: %q", text)
+	}
+}
+
+func TestThemePalette(t *testing.T) {
+	red := RGB{0xAA, 0, 0}
+	c := Theme{Foreground: RGB{1, 2, 3}, Background: RGB{4, 5, 6}, Cursor: &red, Palette: []RGB{{9, 9, 9}}}.colors()
+	if fg := c.Foreground.Get(); !fg.Valid || fg.Value.R != 1 || fg.Value.B != 3 {
+		t.Errorf("foreground %+v", fg)
+	}
+	if cur := c.Cursor.Get(); !cur.Valid || cur.Value.R != 0xAA {
+		t.Errorf("cursor %+v", cur)
+	}
+	if p := c.Palette.Current[0]; p.R != 9 {
+		t.Errorf("palette[0] %+v", p)
+	}
+	if p, lib := c.Palette.Current[1], (Theme{}).colors().Palette.Current[1]; p != lib {
+		t.Errorf("palette[1] %+v, the library's is %+v", p, lib)
+	}
+}

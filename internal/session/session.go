@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/XIAZY/libghostty-vt-go/vt"
+	"github.com/XIAZY/libghostty-vt-go/vt/color"
 	"github.com/XIAZY/libghostty-vt-go/vt/input"
 
 	"term51/internal/pty"
@@ -47,8 +48,56 @@ type Config struct {
 	// counts it.
 	MaxScrollback uint64
 
+	// Theme is the terminal's default colours.
+	Theme Theme
+
 	// Replies configures the answers to programs' queries.
 	Replies replies.Config
+}
+
+// RGB is a colour.
+type RGB struct{ R, G, B uint8 }
+
+// Theme is the colours the terminal starts with. The library leaves the
+// default text and background colours unset, so an application has to give
+// them; the zero Theme is DefaultTheme. (So a theme of black text on a black
+// background with nothing else set cannot be asked for; nobody wants it.)
+type Theme struct {
+	Foreground, Background RGB
+	// Cursor is the cursor's colour; nil draws it in the text colour.
+	Cursor *RGB
+	// Palette replaces the first colours of the 256-colour palette (the 16
+	// ANSI colours, usually); nil keeps the library's.
+	Palette []RGB
+}
+
+// DefaultTheme is light grey on near black.
+var DefaultTheme = Theme{
+	Foreground: RGB{0xD0, 0xD0, 0xD0},
+	Background: RGB{0x10, 0x14, 0x18},
+}
+
+func (t Theme) colors() vt.TerminalColors {
+	if t.Foreground == (RGB{}) && t.Background == (RGB{}) && t.Cursor == nil && t.Palette == nil {
+		t = DefaultTheme
+	}
+	c := vt.TerminalColorsDefault()
+	c.Foreground = color.NewDynamicRGB(color.RGB{R: t.Foreground.R, G: t.Foreground.G, B: t.Foreground.B})
+	c.Background = color.NewDynamicRGB(color.RGB{R: t.Background.R, G: t.Background.G, B: t.Background.B})
+	if t.Cursor != nil {
+		c.Cursor = color.NewDynamicRGB(color.RGB{R: t.Cursor.R, G: t.Cursor.G, B: t.Cursor.B})
+	}
+	if len(t.Palette) > 0 {
+		pal := c.Palette.Current
+		for i, p := range t.Palette {
+			if i >= len(pal) {
+				break
+			}
+			pal[i] = color.RGB{R: p.R, G: p.G, B: p.B}
+		}
+		c.Palette = color.NewDynamicPalette(pal)
+	}
+	return c
 }
 
 // DefaultTerm is the TERM the shell gets when Config.Env does not set one.
@@ -120,7 +169,7 @@ func Start(cfg Config) (*Session, error) {
 		Cols:          uint16(cfg.Cols),
 		Rows:          uint16(cfg.Rows),
 		MaxScrollback: cfg.MaxScrollback,
-		Colors:        vt.TerminalColorsDefault(),
+		Colors:        cfg.Theme.colors(),
 		DefaultModes:  vt.NewModePacked(),
 	})
 	if err != nil {

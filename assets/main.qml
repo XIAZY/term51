@@ -2,7 +2,7 @@ import bb.cascades 1.4
 import bb.system 1.2
 
 // The terminal page: a key bar with the keys the phone's keyboard lacks, the
-// terminal, and the input field. The terminal itself is not drawn by
+// terminal, and a hidden input field. The terminal itself is not drawn by
 // Cascades: Go draws it with OpenGL into a window of its own, and the
 // ForeignWindowControl below is the place in the page where that window
 // shows.
@@ -40,7 +40,6 @@ Page {
     }
 
     onCreationCompleted: {
-        input.requestFocus()
         bridge.state.connect(function(json) {
             var s = JSON.parse(json)
             if (s.ctrl !== undefined) page.ctrl = s.ctrl
@@ -107,16 +106,28 @@ Page {
         }
     ]
 
-    // Characters come through the input field at the bottom of the page (so
-    // that the phone shows its on-screen keyboard rows, and symbols can be
-    // typed). The field always has the focus; its key listener sends only
-    // the keys that are not characters: Backspace, Tab, Escape, the arrows.
-    // Enter is the field's "submitted".
+    // Keys reach the shell in one of two ways. Until the terminal is
+    // tapped nothing has the focus, and the page's key listener below sends
+    // every key. A tap gives the hidden input field the focus, which makes
+    // the phone show its on-screen keyboard rows (so that symbols can be
+    // typed); then characters come through the field, its key listener
+    // sends only the keys that are not characters (Backspace, Tab, Escape,
+    // the arrows), and Enter is the field's "submitted".
     function isCharacterKey(event) {
         var k = event.key
         if (k == 13 || k == 10 || k == 0xF00D)
             return true // Enter: handled by the input field
         return k >= 0x20 && k != 0x7F && k < 0xF000
+    }
+    keyListeners: KeyListener {
+        onKeyPressed: {
+            if (!input.focused)
+                page.send("key", page.keyArgs(event, true))
+        }
+        onKeyReleased: {
+            if (!input.focused)
+                page.send("key", page.keyArgs(event, false))
+        }
     }
     attachedObjects: SystemToast { id: toast }
 
@@ -160,7 +171,9 @@ Page {
 
         // The terminal. Position, Size and Visible: Cascades keeps Go's
         // window over this control's area. A vertical drag scrolls the
-        // scrollback; a long press selects the word under the finger.
+        // scrollback; a long press selects the word under the finger; a
+        // tap brings up the on-screen keyboard rows (the phone's own swipe
+        // down puts them away).
         ForeignWindowControl {
             id: fwc
             windowId: "term51"
@@ -171,12 +184,17 @@ Page {
             attachedObjects: LayoutUpdateHandler {
                 onLayoutFrameChanged: page.sized(layoutFrame)
             }
-            gestureHandlers: LongPressHandler {
-                onLongPressed: {
-                    if (page.cellW > 0 && page.cellH > 0)
-                        page.send("selectword", { x: Math.floor(event.x / page.cellW), y: Math.floor(event.y / page.cellH) })
+            gestureHandlers: [
+                LongPressHandler {
+                    onLongPressed: {
+                        if (page.cellW > 0 && page.cellH > 0)
+                            page.send("selectword", { x: Math.floor(event.x / page.cellW), y: Math.floor(event.y / page.cellH) })
+                    }
+                },
+                TapHandler {
+                    onTapped: input.requestFocus()
                 }
-            }
+            ]
             onTouch: {
                 if (event.isDown()) {
                     fwc.touchY = event.localY
@@ -190,10 +208,11 @@ Page {
             }
         }
 
-        // The input field: it holds the focus, so the phone shows its
-        // on-screen keyboard rows as for any text field. What is typed goes
-        // to the shell at once and the field is emptied. It is not seen
-        // and takes no room: the terminal reaches the bottom of the page.
+        // The input field: while it has the focus the phone shows its
+        // on-screen keyboard rows, as for any text field. What is typed
+        // goes to the shell at once and the field is emptied. It is not
+        // seen and takes no room: the terminal reaches the bottom of the
+        // page.
         TextField {
             id: input
             opacity: 0

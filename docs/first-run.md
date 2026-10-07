@@ -25,6 +25,24 @@ text command to `data/term51.log`.
   phone does not show its on-screen keyboard rows. The page now has one; it
   holds the focus, and what is typed into it goes to the shell.
 
+- **The app could not be closed** (2026-10-07). After the owner closed it,
+  the process stayed behind with one thread, `is_client_reader`, waiting for
+  a reply from the phone's input service (`imfwk`); it could not be killed,
+  the installer refused to install over it, and only a restart removed it.
+  The cause was how the shell was started: asking Go for a controlling
+  terminal made it start the shell with vfork, which copies every descriptor
+  the app has open, so the shell held copies of the connections Cascades
+  had made, the one to the input service among them. Changed: the shell is
+  started in two steps so that Go uses spawn, which hands over only the
+  terminal (`internal/pty`, Start). Checked on the phone with main b8e630b:
+  with the app open the shell holds only its terminal (`/dev/ttyp0` on
+  descriptors 0, 1, 2 and one of its own) against 47 entries in the app,
+  and after closing the app no process and no shell are left.
+- **Found on the way, also changed:** the process called the C library's
+  `exit` from two threads (`os.Exit` is that on this system). It now ends in
+  one place, on the main thread after the Cascades event loop has returned
+  (`main.go`). This was not the cause of the hang above.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

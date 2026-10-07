@@ -22,7 +22,7 @@
 //	var _ StreamHandler = (*StreamReadonlyHandler)(nil)
 //
 // below makes the compiler check that the handler satisfies StreamHandler
-// (stream.go): `Vt(action StreamActionKey, value StreamAction) error` and
+// (stream.go): `Vt(action StreamActionKey, value *StreamAction) error` and
 // `Deinit()`.
 //
 // `Handler.vt` is `fn(self: *Handler, comptime action: Action.Tag, value:

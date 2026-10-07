@@ -18,13 +18,15 @@
 //     the documented signature
 //     `fn(comptime action: Action.Key, value: Action.Value(action)) !void`.
 //     Go has no comptime parameter and no type that depends on a value, so
-//     it is `Vt(action StreamActionKey, value StreamAction) error`: `value`
-//     is the whole tagged union with `value.Tag == action`, and the payload
-//     Zig passes is the field of `value` named by the tag. For a variant
-//     with no payload Zig passes `{}` and no field is meaningful.
-//     `try self.handler.vt(.k, v)` is therefore
-//     `if err := self.handler.Vt(StreamActionKeyK, StreamAction{Tag:
-//     StreamActionKeyK, K: v}); err != nil { return err }`.
+//     it is `Vt(action StreamActionKey, value *StreamAction) error`:
+//     `value` points at the whole tagged union with `value.Tag == action`,
+//     and the payload Zig passes is the field of `value` named by the tag.
+//     For a variant with no payload Zig passes `{}` and no field is
+//     meaningful. The action is one the stream owns and reuses (see
+//     StreamHandler.Vt and streamAction), so
+//     `try self.handler.vt(.k, v)` is
+//     `self.streamAction(StreamActionKeyK).K = v` followed by
+//     `if err := self.vt(StreamActionKeyK); err != nil { return err }`.
 //   - `deinit`, called by Stream.deinit ("The Handler type must also have a
 //     `deinit` function"). It is `Deinit()`.
 //   - `vtRaw` is optional in Zig (`@hasDecl(T, "vtRaw")` in nextNonUtf8). It
@@ -503,6 +505,14 @@ type StreamHandler interface {
 	// slice inside a payload (a title, OSC data, CSI parameters), must copy
 	// it. Only the payload field named by value.Tag is meaningful; every
 	// other payload field is zero.
+	//
+	// The handler must not modify the action: Zig passes it by value, here
+	// it is the stream's own storage.
+	//
+	// If a handler panics and the caller recovers and keeps using the
+	// stream, results stay correct, but from then on the stream takes its
+	// slower paths (a newly allocated action and action array per call),
+	// as it does for a handler that feeds the stream from inside a call.
 	Vt(action StreamActionKey, value *StreamAction) error
 
 	// Deinit is the handler's `deinit`. The stream takes ownership of the
@@ -518,7 +528,11 @@ type StreamHandler interface {
 type StreamHandlerVtRaw interface {
 	//
 	// Go: action is a pointer into storage the stream owns and reuses,
-	// valid only during the call, with the same rule as StreamHandler.Vt.
+	// valid only during the call, with the same rules as StreamHandler.Vt.
+	// In particular the handler must not modify it: it is the parser
+	// action the stream goes on to dispatch when VtRaw returns false, so a
+	// write would change what is dispatched. The note there about a
+	// handler that panics applies here too.
 	VtRaw(action *ParserAction) (bool, error)
 }
 

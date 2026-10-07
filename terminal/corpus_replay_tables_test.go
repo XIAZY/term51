@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 )
 
@@ -62,16 +61,10 @@ func tablesModes(w *bytes.Buffer) {
 	}
 }
 
-// tablesModeDefault is `@field(defaults, name)`: the bool field of the packed
-// struct that Zig calls name. It panics for a name without a field.
+// tablesModeDefault is `@field(defaults, name)`: the bit of the packed modes
+// that Zig calls name. It panics for a name without a field.
 func tablesModeDefault(defaults *ModesModePacked, name string) bool {
-	v := reflect.ValueOf(defaults).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		if zigName(v.Type().Field(i).Name) == name {
-			return dumpField(v, i).Bool()
-		}
-	}
-	panic("ModesModePacked has no field " + name)
+	return defaults.get(modesModePackedFieldBit([]uint8(name)))
 }
 
 // tablesProduce runs a table writer; a panic of the port becomes a line of

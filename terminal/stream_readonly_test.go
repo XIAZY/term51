@@ -2573,7 +2573,7 @@ func TestStreamReadonly_term51_Handler_vt_save_mode_and_restore_mode_round_trip_
 	before := sroSnapshot(t, &tm)
 	sroVt(t, &h, sroModeAct(StreamActionKeySaveMode, ModesModeCursorKeys))
 	after := sroSnapshot(t, &tm)
-	expect(t, tm.Modes.Saved.cursor_keys, "t.modes.saved.cursor_keys")
+	expect(t, sm1_modesField(&tm.Modes.Saved, "cursor_keys"), "t.modes.saved.cursor_keys")
 	expect(t, tm.Modes.Get(ModesModeCursorKeys), "t.modes.get(.cursor_keys)")
 	before.saved_modes = after.saved_modes
 	expectEqual(t, before, after)

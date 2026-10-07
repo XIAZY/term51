@@ -245,7 +245,7 @@ func TestKpPaste_Options_fromTerminal_default_modes_and_reset(t *testing.T) {
 	// Default on: starts on, a reset restores on, and clearing works until reset.
 	{
 		term := kpPasteTerminal(t, func(opts *TerminalOptions) {
-			opts.DefaultModes.bracketed_paste = true
+			sm1_modesFieldSet(&opts.DefaultModes, "bracketed_paste", true)
 		})
 		defer term.Deinit()
 		expectEqual(t, true, InputPasteOptionsFromTerminal(term).Bracketed)

@@ -2463,8 +2463,8 @@ func TestFm3_term51_TerminalFormatter_format_all_modes_changed_in_declaration_or
 func TestFm3_term51_TerminalFormatter_format_modes_are_compared_with_the_terminals_defaults(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 3)
-	opts.DefaultModes.bracketed_paste = true
-	opts.DefaultModes.wraparound = false
+	sm1_modesFieldSet(&opts.DefaultModes, "bracketed_paste", true)
+	sm1_modesFieldSet(&opts.DefaultModes, "wraparound", false)
 	term_, err := TerminalInit(opts)
 	zigTry(t, err)
 	term := &term_

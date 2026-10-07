@@ -619,11 +619,11 @@ palette:
 	if self.opts.Emit == FormatterFormatVt && self.extra.Modes {
 		// inline for (@typeInfo(modespkg.Mode).@"enum".fields): the fields
 		// built once at start-up (modes.go); field i is entry i, so
-		// `@field(default, field.name)` is modesModePackedFields[i].
+		// `@field(default, field.name)` is bit i of the packed modes.
 		for i, field := range modesModeFields {
 			mode := ModesMode(field.value)
 			current := self.terminal.Modes.Get(mode)
-			default_val := *modesModePackedFields[i](&self.terminal.Modes.Default)
+			default_val := self.terminal.Modes.Default.get(uint8(i))
 
 			if current != default_val {
 				tag := ModesModeTagFromInt(ModesModeTagBacking(mode))

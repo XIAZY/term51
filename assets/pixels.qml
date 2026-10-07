@@ -45,10 +45,40 @@ Page {
                 fwc.requestFocus()
             }
         })
+        bridge.event.connect(function(json) {
+            var e = JSON.parse(json)
+            if (e.clipboard !== undefined)
+                bridge.copy(e.clipboard)
+        })
         fwc.requestFocus()
     }
 
     titleBar: TitleBar { title: page.termTitle }
+
+    // Copy takes the selection, or the whole screen when nothing is
+    // selected. Go answers with the text; the page owns the clipboard.
+    actions: [
+        ActionItem {
+            title: "Copy"
+            onTriggered: page.send("copy")
+        },
+        ActionItem {
+            title: "Paste"
+            onTriggered: {
+                var text = bridge.paste()
+                if (text.length > 0)
+                    page.send("paste", { text: text })
+            }
+        },
+        ActionItem {
+            title: "Select all"
+            onTriggered: page.send("selectall")
+        },
+        ActionItem {
+            title: "Clear selection"
+            onTriggered: page.send("unselect")
+        }
+    ]
 
     // The phone's keyboard: every key press and release goes to Go.
     keyListeners: KeyListener {

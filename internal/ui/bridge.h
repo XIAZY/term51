@@ -10,6 +10,9 @@ class Bridge : public QObject {
 
 public:
     Q_INVOKABLE void send(const QString &name, const QString &argsJson);
+    // The system clipboard, as plain text.
+    Q_INVOKABLE void copy(const QString &text);
+    Q_INVOKABLE QString paste();
 
 public slots:
     void postState(const QString &json);

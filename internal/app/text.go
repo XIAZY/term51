@@ -126,6 +126,27 @@ func (a *App) runText() error {
 					sess.ScrollToBottom()
 					_ = sess.Paste([]byte(text))
 				}
+			case "selectword":
+				if found, _ := sess.SelectWordAt(num(c.Args["x"]), num(c.Args["y"])); !found {
+					sess.ClearSelection()
+				}
+			case "select":
+				_ = sess.Select(num(c.Args["x0"]), num(c.Args["y0"]), num(c.Args["x1"]), num(c.Args["y1"]))
+			case "selectall":
+				_ = sess.SelectAll()
+			case "unselect":
+				sess.ClearSelection()
+			case "copy":
+				// The selection, or the whole screen when nothing is selected, goes
+				// back to the page, which owns the clipboard.
+				text, ok, _ := sess.SelectionText()
+				if !ok {
+					text, _ = sess.Text()
+				}
+				if b, err := json.Marshal(map[string]any{"clipboard": text}); err == nil {
+					a.pub.Event(string(b))
+				}
+				sess.ClearSelection()
 			case "scroll":
 				sess.ScrollViewport(num(c.Args["rows"]))
 			}

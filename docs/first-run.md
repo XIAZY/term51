@@ -39,6 +39,14 @@ the one place that changes if the answer is not the assumed one.
 6. **The key bar's buttons do not keep the focus** (an Enter typed after
    tapping Ctrl must reach the terminal).
 
+## Copy and paste
+
+- **The clipboard:** Copy (the selection, or the whole screen) and Paste
+  from the page's menu go through `bb::system::Clipboard` in the bridge.
+- **A long press selects the word under the finger** (text front end): the
+  cell is computed from the touch position and the measured cell size.
+  Selection by dragging is not there yet; a drag scrolls.
+
 ## The text front end (`assets/text.qml`, `internal/textgrid`)
 
 7. **The font is monospace.** The page measures 80 `M` against 80 `i` and

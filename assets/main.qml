@@ -97,7 +97,6 @@ TabbedPane {
                 else if (line == "menu") page.openActionMenu()
                 else if (line == "settings") settingsSheet.open()
                 else if (line == "back") settingsSheet.close()
-                else if (line.indexOf("shot ") == 0) bridge.shot(line.substring(5))
             }
 
             function keyArgs(event, down) {

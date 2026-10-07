@@ -24,10 +24,6 @@
     <asset path="assets">assets</asset>
 
     <permission system="true">run_native</permission>
-    <!-- For the development aid that takes a picture of the display
-         (internal/app/remote.go); to be removed with it before release. -->
-    <permission>use_camera_desktop</permission>
-    <permission>access_shared</permission>
     <env var="LD_LIBRARY_PATH" value="/usr/lib/qt4/lib"/>
     <env var="CASCADES_THEME" value="dark"/>
 </qnx>

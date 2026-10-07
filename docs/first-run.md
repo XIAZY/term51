@@ -115,6 +115,11 @@ The same error text is in the system log of an installed copy that fails
   top and bottom margin in a left-to-right stack ran the bar's whole height.
   Changed: padding on a container around it.
 
+- **An app cannot quietly take a picture of the display** (2026-10-07).
+  `bb::system::Screenshot::captureDisplay` puts a request on the screen for
+  every picture, with no "always allow"; until it is answered the file is
+  empty. Tried as a way for the developers to see the page, and removed.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

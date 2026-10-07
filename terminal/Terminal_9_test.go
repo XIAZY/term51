@@ -498,46 +498,9 @@ func tm9StartHyperlink(t *testing.T, s *Screen, uri string) {
 // tm9ModesMap applies f to every mode of a ModePacked (Zig does this with
 // `~@as(Int, @bitCast(p))`, a bit-wise not of the packed integer).
 func tm9ModesMap(p ModesModePacked, f func(bool) bool) ModesModePacked {
-	p.disable_keyboard = f(p.disable_keyboard)
-	p.insert = f(p.insert)
-	p.send_receive_mode = f(p.send_receive_mode)
-	p.linefeed = f(p.linefeed)
-	p.cursor_keys = f(p.cursor_keys)
-	p.x132_column = f(p.x132_column)
-	p.slow_scroll = f(p.slow_scroll)
-	p.reverse_colors = f(p.reverse_colors)
-	p.origin = f(p.origin)
-	p.wraparound = f(p.wraparound)
-	p.autorepeat = f(p.autorepeat)
-	p.mouse_event_x10 = f(p.mouse_event_x10)
-	p.cursor_blinking = f(p.cursor_blinking)
-	p.cursor_visible = f(p.cursor_visible)
-	p.enable_mode_3 = f(p.enable_mode_3)
-	p.reverse_wrap = f(p.reverse_wrap)
-	p.alt_screen_legacy = f(p.alt_screen_legacy)
-	p.keypad_keys = f(p.keypad_keys)
-	p.enable_left_and_right_margin = f(p.enable_left_and_right_margin)
-	p.mouse_event_normal = f(p.mouse_event_normal)
-	p.mouse_event_button = f(p.mouse_event_button)
-	p.mouse_event_any = f(p.mouse_event_any)
-	p.focus_event = f(p.focus_event)
-	p.mouse_format_utf8 = f(p.mouse_format_utf8)
-	p.mouse_format_sgr = f(p.mouse_format_sgr)
-	p.mouse_alternate_scroll = f(p.mouse_alternate_scroll)
-	p.mouse_format_urxvt = f(p.mouse_format_urxvt)
-	p.mouse_format_sgr_pixels = f(p.mouse_format_sgr_pixels)
-	p.ignore_keypad_with_numlock = f(p.ignore_keypad_with_numlock)
-	p.alt_esc_prefix = f(p.alt_esc_prefix)
-	p.alt_sends_escape = f(p.alt_sends_escape)
-	p.reverse_wrap_extended = f(p.reverse_wrap_extended)
-	p.alt_screen = f(p.alt_screen)
-	p.save_cursor = f(p.save_cursor)
-	p.alt_screen_save_cursor_clear_enter = f(p.alt_screen_save_cursor_clear_enter)
-	p.bracketed_paste = f(p.bracketed_paste)
-	p.synchronized_output = f(p.synchronized_output)
-	p.grapheme_cluster = f(p.grapheme_cluster)
-	p.report_color_scheme = f(p.report_color_scheme)
-	p.in_band_size_reports = f(p.in_band_size_reports)
+	for _, name := range sm1_modesFieldNames {
+		sm1_modesFieldSet(&p, name, f(sm1_modesField(&p, name)))
+	}
 	return p
 }
 
@@ -3290,9 +3253,9 @@ func TestTm9_fullReset_modes_return_to_the_defaults_and_saved_modes_are_cleared(
 	{
 		opts := terminalOptionsDefault(10, 5)
 		opts.DefaultModes = ModesModePackedInit()
-		opts.DefaultModes.wraparound = false
-		opts.DefaultModes.grapheme_cluster = true
-		opts.DefaultModes.insert = true
+		sm1_modesFieldSet(&opts.DefaultModes, "wraparound", false)
+		sm1_modesFieldSet(&opts.DefaultModes, "grapheme_cluster", true)
+		sm1_modesFieldSet(&opts.DefaultModes, "insert", true)
 		term := tm9InitOpts(t, opts)
 		defer term.Deinit()
 		expect(t, !term.Modes.Get(ModesModeWraparound), "!t.modes.get(.wraparound)")
@@ -3314,7 +3277,7 @@ func TestTm9_fullReset_modes_return_to_the_defaults_and_saved_modes_are_cleared(
 		// default (true), not the terminal default (false).
 		term.Modes.Set(ModesModeWraparound, false)
 		expect(t, term.Modes.Restore(ModesModeWraparound), "t.modes.restore(.wraparound)")
-		expect(t, !term.Modes.Default.wraparound, "!t.modes.default.wraparound")
+		expect(t, !sm1_modesField(&term.Modes.Default, "wraparound"), "!t.modes.default.wraparound")
 	}
 }
 
@@ -3378,7 +3341,7 @@ func TestTm9_fullReset_size_colors_mouse_shape_and_default_modes_are_kept(t *tes
 		Palette:    ColorDynamicPaletteDefault,
 	}
 	opts.DefaultModes = ModesModePackedInit()
-	opts.DefaultModes.grapheme_cluster = true
+	sm1_modesFieldSet(&opts.DefaultModes, "grapheme_cluster", true)
 	term := tm9InitOpts(t, opts)
 	defer term.Deinit()
 

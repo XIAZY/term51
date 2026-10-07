@@ -35,17 +35,15 @@
 // all-false, so `.{}` is ModesModePackedInit() and `ModeState{}` is
 // ModesModeStateInit(); a zero ModesModeState is NOT Zig's default state.
 //
-// `@field(packed, entry.name)` is modesModePackedField, which returns a
-// pointer to the bool field Zig names entry.name. Zig resolves the
-// `inline else` + `comptime entryForMode(...)` + `@field` of set, get, save
-// and restore at compile time, so at run time each is a single field
-// access. Following the rule for compile-time work (computed once at
-// start-up, not on each call), two tables are built at start-up:
-// modesModeIndex maps a Mode to the index of its entry, and
-// modesModePackedFields holds, per entry, the field accessor `@field`
-// resolves to (checked against modesModePackedField at start-up).
-// set/get/save/restore, entryForMode, modeFromInt and String use them;
-// modesEntryForMode and modesModePackedField keep their Zig meaning.
+// ModePacked is one bit per entry, bit i for entry i, as Zig's packed struct
+// is; `@field(packed, entry.name)` is that bit (modesModePackedFieldBit gives
+// it for a name). Zig resolves the `inline else` + `comptime
+// entryForMode(...)` + `@field` of set, get, save and restore at compile
+// time, so at run time each is a single bit access. Following the rule for
+// compile-time work (computed once at start-up, not on each call), the table
+// modesModeIndex, built at start-up, maps a Mode to the index of its entry,
+// which is its bit. set/get/save/restore, entryForMode, modeFromInt and
+// String use it; modesEntryForMode keeps its Zig meaning.
 
 package terminal
 
@@ -82,8 +80,7 @@ func (self *ModesModeState) Reset() {
 func (self *ModesModeState) Set(mode ModesMode, value bool) {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
-	i := modesModeEntryIndex(mode)
-	*modesModePackedFields[i](&self.Values) = value
+	self.Values.set(modesModeEntryIndex(mode), value)
 }
 
 // Get is modes.ModeState.get: get the value of a mode.
@@ -93,8 +90,7 @@ func (self *ModesModeState) Set(mode ModesMode, value bool) {
 func (self *ModesModeState) Get(mode ModesMode) bool {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
-	i := modesModeEntryIndex(mode)
-	return *modesModePackedFields[i](&self.Values)
+	return self.Values.get(modesModeEntryIndex(mode))
 }
 
 // Save is modes.ModeState.save: save the state of the given mode. This can
@@ -105,7 +101,7 @@ func (self *ModesModeState) Save(mode ModesMode) {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
 	i := modesModeEntryIndex(mode)
-	*modesModePackedFields[i](&self.Saved) = *modesModePackedFields[i](&self.Values)
+	self.Saved.set(i, self.Values.get(i))
 }
 
 // Restore is modes.ModeState.restore: see save. This will return the
@@ -114,8 +110,8 @@ func (self *ModesModeState) Restore(mode ModesMode) bool {
 	// Zig: switch (mode) { inline else => |mode_comptime| ... }, resolved
 	// at compile time; the tables are built at start-up.
 	i := modesModeEntryIndex(mode)
-	*modesModePackedFields[i](&self.Values) = *modesModePackedFields[i](&self.Saved)
-	return *modesModePackedFields[i](&self.Values)
+	self.Values.set(i, self.Saved.get(i))
+	return self.Values.get(i)
 }
 
 // ModesModePacked is modes.ModePacked: a packed struct of all the settable
@@ -123,205 +119,52 @@ func (self *ModesModeState) Restore(mode ModesMode) bool {
 // struct.
 //
 // Zig: a packed struct generated from `entries`, one bool per entry, named
-// after the entry, default the entry's `default`. In Go it is an ordinary
-// struct with the same fields in the same order. `132_column` begins with a
-// digit, which a Go identifier cannot, so that field takes the prefix `X`
-// (as in sgr.go).
+// after the entry, default the entry's `default`. In Go it is the same thing
+// written by hand: one bit per entry, bit i for entry i of `entries` (the
+// order of the Zig fields), read and written with get and set. The mode
+// called `x` in Zig (`p.wraparound`) is bit modesModePackedFieldBit("x").
+//
+// Go: the first port had one bool field per entry and reached a field
+// through a table of accessor functions; a mode check, several per printed
+// character, was a table lookup and an indirect call
+// (docs/post-port-optimizations.md item 35).
 type ModesModePacked struct {
-	// ANSI
-	disable_keyboard  bool
-	insert            bool
-	send_receive_mode bool // Zig: default true.
-	linefeed          bool
-
-	// DEC
-	cursor_keys                        bool
-	x132_column                        bool
-	slow_scroll                        bool
-	reverse_colors                     bool
-	origin                             bool
-	wraparound                         bool // Zig: default true.
-	autorepeat                         bool
-	mouse_event_x10                    bool
-	cursor_blinking                    bool
-	cursor_visible                     bool // Zig: default true.
-	enable_mode_3                      bool
-	reverse_wrap                       bool
-	alt_screen_legacy                  bool
-	keypad_keys                        bool
-	enable_left_and_right_margin       bool
-	mouse_event_normal                 bool
-	mouse_event_button                 bool
-	mouse_event_any                    bool
-	focus_event                        bool
-	mouse_format_utf8                  bool
-	mouse_format_sgr                   bool
-	mouse_alternate_scroll             bool // Zig: default true.
-	mouse_format_urxvt                 bool
-	mouse_format_sgr_pixels            bool
-	ignore_keypad_with_numlock         bool // Zig: default true.
-	alt_esc_prefix                     bool // Zig: default true.
-	alt_sends_escape                   bool
-	reverse_wrap_extended              bool
-	alt_screen                         bool
-	save_cursor                        bool
-	alt_screen_save_cursor_clear_enter bool
-	bracketed_paste                    bool
-	synchronized_output                bool
-	grapheme_cluster                   bool
-	report_color_scheme                bool
-	in_band_size_reports               bool
+	bits uint64
 }
 
-// modesModePackedField stands for Zig's `@field(p, name)` on a ModePacked:
-// a pointer to the field named name (an entry name). A name without a field
-// is a compile error in Zig; here it panics.
-func modesModePackedField(p *ModesModePacked, name []uint8) *bool {
-	switch string(name) {
-	// ANSI
-	case "disable_keyboard":
-		return &p.disable_keyboard
-	case "insert":
-		return &p.insert
-	case "send_receive_mode":
-		return &p.send_receive_mode
-	case "linefeed":
-		return &p.linefeed
+// get is `@field(p, name)` read for the entry with index i.
+func (p *ModesModePacked) get(i uint8) bool {
+	return p.bits>>i&1 != 0
+}
 
-	// DEC
-	case "cursor_keys":
-		return &p.cursor_keys
-	case "132_column":
-		return &p.x132_column
-	case "slow_scroll":
-		return &p.slow_scroll
-	case "reverse_colors":
-		return &p.reverse_colors
-	case "origin":
-		return &p.origin
-	case "wraparound":
-		return &p.wraparound
-	case "autorepeat":
-		return &p.autorepeat
-	case "mouse_event_x10":
-		return &p.mouse_event_x10
-	case "cursor_blinking":
-		return &p.cursor_blinking
-	case "cursor_visible":
-		return &p.cursor_visible
-	case "enable_mode_3":
-		return &p.enable_mode_3
-	case "reverse_wrap":
-		return &p.reverse_wrap
-	case "alt_screen_legacy":
-		return &p.alt_screen_legacy
-	case "keypad_keys":
-		return &p.keypad_keys
-	case "enable_left_and_right_margin":
-		return &p.enable_left_and_right_margin
-	case "mouse_event_normal":
-		return &p.mouse_event_normal
-	case "mouse_event_button":
-		return &p.mouse_event_button
-	case "mouse_event_any":
-		return &p.mouse_event_any
-	case "focus_event":
-		return &p.focus_event
-	case "mouse_format_utf8":
-		return &p.mouse_format_utf8
-	case "mouse_format_sgr":
-		return &p.mouse_format_sgr
-	case "mouse_alternate_scroll":
-		return &p.mouse_alternate_scroll
-	case "mouse_format_urxvt":
-		return &p.mouse_format_urxvt
-	case "mouse_format_sgr_pixels":
-		return &p.mouse_format_sgr_pixels
-	case "ignore_keypad_with_numlock":
-		return &p.ignore_keypad_with_numlock
-	case "alt_esc_prefix":
-		return &p.alt_esc_prefix
-	case "alt_sends_escape":
-		return &p.alt_sends_escape
-	case "reverse_wrap_extended":
-		return &p.reverse_wrap_extended
-	case "alt_screen":
-		return &p.alt_screen
-	case "save_cursor":
-		return &p.save_cursor
-	case "alt_screen_save_cursor_clear_enter":
-		return &p.alt_screen_save_cursor_clear_enter
-	case "bracketed_paste":
-		return &p.bracketed_paste
-	case "synchronized_output":
-		return &p.synchronized_output
-	case "grapheme_cluster":
-		return &p.grapheme_cluster
-	case "report_color_scheme":
-		return &p.report_color_scheme
-	case "in_band_size_reports":
-		return &p.in_band_size_reports
+// set is `@field(p, name) = value` for the entry with index i.
+func (p *ModesModePacked) set(i uint8, value bool) {
+	if value {
+		p.bits |= 1 << i
+	} else {
+		p.bits &^= 1 << i
+	}
+}
+
+// modesModePackedFieldBit stands for the name in Zig's `@field(p, name)` on
+// a ModePacked: the bit of the field named name (an entry name), which is the
+// index of that entry. A name without a field is a compile error in Zig;
+// here it panics.
+func modesModePackedFieldBit(name []uint8) uint8 {
+	for i, entry := range modesEntries {
+		if string(entry.name) == string(name) {
+			return uint8(i)
+		}
 	}
 	panic("ModePacked has no field " + string(name))
 }
 
-// modesModePackedFields is, for each entry of modesEntries (same index),
-// the field `@field(packed, entry.name)` resolves to at compile time, as an
-// accessor. modesModePackedFieldsCheck verifies at start-up that each one
-// returns the same field as modesModePackedField(p, entry.name).
-var modesModePackedFields = [...]func(p *ModesModePacked) *bool{
-	func(p *ModesModePacked) *bool { return &p.disable_keyboard },                   // disable_keyboard
-	func(p *ModesModePacked) *bool { return &p.insert },                             // insert
-	func(p *ModesModePacked) *bool { return &p.send_receive_mode },                  // send_receive_mode
-	func(p *ModesModePacked) *bool { return &p.linefeed },                           // linefeed
-	func(p *ModesModePacked) *bool { return &p.cursor_keys },                        // cursor_keys
-	func(p *ModesModePacked) *bool { return &p.x132_column },                        // 132_column
-	func(p *ModesModePacked) *bool { return &p.slow_scroll },                        // slow_scroll
-	func(p *ModesModePacked) *bool { return &p.reverse_colors },                     // reverse_colors
-	func(p *ModesModePacked) *bool { return &p.origin },                             // origin
-	func(p *ModesModePacked) *bool { return &p.wraparound },                         // wraparound
-	func(p *ModesModePacked) *bool { return &p.autorepeat },                         // autorepeat
-	func(p *ModesModePacked) *bool { return &p.mouse_event_x10 },                    // mouse_event_x10
-	func(p *ModesModePacked) *bool { return &p.cursor_blinking },                    // cursor_blinking
-	func(p *ModesModePacked) *bool { return &p.cursor_visible },                     // cursor_visible
-	func(p *ModesModePacked) *bool { return &p.enable_mode_3 },                      // enable_mode_3
-	func(p *ModesModePacked) *bool { return &p.reverse_wrap },                       // reverse_wrap
-	func(p *ModesModePacked) *bool { return &p.alt_screen_legacy },                  // alt_screen_legacy
-	func(p *ModesModePacked) *bool { return &p.keypad_keys },                        // keypad_keys
-	func(p *ModesModePacked) *bool { return &p.enable_left_and_right_margin },       // enable_left_and_right_margin
-	func(p *ModesModePacked) *bool { return &p.mouse_event_normal },                 // mouse_event_normal
-	func(p *ModesModePacked) *bool { return &p.mouse_event_button },                 // mouse_event_button
-	func(p *ModesModePacked) *bool { return &p.mouse_event_any },                    // mouse_event_any
-	func(p *ModesModePacked) *bool { return &p.focus_event },                        // focus_event
-	func(p *ModesModePacked) *bool { return &p.mouse_format_utf8 },                  // mouse_format_utf8
-	func(p *ModesModePacked) *bool { return &p.mouse_format_sgr },                   // mouse_format_sgr
-	func(p *ModesModePacked) *bool { return &p.mouse_alternate_scroll },             // mouse_alternate_scroll
-	func(p *ModesModePacked) *bool { return &p.mouse_format_urxvt },                 // mouse_format_urxvt
-	func(p *ModesModePacked) *bool { return &p.mouse_format_sgr_pixels },            // mouse_format_sgr_pixels
-	func(p *ModesModePacked) *bool { return &p.ignore_keypad_with_numlock },         // ignore_keypad_with_numlock
-	func(p *ModesModePacked) *bool { return &p.alt_esc_prefix },                     // alt_esc_prefix
-	func(p *ModesModePacked) *bool { return &p.alt_sends_escape },                   // alt_sends_escape
-	func(p *ModesModePacked) *bool { return &p.reverse_wrap_extended },              // reverse_wrap_extended
-	func(p *ModesModePacked) *bool { return &p.alt_screen },                         // alt_screen
-	func(p *ModesModePacked) *bool { return &p.save_cursor },                        // save_cursor
-	func(p *ModesModePacked) *bool { return &p.alt_screen_save_cursor_clear_enter }, // alt_screen_save_cursor_clear_enter
-	func(p *ModesModePacked) *bool { return &p.bracketed_paste },                    // bracketed_paste
-	func(p *ModesModePacked) *bool { return &p.synchronized_output },                // synchronized_output
-	func(p *ModesModePacked) *bool { return &p.grapheme_cluster },                   // grapheme_cluster
-	func(p *ModesModePacked) *bool { return &p.report_color_scheme },                // report_color_scheme
-	func(p *ModesModePacked) *bool { return &p.in_band_size_reports },               // in_band_size_reports
-}
+var _ = modesModePackedCheck()
 
-var _ = modesModePackedFieldsCheck()
-
-// modesModePackedFieldsCheck asserts that modesModePackedFields matches
-// modesEntries and modesModePackedField. It runs once at start-up.
-func modesModePackedFieldsCheck() bool {
-	assert(len(modesModePackedFields) == len(modesEntries))
-	var p ModesModePacked
-	for i, entry := range modesEntries {
-		assert(modesModePackedFields[i](&p) == modesModePackedField(&p, entry.name))
-	}
+// modesModePackedCheck asserts that every entry has a bit in ModePacked. It
+// runs once at start-up.
+func modesModePackedCheck() bool {
+	assert(len(modesEntries) <= 64)
 	return true
 }
 
@@ -346,8 +189,8 @@ func ModesModeStateInit() ModesModeState {
 // in the same loop over `entries`.
 func ModesModePackedInit() ModesModePacked {
 	var p ModesModePacked
-	for _, entry := range modesEntries {
-		*modesModePackedField(&p, entry.name) = entry.default_
+	for i, entry := range modesEntries {
+		p.set(uint8(i), entry.default_)
 	}
 	return p
 }
@@ -464,12 +307,12 @@ func modesModeIndexInit() *[1 << 16]uint8 {
 
 // modesModeEntryIndex is the index of mode's entry. A value that is not a
 // Mode panics, as Zig's `unreachable` (an invalid enum value) would.
-func modesModeEntryIndex(mode ModesMode) int {
+func modesModeEntryIndex(mode ModesMode) uint8 {
 	i := modesModeIndex[mode]
 	if i == modesModeIndexNone {
 		panic("unreachable")
 	}
-	return int(i)
+	return i
 }
 
 // ModesModeTag is modes.ModeTag: the tag type for our enum is a u16 but we

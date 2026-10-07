@@ -6,12 +6,12 @@
 //   - `try testing.expect(x)` is expect(t, x, "<the Zig expression>"), and
 //     expectEqual / expectEqualStrings keep Zig's names and Zig's
 //     (expected, actual) argument order (helpers in Parser_test.go).
-//   - `ModePacked` is a struct of 40 bools in Go, not a packed struct.
-//     term51EBits (`@bitCast(p)` to u40) is sm1_modesBits, which reads the
-//     fields in struct order with reflect; the reverse `@bitCast` from u40 is
-//     sm1_modesFromBits, which writes through the pointer table
-//     sm1_modesFields (in the order of `entries`). The layout test checks
-//     with reflect that the struct has the fields in that order, which is
+//   - `ModePacked` is one bit per mode in Go as in Zig (bit i for entry i).
+//     term51EBits (`@bitCast(p)` to u40) is sm1_modesBits and the reverse
+//     `@bitCast` from u40 is sm1_modesFromBits. `p.name` is
+//     sm1_modesField(&p, "name") and `p.name = v` is sm1_modesFieldSet;
+//     sm1_modesFieldNames lists the names in declaration order. The layout
+//     test checks that the bit of each name is its position in that list,
 //     the Go counterpart of `@bitOffsetOf`.
 //   - `ModePacked = .{}` and `ModeState = .{}` are ModesModePackedInit() and
 //     ModesModeStateInit(): a Go zero value is all false, while six modes
@@ -27,6 +27,7 @@ import (
 	"math/bits"
 	"reflect"
 	"testing"
+	"unsafe"
 )
 
 // sm1_modeRow is term51EModeRow.
@@ -84,72 +85,70 @@ var sm1_modeRows = [...]sm1_modeRow{
 	{ModesModeInBandSizeReports, "in_band_size_reports", 2048, false, false},
 }
 
-func sm1_modesFields(p *ModesModePacked) [40]*bool {
-	return [40]*bool{
-		&p.disable_keyboard,
-		&p.insert,
-		&p.send_receive_mode,
-		&p.linefeed,
-		&p.cursor_keys,
-		&p.x132_column,
-		&p.slow_scroll,
-		&p.reverse_colors,
-		&p.origin,
-		&p.wraparound,
-		&p.autorepeat,
-		&p.mouse_event_x10,
-		&p.cursor_blinking,
-		&p.cursor_visible,
-		&p.enable_mode_3,
-		&p.reverse_wrap,
-		&p.alt_screen_legacy,
-		&p.keypad_keys,
-		&p.enable_left_and_right_margin,
-		&p.mouse_event_normal,
-		&p.mouse_event_button,
-		&p.mouse_event_any,
-		&p.focus_event,
-		&p.mouse_format_utf8,
-		&p.mouse_format_sgr,
-		&p.mouse_alternate_scroll,
-		&p.mouse_format_urxvt,
-		&p.mouse_format_sgr_pixels,
-		&p.ignore_keypad_with_numlock,
-		&p.alt_esc_prefix,
-		&p.alt_sends_escape,
-		&p.reverse_wrap_extended,
-		&p.alt_screen,
-		&p.save_cursor,
-		&p.alt_screen_save_cursor_clear_enter,
-		&p.bracketed_paste,
-		&p.synchronized_output,
-		&p.grapheme_cluster,
-		&p.report_color_scheme,
-		&p.in_band_size_reports,
-	}
+// sm1_modesFieldNames is the fields of ModePacked in declaration order (the
+// order of `entries`), by their Zig names.
+var sm1_modesFieldNames = [40]string{
+	"disable_keyboard",
+	"insert",
+	"send_receive_mode",
+	"linefeed",
+	"cursor_keys",
+	"132_column",
+	"slow_scroll",
+	"reverse_colors",
+	"origin",
+	"wraparound",
+	"autorepeat",
+	"mouse_event_x10",
+	"cursor_blinking",
+	"cursor_visible",
+	"enable_mode_3",
+	"reverse_wrap",
+	"alt_screen_legacy",
+	"keypad_keys",
+	"enable_left_and_right_margin",
+	"mouse_event_normal",
+	"mouse_event_button",
+	"mouse_event_any",
+	"focus_event",
+	"mouse_format_utf8",
+	"mouse_format_sgr",
+	"mouse_alternate_scroll",
+	"mouse_format_urxvt",
+	"mouse_format_sgr_pixels",
+	"ignore_keypad_with_numlock",
+	"alt_esc_prefix",
+	"alt_sends_escape",
+	"reverse_wrap_extended",
+	"alt_screen",
+	"save_cursor",
+	"alt_screen_save_cursor_clear_enter",
+	"bracketed_paste",
+	"synchronized_output",
+	"grapheme_cluster",
+	"report_color_scheme",
+	"in_band_size_reports",
+}
+
+// sm1_modesField is `@field(p, name)`: the value of the mode Zig calls name.
+func sm1_modesField(p *ModesModePacked, name string) bool {
+	return p.get(modesModePackedFieldBit([]uint8(name)))
+}
+
+// sm1_modesFieldSet is `@field(p, name) = value`.
+func sm1_modesFieldSet(p *ModesModePacked, name string, value bool) {
+	p.set(modesModePackedFieldBit([]uint8(name)), value)
 }
 
 // sm1_modesBits is term51EBits: the u40 `@bitCast` of a ModePacked (bit i is
 // the i-th field in declaration order).
 func sm1_modesBits(p ModesModePacked) uint64 {
-	v := reflect.ValueOf(p)
-	var r uint64
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).Bool() {
-			r |= 1 << uint(i)
-		}
-	}
-	return r
+	return p.bits
 }
 
 // sm1_modesFromBits is `@bitCast(@as(u40, b))` to a ModePacked.
 func sm1_modesFromBits(b uint64) ModesModePacked {
-	var p ModesModePacked
-	f := sm1_modesFields(&p)
-	for i := range f {
-		*f[i] = b>>uint(i)&1 != 0
-	}
-	return p
+	return ModesModePacked{bits: b}
 }
 
 // sm1_modesDefaultBits is term51EDefaultBits.
@@ -273,25 +272,21 @@ func TestModes_term51_ModeTag_layout_of_the_value_and_ansi_bit(t *testing.T) {
 
 // Zig: test "term51: ModePacked: layout one bit per mode in declaration order"
 func TestModes_term51_ModePacked_layout_one_bit_per_mode_in_declaration_order(t *testing.T) {
-	// Zig-only: @bitSizeOf(ModePacked) == 40 and @sizeOf(ModePacked) == 8
-	// (the Go struct is not a packed struct). The field count stands in for
+	// Zig: @bitSizeOf(ModePacked) == 40 and @sizeOf(ModePacked) == 8. Go:
+	// one bit per entry in a 64-bit integer; the entry count stands in for
 	// the bit size.
-	pt := reflect.TypeOf(ModesModePacked{})
-	expectEqual(t, 40, pt.NumField())
+	expectEqual(t, 40, len(modesEntries))
+	expectEqual(t, uintptr(8), unsafe.Sizeof(ModesModePacked{}))
 
 	for i, row := range sm1_modeRows {
-		// Zig: @bitOffsetOf(ModePacked, row.name) == i. Go: the i-th field
-		// of the struct is the field of this mode.
-		name := row.name
-		if name == "132_column" {
-			name = "x132_column"
-		}
-		expectEqualStrings(t, name, pt.Field(i).Name)
-		expect(t, pt.Field(i).Type.Kind() == reflect.Bool, "@FieldType(ModePacked, row.name) == bool")
+		// Zig: @bitOffsetOf(ModePacked, row.name) == i, and
+		// @FieldType(ModePacked, row.name) == bool (a single bit in Go).
+		expectEqualStrings(t, row.name, sm1_modesFieldNames[i])
+		expectEqual(t, uint8(i), modesModePackedFieldBit([]uint8(row.name)))
 
 		// Only that bit is set when the field is true and the rest are false.
 		p := sm1_modesFromBits(0)
-		*sm1_modesFields(&p)[i] = true
+		sm1_modesFieldSet(&p, row.name, true)
 		expectEqual(t, uint64(1)<<uint(i), sm1_modesBits(p))
 	}
 }
@@ -303,22 +298,21 @@ func TestModes_term51_ModePacked_default_values(t *testing.T) {
 	// Exactly six modes default to true.
 	expectEqual(t, 6, bits.OnesCount64(sm1_modesBits(p)))
 	n := 0
-	f := sm1_modesFields(&p)
 	for i, row := range sm1_modeRows {
-		expectEqual(t, row.default_, *f[i])
+		expectEqual(t, row.default_, sm1_modesField(&p, sm1_modesFieldNames[i]))
 		if row.default_ {
 			n += 1
 		}
 	}
 	expectEqual(t, 6, n)
-	expect(t, p.send_receive_mode, "p.send_receive_mode")
-	expect(t, p.wraparound, "p.wraparound")
-	expect(t, p.cursor_visible, "p.cursor_visible")
-	expect(t, p.mouse_alternate_scroll, "p.mouse_alternate_scroll")
-	expect(t, p.ignore_keypad_with_numlock, "p.ignore_keypad_with_numlock")
-	expect(t, p.alt_esc_prefix, "p.alt_esc_prefix")
-	expect(t, !p.cursor_keys, "!p.cursor_keys")
-	expect(t, !p.in_band_size_reports, "!p.in_band_size_reports")
+	expect(t, sm1_modesField(&p, "send_receive_mode"), "p.send_receive_mode")
+	expect(t, sm1_modesField(&p, "wraparound"), "p.wraparound")
+	expect(t, sm1_modesField(&p, "cursor_visible"), "p.cursor_visible")
+	expect(t, sm1_modesField(&p, "mouse_alternate_scroll"), "p.mouse_alternate_scroll")
+	expect(t, sm1_modesField(&p, "ignore_keypad_with_numlock"), "p.ignore_keypad_with_numlock")
+	expect(t, sm1_modesField(&p, "alt_esc_prefix"), "p.alt_esc_prefix")
+	expect(t, !sm1_modesField(&p, "cursor_keys"), "!p.cursor_keys")
+	expect(t, !sm1_modesField(&p, "in_band_size_reports"), "!p.in_band_size_reports")
 }
 
 // Zig: test "term51: entryForMode: returns the entry for every mode"

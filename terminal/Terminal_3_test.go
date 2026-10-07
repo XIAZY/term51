@@ -2138,7 +2138,7 @@ func TestTm3_Terminal_fullReset_default_modes(t *testing.T) {
 	testStdCapacity(t)
 	opts := terminalOptionsDefault(10, 10)
 	opts.DefaultModes = ModesModePackedInit()
-	opts.DefaultModes.grapheme_cluster = true
+	sm1_modesFieldSet(&opts.DefaultModes, "grapheme_cluster", true)
 	tm := tm3Init(t, opts)
 	defer tm.Deinit()
 	expect(t, tm.Modes.Get(ModesModeGraphemeCluster), "t.modes.get(.grapheme_cluster)")
@@ -2701,10 +2701,10 @@ func TestTm3_term51_Options_defaults(t *testing.T) {
 	expectEqual(t, TerminalColorsDefault.Palette.Current, opts.Colors.Palette.Current)
 	expectEqual(t, ModesModePackedInit(), opts.DefaultModes)
 	// Wraparound is the only default-on mode among those we care about.
-	expect(t, opts.DefaultModes.wraparound, "opts.default_modes.wraparound")
-	expect(t, !opts.DefaultModes.insert, "!opts.default_modes.insert")
-	expect(t, !opts.DefaultModes.origin, "!opts.default_modes.origin")
-	expect(t, !opts.DefaultModes.grapheme_cluster, "!opts.default_modes.grapheme_cluster")
+	expect(t, sm1_modesField(&opts.DefaultModes, "wraparound"), "opts.default_modes.wraparound")
+	expect(t, !sm1_modesField(&opts.DefaultModes, "insert"), "!opts.default_modes.insert")
+	expect(t, !sm1_modesField(&opts.DefaultModes, "origin"), "!opts.default_modes.origin")
+	expect(t, !sm1_modesField(&opts.DefaultModes, "grapheme_cluster"), "!opts.default_modes.grapheme_cluster")
 }
 
 // Zig: test "term51: init: initial state"
@@ -2860,9 +2860,9 @@ func TestTm3_term51_init_default_modes_seed_both_values_and_defaults(t *testing.
 	}
 	{
 		dm := ModesModePackedInit()
-		dm.insert = true
-		dm.wraparound = false
-		dm.grapheme_cluster = true
+		sm1_modesFieldSet(&dm, "insert", true)
+		sm1_modesFieldSet(&dm, "wraparound", false)
+		sm1_modesFieldSet(&dm, "grapheme_cluster", true)
 		opts := terminalOptionsDefault(4, 4)
 		opts.DefaultModes = dm
 		tm := tm3Init(t, opts)
@@ -2875,7 +2875,7 @@ func TestTm3_term51_init_default_modes_seed_both_values_and_defaults(t *testing.
 
 		// The saved defaults are independent of later changes to values.
 		tm.Modes.Set(ModesModeInsert, false)
-		expect(t, tm.Modes.Default.insert, "t.modes.default.insert")
+		expect(t, sm1_modesField(&tm.Modes.Default, "insert"), "t.modes.default.insert")
 	}
 }
 

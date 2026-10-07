@@ -988,6 +988,21 @@ func dumpSelfSetBools(t *testing.T, ptr any, names string) {
 		return
 	}
 	for _, name := range strings.Split(names, "|") {
+		// ModePacked is one bit per mode, not a struct of bools (modes.go).
+		if p, ok := ptr.(*ModesModePacked); ok {
+			bit := -1
+			for i, entry := range modesEntries {
+				if string(entry.name) == name {
+					bit = i
+				}
+			}
+			if bit < 0 {
+				t.Errorf("%T has no field %q", ptr, name)
+				continue
+			}
+			p.set(uint8(bit), true)
+			continue
+		}
 		found := false
 		for i := 0; i < v.NumField(); i++ {
 			if !strings.HasPrefix(v.Type().Field(i).Name, "_") && zigName(v.Type().Field(i).Name) == name {

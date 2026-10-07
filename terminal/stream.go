@@ -616,6 +616,37 @@ func (self *Stream[H]) NextSlice(input []uint8) error {
 	// Disable SIMD optimizations if build requests it or if our
 	// manual debug mode is on.
 	for _, c := range input {
+		// Go: a byte 0x20..0x7F in the ground state, with no UTF-8 sequence
+		// open, is printed directly. It is what `next` does with it,
+		// written out: nextUtf8 decodes it to itself and leaves the decoder
+		// as it was, and handleCodepoint passes anything that is neither a
+		// C0 control nor ESC to print. Zig's compiler merges those calls;
+		// Go's makes each of them, for every character
+		// (docs/post-port-optimizations.md item 34).
+		//
+		// The range includes DEL (0x7F), which is not printable: the
+		// per-byte path prints it too (handleCodepoint only diverts
+		// c <= 0xF and ESC), so leaving it out would only send it the long
+		// way to the same call.
+		//
+		// The guard is exactly: ground state, and the decoder in its
+		// accept state (no sequence open). "The decoder as it was" relies
+		// on one more fact: in the accept state the decoder's accumulator
+		// is zero. UTF8Decoder.Next guarantees it (it zeroes the
+		// accumulator whenever it accepts or rejects, and the zero value
+		// starts that way), and it is the only code that writes the
+		// decoder's fields. The per-byte path would leave the accumulator
+		// at zero after this byte; this route does not touch it. Code that
+		// wrote the decoder's fields from elsewhere would break that.
+		if c >= 0x20 && c < 0x80 &&
+			self.parser.state == ParserStateGround &&
+			self.utf8decoder.state == ACCEPT_STATE {
+			if err := self.Print(uint32(c)); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if err := self.Next(c); err != nil {
 			return err
 		}

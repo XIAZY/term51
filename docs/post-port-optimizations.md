@@ -81,6 +81,53 @@ Terminal).
   not run when the function panics, so the ordinary call is also the closer
   translation. The stream benchmarks do not reach this code.
 
+## Second step (2026-10-07)
+
+Measured as above (native, pinned, best of 5), each column on top of the one
+before; "main" is bca2f93, the first step merged. A printed character went
+through about 13 function calls, none of which Go's compiler merged (its
+inlining report names `Next`, `nextUtf8`, the UTF-8 decoder,
+`handleCodepoint`, `Print`, the handler, `Terminal.Print`, `printBody`, the
+mode checks, `printCell`, `CursorRight` and three integrity checks);
+upstream's compiler merges nearly all of them. Items 33 to 35 remove calls;
+item 36 is the erase loop. MB/s:
+
+| Benchmark | main | Item 33 | Item 34 | Item 35 | Item 36 | Upstream plain |
+|---|---:|---:|---:|---:|---:|---:|
+| Stream, ASCII | 40.2 | same | 91.5 | same | same | 65.9 |
+| Stream, SGR | 24.0 | same | 26.1 | 27.7 | same | 52.8 |
+| Stream, mixed | 25.9 | same | 28.7 | 28.0 | same | 51.4 |
+| Terminal, ASCII | 11.0 | 12.4 | 16.9 | 18.9 | 18.4 | 28.3 |
+| Terminal, SGR | 9.8 | 10.3 | 11.4 | 11.7 | 11.7 | 26.1 |
+| Terminal, mixed | 7.7 | 8.0 | 8.2 | 8.5 | 9.2 | 23.7 |
+
+Runs differ by about 3% from one to the next on this machine (other work was
+running), so "same" and differences of that size are not results.
+
+- Item 33: `AssertIntegrity` of `Screen`, `Page` and `PageList` is a wrapper
+  small enough to inline around `assertIntegrityChecked`.
+- Item 34: `NextSlice` prints a printable ASCII byte directly when the
+  parser is in the ground state and no UTF-8 sequence is open. This is a
+  route that is not per-byte `next`; it is held to per-byte `next` by
+  `TestStream_go_only_NextSlice_equals_per_byte_next` (30,000 seeded inputs
+  in random chunks) and `..._direct_print_guard`, and the sampled default
+  split was run natively (project lead ruling, 2026-10-07; see
+  docs/verification.md "When the full rule comes back").
+- Item 35: `ModePacked` is one bit per mode, as upstream's packed struct,
+  and a mode check inlines to a bit test.
+- Item 36: erased cells are filled with a doubling `copy` (`pageCellsFill`)
+  instead of a loop that assigns one cell at a time.
+- Item 37: `SGRParser.Next` increments its index before each of the two
+  returns at the end of a sequence instead of in a deferred closure, which
+  ran once per SGR sequence. Stream, SGR 27.7 -> 33.4; Terminal, SGR
+  11.7 -> 12.6.
+
+Through a terminal the port is now at 1.5 times upstream's plain build on
+plain text, 2.1 times on coloured text and 2.6 times on the full-screen mix.
+After these the profile of the last two is flat: no function is above 20%,
+and what remains is the size of the cell (the erase fill is a block copy of
+20-byte cells, 14% of the full-screen run) and many small costs.
+
 ## Against upstream (2026-10-07)
 
 Upstream's own library (v1.3.1, 332b2ae, unmodified), built with Zig 0.15.2
@@ -144,3 +191,8 @@ There is no phone column: upstream's Zig is not built for the phone.
 | 30 | `Terminal.printAttributes` / `input_key_mods` fixed buffer streams | Two private fixed-buffer-stream stand-ins could be one shared helper. | Ported in parallel branches. |
 | 31 | `StreamHandler.Vt` | Every action, every printed character included, built a `StreamAction` (a struct with a field per payload, 624 bytes) and passed it to the handler by value. Done: the handler now gets a pointer to an action the stream owns and reuses, valid only during the call (see "Changes made"). | Zig passes a small tagged union; the struct-with-tag mapping makes it large. |
 | 32 | `Terminal.Print`, `Terminal.printCell`, `Screen.CursorRight` | A `defer` of the screen integrity check runs for every printed character. Done for these three (see "Changes made"); the other functions that defer the check (cursor moves, erases, scrolls) run once per sequence, not per character, and keep the `defer`. | Zig's `defer` costs nothing; Go's costs a deferred call and blocks inlining. |
+| 33 | `AssertIntegrity` (`Screen`, `Page`, `PageList`) | A real function call per check even with the checks off; three run per printed character. Done: an inlinable wrapper (see "Second step"). | Zig's comptime `if` removes the call; Go's compiler does not inline a function of that size. |
+| 34 | `Stream.NextSlice` | Every byte of plain text goes through `Next`, `nextUtf8`, the UTF-8 decoder and `handleCodepoint` before `Print`. Done: printable ASCII in the ground state is printed directly. | Zig's compiler merges the calls; upstream's SIMD path prints runs of plain text in bulk. |
+| 35 | `ModesModePacked` | A struct of 40 bools read through a table of accessor functions: a lookup and an indirect call per mode check. Done: one bit per mode. | Zig resolves the field at compile time; the first port resolved it at run time through the table. |
+| 36 | `Screen.ClearCells` and the scroll fill | `for i := range cells { cells[i] = blank }` is not compiled to a block operation. Done: `pageCellsFill`. | Zig's `@memset`. |
+| 37 | `SGRParser.Next` | A deferred closure at the end of every SGR sequence. Done: the increment is written before the two returns. | Zig's `defer` costs nothing. |

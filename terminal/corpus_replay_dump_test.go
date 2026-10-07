@@ -729,6 +729,8 @@ func dumpValue(w *bytes.Buffer, prefix string, v reflect.Value) {
 			dumpUnion(w, prefix, v)
 		case dumpIsSegmentedList(t):
 			dumpSegmentedList(w, prefix, v)
+		case t == reflect.TypeOf(ModesModePacked{}):
+			dumpModesPacked(w, prefix, v.Interface().(ModesModePacked))
 		case dumpAllBools(t):
 			dumpBools(w, prefix, v)
 		default:
@@ -917,6 +919,27 @@ func dumpBools(w *bytes.Buffer, prefix string, v reflect.Value) {
 			}
 			any_ = true
 			w.WriteString(zigName(name))
+		}
+	}
+	if !any_ {
+		w.WriteString("none")
+	}
+	w.WriteString("\n")
+}
+
+// dumpModesPacked is the allBools arm for ModePacked, a struct of one bool
+// per mode in Zig and one bit per mode in Go (modes.go): the names of the
+// modes that are set, in the order of the Zig fields (the order of `entries`).
+func dumpModesPacked(w *bytes.Buffer, prefix string, p ModesModePacked) {
+	w.WriteString(prefix + "=")
+	any_ := false
+	for i, entry := range modesEntries {
+		if p.get(uint8(i)) {
+			if any_ {
+				w.WriteString("|")
+			}
+			any_ = true
+			w.Write(entry.name)
 		}
 	}
 	if !any_ {

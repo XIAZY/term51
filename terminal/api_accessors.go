@@ -70,10 +70,10 @@ func (self PageRow) Dirty() bool { return self.dirty }
 
 // Get reports whether mode is set in the packed mode set.
 func (self *ModesModePacked) Get(mode ModesMode) bool {
-	return *modesModePackedFields[modesModeEntryIndex(mode)](self)
+	return self.get(modesModeEntryIndex(mode))
 }
 
 // Set sets or resets mode in the packed mode set.
 func (self *ModesModePacked) Set(mode ModesMode, value bool) {
-	*modesModePackedFields[modesModeEntryIndex(mode)](self) = value
+	self.set(modesModeEntryIndex(mode), value)
 }

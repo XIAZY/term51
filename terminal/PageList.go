@@ -980,11 +980,20 @@ func pageListInitPages(
 // release builds.
 //
 // Zig: self is *const PageList.
+//
+// Go: the body is assertIntegrityChecked, so that this wrapper is small
+// enough for the compiler to inline: with the checks off (the default, as in
+// upstream's release builds) a call costs one test of the flag, as Zig's
+// comptime `if` costs nothing (docs/post-port-optimizations.md item 33).
 func (self *PageList) AssertIntegrity() {
-	if !pageSlowRuntimeSafety {
-		return
+	if pageSlowRuntimeSafety {
+		self.assertIntegrityChecked()
 	}
+}
 
+// assertIntegrityChecked is the body of AssertIntegrity, run when the
+// integrity checks are on. Not a Zig declaration.
+func (self *PageList) assertIntegrityChecked() {
 	if err := self.verifyIntegrity(); err != nil {
 		// Zig: log.err
 		warn("page_list", "PageList integrity check failed: error.%v", err)

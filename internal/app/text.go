@@ -2,6 +2,7 @@ package app
 
 import (
 	"log"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -269,7 +270,7 @@ func (a *App) Run() error {
 	}
 	// settings tells the page every setting's value, for its settings
 	// sheet.
-	settings := func() { a.state(map[string]any{"settings": a.cfg.Values()}) }
+	settings := func() { a.state(map[string]any{"settings": a.cfg.Values(), "bell": a.cfg.Bell}) }
 
 	// fit makes the window, the grid and the shells fit the place the page
 	// last reported (want).
@@ -374,21 +375,39 @@ func (a *App) Run() error {
 				sess.ClearSelection()
 			case "set":
 				// One setting changed on the settings sheet. It is written
-				// to the file at once. The text size applies to what is on
-				// screen; the rest to tabs opened from now on.
+				// to the file at once. The text size, the colours and the
+				// cursor's shape apply to what is on screen; the rest to
+				// tabs opened from now on.
 				name, _ := c.Args["name"].(string)
 				value, _ := c.Args["value"].(string)
-				before := a.cfg.FontPt
+				before := a.cfg
 				if err := a.cfg.Set(name, value); err != nil {
 					a.notice(err.Error())
 				} else if err := a.save(a.cfg); err != nil {
 					log.Printf("app: %v", err)
 					a.notice("The settings could not be saved: " + err.Error())
 				}
-				if a.cfg.FontPt != before {
+				redraw := false
+				if a.cfg.FontPt != before.FontPt {
 					if err := font(); err != nil {
 						return err
 					}
+					redraw = true
+				}
+				if theme := a.cfg.SessionTheme(); !reflect.DeepEqual(theme, before.SessionTheme()) {
+					bg = theme.Background
+					for _, t := range tabs {
+						t.sess.SetTheme(theme)
+					}
+					redraw = true
+				}
+				if a.cfg.Cursor != before.Cursor {
+					for _, t := range tabs {
+						t.sess.SetCursor(a.cfg.SessionCursor())
+					}
+					redraw = true
+				}
+				if redraw {
 					grid()
 				}
 				// Also after a refused value, so that the sheet shows

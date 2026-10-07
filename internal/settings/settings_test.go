@@ -138,9 +138,30 @@ func TestSetAndValues(t *testing.T) {
 	if err := s.Set("fontPt", "5.5"); err != nil || s.FontPt != 5.5 {
 		t.Errorf("Set fontPt: %v, %v", s.FontPt, err)
 	}
+	// A theme is chosen by name and fills the colour settings; the name in
+	// force is read back from the colours.
+	if v["theme"] != "dark" {
+		t.Errorf("the default colours are theme %q, want dark", v["theme"])
+	}
+	for name, theme := range Themes {
+		if err := s.Set("theme", name); err != nil || s.ThemeName() != name || s.Theme.Background != theme.Background {
+			t.Errorf("Set theme %s: %v, name %q, background %s", name, err, s.ThemeName(), s.Theme.Background)
+		}
+		if err := s.Validate(); err != nil {
+			t.Errorf("theme %s: %v", name, err)
+		}
+	}
+	s.Theme.Background = "#123456"
+	if s.ThemeName() != "custom" {
+		t.Errorf("someone's own colours are theme %q", s.ThemeName())
+	}
+	if err := s.Set("cursor", "bar"); err != nil || s.SessionCursor() != session.CursorBar {
+		t.Errorf("Set cursor: %v, %v", s.SessionCursor(), err)
+	}
+
 	// A value that makes no sense, a name that is not a setting and a list
 	// are refused, and nothing changes.
-	for _, bad := range [][2]string{{"fontPt", "400"}, {"fontPt", "big"}, {"shell", ""}, {"colour", "red"}, {"arg", "-l"}} {
+	for _, bad := range [][2]string{{"fontPt", "400"}, {"fontPt", "big"}, {"shell", ""}, {"colour", "red"}, {"arg", "-l"}, {"cursor", "dot"}, {"theme", "pink"}} {
 		before := s
 		before.Args, before.Theme.Palette = nil, nil
 		err := s.Set(bad[0], bad[1])

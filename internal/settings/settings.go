@@ -52,8 +52,57 @@ type Settings struct {
 	// library counts it.
 	ScrollbackBytes uint64
 
+	// Cursor is the cursor's shape while no program asks for one: "block",
+	// "bar" or "underline".
+	Cursor string
+
+	// Bell makes a sound when a program rings the bell.
+	Bell bool
+
 	Theme    Theme
 	Identity Identity
+}
+
+var cursors = map[string]session.CursorShape{
+	"block":     session.CursorBlock,
+	"bar":       session.CursorBar,
+	"underline": session.CursorUnderline,
+}
+
+// Themes are the colour sets the settings sheet offers, by name. A theme
+// is not a setting of its own: choosing one fills the four colour settings,
+// and the theme in force is the one whose colours they hold.
+var Themes = map[string]Theme{
+	// Light grey on near black, the library's palette.
+	"dark": {Foreground: "#d0d0d0", Background: "#101418", Palette: []string{}},
+	// The same on pure black.
+	"black": {Foreground: "#d0d0d0", Background: "#000000", Palette: []string{}},
+	// Dark text on off-white, with colours dark enough to read on it.
+	"light": {Foreground: "#202428", Background: "#fafaf5", Palette: []string{
+		"#202428", "#c4262e", "#2e8b3d", "#9a6a00", "#1f5fbf", "#8b3fa8", "#127f8c", "#b8bcc0",
+		"#5c6166", "#e0424a", "#3aa34d", "#b58100", "#2f76e0", "#a653c4", "#1b98a8", "#ffffff"}},
+	// Solarized dark.
+	"solarized": {Foreground: "#839496", Background: "#002b36", Palette: []string{
+		"#073642", "#dc322f", "#859900", "#b58900", "#268bd2", "#d33682", "#2aa198", "#eee8d5",
+		"#002b36", "#cb4b16", "#586e75", "#657b83", "#839496", "#6c71c4", "#93a1a1", "#fdf6e3"}},
+}
+
+// ThemeName is the name of the theme whose colours the settings hold, or
+// "custom" when they are someone's own.
+func (s Settings) ThemeName() string {
+	for name, t := range Themes {
+		if strings.EqualFold(s.Theme.Foreground, t.Foreground) && strings.EqualFold(s.Theme.Background, t.Background) &&
+			s.Theme.Cursor == t.Cursor && len(s.Theme.Palette) == len(t.Palette) {
+			same := true
+			for i := range t.Palette {
+				same = same && strings.EqualFold(s.Theme.Palette[i], t.Palette[i])
+			}
+			if same {
+				return name
+			}
+		}
+	}
+	return "custom"
 }
 
 // Theme is the terminal's colours, each as "#rrggbb".
@@ -124,6 +173,8 @@ func Default() Settings {
 		Args:            []string{},
 		Term:            session.DefaultTerm,
 		ScrollbackBytes: 8 << 20,
+		Cursor:          "block",
+		Bell:            true,
 		Theme: Theme{
 			Foreground: hex(t.Foreground),
 			Background: hex(t.Background),
@@ -195,6 +246,9 @@ func (s Settings) Validate() error {
 	}
 	if s.ScrollbackBytes > MaxScrollbackBytes {
 		return bad("scrollbackBytes", "%d is more than %d", s.ScrollbackBytes, MaxScrollbackBytes)
+	}
+	if _, ok := cursors[s.Cursor]; !ok {
+		return bad("cursor", "%q is not one of block, bar, underline", s.Cursor)
 	}
 
 	if _, err := parseColor(s.Theme.Foreground); err != nil {
@@ -290,6 +344,8 @@ var fields = []field{
 			return nil
 		},
 		func(s *Settings) []string { return []string{strconv.FormatUint(s.ScrollbackBytes, 10)} }},
+	textField("cursor", "The cursor's shape while no program asks for one: block, bar or underline.", func(s *Settings) *string { return &s.Cursor }),
+	boolField("bell", "Make a sound when a program rings the bell.", func(s *Settings) *bool { return &s.Bell }),
 
 	textField("theme.foreground", "The text colour, as #rrggbb.", func(s *Settings) *string { return &s.Theme.Foreground }),
 	textField("theme.background", "The background colour.", func(s *Settings) *string { return &s.Theme.Background }),
@@ -346,9 +402,10 @@ func fieldByName(name string) *field {
 
 // Values is every setting that has one value, by its name in the file, as
 // the file would hold it. (The two lists, arg and theme.palette, are not in
-// it.)
+// it.) "theme" is the name of the theme the colours make (ThemeName).
 func (s Settings) Values() map[string]string {
-	out := make(map[string]string, len(fields))
+	out := make(map[string]string, len(fields)+1)
+	out["theme"] = s.ThemeName()
 	for i := range fields {
 		if f := &fields[i]; !repeated[f.name] {
 			out[f.name] = f.get(&s)[0]
@@ -361,6 +418,17 @@ func (s Settings) Values() map[string]string {
 // not a single-valued setting, or a value that makes no sense, is an error
 // and changes nothing.
 func (s *Settings) Set(name, value string) error {
+	if name == "theme" {
+		// Not a setting of the file: one of Themes, which fills the
+		// colour settings.
+		t, ok := Themes[value]
+		if !ok {
+			return fmt.Errorf("settings: theme: %q is not a theme", value)
+		}
+		t.Palette = append([]string{}, t.Palette...)
+		s.Theme = t
+		return nil
+	}
 	f := fieldByName(name)
 	if f == nil || repeated[f.name] {
 		return fmt.Errorf("settings: %q is not a setting", name)
@@ -548,6 +616,9 @@ func (s Settings) SessionTheme() session.Theme {
 	return t
 }
 
+// SessionCursor is the cursor's shape as a session takes it.
+func (s Settings) SessionCursor() session.CursorShape { return cursors[s.Cursor] }
+
 // Session is the session to start for a terminal of cols by rows cells of
 // cellW by cellH pixels. env is the environment the shell gets besides
 // TERM (nil: the app's own).
@@ -567,6 +638,7 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string) session.Co
 		Cols: cols, Rows: rows, CellW: cellW, CellH: cellH,
 		MaxScrollback: s.ScrollbackBytes,
 		Theme:         s.SessionTheme(),
+		Cursor:        s.SessionCursor(),
 		Replies:       s.Replies(),
 	}
 }

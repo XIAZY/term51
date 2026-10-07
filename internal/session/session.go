@@ -51,12 +51,34 @@ type Config struct {
 	// Theme is the terminal's default colours.
 	Theme Theme
 
+	// Cursor is the cursor's shape while no program has asked for one.
+	Cursor CursorShape
+
 	// Replies configures the answers to programs' queries.
 	Replies replies.Config
 }
 
 // RGB is a colour.
 type RGB struct{ R, G, B uint8 }
+
+// CursorShape is the shape of the cursor.
+type CursorShape int
+
+const (
+	CursorBlock CursorShape = iota
+	CursorBar
+	CursorUnderline
+)
+
+func (c CursorShape) style() vt.CursorStyle {
+	switch c {
+	case CursorBar:
+		return vt.CursorStyleBar
+	case CursorUnderline:
+		return vt.CursorStyleUnderline
+	}
+	return vt.CursorStyleBlock
+}
 
 // Theme is the colours the terminal starts with. The library leaves the
 // default text and background colours unset, so an application has to give
@@ -152,12 +174,14 @@ type Session struct {
 	// the reader).
 	wmu sync.Mutex
 
-	changed    chan struct{}
-	events     chan Event
-	readerDone chan struct{} // the reader saw the end of the shell's output
-	done       chan struct{} // the shell has exited and been waited for
-	exitErr    error         // set before done is closed
-	closeOnce  sync.Once
+	changed      chan struct{}
+	events       chan Event
+	readerDone   chan struct{} // the reader saw the end of the shell's output
+	done         chan struct{} // the shell has exited and been waited for
+	exitErr      error         // set before done is closed
+	cursor       CursorShape   // the user's shape
+	cursorChosen bool          // a program asked for a shape (DECSCUSR)
+	closeOnce    sync.Once
 }
 
 // Start starts the shell and the reader.
@@ -177,6 +201,7 @@ func Start(cfg Config) (*Session, error) {
 		term:       term,
 		cellW:      cfg.CellW,
 		cellH:      cfg.CellH,
+		cursor:     cfg.Cursor,
 		changed:    make(chan struct{}, 1),
 		events:     make(chan Event, 64),
 		readerDone: make(chan struct{}),
@@ -394,6 +419,27 @@ func (s *Session) Resize(cols, rows, cellW, cellH int) error {
 	return pty.SetSize(s.master, size)
 }
 
+// SetTheme changes the terminal's default colours, for what is on screen
+// too: the next frame is drawn with them. Colours a program has set since
+// the start are replaced as well.
+func (s *Session) SetTheme(t Theme) {
+	s.mu.Lock()
+	if !s.closed {
+		s.term.Colors = t.colors()
+	}
+	s.mu.Unlock()
+	s.signal()
+}
+
+// SetCursor changes the cursor's shape for as long as no program asks for
+// one.
+func (s *Session) SetCursor(c CursorShape) {
+	s.mu.Lock()
+	s.cursor = c
+	s.mu.Unlock()
+	s.signal()
+}
+
 // ScrollViewport moves the view into the scrollback by delta rows (negative:
 // towards older output).
 func (s *Session) ScrollViewport(delta int) {
@@ -423,7 +469,15 @@ func (s *Session) Snapshot(rs *vt.RenderState) error {
 	if s.closed {
 		return ErrClosed
 	}
-	return rs.Update(&s.term)
+	if err := rs.Update(&s.term); err != nil {
+		return err
+	}
+	// The library's cursor is a block until a program asks for a shape;
+	// until then it has the shape the user chose.
+	if !s.cursorChosen && rs.Cursor.VisualStyle == vt.CursorStyleBlock {
+		rs.Cursor.VisualStyle = s.cursor.style()
+	}
+	return nil
 }
 
 // Text returns the screen as plain text (for tests and for copying).

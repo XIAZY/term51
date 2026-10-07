@@ -22,6 +22,9 @@ Sheet {
         values = v
         filling = true
         size.value = parseFloat(v["fontPt"])
+        theme.selectedIndex = { "dark": 0, "black": 1, "light": 2, "solarized": 3, "custom": 4 }[v["theme"]]
+        cursor.selectedIndex = { "block": 0, "bar": 1, "underline": 2 }[v["cursor"]]
+        bell.checked = v["bell"] == "true"
         shell.text = v["shell"]
         term.text = v["term"]
         scrollback.text = "" + (parseInt(v["scrollbackBytes"]) / 1048576)
@@ -93,6 +96,44 @@ Sheet {
                         textStyle.fontSize: FontSize.PointValue
                         textStyle.fontSizeValue: Math.round(size.immediateValue * 2) / 2
                     }
+                }
+
+                Header { title: "Colours and cursor"; subtitle: "Applies at once" }
+                DropDown {
+                    id: theme
+                    title: "Theme"
+                    Option { text: "Dark"; value: "dark" }
+                    Option { text: "Black"; value: "black" }
+                    Option { text: "Light"; value: "light" }
+                    Option { text: "Solarized dark"; value: "solarized" }
+                    // What the drop-down shows for colours someone wrote
+                    // into the settings file; choosing it changes nothing.
+                    Option { text: "Custom (from the settings file)"; value: "custom" }
+                    onSelectedValueChanged: {
+                        if (selectedValue != "custom")
+                            sheet.set("theme", selectedValue)
+                    }
+                }
+                Container {
+                    leftPadding: ui.du(3)
+                    rightPadding: ui.du(3)
+                    topPadding: ui.du(2)
+                    bottomPadding: ui.du(2)
+                    Label { text: "Cursor" }
+                    SegmentedControl {
+                        id: cursor
+                        Option { text: "Block"; value: "block" }
+                        Option { text: "Bar"; value: "bar" }
+                        Option { text: "Underline"; value: "underline" }
+                        onSelectedValueChanged: sheet.set("cursor", selectedValue)
+                    }
+                }
+
+                Header { title: "Sound"; subtitle: "Applies at once" }
+                SettingToggle {
+                    id: bell
+                    text: "Bell: a sound when a program rings it"
+                    onFlipped: sheet.set("bell", on)
                 }
 
                 Header { title: "Shell"; subtitle: "For tabs opened from now on" }
@@ -193,7 +234,7 @@ Sheet {
                     bottomPadding: ui.du(4)
                     Label {
                         multiline: true
-                        text: "The colours and the shell's arguments: data/settings.conf in the app's folder."
+                        text: "Colours of your own and the shell's arguments: data/settings.conf in the app's folder."
                         textStyle.color: Color.Gray
                     }
                 }

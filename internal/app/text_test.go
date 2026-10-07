@@ -387,6 +387,40 @@ func TestSettingsFromThePage(t *testing.T) {
 		return n == 2 && s.Shell == "/bin/sh" && setting("shell") == "/bin/sh"
 	})
 
+	// A theme and the cursor's shape change what is on screen: the last
+	// cell (blank) gets the theme's background, and some cell the bar.
+	lastCell := func() []byte {
+		p.scr.mu.Lock()
+		defer p.scr.mu.Unlock()
+		if len(p.scr.table) < 16 {
+			return make([]byte, 16)
+		}
+		return append([]byte(nil), p.scr.table[len(p.scr.table)-16:]...)
+	}
+	hasFlag := func(flag byte) bool {
+		p.scr.mu.Lock()
+		defer p.scr.mu.Unlock()
+		for i := 0; i+16 <= len(p.scr.table); i += 16 {
+			if p.scr.table[i+2]&flag != 0 {
+				return true
+			}
+		}
+		return false
+	}
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "theme", "value": "light"}})
+	wait(t, "the light theme on screen", func() bool {
+		c := lastCell()
+		return setting("theme") == "light" && c[8] == 0xfa && c[9] == 0xfa && c[10] == 0xf5
+	})
+	if hasFlag(cells.FlagCursorBar) {
+		t.Error("a bar cursor before it was chosen")
+	}
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "cursor", "value": "bar"}})
+	wait(t, "the bar cursor on screen", func() bool { return hasFlag(cells.FlagCursorBar) })
+	if s, n := lastSaved(); n != 4 || s.Cursor != "bar" || s.ThemeName() != "light" {
+		t.Errorf("saved %d times; cursor %q, theme %q", n, s.Cursor, s.ThemeName())
+	}
+
 	a.Quit()
 	if err := <-done; err != nil {
 		t.Errorf("Run returned %v", err)

@@ -1,5 +1,6 @@
 import bb.cascades 1.4
 import bb.system 1.2
+import bb.multimedia 1.4
 
 // The terminal page, made of what BlackBerry 10 gives every app: the
 // standard title bar, the terminal, and at the bottom a row of buttons for
@@ -18,6 +19,8 @@ Page {
     property int tabIndex: 0
 
     property bool created: false     // the terminal's window has been asked for
+    property string termBackground: "#101418" // the theme's, around the terminal
+    property bool bell: true         // a program's bell makes a sound
     property real cellW: 0           // a cell in pixels, from Go
     property real cellH: 0
 
@@ -55,6 +58,8 @@ Page {
             if (s.alt !== undefined) page.alt = s.alt
             if (s.title !== undefined) page.termTitle = s.title
             if (s.cw !== undefined) page.cellW = s.cw
+            if (s.bell !== undefined) page.bell = s.bell
+            if (s.settings !== undefined) page.termBackground = s.settings["theme.background"]
             if (s.ch !== undefined) page.cellH = s.ch
             if (s.tabs !== undefined) {
                 page.tabCount = s.tabs.length
@@ -74,6 +79,8 @@ Page {
                 bridge.copy(e.clipboard)
                 return
             }
+            if (e.bell !== undefined && page.bell)
+                bellSound.play()
             if (e.notice !== undefined) {
                 toast.body = e.notice
                 toast.show()
@@ -166,6 +173,7 @@ Page {
     }
     attachedObjects: [
         SystemToast { id: toast },
+        SystemSound { id: bellSound; sound: SystemSound.GeneralNotification },
         ArrayDataModel { id: tabsModel },
         SettingsSheet { id: settingsSheet },
 
@@ -226,7 +234,7 @@ Page {
 
     Container {
         layout: StackLayout {}
-        background: Color.create("#101418")
+        background: Color.create(page.termBackground)
 
         // The terminal. Position, Size and Visible: Cascades keeps Go's
         // window over this control's area. A vertical drag scrolls the

@@ -43,14 +43,22 @@ func main() {
 	if err != nil {
 		log.Printf("settings: %v; using the defaults", err)
 	}
+	// The process ends in one place only: here on the main thread, after
+	// the UI's event loop has returned and Cascades has taken itself down.
+	// On this system os.Exit is the C library's exit, which runs the
+	// libraries' clean-up on the thread that calls it. Called from another
+	// thread, with the UI still up or just going down, it left a thread
+	// waiting for the phone's input service for ever and a process that
+	// could not be killed (found on the phone, 2026-10-07).
 	a := app.New(cfg, ui.Publisher{})
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
 		log.Printf("the app's loop ended: %v", err)
 		close(ended)
-		// The last shell is gone: the app has nothing left to show.
-		os.Exit(0)
+		// The last shell is gone: the app has nothing left to show. End
+		// the UI; main does the rest.
+		ui.Quit()
 	}()
 
 	rc := ui.Run(func(name, argsJSON string) {
@@ -63,8 +71,9 @@ func main() {
 		}
 		a.Send(app.Command{Name: name, Args: args})
 	})
-	// The user closed the app: hang the shells up before going, and give
-	// that a bounded time.
+	// The UI has ended, because the user closed the app or the last shell
+	// went. Hang up any shells still running, with a bounded wait, then
+	// leave.
 	a.Quit()
 	select {
 	case <-ended:

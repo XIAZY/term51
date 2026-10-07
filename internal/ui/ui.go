@@ -36,6 +36,10 @@ func goCommand(name, argsJSON *C.char) {
 	}
 }
 
+// Quit asks the UI to end: Run then returns on its own thread. Safe from any
+// goroutine, once the page has sent its first command.
+func Quit() { C.ui_quit() }
+
 // Publisher posts state and events to the UI. Safe from any goroutine.
 type Publisher struct{}
 

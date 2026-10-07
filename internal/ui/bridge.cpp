@@ -60,3 +60,7 @@ static void post(const char *slot, const char *json) {
 
 extern "C" void ui_state(const char *json) { post("postState", json); }
 extern "C" void ui_event(const char *json) { post("postEvent", json); }
+
+extern "C" void ui_quit(void) {
+    QMetaObject::invokeMethod(Application::instance(), "quit", Qt::QueuedConnection);
+}

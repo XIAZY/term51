@@ -836,8 +836,11 @@ func NewSelection(startPin Pin, endPin Pin, rect bool) Selection {
 	return terminal.SelectionInit(startPin, endPin, rect)
 }
 
-// NewStream is [terminal.StreamInit].
-func NewStream[H StreamHandler](h H) Stream[H] { return terminal.StreamInit[H](h) }
+// NewStream is [terminal.StreamInitAlloc].
+func NewStream[H StreamHandler](h H) Stream[H] { return terminal.StreamInitAlloc[H](h) }
+
+// NewStreamFixed is [terminal.StreamInit].
+func NewStreamFixed[H StreamHandler](h H) Stream[H] { return terminal.StreamInit[H](h) }
 
 // NewTerminal is [terminal.TerminalInit].
 func NewTerminal(opts TerminalOptions) (Terminal, error) { return terminal.TerminalInit(opts) }
@@ -1808,9 +1811,6 @@ type StreamHandler = terminal.StreamHandler
 
 // StreamHandlerVtRaw is [terminal.StreamHandlerVtRaw].
 type StreamHandlerVtRaw = terminal.StreamHandlerVtRaw
-
-// StreamInitAlloc is [terminal.StreamInitAlloc].
-func StreamInitAlloc[H StreamHandler](h H) Stream[H] { return terminal.StreamInitAlloc[H](h) }
 
 // StringMap is [terminal.StringMap].
 type StringMap = terminal.StringMap

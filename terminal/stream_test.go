@@ -1302,11 +1302,11 @@ func (self *strA_recorder) Vt(action StreamActionKey, value *StreamAction) error
 		strA_recPut(
 			self,
 			"color_operation %s %s n=%d",
-			value.ColorOperation.Op.String(), strA_terminatorName(value.ColorOperation.Terminator), value.ColorOperation.Requests.count(),
+			value.ColorOperation.Op.String(), strA_terminatorName(value.ColorOperation.Terminator), value.ColorOperation.Requests.Count(),
 		)
 		reqs := value.ColorOperation.Requests
-		it := reqs.constIterator(0)
-		for req := it.next(); req != nil; req = it.next() {
+		it := reqs.ConstIterator(0)
+		for req := it.Next(); req != nil; req = it.Next() {
 			switch req.Tag {
 			case OSCParsersColorRequestSet:
 				v := req.Set

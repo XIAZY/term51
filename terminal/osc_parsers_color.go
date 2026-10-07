@@ -516,7 +516,7 @@ func oscParsersColorParseResetAnsiColor(
 		color_str_opt := it.next()
 		if !color_str_opt.Valid {
 			// If no parameters are given, we reset the full table.
-			if result.count() == 0 {
+			if result.Count() == 0 {
 				req, err := result.addOne()
 				if err != nil {
 					// Zig: errdefer result.deinit(alloc)
@@ -719,20 +719,20 @@ func (self *OSCParsersColorList) addOne() (*OSCParsersColorRequest, error) {
 }
 
 // count is std.SegmentedList.count: the number of requests.
-func (self OSCParsersColorList) count() int {
+func (self OSCParsersColorList) Count() int {
 	return len(self.items)
 }
 
 // at is std.SegmentedList.at: a pointer to the request at index i. Zig
 // asserts i < count().
-func (self *OSCParsersColorList) at(i int) *OSCParsersColorRequest {
+func (self *OSCParsersColorList) At(i int) *OSCParsersColorRequest {
 	assert(i < len(self.items))
 	return &self.items[i]
 }
 
 // constIterator is std.SegmentedList.constIterator: an iterator positioned
 // at start_index.
-func (self *OSCParsersColorList) constIterator(start_index int) OSCParsersColorListConstIterator {
+func (self *OSCParsersColorList) ConstIterator(start_index int) OSCParsersColorListConstIterator {
 	return OSCParsersColorListConstIterator{
 		list:  self,
 		index: start_index,
@@ -753,7 +753,7 @@ type OSCParsersColorListConstIterator struct {
 }
 
 // next returns the next request, or nil at the end. Zig: next() ?*const T.
-func (self *OSCParsersColorListConstIterator) next() *OSCParsersColorRequest {
+func (self *OSCParsersColorListConstIterator) Next() *OSCParsersColorRequest {
 	if self.index >= len(self.list.items) {
 		return nil
 	}

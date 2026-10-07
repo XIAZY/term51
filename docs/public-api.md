@@ -85,7 +85,9 @@ parser refuses commands that need a growing buffer when it has none), the
 choice is a `bool`: `OSCParserInit(false)` is upstream's `init(null)`,
 `StreamInit` builds a stream whose OSC parser cannot grow and
 `StreamInitAlloc` one that can; `Terminal.VtStream` uses the second, as
-upstream does.
+upstream does. In package `vt` the growing one is `NewStream`, because that
+is the name a Go user reaches for and the fixed one silently refuses the
+colour and clipboard commands; the fixed one is `NewStreamFixed`.
 
 `Deinit` methods remain and are optional for memory. Call them where they
 do more than free: `Selection.Deinit` and `HighlightTracked.Deinit` stop

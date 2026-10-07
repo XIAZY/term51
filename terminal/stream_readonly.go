@@ -530,12 +530,12 @@ func (self *StreamReadonlyHandler) colorOperation(
 	requests *OSCParsersColorList,
 ) error {
 	_ = op
-	if requests.count() == 0 {
+	if requests.Count() == 0 {
 		return nil
 	}
 
-	it := requests.constIterator(0)
-	for req := it.next(); req != nil; req = it.next() {
+	it := requests.ConstIterator(0)
+	for req := it.Next(); req != nil; req = it.Next() {
 		switch req.Tag {
 		case OSCParsersColorRequestSet:
 			set := req.Set

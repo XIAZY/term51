@@ -635,7 +635,7 @@ func (self OSCCommand) zigFmtAny() string {
 				zigFmtAnyStruct(&l, d,
 					"prealloc_segment", func(d int) string { return zigFmtAnyElided(d, "{ ... }") },
 					"dynamic_segments", func(d int) string { return zigFmtAnyElided(d, "{ ... }") },
-					"len", func(int) string { return strconv.Itoa(v.Requests.count()) },
+					"len", func(int) string { return strconv.Itoa(v.Requests.Count()) },
 				)
 				return l.String()
 			},

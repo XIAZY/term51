@@ -5679,10 +5679,10 @@ func TestStreamReadonly_term51_Handler_colorOperation_the_request_list_stays_own
 
 	// Two requests fit the preallocated segment, three do not.
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;1;red;2;red\x07")))
-	expectEqual(t, 2, s.parser.osc_parser.command.ColorOperation.Requests.count())
+	expectEqual(t, 2, s.parser.osc_parser.command.ColorOperation.Requests.Count())
 	// Zig-only: try testing.expectEqual(@as(usize, 0), s.parser.osc_parser.command.color_operation.requests.dynamic_segments.len)
 	zigTry(t, s.NextSlice([]uint8("\x1b]4;1;red;2;red;3;red\x07")))
-	expectEqual(t, 3, s.parser.osc_parser.command.ColorOperation.Requests.count())
+	expectEqual(t, 3, s.parser.osc_parser.command.ColorOperation.Requests.Count())
 	// The handler already applied them, and the heap segments are still
 	// allocated, so the caller of the stream has to free them.
 	expectEqual(t, sroRed, tm.Colors.Palette.Current[3])

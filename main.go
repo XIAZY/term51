@@ -45,7 +45,7 @@ func main() {
 	if _, err := os.Stat("data/rawkeys"); err == nil {
 		cfg.RawKeys = true
 	}
-	a := app.New(cfg)
+	a := app.New(cfg, ui.Publisher{})
 	go func() {
 		err := a.Run()
 		log.Printf("the session ended: %v", err)

@@ -47,6 +47,13 @@ the one place that changes if the answer is not the assumed one.
   cell is computed from the touch position and the measured cell size.
   Selection by dragging is not there yet; a drag scrolls.
 
+## Tabs (text front end)
+
+- New tab, Next tab and Close tab are in the page's menu; the title shows
+  "2/3" and the shell's title. The logic is tested on the development
+  machine with real shells; the menu is not. The pixel front end has one
+  tab for now.
+
 ## The text front end (`assets/text.qml`, `internal/textgrid`)
 
 7. **The font is monospace.** The page measures 80 `M` against 80 `i` and

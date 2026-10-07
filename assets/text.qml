@@ -13,6 +13,8 @@ Page {
     property bool ctrl: false
     property bool alt: false
     property string termTitle: "term51"
+    property int tabCount: 1
+    property int tabIndex: 0
 
     property int fontPt: 7           // the labels' font size, in points
     property real cellW: 0
@@ -68,6 +70,8 @@ Page {
             if (s.ctrl !== undefined) page.ctrl = s.ctrl
             if (s.alt !== undefined) page.alt = s.alt
             if (s.title !== undefined) page.termTitle = s.title
+            if (s.tabs !== undefined) page.tabCount = s.tabs.length
+            if (s.current !== undefined) page.tabIndex = s.current
         })
         bridge.event.connect(function(json) {
             var e = JSON.parse(json)
@@ -88,7 +92,10 @@ Page {
         })
     }
 
-    titleBar: TitleBar { title: page.termTitle }
+    // With several tabs the title says which one is shown.
+    titleBar: TitleBar {
+        title: page.tabCount > 1 ? (page.tabIndex + 1) + "/" + page.tabCount + "  " + page.termTitle : page.termTitle
+    }
 
     // Copy takes the selection, or the whole screen when nothing is
     // selected. Go answers with the text; the page owns the clipboard.
@@ -104,6 +111,19 @@ Page {
                 if (text.length > 0)
                     page.send("paste", { text: text })
             }
+        },
+        ActionItem {
+            title: "New tab"
+            onTriggered: page.send("newtab")
+        },
+        ActionItem {
+            title: "Next tab"
+            enabled: page.tabCount > 1
+            onTriggered: page.send("tab", { index: (page.tabIndex + 1) % page.tabCount })
+        },
+        ActionItem {
+            title: "Close tab"
+            onTriggered: page.send("closetab")
         },
         ActionItem {
             title: "Select all"

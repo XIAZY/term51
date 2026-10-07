@@ -162,7 +162,7 @@ func (s *screen) Sheet(sheet []byte, x, y, w, h int) {
 	}
 }
 
-func (s *screen) Frame(table []byte, lo, hi int) error {
+func (s *screen) Frame(table []byte, lo, hi int, shot []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	copy(s.table[lo:hi], table[lo:hi])

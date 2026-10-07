@@ -287,12 +287,16 @@ static void t51_gpu_sheet(t51_gpu *g, const unsigned char *pix, int x, int y, in
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, GL_RED, GL_UNSIGNED_BYTE, pix + (size_t)y * T51_SHEET + x);
 }
 
-// One frame: the bytes lo <= i < hi of the table are new.
-static int t51_gpu_frame(t51_gpu *g, const unsigned char *table, int lo, int hi) {
+// One frame: the bytes lo <= i < hi of the table are new. With shot not
+// NULL the picture is also read back into it before it is shown: 4 bytes
+// (R, G, B, A) per pixel, the bottom row first.
+static int t51_gpu_frame(t51_gpu *g, const unsigned char *table, int lo, int hi, unsigned char *shot) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (hi > lo)
 		glBufferSubData(GL_ARRAY_BUFFER, lo, hi - lo, table + lo);
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g->cells);
+	if (shot)
+		glReadPixels(0, 0, g->w, g->h, GL_RGBA, GL_UNSIGNED_BYTE, shot);
 	if (!eglSwapBuffers(g->dpy, g->surf))
 		return t51_fail(g, "eglSwapBuffers");
 	return 0;
@@ -369,8 +373,14 @@ func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
 
 // Frame draws the table and shows it; the bytes lo <= i < hi of table have
 // changed since the last frame. It is the one call from Go into C per frame.
-func (s *Screen) Frame(table []byte, lo, hi int) error {
-	if C.t51_gpu_frame(&s.g, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi)) != 0 {
+// A shot that is not nil receives the picture as drawn: 4 bytes (R, G, B,
+// A) per pixel of the window, the bottom row first.
+func (s *Screen) Frame(table []byte, lo, hi int, shot []byte) error {
+	var out *C.uchar
+	if shot != nil {
+		out = (*C.uchar)(unsafe.Pointer(&shot[0]))
+	}
+	if C.t51_gpu_frame(&s.g, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), out) != 0 {
 		return s.err()
 	}
 	return nil

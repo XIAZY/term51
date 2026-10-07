@@ -1,7 +1,11 @@
 package app
 
 import (
+	"image"
+	"image/png"
 	"log"
+	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -82,6 +86,7 @@ func (a *App) Run() error {
 	var sheet *cells.Sheet // the character shapes, shared by all tabs
 	var table cells.Table  // the shown tab's cells
 	bg := a.cfg.SessionTheme().Background
+	winW, winH := 0, 0 // the window in pixels
 
 	var tabs []*tab
 	cur := -1
@@ -141,8 +146,17 @@ func (a *App) Run() error {
 		if first == end && fresh.Empty() {
 			return
 		}
-		if err := scr.Frame(table.Data, first, end); err != nil {
+		var shot []byte
+		if a.cfg.SaveFrames {
+			shot = make([]byte, winW*winH*4)
+		}
+		if err := scr.Frame(table.Data, first, end, shot); err != nil {
 			log.Printf("app: %v", err)
+		}
+		if shot != nil {
+			if err := saveFrame("data/frame.png", shot, winW, winH); err != nil {
+				log.Printf("app: %v", err)
+			}
 		}
 	}
 	// show makes tab i the one on screen: its whole table is drawn.
@@ -222,6 +236,7 @@ func (a *App) Run() error {
 				// The page's place for the terminal, in pixels: the first
 				// time it creates the window, afterwards it resizes it.
 				w, h := num(c.Args["w"]), num(c.Args["h"])
+				winW, winH = w, h
 				if scr == nil {
 					group, _ := c.Args["group"].(string)
 					id, _ := c.Args["id"].(string)
@@ -402,4 +417,28 @@ func (a *App) Run() error {
 			post()
 		}
 	}
+}
+
+// saveFrame writes a picture read back from the screen (4 bytes per pixel,
+// the bottom row first) as a PNG, replacing the file in one step.
+func saveFrame(path string, shot []byte, w, h int) error {
+	img := image.NewNRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		copy(img.Pix[y*img.Stride:(y+1)*img.Stride], shot[(h-1-y)*w*4:(h-y)*w*4])
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), ".frame-*")
+	if err != nil {
+		return err
+	}
+	err = png.Encode(f, img)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), path)
+	}
+	if err != nil {
+		os.Remove(f.Name())
+	}
+	return err
 }

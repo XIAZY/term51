@@ -13,6 +13,8 @@ and optimise later"):
 - Each item becomes its own change, with the full test suite and the
   recorded corpus (natively, on 32-bit ARM, and on the phone) proving that
   behaviour did not change.
+  (Superseded on 2026-10-07: changes are tested natively, and on the phone
+  only when they could behave differently on 32-bit; see `verification.md`.)
 - Behaviour changes, such as fixing upstream defects, are a separate list:
   `term51/docs/deliberate-fixes.md`. Performance items are in
   `post-port-optimizations.md`. This file is about shape: what a Go
@@ -36,6 +38,7 @@ library make more sense in Go? What came of it:
 | 1.3 exported names | **Done differently:** exported fields only for the types a user reads or fills in; the cell, row and mode storage behind methods. |
 | 2.1 `Optional[T]` | **Kept.** The standard library has the same shape (`sql.Null[T]`). |
 | 2.2 tagged unions | **Kept**, except how the stream hands actions over: a pointer to one reused action (speed, and the public handler signature). |
+| Mapping rule "packed structs become ordinary structs" | **Kept** for the small ones; **reversed for the cell and the mode set**, which are upstream's packed values again (8 bytes per cell instead of 20; a mode check is a bit test). Measured: +15% on erase-heavy output on the development machine, no speed change on the phone's 32-bit processor, scrollback memory less than half. |
 | 2.3 field names | **Done** for the exported fields (Go names, by tool); internal fields keep upstream's. |
 | 2.4 panics | **Done where input can reach:** a zero size is an error. A nil pointer, an undeclared enum value or an oversized code point stays a panic, as a programming mistake does in Go. |
 | 2.5 errors that cannot happen | **Kept.** They sit in signatures the translated tests check; an always-nil error costs a Go caller nothing. |
@@ -49,7 +52,7 @@ library make more sense in Go? What came of it:
 | 5.2, 5.3 run-time stand-ins, start-up tables | **Kept.** |
 | 6 tests | **Kept** one to one with upstream's; the replayer understands the exported names. |
 | 7.1 platform by build target | **Kept**, as upstream. |
-| Speed | `post-port-optimizations.md`: through a real terminal, from 4.6 to 7.6 times slower than upstream's plain build to 1.5 to 2.6 times. |
+| Speed | `post-port-optimizations.md`: through a real terminal, from 4.6 to 7.6 times slower than upstream's plain build to 1.5 to 2.2 times (19.2 / 12.8 / 10.7 MB/s against 28.3 / 26.1 / 23.7 for plain text, coloured and full-screen output). |
 
 ## The target: faithful in behaviour, Go in form (project owner, 2026-10-06)
 

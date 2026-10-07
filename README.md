@@ -12,8 +12,10 @@ programs' queries belong to the application, as they do with upstream.
 **The rule of the port:** the same features and behaviour as upstream, in
 the form a Go user expects. Every upstream test is translated, and about
 190,000 recorded cases compare the terminal's full state, byte for byte,
-with what the pinned upstream library produced. Pure Go, no cgo, no
-dependencies; it builds for any platform Go does.
+with what the pinned upstream library produced. Pure Go: no cgo, no
+dependencies, and no platform-specific code apart from the key encoding's
+macOS option. It has been built and run on Linux (arm64) and on QNX
+(BlackBerry 10, 32-bit ARM).
 
 ## Use
 
@@ -37,6 +39,11 @@ rs.Update(&term)                 // a snapshot of the screen, to draw from
 
 input.EncodeKey(w, keyEvent, input.KeyEncodeOptionsFromTerminal(&term))
 ```
+
+`term.VtStream()` applies everything a program writes and ignores the
+queries it sends ("where is the cursor", "what terminal are you"). To
+answer them, give `vt.NewStream` your own handler that wraps
+`vt.NewReadonlyHandler`; see `ExampleNewStream`.
 
 `vt/example_test.go` has complete, tested examples: reading the screen as
 text and cell by cell, key encoding, and a stream handler that answers a
@@ -67,6 +74,15 @@ wrong arguments, and what remains of allocators and `Deinit`.
   what was kept as upstream has it, with the reasons.
 - Upstream's own defects are copied on purpose and listed in the `term51`
   repository (`docs/deliberate-fixes.md`).
+
+## Speed
+
+Through a real terminal the port is 1.5 to 2.2 times slower than upstream's
+plain (non-SIMD) build on the same machine; the measurements and what was
+done are in `docs/post-port-optimizations.md`. The cheapest speed left is
+the application's to take: building the final program with Go's
+profile-guided optimisation gave 30% on plain text in a trial, with no code
+change.
 
 ## Tests
 

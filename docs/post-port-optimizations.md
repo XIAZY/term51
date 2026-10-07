@@ -81,6 +81,33 @@ Terminal).
   not run when the function panics, so the ordinary call is also the closer
   translation. The stream benchmarks do not reach this code.
 
+## Against upstream (2026-10-07)
+
+Upstream's own library (v1.3.1, 332b2ae, unmodified), built with Zig 0.15.2
+on the development machine and fed the same three inputs through the same
+two paths, pinned to the same core, best of 5 runs of one second. The
+benchmark is `bench/` in the term51 repository. Upstream "plain" is
+`-Dsimd=false`, the code path the port follows; both upstream columns are
+ReleaseFast. MB/s:
+
+| Benchmark | Upstream SIMD | Upstream plain | Go baseline (d7720fb) | Go at item 32 | Upstream plain / Go |
+|---|---:|---:|---:|---:|---:|
+| Stream, ASCII | 187.9 | 65.9 | 25.1 | 40.3 | 1.6 |
+| Stream, SGR | 71.3 | 52.8 | 6.5 | 24.0 | 2.2 |
+| Stream, mixed | 74.1 | 51.4 | 4.8 | 26.2 | 2.0 |
+| Terminal, ASCII | 37.2 | 28.3 | 6.1 | 11.6 | 2.4 |
+| Terminal, SGR | 30.7 | 26.1 | 4.0 | 9.9 | 2.6 |
+| Terminal, mixed | 27.9 | 23.7 | 3.1 | 7.8 | 3.0 |
+
+Upstream plain built ReleaseSafe (safety checks on, the build the recorded
+cases came from): Stream 65.9 / 51.6 / 50.5, Terminal 27.1 / 24.5 / 22.0.
+
+Through a terminal, upstream's SIMD path gains 1.2 to 1.3 times over its
+plain path, so the remaining gap is in the per-character screen work, not
+in scanning bytes. The goal for the next speed step (project lead,
+2026-10-07) is within 1.5 times of upstream plain through a terminal.
+There is no phone column: upstream's Zig is not built for the phone.
+
 ## Items
 
 | # | Where | What is slow | Why it is that way now |

@@ -1390,9 +1390,7 @@ func (self *Screen) CursorDownScroll() error {
 			page := &self.Cursor.PagePin.Node.data
 			start := page.cellIndex(self.Cursor.PageCell) - uint(self.Cursor.X)
 			cells := page.cells[start : start+uint(self.Pages.cols)]
-			for i := range cells {
-				cells[i] = blank_cell.Value
-			}
+			pageCellsFill(cells, blank_cell.Value)
 		}
 	}
 
@@ -1511,9 +1509,7 @@ func (self *Screen) CursorScrollAbove() error {
 			page := &self.Cursor.PagePin.Node.data
 			start := page.cellIndex(self.Cursor.PageCell) - uint(self.Cursor.X)
 			cells := page.cells[start : start+uint(self.Pages.cols)]
-			for i := range cells {
-				cells[i] = blank_cell.Value
-			}
+			pageCellsFill(cells, blank_cell.Value)
 		}
 	}
 
@@ -2123,10 +2119,7 @@ func (self *Screen) ClearCells(page *Page, row *PageRow, cells []PageCell) {
 	// placeholder flag): compiled out; see the file header.
 
 	// @memset(cells, self.blankCell())
-	blank := self.BlankCell()
-	for i := range cells {
-		cells[i] = blank
-	}
+	pageCellsFill(cells, self.BlankCell())
 }
 
 // ClearUnprotectedCells is Screen.clearUnprotectedCells.

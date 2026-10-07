@@ -3246,3 +3246,20 @@ func pageStdMathCeilPowerOfTwo(value uint64, int_bits int) uint64 {
 	assert(shift < int_bits) // catch unreachable
 	return uint64(1) << shift
 }
+
+// pageCellsFill is Zig's `@memset(cells, value)` for cells. Not a Zig
+// declaration.
+//
+// Go: a loop that assigns a cell at a time is not turned into a block
+// operation by the compiler. Writing the first cell and then doubling the
+// filled part with copy is, and erasing is most of the work of a full-screen
+// program (docs/post-port-optimizations.md item 36).
+func pageCellsFill(cells []PageCell, value PageCell) {
+	if len(cells) == 0 {
+		return
+	}
+	cells[0] = value
+	for n := 1; n < len(cells); n *= 2 {
+		copy(cells[n:], cells[:n])
+	}
+}

@@ -57,7 +57,7 @@ func (self *actionHandler) flush() {
 }
 
 // Mirrors harness/src/trace.zig:35 ActionHandler.vt
-func (self *actionHandler) Vt(action StreamActionKey, value StreamAction) error {
+func (self *actionHandler) Vt(action StreamActionKey, value *StreamAction) error {
 	if action == StreamActionKeyPrint {
 		if self.inPrintRun {
 			fmt.Fprintf(self.w, ",%x", value.Print.cp)
@@ -70,7 +70,8 @@ func (self *actionHandler) Vt(action StreamActionKey, value StreamAction) error 
 	self.flush()
 	name := action.String()
 	self.w.WriteString("@" + name + "\n")
-	dumpActionPayload(self.w, " v", value, name)
+	// The dump is written during the call; dumpActionPayload takes a copy.
+	dumpActionPayload(self.w, " v", *value, name)
 	return nil
 }
 

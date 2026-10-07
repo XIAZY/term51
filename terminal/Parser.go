@@ -332,59 +332,78 @@ func (self *Parser) Deinit() {
 // Up to 3 actions may need to be executed -- in order -- representing
 // the state exit, transition, and entry actions.
 func (self *Parser) Next(c uint8) [3]Optional[ParserAction] {
+	var result [3]Optional[ParserAction]
+	self.nextInto(c, &result)
+	return result
+}
+
+// nextInto is the body of Parser.next, writing the up to three actions into
+// the caller's slots instead of returning them.
+//
+// Go: Zig returns `[3]?Action`, a few small tagged unions. The Go
+// ParserAction is a struct with a field per payload (840 bytes, because one
+// field is a whole OSC command), so returning three of them for every input
+// byte meant clearing and copying about 2.5 KB per byte; that was most of the
+// stream's time (docs/post-port-optimizations.md, item 1). The stream keeps
+// one array for the life of the stream and passes it here. Each slot is
+// written through parserActionNone / parserActionSome, which keep a slot
+// exactly equal to the value Next would have returned: only the payload field
+// of the slot's tag is ever non-zero.
+func (self *Parser) nextInto(c uint8, result *[3]Optional[ParserAction]) {
 	effect := table[c][int(self.state)]
 
 	next_state := effect.state
 	action := effect.action
 
 	// After generating the actions, we set our next state.
-	// Zig: `defer self.state = next_state`.
-	defer func() { self.state = next_state }()
+	// Zig: `defer self.state = next_state`. The function has one exit, so
+	// the assignment is written there instead of in a deferred closure,
+	// which Go would run (and pay for) on every byte.
 
 	// When going from one state to another, the actions take place in this order:
 	//
 	// 1. exit action from old state
 	// 2. transition action
 	// 3. entry action to new state
-	var result [3]Optional[ParserAction]
+	// Go: the three slots are the caller's (see nextInto's comment).
 
 	// Exit depends on current state
 	if self.state == next_state {
-		result[0] = None[ParserAction]()
+		parserActionNone(&result[0])
 	} else {
 		switch self.state {
 		case ParserStateOscString:
 			if cmd := self.osc_parser.End(Some(c)); cmd != nil {
-				result[0] = Some(ParserAction{Tag: ParserActionOscDispatch, OscDispatch: *cmd})
+				parserActionSome(&result[0], ParserActionOscDispatch).OscDispatch = *cmd
 			} else {
-				result[0] = None[ParserAction]()
+				parserActionNone(&result[0])
 			}
 		case ParserStateDcsPassthrough:
-			result[0] = Some(ParserAction{Tag: ParserActionDcsUnhook})
+			parserActionSome(&result[0], ParserActionDcsUnhook)
 		case ParserStateSosPmApcString:
-			result[0] = Some(ParserAction{Tag: ParserActionApcEnd})
+			parserActionSome(&result[0], ParserActionApcEnd)
 		default:
-			result[0] = None[ParserAction]()
+			parserActionNone(&result[0])
 		}
 	}
 
-	result[1] = self.doAction(action, c)
+	self.doActionInto(action, c, &result[1])
 
 	// Entry depends on new state
 	if self.state == next_state {
-		result[2] = None[ParserAction]()
+		parserActionNone(&result[2])
 	} else {
 		switch next_state {
 		case ParserStateEscape, ParserStateDcsEntry, ParserStateCsiEntry:
 			self.Clear()
-			result[2] = None[ParserAction]()
+			parserActionNone(&result[2])
 		case ParserStateOscString:
 			self.osc_parser.Reset()
-			result[2] = None[ParserAction]()
+			parserActionNone(&result[2])
 		case ParserStateDcsPassthrough:
 			// Ignore too many parameters
 			if self.params_idx >= MAX_PARAMS {
-				result[2] = None[ParserAction]()
+				parserActionNone(&result[2])
 				break
 			}
 
@@ -393,22 +412,19 @@ func (self *Parser) Next(c uint8) [3]Optional[ParserAction] {
 				self.params[self.params_idx] = self.param_acc
 				self.params_idx += 1
 			}
-			result[2] = Some(ParserAction{
-				Tag: ParserActionDcsHook,
-				DcsHook: ParserActionDCS{
-					Intermediates: self.intermediates[0:self.intermediates_idx],
-					Params:        self.params[0:self.params_idx],
-					Final:         c,
-				},
-			})
+			parserActionSome(&result[2], ParserActionDcsHook).DcsHook = ParserActionDCS{
+				Intermediates: self.intermediates[0:self.intermediates_idx],
+				Params:        self.params[0:self.params_idx],
+				Final:         c,
+			}
 		case ParserStateSosPmApcString:
-			result[2] = Some(ParserAction{Tag: ParserActionApcStart})
+			parserActionSome(&result[2], ParserActionApcStart)
 		default:
-			result[2] = None[ParserAction]()
+			parserActionNone(&result[2])
 		}
 	}
 
-	return result
+	self.state = next_state
 }
 
 // Collect is Parser.collect.
@@ -423,23 +439,36 @@ func (self *Parser) Collect(c uint8) {
 }
 
 func (self *Parser) doAction(action ParserTransitionAction, c uint8) Optional[ParserAction] {
+	var out Optional[ParserAction]
+	self.doActionInto(action, c, &out)
+	return out
+}
+
+// doActionInto is the body of Parser.doAction, writing its result into the
+// caller's slot (see nextInto).
+func (self *Parser) doActionInto(action ParserTransitionAction, c uint8, out *Optional[ParserAction]) {
 	switch action {
 	case ParserTransitionActionNone, ParserTransitionActionIgnore:
-		return None[ParserAction]()
+		parserActionNone(out)
+		return
 	case ParserTransitionActionPrint:
-		return Some(ParserAction{Tag: ParserActionPrint, Print: uint32(c)})
+		parserActionSome(out, ParserActionPrint).Print = uint32(c)
+		return
 	case ParserTransitionActionExecute:
-		return Some(ParserAction{Tag: ParserActionExecute, Execute: c})
+		parserActionSome(out, ParserActionExecute).Execute = c
+		return
 	case ParserTransitionActionCollect:
 		self.Collect(c)
-		return None[ParserAction]()
+		parserActionNone(out)
+		return
 	case ParserTransitionActionParam:
 		// Semicolon separates parameters. If we encounter a semicolon
 		// we need to store and move on to the next parameter.
 		if c == ';' || c == ':' {
 			// Ignore too many parameters
 			if self.params_idx >= MAX_PARAMS {
-				return None[ParserAction]()
+				parserActionNone(out)
+				return
 			}
 
 			// Set param final value
@@ -452,7 +481,8 @@ func (self *Parser) doAction(action ParserTransitionAction, c uint8) Optional[Pa
 			// Reset current param value to 0
 			self.param_acc = 0
 			self.param_acc_idx = 0
-			return None[ParserAction]()
+			parserActionNone(out)
+			return
 		}
 
 		// A numeric value. Add it to our accumulator.
@@ -469,14 +499,17 @@ func (self *Parser) doAction(action ParserTransitionAction, c uint8) Optional[Pa
 		self.param_acc_idx += 1
 
 		// The client is expected to perform no action.
-		return None[ParserAction]()
+		parserActionNone(out)
+		return
 	case ParserTransitionActionOscPut:
 		self.osc_parser.Next(c)
-		return None[ParserAction]()
+		parserActionNone(out)
+		return
 	case ParserTransitionActionCsiDispatch:
 		// Ignore too many parameters
 		if self.params_idx >= MAX_PARAMS {
-			return None[ParserAction]()
+			parserActionNone(out)
+			return
 		}
 
 		// Finalize parameters if we have one
@@ -485,14 +518,13 @@ func (self *Parser) doAction(action ParserTransitionAction, c uint8) Optional[Pa
 			self.params_idx += 1
 		}
 
-		result := ParserAction{
-			Tag: ParserActionCsiDispatch,
-			CsiDispatch: ParserActionCSI{
-				Intermediates: self.intermediates[0:self.intermediates_idx],
-				Params:        self.params[0:self.params_idx],
-				ParamsSep:     self.params_sep,
-				Final:         c,
-			},
+		// Go: built in the caller's slot; `result` is Zig's local.
+		result := parserActionSome(out, ParserActionCsiDispatch)
+		result.CsiDispatch = ParserActionCSI{
+			Intermediates: self.intermediates[0:self.intermediates_idx],
+			Params:        self.params[0:self.params_idx],
+			ParamsSep:     self.params_sep,
+			Final:         c,
 		}
 
 		// We only allow colon or mixed separators for the 'm' command.
@@ -502,24 +534,69 @@ func (self *Parser) doAction(action ParserTransitionAction, c uint8) Optional[Pa
 				"CSI colon or mixed separators only allowed for 'm' command, got: %s",
 				result.Format(),
 			)
-			return None[ParserAction]()
+			parserActionNone(out)
+			return
 		}
 
-		return Some(result)
+		return
 	case ParserTransitionActionEscDispatch:
-		return Some(ParserAction{
-			Tag: ParserActionEscDispatch,
-			EscDispatch: ParserActionESC{
-				Intermediates: self.intermediates[0:self.intermediates_idx],
-				Final:         c,
-			},
-		})
+		parserActionSome(out, ParserActionEscDispatch).EscDispatch = ParserActionESC{
+			Intermediates: self.intermediates[0:self.intermediates_idx],
+			Final:         c,
+		}
+		return
 	case ParserTransitionActionPut:
-		return Some(ParserAction{Tag: ParserActionDcsPut, DcsPut: c})
+		parserActionSome(out, ParserActionDcsPut).DcsPut = c
+		return
 	case ParserTransitionActionApcPut:
-		return Some(ParserAction{Tag: ParserActionApcPut, ApcPut: c})
+		parserActionSome(out, ParserActionApcPut).ApcPut = c
+		return
 	}
 	panic("unreachable")
+}
+
+// parserActionNone makes a slot Zig's `null`: afterwards it equals
+// None[ParserAction](). Not a Zig declaration (see nextInto).
+func parserActionNone(o *Optional[ParserAction]) {
+	if !o.Valid {
+		return
+	}
+	// Only the payload of the slot's tag can be non-zero.
+	switch o.Value.Tag {
+	case ParserActionPrint:
+		o.Value.Print = 0
+	case ParserActionExecute:
+		o.Value.Execute = 0
+	case ParserActionCsiDispatch:
+		o.Value.CsiDispatch = ParserActionCSI{}
+	case ParserActionEscDispatch:
+		o.Value.EscDispatch = ParserActionESC{}
+	case ParserActionOscDispatch:
+		o.Value.OscDispatch = OSCCommand{}
+	case ParserActionDcsHook:
+		o.Value.DcsHook = ParserActionDCS{}
+	case ParserActionDcsPut:
+		o.Value.DcsPut = 0
+	case ParserActionApcPut:
+		o.Value.ApcPut = 0
+	case ParserActionDcsUnhook, ParserActionApcStart, ParserActionApcEnd:
+		// No payload.
+	default:
+		panic("unreachable")
+	}
+	o.Value.Tag = 0
+	o.Valid = false
+}
+
+// parserActionSome makes a slot Zig's `Action{ .tag = ... }` with a zero
+// payload and returns the action for the caller to set its payload field:
+// afterwards the slot equals Some(ParserAction{Tag: tag, <payload>}). Not a
+// Zig declaration (see nextInto).
+func parserActionSome(o *Optional[ParserAction], tag ParserActionTag) *ParserAction {
+	parserActionNone(o)
+	o.Valid = true
+	o.Value.Tag = tag
+	return &o.Value
 }
 
 // Clear is Parser.clear.

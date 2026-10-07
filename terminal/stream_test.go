@@ -75,7 +75,7 @@ type strA_printH struct {
 	c Optional[uint32]
 }
 
-func (self *strA_printH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_printH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyPrint:
 		self.c = Some(value.Print.cp)
@@ -116,7 +116,7 @@ type strA_cursorRightH struct {
 	amount uint16
 }
 
-func (self *strA_cursorRightH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_cursorRightH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyCursorRight:
 		self.amount = value.CursorRight.value
@@ -147,7 +147,7 @@ type strA_decSetModeH struct {
 	mode ModesMode
 }
 
-func (self *strA_decSetModeH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_decSetModeH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeySetMode:
 		self.mode = value.SetMode.mode
@@ -177,7 +177,7 @@ type strA_ansiSetModeH struct {
 	mode Optional[ModesMode]
 }
 
-func (self *strA_ansiSetModeH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_ansiSetModeH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeySetMode:
 		self.mode = Some(value.SetMode.mode)
@@ -214,7 +214,7 @@ func (self *strA_ansiSetModeUnknownH) setMode(mode ModesMode, v bool) error {
 	return nil
 }
 
-func (self *strA_ansiSetModeUnknownH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_ansiSetModeUnknownH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = self
 	_ = value
 	return nil
@@ -235,7 +235,7 @@ type strA_restoreModeH struct {
 	called bool
 }
 
-func (self *strA_restoreModeH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_restoreModeH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyTopAndBottomMargin:
 		self.called = true
@@ -255,7 +255,7 @@ type strA_popKittyH struct {
 	n uint16
 }
 
-func (self *strA_popKittyH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_popKittyH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyKittyKeyboardPop:
 		self.n = value.KittyKeyboardPop
@@ -275,7 +275,7 @@ type strA_decscaH struct {
 	v Optional[ANSIProtectedMode]
 }
 
-func (self *strA_decscaH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_decscaH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyProtectedModeOff:
 		self.v = Some(ANSIProtectedModeOff)
@@ -314,7 +314,7 @@ type strA_decedH struct {
 	protected Optional[bool]
 }
 
-func (self *strA_decedH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_decedH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyEraseDisplayBelow:
 		self.mode = Some(CSIEraseDisplayBelow)
@@ -403,7 +403,7 @@ type strA_decelH struct {
 	protected Optional[bool]
 }
 
-func (self *strA_decelH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_decelH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyEraseLineRight:
 		self.mode = Some(CSIEraseLineRight)
@@ -478,7 +478,7 @@ type strA_decscusrH struct {
 	style Optional[ANSICursorStyle]
 }
 
-func (self *strA_decscusrH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_decscusrH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyCursorStyle:
 		self.style = Some(value.CursorStyle)
@@ -515,7 +515,7 @@ type strA_xtshiftescapeH struct {
 	escape Optional[bool]
 }
 
-func (self *strA_xtshiftescapeH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_xtshiftescapeH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyMouseShiftCapture:
 		self.escape = Some(value.MouseShiftCapture)
@@ -548,7 +548,7 @@ type strA_windowTitleSeenH struct {
 	seen bool
 }
 
-func (self *strA_windowTitleSeenH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_windowTitleSeenH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	switch action {
 	case StreamActionKeyWindowTitle:
@@ -577,7 +577,7 @@ type strA_insertBlanksCalledH struct {
 	called bool
 }
 
-func (self *strA_insertBlanksCalledH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_insertBlanksCalledH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	switch action {
 	case StreamActionKeyInsertBlanks:
@@ -602,7 +602,7 @@ type strA_insertBlanksValueH struct {
 	value Optional[uint]
 }
 
-func (self *strA_insertBlanksValueH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_insertBlanksValueH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyInsertBlanks:
 		self.value = Some(value.InsertBlanks)
@@ -622,7 +622,7 @@ type strA_scoscH struct {
 	called bool
 }
 
-func (self *strA_scoscH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_scoscH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	switch action {
 	case StreamActionKeyLeftAndRightMargin:
@@ -645,7 +645,7 @@ type strA_scorcH struct {
 	called bool
 }
 
-func (self *strA_scorcH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_scorcH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	switch action {
 	case StreamActionKeyRestoreCursor:
@@ -665,7 +665,7 @@ type strA_tooManyParamsH struct {
 	strA_noDeinit
 }
 
-func (self *strA_tooManyParamsH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_tooManyParamsH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = self
 	_ = value
 	switch action {
@@ -685,7 +685,7 @@ type strA_ignoreAllH struct {
 	strA_noDeinit
 }
 
-func (self *strA_ignoreAllH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_ignoreAllH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = self
 	_ = action
 	_ = value
@@ -704,7 +704,7 @@ type strA_sizeReportH struct {
 	style Optional[CSISizeReportStyle]
 }
 
-func (self *strA_sizeReportH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_sizeReportH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeySizeReport:
 		self.style = Some(value.SizeReport)
@@ -738,7 +738,7 @@ func (self *strA_invalidCsiTH) sendSizeReport(style CSISizeReportStyle) {
 	self.style = Some(style)
 }
 
-func (self *strA_invalidCsiTH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_invalidCsiTH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = self
 	_ = action
 	_ = value
@@ -758,7 +758,7 @@ type strA_titlePushH struct {
 	index Optional[uint16]
 }
 
-func (self *strA_titlePushH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_titlePushH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyTitlePush:
 		self.index = Some(value.TitlePush)
@@ -803,7 +803,7 @@ type strA_titlePopH struct {
 	index Optional[uint16]
 }
 
-func (self *strA_titlePopH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_titlePopH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyTitlePop:
 		self.index = Some(value.TitlePop)
@@ -848,7 +848,7 @@ type strA_lastActionH struct {
 	action Optional[StreamActionKey]
 }
 
-func (self *strA_lastActionH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_lastActionH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	self.action = Some(action)
 	return nil
@@ -907,7 +907,7 @@ type strA_sgrUnderlineColorH struct {
 	called bool
 }
 
-func (self *strA_sgrUnderlineColorH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_sgrUnderlineColorH) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeySetAttribute:
 		self.attrs = Some(value.SetAttribute)
@@ -931,7 +931,7 @@ type strA_tabClearOverflowH struct {
 	called bool
 }
 
-func (self *strA_tabClearOverflowH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_tabClearOverflowH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	switch action {
 	case StreamActionKeyTabClearCurrent, StreamActionKeyTabClearAll:
@@ -1208,7 +1208,7 @@ func strA_anyPayload(action StreamActionKey, value StreamAction) (string, bool) 
 }
 
 // Vt is term51ARecorder.vt.
-func (self *strA_recorder) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_recorder) Vt(action StreamActionKey, value *StreamAction) error {
 	name := action.String()
 	if action != StreamActionKeyPrint {
 		strA_recFlush(self)
@@ -1237,7 +1237,7 @@ func (self *strA_recorder) Vt(action StreamActionKey, value StreamAction) error 
 		strA_recPut(
 			self,
 			"%s %s\n",
-			name, strA_modeOf(action, value).mode.String(),
+			name, strA_modeOf(action, *value).mode.String(),
 		)
 	case StreamActionKeyDeviceAttributes:
 		strA_recPut(self, "device_attributes %s\n", value.DeviceAttributes.String())
@@ -1341,7 +1341,7 @@ func (self *strA_recorder) Vt(action StreamActionKey, value StreamAction) error 
 		StreamActionKeyCursorRow,
 		StreamActionKeyCursorColRelative,
 		StreamActionKeyCursorRowRelative:
-		strA_recPut(self, "%s %d\n", name, strA_cursorMovement(action, value).value)
+		strA_recPut(self, "%s %d\n", name, strA_cursorMovement(action, *value).value)
 	case StreamActionKeyCursorPos:
 		strA_recPut(self, "cursor_pos %d %d\n", value.CursorPos.row, value.CursorPos.col)
 	case StreamActionKeySetAttribute:
@@ -1360,7 +1360,7 @@ func (self *strA_recorder) Vt(action StreamActionKey, value StreamAction) error 
 	case StreamActionKeyApcPut:
 		strA_recPut(self, "%s %x\n", name, value.ApcPut)
 	default:
-		if payload, ok := strA_anyPayload(action, value); ok {
+		if payload, ok := strA_anyPayload(action, *value); ok {
 			strA_recPut(self, "%s %s\n", name, payload)
 		} else {
 			strA_recPut(self, "%s\n", name)
@@ -1406,12 +1406,12 @@ func (self *strA_rawRecorder) Deinit() {
 }
 
 // Vt is term51ARawRecorder.vt.
-func (self *strA_rawRecorder) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_rawRecorder) Vt(action StreamActionKey, value *StreamAction) error {
 	return self.base.Vt(action, value)
 }
 
 // VtRaw is term51ARawRecorder.vtRaw.
-func (self *strA_rawRecorder) VtRaw(action ParserAction) (bool, error) {
+func (self *strA_rawRecorder) VtRaw(action *ParserAction) (bool, error) {
 	w := func(format string, args ...any) {
 		self.raw = append(self.raw, fmt.Sprintf(format, args...)...)
 	}
@@ -1708,7 +1708,7 @@ type strA_initByValueH struct {
 
 func (self *strA_initByValueH) Deinit() {}
 
-func (self *strA_initByValueH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_initByValueH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = value
 	if action == StreamActionKeyBell {
 		self.n += 1
@@ -1931,7 +1931,7 @@ func (self *strA_deinitFlagH) Deinit() {
 	*self.flag = true
 }
 
-func (self *strA_deinitFlagH) Vt(action StreamActionKey, value StreamAction) error {
+func (self *strA_deinitFlagH) Vt(action StreamActionKey, value *StreamAction) error {
 	_ = self
 	_ = action
 	_ = value
@@ -4956,7 +4956,7 @@ func TestStream_term51_term51ARawRecorder_vtRaw_logs_every_kind_of_raw_action_an
 		{Tag: ParserActionApcEnd},
 	}
 	for _, a := range actions {
-		skip, err := rec.VtRaw(a)
+		skip, err := rec.VtRaw(&a)
 		zigTry(t, err)
 		expect(t, !skip, "!(try rec.vtRaw(a))")
 	}
@@ -4968,17 +4968,17 @@ func TestStream_term51_term51ARawRecorder_vtRaw_logs_every_kind_of_raw_action_an
 	)
 
 	rec.mode = strA_rawSkip
-	skip, err := rec.VtRaw(ParserAction{Tag: ParserActionExecute, Execute: 1})
+	skip, err := rec.VtRaw(&ParserAction{Tag: ParserActionExecute, Execute: 1})
 	zigTry(t, err)
 	expect(t, skip, "try rec.vtRaw(.{ .execute = 1 })")
 	rec.mode = strA_rawFail
-	_, err = rec.VtRaw(ParserAction{Tag: ParserActionExecute, Execute: 1})
+	_, err = rec.VtRaw(&ParserAction{Tag: ParserActionExecute, Execute: 1})
 	expect(t, errors.Is(err, strA_errTestFailure), "error.Term51ATestFailure")
 	// With `only` set, other kinds of action pass.
 	rec.only = Some(ParserActionDcsPut)
-	skip, err = rec.VtRaw(ParserAction{Tag: ParserActionExecute, Execute: 1})
+	skip, err = rec.VtRaw(&ParserAction{Tag: ParserActionExecute, Execute: 1})
 	zigTry(t, err)
 	expect(t, !skip, "!(try rec.vtRaw(.{ .execute = 1 }))")
-	_, err = rec.VtRaw(ParserAction{Tag: ParserActionDcsPut, DcsPut: 1})
+	_, err = rec.VtRaw(&ParserAction{Tag: ParserActionDcsPut, DcsPut: 1})
 	expect(t, errors.Is(err, strA_errTestFailure), "error.Term51ATestFailure")
 }

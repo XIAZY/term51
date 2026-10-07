@@ -681,7 +681,20 @@ func (self *Terminal) Print(c uint32) error {
 
 	// After doing any printing, wrapping, scrolling, etc. we want to ensure
 	// that our screen remains in a consistent state.
-	defer func() { self.screens.active.AssertIntegrity() }()
+	//
+	// Go: Zig's `defer self.screens.active.assertIntegrity()` is the call
+	// after printBody returns. A Go `defer` here cost about 12% of the
+	// time to print a character (docs/post-port-optimizations.md item 32).
+	// A Zig defer does not run when the function panics, and neither does
+	// this.
+	err := self.printBody(c)
+	self.screens.active.AssertIntegrity()
+	return err
+}
+
+// printBody is the rest of Terminal.print, after its `defer` (see Print).
+// Not a Zig declaration.
+func (self *Terminal) printBody(c uint32) error {
 
 	// Our right margin depends where our cursor is now.
 	var right_limit SizeCellCountInt
@@ -1137,7 +1150,8 @@ grapheme:
 // Zig: fn printCell(self: *Terminal, unmapped_c: u21, wide: Cell.Wide)
 // void.
 func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
-	defer func() { self.screens.active.AssertIntegrity() }()
+	// Zig: defer self.screens.active.assertIntegrity(); Go: the call at the
+	// end of the function, which has no other exit (see Print).
 
 	// TODO: spacers should use a bgcolor only cell
 
@@ -1311,6 +1325,9 @@ func (self *Terminal) printCell(unmapped_c uint32, wide PageCellWide) {
 		page.ClearHyperlink(cell)
 		page.UpdateRowHyperlinkFlag(self.screens.active.cursor.page_row)
 	}
+
+	// Zig: the `defer` at the top of the function (see Print).
+	self.screens.active.AssertIntegrity()
 }
 
 // printWrap is Terminal.printWrap.

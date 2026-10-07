@@ -1076,13 +1076,16 @@ func (self *Screen) CursorCellEndOfPrev() *PageCell {
 func (self *Screen) CursorRight(n SizeCellCountInt) {
 	// Zig: `self.cursor.x + n` is u16 and traps on overflow.
 	assert(uint32(self.cursor.x)+uint32(n) < uint32(self.pages.cols))
-	defer self.AssertIntegrity()
+	// Zig: defer self.assertIntegrity(); Go: the call at the end of the
+	// function, which has no other exit (Terminal.Print has the reason).
 
 	// Zig: `cell + n` on the many-item pointer.
 	page := &self.cursor.page_pin.node.data
 	self.cursor.page_cell = &page.cells[page.cellIndex(self.cursor.page_cell)+uint(n)]
 	self.cursor.page_pin.x += n
 	self.cursor.x += n
+
+	self.AssertIntegrity()
 }
 
 // CursorLeft is Screen.cursorLeft.

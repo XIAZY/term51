@@ -18,13 +18,15 @@
 //     the documented signature
 //     `fn(comptime action: Action.Key, value: Action.Value(action)) !void`.
 //     Go has no comptime parameter and no type that depends on a value, so
-//     it is `Vt(action StreamActionKey, value StreamAction) error`: `value`
-//     is the whole tagged union with `value.Tag == action`, and the payload
-//     Zig passes is the field of `value` named by the tag. For a variant
-//     with no payload Zig passes `{}` and no field is meaningful.
-//     `try self.handler.vt(.k, v)` is therefore
-//     `if err := self.handler.Vt(StreamActionKeyK, StreamAction{Tag:
-//     StreamActionKeyK, K: v}); err != nil { return err }`.
+//     it is `Vt(action StreamActionKey, value *StreamAction) error`:
+//     `value` points at the whole tagged union with `value.Tag == action`,
+//     and the payload Zig passes is the field of `value` named by the tag.
+//     For a variant with no payload Zig passes `{}` and no field is
+//     meaningful. The action is one the stream owns and reuses (see
+//     StreamHandler.Vt and streamAction), so
+//     `try self.handler.vt(.k, v)` is
+//     `self.streamAction(StreamActionKeyK).K = v` followed by
+//     `if err := self.vt(StreamActionKeyK); err != nil { return err }`.
 //   - `deinit`, called by Stream.deinit ("The Handler type must also have a
 //     `deinit` function"). It is `Deinit()`.
 //   - `vtRaw` is optional in Zig (`@hasDecl(T, "vtRaw")` in nextNonUtf8). It
@@ -497,7 +499,21 @@ type StreamHandler interface {
 	// The handler can choose to react to whatever actions it cares about.
 	// `value.Tag` equals `action`; the payload is the field of `value`
 	// named by it.
-	Vt(action StreamActionKey, value StreamAction) error
+	//
+	// Go: value is a pointer into storage the stream owns and reuses. It is
+	// valid only during the call: a handler that keeps an action, or a
+	// slice inside a payload (a title, OSC data, CSI parameters), must copy
+	// it. Only the payload field named by value.Tag is meaningful; every
+	// other payload field is zero.
+	//
+	// The handler must not modify the action: Zig passes it by value, here
+	// it is the stream's own storage.
+	//
+	// If a handler panics and the caller recovers and keeps using the
+	// stream, results stay correct, but from then on the stream takes its
+	// slower paths (a newly allocated action and action array per call),
+	// as it does for a handler that feeds the stream from inside a call.
+	Vt(action StreamActionKey, value *StreamAction) error
 
 	// Deinit is the handler's `deinit`. The stream takes ownership of the
 	// handler and calls this when the stream is deinitialized.
@@ -510,7 +526,14 @@ type StreamHandler interface {
 // stream skips processing the action itself; an error is logged and treated
 // as `true`.
 type StreamHandlerVtRaw interface {
-	VtRaw(action ParserAction) (bool, error)
+	//
+	// Go: action is a pointer into storage the stream owns and reuses,
+	// valid only during the call, with the same rules as StreamHandler.Vt.
+	// In particular the handler must not modify it: it is the parser
+	// action the stream goes on to dispatch when VtRaw returns false, so a
+	// write would change what is dispatched. The note there about a
+	// handler that panics applies here too.
+	VtRaw(action *ParserAction) (bool, error)
 }
 
 // Stream is the type returned by stream.Stream(Handler): a type that can
@@ -521,6 +544,19 @@ type Stream[H StreamHandler] struct {
 	handler     H
 	parser      Parser
 	utf8decoder UTF8Decoder
+
+	// Zig: no fields. The parser's actions for the current byte and whether
+	// nextNonUtf8 is using them (see nextNonUtf8).
+	actions      [3]Optional[ParserAction]
+	actions_busy bool
+
+	// Zig: no fields. The action handed to the handler (see streamAction):
+	// action_own is the stream's reusable action, action_cur the one
+	// prepared for the next handler call, action_depth the number of
+	// handler calls in progress.
+	action_own   StreamAction
+	action_cur   *StreamAction
+	action_depth int
 
 	// Zig: no field. `@hasDecl(T, "vtRaw")` is decided at compile time;
 	// the port decides it once, in StreamInit (mapping: compile-time work is
@@ -952,13 +988,35 @@ csi_param:
 	// that causes weird behavior in some tests- I'm not sure if they
 	// miscompile or it's just very counter-intuitive comptime stuff,
 	// but regardless, this is the easy solution.
-	actions := self.parser.Next(c)
+	//
+	// Go: Zig's `const actions = self.parser.next(c)` is a small local
+	// array. The Go actions are large (see Parser.nextInto), so the stream
+	// keeps one array for its whole life and the parser fills it in place.
+	// A handler that feeds this same stream from inside a callback would
+	// overwrite the array while this loop still reads it, where Zig's local
+	// would be untouched; such a re-entrant call takes a local array.
+	if self.actions_busy {
+		actions := self.parser.Next(c)
+		return self.nextNonUtf8Actions(&actions)
+	}
+	self.actions_busy = true
+	self.parser.nextInto(c, &self.actions)
+	err := self.nextNonUtf8Actions(&self.actions)
+	self.actions_busy = false
+	return err
+}
 
-	for _, action_opt := range actions {
+// nextNonUtf8Actions is the loop of Stream(Handler).nextNonUtf8 over the
+// actions the parser produced (not a separate function in Zig; see the
+// comment at its call).
+func (self *Stream[H]) nextNonUtf8Actions(actions *[3]Optional[ParserAction]) error {
+	for i := range actions {
+		action_opt := &actions[i]
 		if !action_opt.Valid {
 			continue
 		}
-		action := action_opt.Value
+		// Go: a pointer, not a copy of the 840-byte action.
+		action := &action_opt.Value
 		// Zig: if (comptime debug) log.info("action: {f}", .{action});
 
 		// A handler can expose this to get the raw action before
@@ -1003,27 +1061,33 @@ csi_param:
 				return err
 			}
 		case ParserActionDcsHook:
-			if err := self.handler.Vt(StreamActionKeyDcsHook, StreamAction{Tag: StreamActionKeyDcsHook, DcsHook: action.DcsHook}); err != nil {
+			self.streamAction(StreamActionKeyDcsHook).DcsHook = action.DcsHook
+			if err := self.vt(StreamActionKeyDcsHook); err != nil {
 				return err
 			}
 		case ParserActionDcsPut:
-			if err := self.handler.Vt(StreamActionKeyDcsPut, StreamAction{Tag: StreamActionKeyDcsPut, DcsPut: action.DcsPut}); err != nil {
+			self.streamAction(StreamActionKeyDcsPut).DcsPut = action.DcsPut
+			if err := self.vt(StreamActionKeyDcsPut); err != nil {
 				return err
 			}
 		case ParserActionDcsUnhook:
-			if err := self.handler.Vt(StreamActionKeyDcsUnhook, StreamAction{Tag: StreamActionKeyDcsUnhook}); err != nil {
+			self.streamAction(StreamActionKeyDcsUnhook)
+			if err := self.vt(StreamActionKeyDcsUnhook); err != nil {
 				return err
 			}
 		case ParserActionApcStart:
-			if err := self.handler.Vt(StreamActionKeyApcStart, StreamAction{Tag: StreamActionKeyApcStart}); err != nil {
+			self.streamAction(StreamActionKeyApcStart)
+			if err := self.vt(StreamActionKeyApcStart); err != nil {
 				return err
 			}
 		case ParserActionApcPut:
-			if err := self.handler.Vt(StreamActionKeyApcPut, StreamAction{Tag: StreamActionKeyApcPut, ApcPut: action.ApcPut}); err != nil {
+			self.streamAction(StreamActionKeyApcPut).ApcPut = action.ApcPut
+			if err := self.vt(StreamActionKeyApcPut); err != nil {
 				return err
 			}
 		case ParserActionApcEnd:
-			if err := self.handler.Vt(StreamActionKeyApcEnd, StreamAction{Tag: StreamActionKeyApcEnd}); err != nil {
+			self.streamAction(StreamActionKeyApcEnd)
+			if err := self.vt(StreamActionKeyApcEnd); err != nil {
 				return err
 			}
 		default:
@@ -1033,11 +1097,231 @@ csi_param:
 	return nil
 }
 
+// streamAction prepares the action the handler will receive for key and
+// returns it for the caller to set its payload field; vt then calls the
+// handler. Not a Zig declaration.
+//
+// Go: Zig builds a small tagged union at each `self.handler.vt(.key, payload)`.
+// The Go StreamAction has a field per payload (624 bytes), so building and
+// passing one by value for every action, every printed character included,
+// was the stream's largest remaining cost (docs/post-port-optimizations.md).
+// The stream owns one StreamAction and the handler gets a pointer to it.
+// streamActionClear keeps it equal to a freshly built `StreamAction{Tag: key,
+// <payload>}`: only the payload of the current tag is ever non-zero.
+//
+// While a handler is being called (action_depth > 0), a handler that feeds
+// this same stream from inside the callback gets a fresh action for each of
+// its own actions, instead of overwriting the one it was handed (Zig's is a
+// value).
+func (self *Stream[H]) streamAction(key StreamActionKey) *StreamAction {
+	var a *StreamAction
+	if self.action_depth == 0 {
+		a = &self.action_own
+		// The caller assigns the whole payload field of key, so the
+		// payload only needs clearing when the tag changes.
+		if a.Tag != key {
+			streamActionClear(a)
+			a.Tag = key
+		}
+	} else {
+		a = new(StreamAction)
+		a.Tag = key
+	}
+	self.action_cur = a
+	return a
+}
+
+// vt is `self.handler.vt(key, payload)` for the action streamAction(key)
+// prepared. Not a Zig declaration (see streamAction).
+func (self *Stream[H]) vt(key StreamActionKey) error {
+	a := self.action_cur
+	assert(a != nil && a.Tag == key)
+	self.action_cur = nil
+	self.action_depth += 1
+	err := self.handler.Vt(key, a)
+	self.action_depth -= 1
+	return err
+}
+
+// streamActionZero is the zero StreamAction, the source of zero payloads.
+var streamActionZero StreamAction
+
+// streamActionClear makes a the zero StreamAction again, given that only
+// the payload of a.Tag can be non-zero. Not a Zig declaration (see
+// streamAction). TestStream_go_only_action_reused_equals_fresh checks every
+// key.
+func streamActionClear(a *StreamAction) {
+	switch a.Tag {
+	case StreamActionKeyPrint:
+		a.Print = streamActionZero.Print
+	case StreamActionKeyPrintRepeat:
+		a.PrintRepeat = streamActionZero.PrintRepeat
+	case StreamActionKeyHorizontalTab:
+		a.HorizontalTab = streamActionZero.HorizontalTab
+	case StreamActionKeyHorizontalTabBack:
+		a.HorizontalTabBack = streamActionZero.HorizontalTabBack
+	case StreamActionKeyInvokeCharset:
+		a.InvokeCharset = streamActionZero.InvokeCharset
+	case StreamActionKeyCursorUp:
+		a.CursorUp = streamActionZero.CursorUp
+	case StreamActionKeyCursorDown:
+		a.CursorDown = streamActionZero.CursorDown
+	case StreamActionKeyCursorLeft:
+		a.CursorLeft = streamActionZero.CursorLeft
+	case StreamActionKeyCursorRight:
+		a.CursorRight = streamActionZero.CursorRight
+	case StreamActionKeyCursorCol:
+		a.CursorCol = streamActionZero.CursorCol
+	case StreamActionKeyCursorRow:
+		a.CursorRow = streamActionZero.CursorRow
+	case StreamActionKeyCursorColRelative:
+		a.CursorColRelative = streamActionZero.CursorColRelative
+	case StreamActionKeyCursorRowRelative:
+		a.CursorRowRelative = streamActionZero.CursorRowRelative
+	case StreamActionKeyCursorPos:
+		a.CursorPos = streamActionZero.CursorPos
+	case StreamActionKeyCursorStyle:
+		a.CursorStyle = streamActionZero.CursorStyle
+	case StreamActionKeyEraseDisplayBelow:
+		a.EraseDisplayBelow = streamActionZero.EraseDisplayBelow
+	case StreamActionKeyEraseDisplayAbove:
+		a.EraseDisplayAbove = streamActionZero.EraseDisplayAbove
+	case StreamActionKeyEraseDisplayComplete:
+		a.EraseDisplayComplete = streamActionZero.EraseDisplayComplete
+	case StreamActionKeyEraseDisplayScrollback:
+		a.EraseDisplayScrollback = streamActionZero.EraseDisplayScrollback
+	case StreamActionKeyEraseDisplayScrollComplete:
+		a.EraseDisplayScrollComplete = streamActionZero.EraseDisplayScrollComplete
+	case StreamActionKeyEraseLineRight:
+		a.EraseLineRight = streamActionZero.EraseLineRight
+	case StreamActionKeyEraseLineLeft:
+		a.EraseLineLeft = streamActionZero.EraseLineLeft
+	case StreamActionKeyEraseLineComplete:
+		a.EraseLineComplete = streamActionZero.EraseLineComplete
+	case StreamActionKeyEraseLineRightUnlessPendingWrap:
+		a.EraseLineRightUnlessPendingWrap = streamActionZero.EraseLineRightUnlessPendingWrap
+	case StreamActionKeyDeleteChars:
+		a.DeleteChars = streamActionZero.DeleteChars
+	case StreamActionKeyEraseChars:
+		a.EraseChars = streamActionZero.EraseChars
+	case StreamActionKeyInsertLines:
+		a.InsertLines = streamActionZero.InsertLines
+	case StreamActionKeyInsertBlanks:
+		a.InsertBlanks = streamActionZero.InsertBlanks
+	case StreamActionKeyDeleteLines:
+		a.DeleteLines = streamActionZero.DeleteLines
+	case StreamActionKeyScrollUp:
+		a.ScrollUp = streamActionZero.ScrollUp
+	case StreamActionKeyScrollDown:
+		a.ScrollDown = streamActionZero.ScrollDown
+	case StreamActionKeySetMode:
+		a.SetMode = streamActionZero.SetMode
+	case StreamActionKeyResetMode:
+		a.ResetMode = streamActionZero.ResetMode
+	case StreamActionKeySaveMode:
+		a.SaveMode = streamActionZero.SaveMode
+	case StreamActionKeyRestoreMode:
+		a.RestoreMode = streamActionZero.RestoreMode
+	case StreamActionKeyRequestMode:
+		a.RequestMode = streamActionZero.RequestMode
+	case StreamActionKeyRequestModeUnknown:
+		a.RequestModeUnknown = streamActionZero.RequestModeUnknown
+	case StreamActionKeyTopAndBottomMargin:
+		a.TopAndBottomMargin = streamActionZero.TopAndBottomMargin
+	case StreamActionKeyLeftAndRightMargin:
+		a.LeftAndRightMargin = streamActionZero.LeftAndRightMargin
+	case StreamActionKeyModifyKeyFormat:
+		a.ModifyKeyFormat = streamActionZero.ModifyKeyFormat
+	case StreamActionKeyMouseShiftCapture:
+		a.MouseShiftCapture = streamActionZero.MouseShiftCapture
+	case StreamActionKeySizeReport:
+		a.SizeReport = streamActionZero.SizeReport
+	case StreamActionKeyTitlePush:
+		a.TitlePush = streamActionZero.TitlePush
+	case StreamActionKeyTitlePop:
+		a.TitlePop = streamActionZero.TitlePop
+	case StreamActionKeyDeviceAttributes:
+		a.DeviceAttributes = streamActionZero.DeviceAttributes
+	case StreamActionKeyDeviceStatus:
+		a.DeviceStatus = streamActionZero.DeviceStatus
+	case StreamActionKeyKittyKeyboardPush:
+		a.KittyKeyboardPush = streamActionZero.KittyKeyboardPush
+	case StreamActionKeyKittyKeyboardPop:
+		a.KittyKeyboardPop = streamActionZero.KittyKeyboardPop
+	case StreamActionKeyKittyKeyboardSet:
+		a.KittyKeyboardSet = streamActionZero.KittyKeyboardSet
+	case StreamActionKeyKittyKeyboardSetOr:
+		a.KittyKeyboardSetOr = streamActionZero.KittyKeyboardSetOr
+	case StreamActionKeyKittyKeyboardSetNot:
+		a.KittyKeyboardSetNot = streamActionZero.KittyKeyboardSetNot
+	case StreamActionKeyDcsHook:
+		a.DcsHook = streamActionZero.DcsHook
+	case StreamActionKeyDcsPut:
+		a.DcsPut = streamActionZero.DcsPut
+	case StreamActionKeyApcPut:
+		a.ApcPut = streamActionZero.ApcPut
+	case StreamActionKeyActiveStatusDisplay:
+		a.ActiveStatusDisplay = streamActionZero.ActiveStatusDisplay
+	case StreamActionKeyWindowTitle:
+		a.WindowTitle = streamActionZero.WindowTitle
+	case StreamActionKeyReportPwd:
+		a.ReportPwd = streamActionZero.ReportPwd
+	case StreamActionKeyShowDesktopNotification:
+		a.ShowDesktopNotification = streamActionZero.ShowDesktopNotification
+	case StreamActionKeyProgressReport:
+		a.ProgressReport = streamActionZero.ProgressReport
+	case StreamActionKeyStartHyperlink:
+		a.StartHyperlink = streamActionZero.StartHyperlink
+	case StreamActionKeyClipboardContents:
+		a.ClipboardContents = streamActionZero.ClipboardContents
+	case StreamActionKeyMouseShape:
+		a.MouseShape = streamActionZero.MouseShape
+	case StreamActionKeyConfigureCharset:
+		a.ConfigureCharset = streamActionZero.ConfigureCharset
+	case StreamActionKeySetAttribute:
+		a.SetAttribute = streamActionZero.SetAttribute
+	case StreamActionKeyKittyColorReport:
+		a.KittyColorReport = streamActionZero.KittyColorReport
+	case StreamActionKeyColorOperation:
+		a.ColorOperation = streamActionZero.ColorOperation
+	case StreamActionKeySemanticPrompt:
+		a.SemanticPrompt = streamActionZero.SemanticPrompt
+	case StreamActionKeyBell, StreamActionKeyBackspace, StreamActionKeyLinefeed,
+		StreamActionKeyCarriageReturn, StreamActionKeyEnquiry, StreamActionKeyTabClearCurrent,
+		StreamActionKeyTabClearAll, StreamActionKeyTabSet, StreamActionKeyTabReset,
+		StreamActionKeyIndex, StreamActionKeyNextLine, StreamActionKeyReverseIndex,
+		StreamActionKeyFullReset, StreamActionKeyLeftAndRightMarginAmbiguous,
+		StreamActionKeySaveCursor, StreamActionKeyRestoreCursor, StreamActionKeyProtectedModeOff,
+		StreamActionKeyProtectedModeIso, StreamActionKeyProtectedModeDec, StreamActionKeyXtversion,
+		StreamActionKeyKittyKeyboardQuery, StreamActionKeyDcsUnhook, StreamActionKeyApcStart,
+		StreamActionKeyApcEnd, StreamActionKeyEndHyperlink, StreamActionKeyDecaln:
+		// No payload.
+	default:
+		panic("unreachable")
+	}
+	a.Tag = 0
+}
+
 // Print is Stream(Handler).print.
 //
 // Zig: c is u21.
 func (self *Stream[H]) Print(c uint32) error {
-	return self.handler.Vt(StreamActionKeyPrint, StreamAction{Tag: StreamActionKeyPrint, Print: StreamActionPrint{cp: c}})
+	if self.action_depth != 0 {
+		self.streamAction(StreamActionKeyPrint).Print = StreamActionPrint{cp: c}
+		return self.vt(StreamActionKeyPrint)
+	}
+	// Go: streamAction and vt written out, for the hottest action: the two
+	// calls cost about a third of the stream's throughput on plain text.
+	a := &self.action_own
+	if a.Tag != StreamActionKeyPrint {
+		streamActionClear(a)
+		a.Tag = StreamActionKeyPrint
+	}
+	a.Print = StreamActionPrint{cp: c}
+	self.action_depth = 1
+	err := self.handler.Vt(StreamActionKeyPrint, a)
+	self.action_depth = 0
+	return err
 }
 
 // Execute is Stream(Handler).execute.
@@ -1059,35 +1343,43 @@ func (self *Stream[H]) Execute(c uint8) error {
 	case ANSIC0NUL, ANSIC0SOH, ANSIC0STX:
 
 	case ANSIC0ENQ:
-		if err := self.handler.Vt(StreamActionKeyEnquiry, StreamAction{Tag: StreamActionKeyEnquiry}); err != nil {
+		self.streamAction(StreamActionKeyEnquiry)
+		if err := self.vt(StreamActionKeyEnquiry); err != nil {
 			return err
 		}
 	case ANSIC0BEL:
-		if err := self.handler.Vt(StreamActionKeyBell, StreamAction{Tag: StreamActionKeyBell}); err != nil {
+		self.streamAction(StreamActionKeyBell)
+		if err := self.vt(StreamActionKeyBell); err != nil {
 			return err
 		}
 	case ANSIC0BS:
-		if err := self.handler.Vt(StreamActionKeyBackspace, StreamAction{Tag: StreamActionKeyBackspace}); err != nil {
+		self.streamAction(StreamActionKeyBackspace)
+		if err := self.vt(StreamActionKeyBackspace); err != nil {
 			return err
 		}
 	case ANSIC0HT:
-		if err := self.handler.Vt(StreamActionKeyHorizontalTab, StreamAction{Tag: StreamActionKeyHorizontalTab, HorizontalTab: 1}); err != nil {
+		self.streamAction(StreamActionKeyHorizontalTab).HorizontalTab = 1
+		if err := self.vt(StreamActionKeyHorizontalTab); err != nil {
 			return err
 		}
 	case ANSIC0LF, ANSIC0VT, ANSIC0FF:
-		if err := self.handler.Vt(StreamActionKeyLinefeed, StreamAction{Tag: StreamActionKeyLinefeed}); err != nil {
+		self.streamAction(StreamActionKeyLinefeed)
+		if err := self.vt(StreamActionKeyLinefeed); err != nil {
 			return err
 		}
 	case ANSIC0CR:
-		if err := self.handler.Vt(StreamActionKeyCarriageReturn, StreamAction{Tag: StreamActionKeyCarriageReturn}); err != nil {
+		self.streamAction(StreamActionKeyCarriageReturn)
+		if err := self.vt(StreamActionKeyCarriageReturn); err != nil {
 			return err
 		}
 	case ANSIC0SO:
-		if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{bank: CharsetsActiveSlotGL, charset: CharsetsSlotsG1, locking: false}}); err != nil {
+		self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{bank: CharsetsActiveSlotGL, charset: CharsetsSlotsG1, locking: false}
+		if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 			return err
 		}
 	case ANSIC0SI:
-		if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{bank: CharsetsActiveSlotGL, charset: CharsetsSlotsG0, locking: false}}); err != nil {
+		self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{bank: CharsetsActiveSlotGL, charset: CharsetsSlotsG0, locking: false}
+		if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 			return err
 		}
 
@@ -1139,7 +1431,8 @@ prong:
 				warn("stream", "invalid cursor up command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorUp, StreamAction{Tag: StreamActionKeyCursorUp, CursorUp: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorUp).CursorUp = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorUp); err != nil {
 				return err
 			}
 
@@ -1164,7 +1457,8 @@ prong:
 				warn("stream", "invalid cursor down command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorDown, StreamAction{Tag: StreamActionKeyCursorDown, CursorDown: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorDown).CursorDown = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorDown); err != nil {
 				return err
 			}
 
@@ -1189,7 +1483,8 @@ prong:
 				warn("stream", "invalid cursor right command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorRight, StreamAction{Tag: StreamActionKeyCursorRight, CursorRight: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorRight).CursorRight = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorRight); err != nil {
 				return err
 			}
 
@@ -1214,7 +1509,8 @@ prong:
 				warn("stream", "invalid cursor left command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorLeft, StreamAction{Tag: StreamActionKeyCursorLeft, CursorLeft: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorLeft).CursorLeft = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorLeft); err != nil {
 				return err
 			}
 
@@ -1239,10 +1535,12 @@ prong:
 				warn("stream", "invalid cursor up command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorDown, StreamAction{Tag: StreamActionKeyCursorDown, CursorDown: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorDown).CursorDown = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorDown); err != nil {
 				return err
 			}
-			if err := self.handler.Vt(StreamActionKeyCarriageReturn, StreamAction{Tag: StreamActionKeyCarriageReturn}); err != nil {
+			self.streamAction(StreamActionKeyCarriageReturn)
+			if err := self.vt(StreamActionKeyCarriageReturn); err != nil {
 				return err
 			}
 
@@ -1267,10 +1565,12 @@ prong:
 				warn("stream", "invalid cursor down command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorUp, StreamAction{Tag: StreamActionKeyCursorUp, CursorUp: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorUp).CursorUp = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorUp); err != nil {
 				return err
 			}
-			if err := self.handler.Vt(StreamActionKeyCarriageReturn, StreamAction{Tag: StreamActionKeyCarriageReturn}); err != nil {
+			self.streamAction(StreamActionKeyCarriageReturn)
+			if err := self.vt(StreamActionKeyCarriageReturn); err != nil {
 				return err
 			}
 
@@ -1296,7 +1596,8 @@ prong:
 				warn("stream", "invalid HPA command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorCol, StreamAction{Tag: StreamActionKeyCursorCol, CursorCol: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorCol).CursorCol = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorCol); err != nil {
 				return err
 			}
 
@@ -1324,7 +1625,8 @@ prong:
 				warn("stream", "invalid CUP command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorPos, StreamAction{Tag: StreamActionKeyCursorPos, CursorPos: pos}); err != nil {
+			self.streamAction(StreamActionKeyCursorPos).CursorPos = pos
+			if err := self.vt(StreamActionKeyCursorPos); err != nil {
 				return err
 			}
 
@@ -1349,7 +1651,8 @@ prong:
 				warn("stream", "invalid horizontal tab command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyHorizontalTab, StreamAction{Tag: StreamActionKeyHorizontalTab, HorizontalTab: value}); err != nil {
+			self.streamAction(StreamActionKeyHorizontalTab).HorizontalTab = value
+			if err := self.vt(StreamActionKeyHorizontalTab); err != nil {
 				return err
 			}
 
@@ -1411,23 +1714,28 @@ prong:
 
 		switch mode {
 		case CSIEraseDisplayBelow:
-			if err := self.handler.Vt(StreamActionKeyEraseDisplayBelow, StreamAction{Tag: StreamActionKeyEraseDisplayBelow, EraseDisplayBelow: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseDisplayBelow).EraseDisplayBelow = protected
+			if err := self.vt(StreamActionKeyEraseDisplayBelow); err != nil {
 				return err
 			}
 		case CSIEraseDisplayAbove:
-			if err := self.handler.Vt(StreamActionKeyEraseDisplayAbove, StreamAction{Tag: StreamActionKeyEraseDisplayAbove, EraseDisplayAbove: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseDisplayAbove).EraseDisplayAbove = protected
+			if err := self.vt(StreamActionKeyEraseDisplayAbove); err != nil {
 				return err
 			}
 		case CSIEraseDisplayComplete:
-			if err := self.handler.Vt(StreamActionKeyEraseDisplayComplete, StreamAction{Tag: StreamActionKeyEraseDisplayComplete, EraseDisplayComplete: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseDisplayComplete).EraseDisplayComplete = protected
+			if err := self.vt(StreamActionKeyEraseDisplayComplete); err != nil {
 				return err
 			}
 		case CSIEraseDisplayScrollback:
-			if err := self.handler.Vt(StreamActionKeyEraseDisplayScrollback, StreamAction{Tag: StreamActionKeyEraseDisplayScrollback, EraseDisplayScrollback: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseDisplayScrollback).EraseDisplayScrollback = protected
+			if err := self.vt(StreamActionKeyEraseDisplayScrollback); err != nil {
 				return err
 			}
 		case CSIEraseDisplayScrollComplete:
-			if err := self.handler.Vt(StreamActionKeyEraseDisplayScrollComplete, StreamAction{Tag: StreamActionKeyEraseDisplayScrollComplete, EraseDisplayScrollComplete: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseDisplayScrollComplete).EraseDisplayScrollComplete = protected
+			if err := self.vt(StreamActionKeyEraseDisplayScrollComplete); err != nil {
 				return err
 			}
 		default:
@@ -1478,19 +1786,23 @@ prong:
 
 		switch mode {
 		case CSIEraseLineRight:
-			if err := self.handler.Vt(StreamActionKeyEraseLineRight, StreamAction{Tag: StreamActionKeyEraseLineRight, EraseLineRight: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseLineRight).EraseLineRight = protected
+			if err := self.vt(StreamActionKeyEraseLineRight); err != nil {
 				return err
 			}
 		case CSIEraseLineLeft:
-			if err := self.handler.Vt(StreamActionKeyEraseLineLeft, StreamAction{Tag: StreamActionKeyEraseLineLeft, EraseLineLeft: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseLineLeft).EraseLineLeft = protected
+			if err := self.vt(StreamActionKeyEraseLineLeft); err != nil {
 				return err
 			}
 		case CSIEraseLineComplete:
-			if err := self.handler.Vt(StreamActionKeyEraseLineComplete, StreamAction{Tag: StreamActionKeyEraseLineComplete, EraseLineComplete: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseLineComplete).EraseLineComplete = protected
+			if err := self.vt(StreamActionKeyEraseLineComplete); err != nil {
 				return err
 			}
 		case CSIEraseLineRightUnlessPendingWrap:
-			if err := self.handler.Vt(StreamActionKeyEraseLineRightUnlessPendingWrap, StreamAction{Tag: StreamActionKeyEraseLineRightUnlessPendingWrap, EraseLineRightUnlessPendingWrap: protected}); err != nil {
+			self.streamAction(StreamActionKeyEraseLineRightUnlessPendingWrap).EraseLineRightUnlessPendingWrap = protected
+			if err := self.vt(StreamActionKeyEraseLineRightUnlessPendingWrap); err != nil {
 				return err
 			}
 		default: // _
@@ -1515,7 +1827,8 @@ prong:
 				warn("stream", "invalid IL command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyInsertLines, StreamAction{Tag: StreamActionKeyInsertLines, InsertLines: value}); err != nil {
+			self.streamAction(StreamActionKeyInsertLines).InsertLines = value
+			if err := self.vt(StreamActionKeyInsertLines); err != nil {
 				return err
 			}
 
@@ -1541,7 +1854,8 @@ prong:
 				warn("stream", "invalid DL command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyDeleteLines, StreamAction{Tag: StreamActionKeyDeleteLines, DeleteLines: value}); err != nil {
+			self.streamAction(StreamActionKeyDeleteLines).DeleteLines = value
+			if err := self.vt(StreamActionKeyDeleteLines); err != nil {
 				return err
 			}
 
@@ -1566,7 +1880,8 @@ prong:
 				warn("stream", "invalid delete characters command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyDeleteChars, StreamAction{Tag: StreamActionKeyDeleteChars, DeleteChars: value}); err != nil {
+			self.streamAction(StreamActionKeyDeleteChars).DeleteChars = value
+			if err := self.vt(StreamActionKeyDeleteChars); err != nil {
 				return err
 			}
 
@@ -1592,7 +1907,8 @@ prong:
 				warn("stream", "invalid scroll up command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyScrollUp, StreamAction{Tag: StreamActionKeyScrollUp, ScrollUp: value}); err != nil {
+			self.streamAction(StreamActionKeyScrollUp).ScrollUp = value
+			if err := self.vt(StreamActionKeyScrollUp); err != nil {
 				return err
 			}
 
@@ -1617,7 +1933,8 @@ prong:
 				warn("stream", "invalid scroll down command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyScrollDown, StreamAction{Tag: StreamActionKeyScrollDown, ScrollDown: value}); err != nil {
+			self.streamAction(StreamActionKeyScrollDown).ScrollDown = value
+			if err := self.vt(StreamActionKeyScrollDown); err != nil {
 				return err
 			}
 
@@ -1634,7 +1951,8 @@ prong:
 		case 0:
 			if len(input.Params) == 0 ||
 				(len(input.Params) == 1 && input.Params[0] == 0) {
-				if err := self.handler.Vt(StreamActionKeyTabSet, StreamAction{Tag: StreamActionKeyTabSet}); err != nil {
+				self.streamAction(StreamActionKeyTabSet)
+				if err := self.vt(StreamActionKeyTabSet); err != nil {
 					return err
 				}
 				return nil
@@ -1650,12 +1968,14 @@ prong:
 					panic("unreachable")
 
 				case 2:
-					if err := self.handler.Vt(StreamActionKeyTabClearCurrent, StreamAction{Tag: StreamActionKeyTabClearCurrent}); err != nil {
+					self.streamAction(StreamActionKeyTabClearCurrent)
+					if err := self.vt(StreamActionKeyTabClearCurrent); err != nil {
 						return err
 					}
 
 				case 5:
-					if err := self.handler.Vt(StreamActionKeyTabClearAll, StreamAction{Tag: StreamActionKeyTabClearAll}); err != nil {
+					self.streamAction(StreamActionKeyTabClearAll)
+					if err := self.vt(StreamActionKeyTabClearAll); err != nil {
 						return err
 					}
 
@@ -1672,7 +1992,8 @@ prong:
 			if input.Intermediates[0] == '?' &&
 				len(input.Params) == 1 &&
 				input.Params[0] == 5 {
-				if err := self.handler.Vt(StreamActionKeyTabReset, StreamAction{Tag: StreamActionKeyTabReset}); err != nil {
+				self.streamAction(StreamActionKeyTabReset)
+				if err := self.vt(StreamActionKeyTabReset); err != nil {
 					return err
 				}
 			} else {
@@ -1700,7 +2021,8 @@ prong:
 				warn("stream", "invalid erase characters command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyEraseChars, StreamAction{Tag: StreamActionKeyEraseChars, EraseChars: value}); err != nil {
+			self.streamAction(StreamActionKeyEraseChars).EraseChars = value
+			if err := self.vt(StreamActionKeyEraseChars); err != nil {
 				return err
 			}
 
@@ -1725,7 +2047,8 @@ prong:
 				warn("stream", "invalid horizontal tab back command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyHorizontalTabBack, StreamAction{Tag: StreamActionKeyHorizontalTabBack, HorizontalTabBack: value}); err != nil {
+			self.streamAction(StreamActionKeyHorizontalTabBack).HorizontalTabBack = value
+			if err := self.vt(StreamActionKeyHorizontalTabBack); err != nil {
 				return err
 			}
 
@@ -1750,7 +2073,8 @@ prong:
 				warn("stream", "invalid HPR command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorColRelative, StreamAction{Tag: StreamActionKeyCursorColRelative, CursorColRelative: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorColRelative).CursorColRelative = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorColRelative); err != nil {
 				return err
 			}
 
@@ -1775,7 +2099,8 @@ prong:
 				warn("stream", "invalid print repeat command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyPrintRepeat, StreamAction{Tag: StreamActionKeyPrintRepeat, PrintRepeat: value}); err != nil {
+			self.streamAction(StreamActionKeyPrintRepeat).PrintRepeat = value
+			if err := self.vt(StreamActionKeyPrintRepeat); err != nil {
 				return err
 			}
 
@@ -1807,7 +2132,8 @@ prong:
 
 		if req.Valid {
 			r := req.Value
-			if err := self.handler.Vt(StreamActionKeyDeviceAttributes, StreamAction{Tag: StreamActionKeyDeviceAttributes, DeviceAttributes: r}); err != nil {
+			self.streamAction(StreamActionKeyDeviceAttributes).DeviceAttributes = r
+			if err := self.vt(StreamActionKeyDeviceAttributes); err != nil {
 				return err
 			}
 		} else {
@@ -1829,7 +2155,8 @@ prong:
 				warn("stream", "invalid VPA command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorRow, StreamAction{Tag: StreamActionKeyCursorRow, CursorRow: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorRow).CursorRow = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorRow); err != nil {
 				return err
 			}
 
@@ -1854,7 +2181,8 @@ prong:
 				warn("stream", "invalid VPR command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyCursorRowRelative, StreamAction{Tag: StreamActionKeyCursorRowRelative, CursorRowRelative: StreamActionCursorMovement{value: value}}); err != nil {
+			self.streamAction(StreamActionKeyCursorRowRelative).CursorRowRelative = StreamActionCursorMovement{value: value}
+			if err := self.vt(StreamActionKeyCursorRowRelative); err != nil {
 				return err
 			}
 
@@ -1887,11 +2215,13 @@ prong:
 			}
 			switch mode {
 			case CSITabClearCurrent:
-				if err := self.handler.Vt(StreamActionKeyTabClearCurrent, StreamAction{Tag: StreamActionKeyTabClearCurrent}); err != nil {
+				self.streamAction(StreamActionKeyTabClearCurrent)
+				if err := self.vt(StreamActionKeyTabClearCurrent); err != nil {
 					return err
 				}
 			case CSITabClearAll:
-				if err := self.handler.Vt(StreamActionKeyTabClearAll, StreamAction{Tag: StreamActionKeyTabClearAll}); err != nil {
+				self.streamAction(StreamActionKeyTabClearAll)
+				if err := self.vt(StreamActionKeyTabClearAll); err != nil {
 					return err
 				}
 			default: // _
@@ -1923,7 +2253,8 @@ prong:
 
 		for _, mode_int := range input.Params {
 			if mode := ModesModeFromInt(mode_int, ansi_mode); mode.Valid {
-				if err := self.handler.Vt(StreamActionKeySetMode, StreamAction{Tag: StreamActionKeySetMode, SetMode: StreamActionMode{mode: mode.Value}}); err != nil {
+				self.streamAction(StreamActionKeySetMode).SetMode = StreamActionMode{mode: mode.Value}
+				if err := self.vt(StreamActionKeySetMode); err != nil {
 					return err
 				}
 			} else {
@@ -1948,7 +2279,8 @@ prong:
 
 		for _, mode_int := range input.Params {
 			if mode := ModesModeFromInt(mode_int, ansi_mode); mode.Valid {
-				if err := self.handler.Vt(StreamActionKeyResetMode, StreamAction{Tag: StreamActionKeyResetMode, ResetMode: StreamActionMode{mode: mode.Value}}); err != nil {
+				self.streamAction(StreamActionKeyResetMode).ResetMode = StreamActionMode{mode: mode.Value}
+				if err := self.vt(StreamActionKeyResetMode); err != nil {
 					return err
 				}
 			} else {
@@ -1973,7 +2305,8 @@ prong:
 				}
 				attr := attr_.Value
 				// log.info("SGR attribute: {}", .{attr});
-				if err := self.handler.Vt(StreamActionKeySetAttribute, StreamAction{Tag: StreamActionKeySetAttribute, SetAttribute: attr}); err != nil {
+				self.streamAction(StreamActionKeySetAttribute).SetAttribute = attr
+				if err := self.vt(StreamActionKeySetAttribute); err != nil {
 					return err
 				}
 			}
@@ -1984,7 +2317,8 @@ prong:
 				// blk: (break :blk is break prong)
 				if len(input.Params) == 0 {
 					// Reset
-					if err := self.handler.Vt(StreamActionKeyModifyKeyFormat, StreamAction{Tag: StreamActionKeyModifyKeyFormat, ModifyKeyFormat: ANSIModifyKeyFormatLegacy}); err != nil {
+					self.streamAction(StreamActionKeyModifyKeyFormat).ModifyKeyFormat = ANSIModifyKeyFormatLegacy
+					if err := self.vt(StreamActionKeyModifyKeyFormat); err != nil {
 						return err
 					}
 					break prong // break :blk
@@ -2031,7 +2365,8 @@ prong:
 					}
 				}
 
-				if err := self.handler.Vt(StreamActionKeyModifyKeyFormat, StreamAction{Tag: StreamActionKeyModifyKeyFormat, ModifyKeyFormat: format}); err != nil {
+				self.streamAction(StreamActionKeyModifyKeyFormat).ModifyKeyFormat = format
+				if err := self.vt(StreamActionKeyModifyKeyFormat); err != nil {
 					return err
 				}
 
@@ -2082,7 +2417,8 @@ prong:
 			}
 			req := req_.Value
 
-			if err := self.handler.Vt(StreamActionKeyDeviceStatus, StreamAction{Tag: StreamActionKeyDeviceStatus, DeviceStatus: StreamActionDeviceStatus{request: req}}); err != nil {
+			self.streamAction(StreamActionKeyDeviceStatus).DeviceStatus = StreamActionDeviceStatus{request: req}
+			if err := self.vt(StreamActionKeyDeviceStatus); err != nil {
 				return err
 			}
 			return nil
@@ -2100,7 +2436,8 @@ prong:
 				// control what exactly is being disabled. However, we
 				// only support reverting back to modify other keys in
 				// numeric except format.
-				if err := self.handler.Vt(StreamActionKeyModifyKeyFormat, StreamAction{Tag: StreamActionKeyModifyKeyFormat, ModifyKeyFormat: ANSIModifyKeyFormatOtherKeysNumericExcept}); err != nil {
+				self.streamAction(StreamActionKeyModifyKeyFormat).ModifyKeyFormat = ANSIModifyKeyFormatOtherKeysNumericExcept
+				if err := self.vt(StreamActionKeyModifyKeyFormat); err != nil {
 					return err
 				}
 
@@ -2158,14 +2495,16 @@ prong:
 			mode := ModesModeFromInt(mode_raw, ansi_mode)
 			if mode.Valid {
 				m := mode.Value
-				if err := self.handler.Vt(StreamActionKeyRequestMode, StreamAction{Tag: StreamActionKeyRequestMode, RequestMode: StreamActionMode{mode: m}}); err != nil {
+				self.streamAction(StreamActionKeyRequestMode).RequestMode = StreamActionMode{mode: m}
+				if err := self.vt(StreamActionKeyRequestMode); err != nil {
 					return err
 				}
 			} else {
-				if err := self.handler.Vt(StreamActionKeyRequestModeUnknown, StreamAction{Tag: StreamActionKeyRequestModeUnknown, RequestModeUnknown: StreamActionRawMode{
+				self.streamAction(StreamActionKeyRequestModeUnknown).RequestModeUnknown = StreamActionRawMode{
 					mode: mode_raw,
 					ansi: ansi_mode,
-				}}); err != nil {
+				}
+				if err := self.vt(StreamActionKeyRequestModeUnknown); err != nil {
 					return err
 				}
 			}
@@ -2212,7 +2551,8 @@ prong:
 					warn("stream", "invalid set cursor style command: %s", input.Format())
 					return nil
 				}
-				if err := self.handler.Vt(StreamActionKeyCursorStyle, StreamAction{Tag: StreamActionKeyCursorStyle, CursorStyle: style}); err != nil {
+				self.streamAction(StreamActionKeyCursorStyle).CursorStyle = style
+				if err := self.vt(StreamActionKeyCursorStyle); err != nil {
 					return err
 				}
 
@@ -2243,15 +2583,18 @@ prong:
 
 				switch mode {
 				case ANSIProtectedModeOff:
-					if err := self.handler.Vt(StreamActionKeyProtectedModeOff, StreamAction{Tag: StreamActionKeyProtectedModeOff}); err != nil {
+					self.streamAction(StreamActionKeyProtectedModeOff)
+					if err := self.vt(StreamActionKeyProtectedModeOff); err != nil {
 						return err
 					}
 				case ANSIProtectedModeIso:
-					if err := self.handler.Vt(StreamActionKeyProtectedModeIso, StreamAction{Tag: StreamActionKeyProtectedModeIso}); err != nil {
+					self.streamAction(StreamActionKeyProtectedModeIso)
+					if err := self.vt(StreamActionKeyProtectedModeIso); err != nil {
 						return err
 					}
 				case ANSIProtectedModeDec:
-					if err := self.handler.Vt(StreamActionKeyProtectedModeDec, StreamAction{Tag: StreamActionKeyProtectedModeDec}); err != nil {
+					self.streamAction(StreamActionKeyProtectedModeDec)
+					if err := self.vt(StreamActionKeyProtectedModeDec); err != nil {
 						return err
 					}
 				default:
@@ -2260,7 +2603,8 @@ prong:
 
 			// XTVERSION
 			case '>':
-				if err := self.handler.Vt(StreamActionKeyXtversion, StreamAction{Tag: StreamActionKeyXtversion}); err != nil {
+				self.streamAction(StreamActionKeyXtversion)
+				if err := self.vt(StreamActionKeyXtversion); err != nil {
 					return err
 				}
 			default:
@@ -2283,15 +2627,18 @@ prong:
 		case 0:
 			switch len(input.Params) {
 			case 0:
-				if err := self.handler.Vt(StreamActionKeyTopAndBottomMargin, StreamAction{Tag: StreamActionKeyTopAndBottomMargin, TopAndBottomMargin: StreamActionMargin{top_left: 0, bottom_right: 0}}); err != nil {
+				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{top_left: 0, bottom_right: 0}
+				if err := self.vt(StreamActionKeyTopAndBottomMargin); err != nil {
 					return err
 				}
 			case 1:
-				if err := self.handler.Vt(StreamActionKeyTopAndBottomMargin, StreamAction{Tag: StreamActionKeyTopAndBottomMargin, TopAndBottomMargin: StreamActionMargin{top_left: input.Params[0], bottom_right: 0}}); err != nil {
+				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: 0}
+				if err := self.vt(StreamActionKeyTopAndBottomMargin); err != nil {
 					return err
 				}
 			case 2:
-				if err := self.handler.Vt(StreamActionKeyTopAndBottomMargin, StreamAction{Tag: StreamActionKeyTopAndBottomMargin, TopAndBottomMargin: StreamActionMargin{top_left: input.Params[0], bottom_right: input.Params[1]}}); err != nil {
+				self.streamAction(StreamActionKeyTopAndBottomMargin).TopAndBottomMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: input.Params[1]}
+				if err := self.vt(StreamActionKeyTopAndBottomMargin); err != nil {
 					return err
 				}
 			default:
@@ -2304,7 +2651,8 @@ prong:
 			case '?':
 				for _, mode_int := range input.Params {
 					if mode := ModesModeFromInt(mode_int, false); mode.Valid {
-						if err := self.handler.Vt(StreamActionKeyRestoreMode, StreamAction{Tag: StreamActionKeyRestoreMode, RestoreMode: StreamActionMode{mode: mode.Value}}); err != nil {
+						self.streamAction(StreamActionKeyRestoreMode).RestoreMode = StreamActionMode{mode: mode.Value}
+						if err := self.vt(StreamActionKeyRestoreMode); err != nil {
 							return err
 						}
 					} else {
@@ -2339,15 +2687,18 @@ prong:
 			// is set, then we should invoke DECSLRM, otherwise
 			// we should invoke SC.
 			case 0:
-				if err := self.handler.Vt(StreamActionKeyLeftAndRightMarginAmbiguous, StreamAction{Tag: StreamActionKeyLeftAndRightMarginAmbiguous}); err != nil {
+				self.streamAction(StreamActionKeyLeftAndRightMarginAmbiguous)
+				if err := self.vt(StreamActionKeyLeftAndRightMarginAmbiguous); err != nil {
 					return err
 				}
 			case 1:
-				if err := self.handler.Vt(StreamActionKeyLeftAndRightMargin, StreamAction{Tag: StreamActionKeyLeftAndRightMargin, LeftAndRightMargin: StreamActionMargin{top_left: input.Params[0], bottom_right: 0}}); err != nil {
+				self.streamAction(StreamActionKeyLeftAndRightMargin).LeftAndRightMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: 0}
+				if err := self.vt(StreamActionKeyLeftAndRightMargin); err != nil {
 					return err
 				}
 			case 2:
-				if err := self.handler.Vt(StreamActionKeyLeftAndRightMargin, StreamAction{Tag: StreamActionKeyLeftAndRightMargin, LeftAndRightMargin: StreamActionMargin{top_left: input.Params[0], bottom_right: input.Params[1]}}); err != nil {
+				self.streamAction(StreamActionKeyLeftAndRightMargin).LeftAndRightMargin = StreamActionMargin{top_left: input.Params[0], bottom_right: input.Params[1]}
+				if err := self.vt(StreamActionKeyLeftAndRightMargin); err != nil {
 					return err
 				}
 			default:
@@ -2359,7 +2710,8 @@ prong:
 			case '?':
 				for _, mode_int := range input.Params {
 					if mode := ModesModeFromInt(mode_int, false); mode.Valid {
-						if err := self.handler.Vt(StreamActionKeySaveMode, StreamAction{Tag: StreamActionKeySaveMode, SaveMode: StreamActionMode{mode: mode.Value}}); err != nil {
+						self.streamAction(StreamActionKeySaveMode).SaveMode = StreamActionMode{mode: mode.Value}
+						if err := self.vt(StreamActionKeySaveMode); err != nil {
 							return err
 						}
 					} else {
@@ -2392,7 +2744,8 @@ prong:
 					break prong // break :capture
 				}
 
-				if err := self.handler.Vt(StreamActionKeyMouseShiftCapture, StreamAction{Tag: StreamActionKeyMouseShiftCapture, MouseShiftCapture: capture}); err != nil {
+				self.streamAction(StreamActionKeyMouseShiftCapture).MouseShiftCapture = capture
+				if err := self.vt(StreamActionKeyMouseShiftCapture); err != nil {
 					return err
 				}
 
@@ -2419,7 +2772,8 @@ prong:
 				case 14:
 					if len(input.Params) == 1 {
 						// report the text area size in pixels
-						if err := self.handler.Vt(StreamActionKeySizeReport, StreamAction{Tag: StreamActionKeySizeReport, SizeReport: CSISizeReportStyleCsi14T}); err != nil {
+						self.streamAction(StreamActionKeySizeReport).SizeReport = CSISizeReportStyleCsi14T
+						if err := self.vt(StreamActionKeySizeReport); err != nil {
 							return err
 						}
 					} else {
@@ -2431,7 +2785,8 @@ prong:
 				case 16:
 					if len(input.Params) == 1 {
 						// report cell size in pixels
-						if err := self.handler.Vt(StreamActionKeySizeReport, StreamAction{Tag: StreamActionKeySizeReport, SizeReport: CSISizeReportStyleCsi16T}); err != nil {
+						self.streamAction(StreamActionKeySizeReport).SizeReport = CSISizeReportStyleCsi16T
+						if err := self.vt(StreamActionKeySizeReport); err != nil {
 							return err
 						}
 					} else {
@@ -2443,7 +2798,8 @@ prong:
 				case 18:
 					if len(input.Params) == 1 {
 						// report screen size in characters
-						if err := self.handler.Vt(StreamActionKeySizeReport, StreamAction{Tag: StreamActionKeySizeReport, SizeReport: CSISizeReportStyleCsi18T}); err != nil {
+						self.streamAction(StreamActionKeySizeReport).SizeReport = CSISizeReportStyleCsi18T
+						if err := self.vt(StreamActionKeySizeReport); err != nil {
 							return err
 						}
 					} else {
@@ -2455,7 +2811,8 @@ prong:
 				case 21:
 					if len(input.Params) == 1 {
 						// report window title
-						if err := self.handler.Vt(StreamActionKeySizeReport, StreamAction{Tag: StreamActionKeySizeReport, SizeReport: CSISizeReportStyleCsi21T}); err != nil {
+						self.streamAction(StreamActionKeySizeReport).SizeReport = CSISizeReportStyleCsi21T
+						if err := self.vt(StreamActionKeySizeReport); err != nil {
 							return err
 						}
 					} else {
@@ -2481,11 +2838,13 @@ prong:
 						}
 						switch number {
 						case 22:
-							if err := self.handler.Vt(StreamActionKeyTitlePush, StreamAction{Tag: StreamActionKeyTitlePush, TitlePush: index}); err != nil {
+							self.streamAction(StreamActionKeyTitlePush).TitlePush = index
+							if err := self.vt(StreamActionKeyTitlePush); err != nil {
 								return err
 							}
 						case 23:
-							if err := self.handler.Vt(StreamActionKeyTitlePop, StreamAction{Tag: StreamActionKeyTitlePop, TitlePop: index}); err != nil {
+							self.streamAction(StreamActionKeyTitlePop).TitlePop = index
+							if err := self.vt(StreamActionKeyTitlePop); err != nil {
 								return err
 							}
 						default:
@@ -2521,7 +2880,8 @@ prong:
 	case 'u':
 		switch len(input.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyRestoreCursor, StreamAction{Tag: StreamActionKeyRestoreCursor}); err != nil {
+			self.streamAction(StreamActionKeyRestoreCursor)
+			if err := self.vt(StreamActionKeyRestoreCursor); err != nil {
 				return err
 			}
 
@@ -2529,7 +2889,8 @@ prong:
 		case 1:
 			switch input.Intermediates[0] {
 			case '?':
-				if err := self.handler.Vt(StreamActionKeyKittyKeyboardQuery, StreamAction{Tag: StreamActionKeyKittyKeyboardQuery}); err != nil {
+				self.streamAction(StreamActionKeyKittyKeyboardQuery)
+				if err := self.vt(StreamActionKeyKittyKeyboardQuery); err != nil {
 					return err
 				}
 
@@ -2548,7 +2909,8 @@ prong:
 					flags = 0
 				}
 
-				if err := self.handler.Vt(StreamActionKeyKittyKeyboardPush, StreamAction{Tag: StreamActionKeyKittyKeyboardPush, KittyKeyboardPush: StreamActionKittyKeyboardFlags{flags: KittyKeyFlagsFromInt(flags)}}); err != nil {
+				self.streamAction(StreamActionKeyKittyKeyboardPush).KittyKeyboardPush = StreamActionKittyKeyboardFlags{flags: KittyKeyFlagsFromInt(flags)}
+				if err := self.vt(StreamActionKeyKittyKeyboardPush); err != nil {
 					return err
 				}
 
@@ -2560,7 +2922,8 @@ prong:
 					number = 1
 				}
 
-				if err := self.handler.Vt(StreamActionKeyKittyKeyboardPop, StreamAction{Tag: StreamActionKeyKittyKeyboardPop, KittyKeyboardPop: number}); err != nil {
+				self.streamAction(StreamActionKeyKittyKeyboardPop).KittyKeyboardPop = number
+				if err := self.vt(StreamActionKeyKittyKeyboardPop); err != nil {
 					return err
 				}
 
@@ -2602,15 +2965,18 @@ prong:
 				kitty_flags := StreamActionKittyKeyboardFlags{flags: KittyKeyFlagsFromInt(flags)}
 				switch action_tag {
 				case StreamActionKeyKittyKeyboardSet:
-					if err := self.handler.Vt(StreamActionKeyKittyKeyboardSet, StreamAction{Tag: StreamActionKeyKittyKeyboardSet, KittyKeyboardSet: kitty_flags}); err != nil {
+					self.streamAction(StreamActionKeyKittyKeyboardSet).KittyKeyboardSet = kitty_flags
+					if err := self.vt(StreamActionKeyKittyKeyboardSet); err != nil {
 						return err
 					}
 				case StreamActionKeyKittyKeyboardSetOr:
-					if err := self.handler.Vt(StreamActionKeyKittyKeyboardSetOr, StreamAction{Tag: StreamActionKeyKittyKeyboardSetOr, KittyKeyboardSetOr: kitty_flags}); err != nil {
+					self.streamAction(StreamActionKeyKittyKeyboardSetOr).KittyKeyboardSetOr = kitty_flags
+					if err := self.vt(StreamActionKeyKittyKeyboardSetOr); err != nil {
 						return err
 					}
 				case StreamActionKeyKittyKeyboardSetNot:
-					if err := self.handler.Vt(StreamActionKeyKittyKeyboardSetNot, StreamAction{Tag: StreamActionKeyKittyKeyboardSetNot, KittyKeyboardSetNot: kitty_flags}); err != nil {
+					self.streamAction(StreamActionKeyKittyKeyboardSetNot).KittyKeyboardSetNot = kitty_flags
+					if err := self.vt(StreamActionKeyKittyKeyboardSetNot); err != nil {
 						return err
 					}
 				default:
@@ -2645,7 +3011,8 @@ prong:
 				warn("stream", "invalid ICH command: %s", input.Format())
 				return nil
 			}
-			if err := self.handler.Vt(StreamActionKeyInsertBlanks, StreamAction{Tag: StreamActionKeyInsertBlanks, InsertBlanks: value}); err != nil {
+			self.streamAction(StreamActionKeyInsertBlanks).InsertBlanks = value
+			if err := self.vt(StreamActionKeyInsertBlanks); err != nil {
 				return err
 			}
 
@@ -2680,7 +3047,8 @@ prong:
 			break prong // break :decsasd
 		}
 
-		if err := self.handler.Vt(StreamActionKeyActiveStatusDisplay, StreamAction{Tag: StreamActionKeyActiveStatusDisplay, ActiveStatusDisplay: display}); err != nil {
+		self.streamAction(StreamActionKeyActiveStatusDisplay).ActiveStatusDisplay = display
+		if err := self.vt(StreamActionKeyActiveStatusDisplay); err != nil {
 			return err
 		}
 
@@ -2717,7 +3085,8 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 	switch cmd.Tag {
 	case OSCCommandKeySemanticPrompt:
 		sp := cmd.SemanticPrompt
-		if err := self.handler.Vt(StreamActionKeySemanticPrompt, StreamAction{Tag: StreamActionKeySemanticPrompt, SemanticPrompt: sp}); err != nil {
+		self.streamAction(StreamActionKeySemanticPrompt).SemanticPrompt = sp
+		if err := self.vt(StreamActionKeySemanticPrompt); err != nil {
 			return err
 		}
 
@@ -2730,7 +3099,8 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 			return nil
 		}
 
-		if err := self.handler.Vt(StreamActionKeyWindowTitle, StreamAction{Tag: StreamActionKeyWindowTitle, WindowTitle: StreamActionWindowTitle{title: title}}); err != nil {
+		self.streamAction(StreamActionKeyWindowTitle).WindowTitle = StreamActionWindowTitle{title: title}
+		if err := self.vt(StreamActionKeyWindowTitle); err != nil {
 			return err
 		}
 
@@ -2739,16 +3109,18 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 
 	case OSCCommandKeyClipboardContents:
 		clip := cmd.ClipboardContents
-		if err := self.handler.Vt(StreamActionKeyClipboardContents, StreamAction{Tag: StreamActionKeyClipboardContents, ClipboardContents: StreamActionClipboardContents{
+		self.streamAction(StreamActionKeyClipboardContents).ClipboardContents = StreamActionClipboardContents{
 			kind: clip.kind,
 			data: clip.data,
-		}}); err != nil {
+		}
+		if err := self.vt(StreamActionKeyClipboardContents); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyReportPwd:
 		v := cmd.ReportPwd
-		if err := self.handler.Vt(StreamActionKeyReportPwd, StreamAction{Tag: StreamActionKeyReportPwd, ReportPwd: StreamActionReportPwd{url: v.value}}); err != nil {
+		self.streamAction(StreamActionKeyReportPwd).ReportPwd = StreamActionReportPwd{url: v.value}
+		if err := self.vt(StreamActionKeyReportPwd); err != nil {
 			return err
 		}
 
@@ -2761,52 +3133,59 @@ func (self *Stream[H]) oscDispatch(cmd OSCCommand) error {
 		}
 		shape := shape_.Value
 
-		if err := self.handler.Vt(StreamActionKeyMouseShape, StreamAction{Tag: StreamActionKeyMouseShape, MouseShape: shape}); err != nil {
+		self.streamAction(StreamActionKeyMouseShape).MouseShape = shape
+		if err := self.vt(StreamActionKeyMouseShape); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyColorOperation:
 		v := cmd.ColorOperation
-		if err := self.handler.Vt(StreamActionKeyColorOperation, StreamAction{Tag: StreamActionKeyColorOperation, ColorOperation: StreamActionColorOperation{
+		self.streamAction(StreamActionKeyColorOperation).ColorOperation = StreamActionColorOperation{
 			op:         v.op,
 			requests:   v.requests,
 			terminator: v.terminator,
-		}}); err != nil {
+		}
+		if err := self.vt(StreamActionKeyColorOperation); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyKittyColorProtocol:
 		v := cmd.KittyColorProtocol
-		if err := self.handler.Vt(StreamActionKeyKittyColorReport, StreamAction{Tag: StreamActionKeyKittyColorReport, KittyColorReport: v}); err != nil {
+		self.streamAction(StreamActionKeyKittyColorReport).KittyColorReport = v
+		if err := self.vt(StreamActionKeyKittyColorReport); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyShowDesktopNotification:
 		v := cmd.ShowDesktopNotification
-		if err := self.handler.Vt(StreamActionKeyShowDesktopNotification, StreamAction{Tag: StreamActionKeyShowDesktopNotification, ShowDesktopNotification: StreamActionShowDesktopNotification{
+		self.streamAction(StreamActionKeyShowDesktopNotification).ShowDesktopNotification = StreamActionShowDesktopNotification{
 			title: v.title,
 			body:  v.body,
-		}}); err != nil {
+		}
+		if err := self.vt(StreamActionKeyShowDesktopNotification); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyHyperlinkStart:
 		v := cmd.HyperlinkStart
-		if err := self.handler.Vt(StreamActionKeyStartHyperlink, StreamAction{Tag: StreamActionKeyStartHyperlink, StartHyperlink: StreamActionStartHyperlink{
+		self.streamAction(StreamActionKeyStartHyperlink).StartHyperlink = StreamActionStartHyperlink{
 			uri: v.uri,
 			id:  v.id,
-		}}); err != nil {
+		}
+		if err := self.vt(StreamActionKeyStartHyperlink); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyHyperlinkEnd:
-		if err := self.handler.Vt(StreamActionKeyEndHyperlink, StreamAction{Tag: StreamActionKeyEndHyperlink}); err != nil {
+		self.streamAction(StreamActionKeyEndHyperlink)
+		if err := self.vt(StreamActionKeyEndHyperlink); err != nil {
 			return err
 		}
 
 	case OSCCommandKeyConemuProgressReport:
 		v := cmd.ConemuProgressReport
-		if err := self.handler.Vt(StreamActionKeyProgressReport, StreamAction{Tag: StreamActionKeyProgressReport, ProgressReport: v}); err != nil {
+		self.streamAction(StreamActionKeyProgressReport).ProgressReport = v
+		if err := self.vt(StreamActionKeyProgressReport); err != nil {
 			return err
 		}
 
@@ -2859,10 +3238,11 @@ func (self *Stream[H]) configureCharset(intermediates []uint8, set CharsetsChars
 		return nil
 	}
 
-	return self.handler.Vt(StreamActionKeyConfigureCharset, StreamAction{Tag: StreamActionKeyConfigureCharset, ConfigureCharset: StreamActionConfigureCharset{
+	self.streamAction(StreamActionKeyConfigureCharset).ConfigureCharset = StreamActionConfigureCharset{
 		slot:    slot,
 		charset: set,
-	}})
+	}
+	return self.vt(StreamActionKeyConfigureCharset)
 }
 
 // escDispatch is Stream(Handler).escDispatch.
@@ -2910,7 +3290,8 @@ prong:
 	case '7':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeySaveCursor, StreamAction{Tag: StreamActionKeySaveCursor}); err != nil {
+			self.streamAction(StreamActionKeySaveCursor)
+			if err := self.vt(StreamActionKeySaveCursor); err != nil {
 				return err
 			}
 		default:
@@ -2923,7 +3304,8 @@ prong:
 		switch len(action.Intermediates) {
 		// DECRC - Restore Cursor
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyRestoreCursor, StreamAction{Tag: StreamActionKeyRestoreCursor}); err != nil {
+			self.streamAction(StreamActionKeyRestoreCursor)
+			if err := self.vt(StreamActionKeyRestoreCursor); err != nil {
 				return err
 			}
 			break prong // break :blk {}
@@ -2932,7 +3314,8 @@ prong:
 			switch action.Intermediates[0] {
 			// DECALN - Fill Screen with E
 			case '#':
-				if err := self.handler.Vt(StreamActionKeyDecaln, StreamAction{Tag: StreamActionKeyDecaln}); err != nil {
+				self.streamAction(StreamActionKeyDecaln)
+				if err := self.vt(StreamActionKeyDecaln); err != nil {
 					return err
 				}
 				break prong // break :blk {}
@@ -2949,7 +3332,8 @@ prong:
 	case 'D':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyIndex, StreamAction{Tag: StreamActionKeyIndex}); err != nil {
+			self.streamAction(StreamActionKeyIndex)
+			if err := self.vt(StreamActionKeyIndex); err != nil {
 				return err
 			}
 		default:
@@ -2961,7 +3345,8 @@ prong:
 	case 'E':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyNextLine, StreamAction{Tag: StreamActionKeyNextLine}); err != nil {
+			self.streamAction(StreamActionKeyNextLine)
+			if err := self.vt(StreamActionKeyNextLine); err != nil {
 				return err
 			}
 		default:
@@ -2973,7 +3358,8 @@ prong:
 	case 'H':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyTabSet, StreamAction{Tag: StreamActionKeyTabSet}); err != nil {
+			self.streamAction(StreamActionKeyTabSet)
+			if err := self.vt(StreamActionKeyTabSet); err != nil {
 				return err
 			}
 		default:
@@ -2985,7 +3371,8 @@ prong:
 	case 'M':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyReverseIndex, StreamAction{Tag: StreamActionKeyReverseIndex}); err != nil {
+			self.streamAction(StreamActionKeyReverseIndex)
+			if err := self.vt(StreamActionKeyReverseIndex); err != nil {
 				return err
 			}
 		default:
@@ -2997,11 +3384,12 @@ prong:
 	case 'N':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGL,
 				charset: CharsetsSlotsG2,
 				locking: true,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3013,11 +3401,12 @@ prong:
 	case 'O':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGL,
 				charset: CharsetsSlotsG3,
 				locking: true,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3029,7 +3418,8 @@ prong:
 	case 'V':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyProtectedModeIso, StreamAction{Tag: StreamActionKeyProtectedModeIso}); err != nil {
+			self.streamAction(StreamActionKeyProtectedModeIso)
+			if err := self.vt(StreamActionKeyProtectedModeIso); err != nil {
 				return err
 			}
 		default:
@@ -3040,7 +3430,8 @@ prong:
 	case 'W':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyProtectedModeOff, StreamAction{Tag: StreamActionKeyProtectedModeOff}); err != nil {
+			self.streamAction(StreamActionKeyProtectedModeOff)
+			if err := self.vt(StreamActionKeyProtectedModeOff); err != nil {
 				return err
 			}
 		default:
@@ -3050,7 +3441,8 @@ prong:
 	// DECID
 	case 'Z':
 		if len(action.Intermediates) == 0 {
-			if err := self.handler.Vt(StreamActionKeyDeviceAttributes, StreamAction{Tag: StreamActionKeyDeviceAttributes, DeviceAttributes: ANSIDeviceAttributeReqPrimary}); err != nil {
+			self.streamAction(StreamActionKeyDeviceAttributes).DeviceAttributes = ANSIDeviceAttributeReqPrimary
+			if err := self.vt(StreamActionKeyDeviceAttributes); err != nil {
 				return err
 			}
 		} else {
@@ -3061,7 +3453,8 @@ prong:
 	case 'c':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyFullReset, StreamAction{Tag: StreamActionKeyFullReset}); err != nil {
+			self.streamAction(StreamActionKeyFullReset)
+			if err := self.vt(StreamActionKeyFullReset); err != nil {
 				return err
 			}
 		default:
@@ -3073,11 +3466,12 @@ prong:
 	case 'n':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGL,
 				charset: CharsetsSlotsG2,
 				locking: false,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3089,11 +3483,12 @@ prong:
 	case 'o':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGL,
 				charset: CharsetsSlotsG3,
 				locking: false,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3105,11 +3500,12 @@ prong:
 	case '~':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGR,
 				charset: CharsetsSlotsG1,
 				locking: false,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3121,11 +3517,12 @@ prong:
 	case '}':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGR,
 				charset: CharsetsSlotsG2,
 				locking: false,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3137,11 +3534,12 @@ prong:
 	case '|':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyInvokeCharset, StreamAction{Tag: StreamActionKeyInvokeCharset, InvokeCharset: StreamActionInvokeCharset{
+			self.streamAction(StreamActionKeyInvokeCharset).InvokeCharset = StreamActionInvokeCharset{
 				bank:    CharsetsActiveSlotGR,
 				charset: CharsetsSlotsG3,
 				locking: false,
-			}}); err != nil {
+			}
+			if err := self.vt(StreamActionKeyInvokeCharset); err != nil {
 				return err
 			}
 		default:
@@ -3153,7 +3551,8 @@ prong:
 	case '=':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeySetMode, StreamAction{Tag: StreamActionKeySetMode, SetMode: StreamActionMode{mode: ModesModeKeypadKeys}}); err != nil {
+			self.streamAction(StreamActionKeySetMode).SetMode = StreamActionMode{mode: ModesModeKeypadKeys}
+			if err := self.vt(StreamActionKeySetMode); err != nil {
 				return err
 			}
 		default:
@@ -3164,7 +3563,8 @@ prong:
 	case '>':
 		switch len(action.Intermediates) {
 		case 0:
-			if err := self.handler.Vt(StreamActionKeyResetMode, StreamAction{Tag: StreamActionKeyResetMode, ResetMode: StreamActionMode{mode: ModesModeKeypadKeys}}); err != nil {
+			self.streamAction(StreamActionKeyResetMode).ResetMode = StreamActionMode{mode: ModesModeKeypadKeys}
+			if err := self.vt(StreamActionKeyResetMode); err != nil {
 				return err
 			}
 		default:

@@ -22,7 +22,7 @@
 //	var _ StreamHandler = (*StreamReadonlyHandler)(nil)
 //
 // below makes the compiler check that the handler satisfies StreamHandler
-// (stream.go): `Vt(action StreamActionKey, value StreamAction) error` and
+// (stream.go): `Vt(action StreamActionKey, value *StreamAction) error` and
 // `Deinit()`.
 //
 // `Handler.vt` is `fn(self: *Handler, comptime action: Action.Tag, value:
@@ -113,7 +113,7 @@ func (self *StreamReadonlyHandler) Deinit() {
 // linefeed, index, scrollUp, decaln, semanticPrompt, Screen.startHyperlink
 // and the private setMode, colorOperation and kittyColorOperation below.
 // The error of `setAttribute` is discarded (`catch {}`).
-func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value StreamAction) error {
+func (self *StreamReadonlyHandler) Vt(action StreamActionKey, value *StreamAction) error {
 	switch action {
 	case StreamActionKeyPrint:
 		if err := self.terminal.Print(value.Print.cp); err != nil {

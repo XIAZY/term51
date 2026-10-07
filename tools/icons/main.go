@@ -1,5 +1,6 @@
 // Command icons draws the menus' icons that the system has none for (new
-// tab, close tab, tabs, paste, copy, select all, cancel) into assets/images: white line drawings on a clear
+// tab, close tab, tabs, paste, copy, select all, cancel, settings, the three
+// dots) into assets/images: white line drawings on a clear
 // background, 81 by 81 pixels, the size BlackBerry 10 uses for action icons.
 // Run from the repository's root: go run ./tools/icons
 package main
@@ -58,6 +59,20 @@ func main() {
 						i.SetNRGBA(size-1-x, y, white)
 					}
 				}
+			}
+		},
+		// Three dots, one above the other.
+		"dots": func(i icon) {
+			for _, y := range []int{16, 37, 58} {
+				i.box(36, y, 45, y+9, white)
+			}
+		},
+		// Three sliders: lines with a knob each.
+		"settings": func(i icon) {
+			for n, knob := range []int{24, 48, 32} {
+				y := 20 + 20*n
+				i.box(14, y, 67, y+line, white)
+				i.box(knob, y-6, knob+line+4, y+line+6, white)
 			}
 		},
 		// Two sheets, one in front of the other.

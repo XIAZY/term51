@@ -61,9 +61,13 @@ func (a *App) Quit() {
 
 // notice shows the user a short message (a toast on the phone).
 func (a *App) notice(text string) {
-	if b, err := json.Marshal(map[string]any{"notice": text}); err == nil {
-		a.pub.Event(string(b))
-	}
+	a.event(map[string]any{"notice": text})
+}
+
+// event sends the page a one-off message.
+func (a *App) event(v map[string]any) {
+	b, _ := json.Marshal(v) // a map of strings, numbers and booleans always encodes
+	a.pub.Event(string(b))
 }
 
 func num(v any) int {
@@ -72,10 +76,8 @@ func num(v any) int {
 }
 
 func (a *App) state(v map[string]any) {
-	b, err := json.Marshal(v)
-	if err == nil {
-		a.pub.State(string(b))
-	}
+	b, _ := json.Marshal(v) // as in event
+	a.pub.State(string(b))
 }
 
 // bar handles a key of the key bar.

@@ -107,13 +107,10 @@ func SetSize(f *os.File, s Size) error {
 
 // Start starts cmd on a new pseudo-terminal of the given size and returns
 // the master side. The program runs in a new session with the pty as its
-// controlling terminal; cmd's Stdin, Stdout, Stderr and SysProcAttr must be
-// unset. The caller reads and writes the master, and closes it after cmd has
+// controlling terminal; Start sets cmd's Stdin, Stdout, Stderr and
+// SysProcAttr. The caller reads and writes the master, and closes it after cmd has
 // been waited for.
 func Start(cmd *exec.Cmd, size Size) (*os.File, error) {
-	if cmd.Stdin != nil || cmd.Stdout != nil || cmd.Stderr != nil || cmd.SysProcAttr != nil {
-		return nil, errors.New("pty: cmd must not set Stdin, Stdout, Stderr or SysProcAttr")
-	}
 	master, slave, err := Open()
 	if err != nil {
 		return nil, err

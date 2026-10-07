@@ -7,6 +7,11 @@ deleted.
 
 | Date (UTC) | Decision | By | Why |
 |---|---|---|---|
+| 2026-10-07 | The identity texts in the settings (name, version, answerback) may contain any characters; the earlier ban on control characters is removed. | anchron | An answerback can legitimately contain control characters, and the ban protected nothing. |
+| 2026-10-07 | The settings file is plain text, one `name = value` per line with `#` comments. A name the app does not know is a warning and the rest of the file is used. | mitchellh, anchron | It is edited by hand on the phone, and an older app must survive a file written for a newer one. |
+| 2026-10-07 | Output is shown at once when the terminal has been quiet, and at most 30 times a second while it keeps changing. | mitchellh, from anchron's review | The echo of a typed key must not wait, and a flood of output must not make the page lay text out again for every line. |
+| 2026-10-07 | The key bar's Ctrl and Alt are sticky: each applies to the next key that is not itself a modifier, and is then released. | anchron | The Passport has no Ctrl key, and holding an on-screen key while typing on the keyboard is awkward. |
+| 2026-10-07 | The app is built without profile-guided optimisation for now. | mitchellh, anchron | It needs a profile from a real session on the phone. A trial on the development machine gave +30% on plain text, so it is worth doing once there is one. |
 | 2026-10-07 | The key-logging switch (`logInput`) is removed as soon as the Passport's keyboard has been checked with it. | mitchellh | A diagnostic is not a setting; and it would write what is typed to a file. |
 | 2026-10-07 | The first start writes the settings file with every setting at its default and a comment on each. | anchron, mitchellh | Until there is a settings page a user needs something to edit. |
 | 2026-10-07 | A settings file with a mistake in it: the app starts on the defaults and the log names the mistake. | anchron | A person editing by hand will make mistakes; the app should still open. |

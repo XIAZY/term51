@@ -1,5 +1,5 @@
-// Command icons draws the menu's three icons that the system has none for
-// (new tab, tabs, paste) into assets/images: white line drawings on a clear
+// Command icons draws the menus' icons that the system has none for (new
+// tab, tabs, paste, copy, select all, cancel) into assets/images: white line drawings on a clear
 // background, 81 by 81 pixels, the size BlackBerry 10 uses for action icons.
 // Run from the repository's root: go run ./tools/icons
 package main
@@ -35,6 +35,13 @@ func (i icon) frame(x0, y0, x1, y1 int) {
 
 var white, clear = color.NRGBA{255, 255, 255, 255}, color.NRGBA{}
 
+// sheets draws two sheets, one in front of the other.
+func sheets(i icon) {
+	i.frame(28, 14, 67, 53)
+	i.box(14, 28, 53, 67, clear)
+	i.frame(14, 28, 53, 67)
+}
+
 func main() {
 	draw := map[string]func(icon){
 		// A plus.
@@ -43,10 +50,30 @@ func main() {
 			i.box(16, 38, 65, 38+line, white)
 		},
 		// Two sheets, one in front of the other.
-		"tabs": func(i icon) {
-			i.frame(28, 14, 67, 53)
-			i.box(14, 28, 53, 67, clear)
-			i.frame(14, 28, 53, 67)
+		"tabs": sheets,
+		"copy": sheets,
+		// A dashed frame around a filled square.
+		"selectall": func(i icon) {
+			i.frame(14, 14, 67, 67)
+			for _, at := range []int{26, 50} {
+				i.box(at, 14, at+line, 67, clear)
+				i.box(14, at, 67, at+line, clear)
+			}
+			i.box(31, 31, 50, 50, white)
+		},
+		// A ring with a stroke through it.
+		"cancel": func(i icon) {
+			const c, outer, inner = 40, 27, 27 - line
+			for y := 0; y < size; y++ {
+				for x := 0; x < size; x++ {
+					d := (x-c)*(x-c) + (y-c)*(y-c)
+					ring := d <= outer*outer && d >= inner*inner
+					stroke := d <= outer*outer && x+y >= 2*c-line/2-1 && x+y <= 2*c+line/2+1
+					if ring || stroke {
+						i.SetNRGBA(x, y, white)
+					}
+				}
+			}
 		},
 		// A clipboard: the board and its clip.
 		"paste": func(i icon) {

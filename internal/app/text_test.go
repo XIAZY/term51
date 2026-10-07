@@ -353,6 +353,20 @@ func TestCopyAndResize(t *testing.T) {
 		return strings.Contains(p.clipboard, "copy-me")
 	})
 
+	// A press and hold on text that is already selected keeps the
+	// selection (it only opens the menu): after Select all, Copy still
+	// copies everything, not the one word under the finger.
+	typeLine(a, "echo second-mark")
+	wait(t, "the second line", func() bool { return strings.Contains(p.screen(), "second-mark") })
+	a.Send(Command{Name: "selectall"})
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 0.0, "y": 0.0}})
+	a.Send(Command{Name: "copy"})
+	wait(t, "everything in the clipboard", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return strings.Contains(p.clipboard, "copy-me") && strings.Contains(p.clipboard, "second-mark")
+	})
+
 	// The sizes of one slide of the on-screen rows, close together, are
 	// one resize: to the last of them.
 	p.scr.mu.Lock()

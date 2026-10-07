@@ -337,7 +337,15 @@ func (a *App) Run() error {
 					_ = sess.Paste([]byte(text))
 				}
 			case "selectword":
-				if found, _ := sess.SelectWordAt(num(c.Args["x"]), num(c.Args["y"])); !found {
+				// A press and hold selects the word under the finger; on
+				// text that is already selected it keeps the selection, so
+				// that the menu it opens can copy it (after Select all, for
+				// one).
+				x, y := num(c.Args["x"]), num(c.Args["y"])
+				if sess.Selected(x, y) {
+					break
+				}
+				if found, _ := sess.SelectWordAt(x, y); !found {
 					sess.ClearSelection()
 				}
 			case "select":

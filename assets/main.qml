@@ -23,6 +23,13 @@ Page {
 
     function send(name, args) { bridge.send(name, JSON.stringify(args || {})) }
 
+    // Types the clipboard's text into the shell.
+    function pasteClipboard() {
+        var text = bridge.paste()
+        if (text.length > 0)
+            send("paste", { text: text })
+    }
+
     function keyArgs(event, down) {
         return { down: down, key: event.key, keycap: event.keycap, unicode: event.unicode,
                  shift: event.shiftPressed, ctrl: event.ctrlPressed, alt: event.altPressed }
@@ -124,11 +131,7 @@ Page {
             ActionItem {
                 title: "Paste"
                 imageSource: "asset:///images/paste.png"
-                onTriggered: {
-                    var text = bridge.paste()
-                    if (text.length > 0)
-                        page.send("paste", { text: text })
-                }
+                onTriggered: page.pasteClipboard()
             }
         ]
         settingsAction: SettingsActionItem {
@@ -224,32 +227,61 @@ Page {
 
         // The terminal. Position, Size and Visible: Cascades keeps Go's
         // window over this control's area. A vertical drag scrolls the
-        // scrollback; a long press selects the word under the finger; a
-        // tap brings up the on-screen keyboard rows (the phone's own swipe
-        // down puts them away).
+        // scrollback. A press and hold selects the word under the finger
+        // and opens the standard context menu (on text that is already
+        // selected it keeps the selection). A tap brings up the on-screen
+        // keyboard rows (the phone's own swipe down puts them away).
         ForeignWindowControl {
             id: fwc
             windowId: "term51"
             updatedProperties: WindowProperty.Position | WindowProperty.Size | WindowProperty.Visible
             horizontalAlignment: HorizontalAlignment.Fill
             layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-            property real touchY: 0
+            property real touchX: 0 // where the finger went down,
+            property real downY: 0  // for the press and hold
+            property real touchY: 0 // the drag so far
             attachedObjects: LayoutUpdateHandler {
                 onLayoutFrameChanged: page.sized(layoutFrame)
             }
-            gestureHandlers: [
-                LongPressHandler {
-                    onLongPressed: {
-                        if (page.cellW > 0 && page.cellH > 0)
-                            page.send("selectword", { x: Math.floor(event.x / page.cellW), y: Math.floor(event.y / page.cellH) })
-                    }
-                },
-                TapHandler {
-                    onTapped: input.requestFocus()
+            gestureHandlers: TapHandler {
+                onTapped: input.requestFocus()
+            }
+            contextMenuHandler: ContextMenuHandler {
+                onPopulating: {
+                    if (page.cellW > 0 && page.cellH > 0)
+                        page.send("selectword", { x: Math.floor(fwc.touchX / page.cellW), y: Math.floor(fwc.downY / page.cellH) })
                 }
-            ]
+            }
+            contextActions: ActionSet {
+                title: "Selection"
+                ActionItem {
+                    title: "Copy"
+                    imageSource: "asset:///images/copy.png"
+                    onTriggered: page.send("copy")
+                }
+                ActionItem {
+                    title: "Select all"
+                    imageSource: "asset:///images/selectall.png"
+                    onTriggered: page.send("selectall")
+                }
+                ActionItem {
+                    title: "Paste"
+                    imageSource: "asset:///images/paste.png"
+                    onTriggered: {
+                        page.send("unselect")
+                        page.pasteClipboard()
+                    }
+                }
+                ActionItem {
+                    title: "Cancel"
+                    imageSource: "asset:///images/cancel.png"
+                    onTriggered: page.send("unselect")
+                }
+            }
             onTouch: {
                 if (event.isDown()) {
+                    fwc.touchX = event.localX
+                    fwc.downY = event.localY
                     fwc.touchY = event.localY
                 } else if (event.isMove() && page.cellH > 0) {
                     var d = Math.floor((event.localY - fwc.touchY) / page.cellH)

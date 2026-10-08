@@ -136,8 +136,9 @@ The same error text is in the system log of an installed copy that fails
 - **The phone's terminal database is small** (2026-10-08): `/usr/lib/terminfo`
   has `xterm`, `xterms`, `vt100`, `vt102`, `vt52`, `ansi` and QNX's own
   (`qansi`, `qnx` and their variants), and neither `xterm-256color` nor
-  `vt220`. Those two are still offered as terminal types, for programs on
-  other machines over ssh, where the other machine's database counts.
+  `vt220`. The app's default had been `xterm-256color`; it is `xterm` now,
+  and `xterm-256color` is still offered, for programs on other machines
+  over ssh, where the other machine's database counts.
 
 ## Still to look at
 

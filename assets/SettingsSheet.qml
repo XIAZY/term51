@@ -26,7 +26,7 @@ Sheet {
         cursor.selectedIndex = { "block": 0, "bar": 1, "underline": 2 }[v["cursor"]]
         bell.checked = v["bell"] == "true"
         shell.text = v["shell"]
-        term.selectedIndex = { "xterm-256color": 0, "xterm": 1, "vt220": 2, "vt100": 3, "ansi": 4, "qansi": 5 }[v["term"]]
+        term.selectedIndex = { "xterm": 0, "xterm-256color": 1, "vt100": 2, "ansi": 3, "qansi": 4 }[v["term"]]
         scrollback.text = "" + (parseInt(v["scrollbackBytes"]) / 1048576)
         filling = false
     }
@@ -130,14 +130,13 @@ Sheet {
                     onEdited: sheet.set("shell", text)
                 }
                 DropDown {
-                    // The values the app accepts (settings.Terms in Go). The
-                    // first two the phone's own programs do not all know;
-                    // they are for programs on other machines, over ssh.
+                    // The values the app accepts (settings.Terms in Go). All
+                    // but xterm-256color are known to the phone's own
+                    // programs.
                     id: term
                     title: "Terminal type"
-                    Option { text: "xterm-256color"; description: "For other machines, over ssh"; value: "xterm-256color" }
                     Option { text: "xterm"; value: "xterm" }
-                    Option { text: "vt220"; description: "For other machines, over ssh"; value: "vt220" }
+                    Option { text: "xterm-256color"; description: "For other machines, over ssh"; value: "xterm-256color" }
                     Option { text: "vt100"; value: "vt100" }
                     Option { text: "ansi"; value: "ansi" }
                     Option { text: "qansi"; description: "QNX's own"; value: "qansi" }

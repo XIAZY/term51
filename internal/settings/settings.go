@@ -70,10 +70,11 @@ var cursors = map[string]session.CursorShape{
 }
 
 // Terms are the terminal types the shell can be given as TERM, the default
-// first. xterm-256color and vt220 are for programs on other machines, over
-// ssh; the phone's own terminal database has xterm, vt100, ansi and qansi
-// (QNX's own), and neither of the first two.
-var Terms = []string{session.DefaultTerm, "xterm", "vt220", "vt100", "ansi", "qansi"}
+// first. The phone's own terminal database (/usr/lib/terminfo) has xterm,
+// vt100, ansi and qansi (QNX's own), so the default is one its programs
+// know. It has no xterm-256color: that one is for programs on other
+// machines, over ssh, where the other machine's database counts.
+var Terms = []string{"xterm", "xterm-256color", "vt100", "ansi", "qansi"}
 
 // Themes are the colour sets the settings sheet offers, by name. A theme
 // is not a setting of its own: choosing one fills the four colour settings,
@@ -132,7 +133,7 @@ func Default() Settings {
 		FontPt:          7,
 		Shell:           "/bin/sh",
 		Args:            []string{},
-		Term:            session.DefaultTerm,
+		Term:            Terms[0],
 		ScrollbackBytes: 8 << 20,
 		Cursor:          "block",
 		Bell:            true,

@@ -426,6 +426,16 @@ TabbedPane {
                                 page.send("pad", { phase: "hold" })
                             }
                         }
+                        // Never shown: the handler above stops every menu.
+                        // It is here because a hold is known to be told for a
+                        // control that has actions for the context menu, and
+                        // not known to be told for one that has none.
+                        contextActions: ActionSet {
+                            ActionItem {
+                                title: "Copy"
+                                onTriggered: page.send("copy")
+                            }
+                        }
                         onTouch: {
                             if (event.isDown()) {
                                 fwc.touchX = event.localX

@@ -199,6 +199,14 @@ TabbedPane {
                 TextField {
                     id: input
                     opacity: 0
+                    // Only this page gives it the focus (requestFocus, on a
+                    // tap on the terminal): never a key, a touch or the
+                    // phone's key navigation. Left to itself the field was
+                    // the page's one target for the Enter key, so Enter on
+                    // the physical keyboard brought the on-screen rows up,
+                    // which no other key did.
+                    focusPolicy: FocusPolicy.None
+                    navigation.focusPolicy: NavigationFocusPolicy.NotFocusable
                     verticalAlignment: VerticalAlignment.Bottom
                     horizontalAlignment: HorizontalAlignment.Fill
                     inputMode: TextFieldInputMode.Text

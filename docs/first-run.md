@@ -140,6 +140,13 @@ The same error text is in the system log of an installed copy that fails
   and `xterm-256color` is still offered, for programs on other machines
   over ssh, where the other machine's database counts.
 
+- **Enter brought the on-screen rows up** (2026-10-08). With nothing
+  focused, Enter on the physical keyboard gave the hidden input field the
+  focus, and a focused text field is what makes the phone show its rows; no
+  other key did that. Changed: the field's focus policy is "none" (the
+  SDK: "only focusable programmatically") and it is no target for key
+  navigation, so only the page's own `requestFocus()` on a tap focuses it.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

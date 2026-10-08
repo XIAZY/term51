@@ -15,6 +15,7 @@ import (
 	"golang.org/x/image/font/opentype"
 
 	"term51/internal/cells"
+	"term51/internal/selbar"
 	"term51/internal/settings"
 )
 
@@ -578,7 +579,10 @@ func TestStretchSelection(t *testing.T) {
 		c := clipboard()
 		return strings.Contains(c, "line-15 end\nline-16 end") && strings.HasSuffix(c, "line-29 end\nline-30")
 	})
-	// And it no longer scrolls once the finger has lifted.
+	// And it no longer scrolls once the finger has lifted. (The frame
+	// that shows the selection as copied is let through first.)
+	wait(t, "the selection finished", func() bool { return p.get("selected") == "done" })
+	time.Sleep(100 * time.Millisecond)
 	before := p.screen()
 	time.Sleep(300 * time.Millisecond)
 	if p.screen() != before {
@@ -605,6 +609,51 @@ func TestStretchSelection(t *testing.T) {
 		c := clipboard()
 		return strings.HasPrefix(c, top+" end\n") && strings.Contains(c, "line-29 end\nline-30 end")
 	})
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
+// The selection's bar of buttons: the page is told where it goes, by the
+// rows of the view that have selected text in them (internal/selbar), and
+// again whenever that changes.
+func TestSelectionBar(t *testing.T) {
+	a, p, done := startApp(t)
+	// Room for the bar: 80 by 30 cells of 8 by 17 pixels.
+	a.Send(Command{Name: "window", Args: map[string]any{"group": "g", "id": "term51", "w": 80.0 * 8, "h": 30.0 * 17}})
+	wait(t, "the larger view", func() bool { c, r := p.scr.size(); return c == 80 && r == 30 })
+	typeLine(a, "clear; for i in $(seq 1 40); do printf '%-40s%s\\n' line-$i end-$i; done")
+	wait(t, "the output", func() bool { return strings.Contains(p.screen(), "end-40") })
+	// Rows 0 to 28 are lines 12 to 40: line-32 is row 20, and its "end-32"
+	// columns 40 to 45.
+	bar := func(x, y int) func() bool {
+		return func() bool { return p.get("selBarX") == float64(x) && p.get("selBarY") == float64(y) }
+	}
+	const above = 20*17 - selbar.Gap - selbar.Height
+	const right = 80*8 - selbar.Width - selbar.Margin
+
+	// A word: above it and centred over it.
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 42.0, "y": 20.0}})
+	wait(t, "the bar over the word", bar((40+46)*8/2-selbar.Width/2, above))
+
+	// Stretched into the next row, the first row is selected from the word
+	// to its end: the bar is over that part, and stays inside the right
+	// side.
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "down", "x": 46.5, "y": 20.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "move", "x": 42.5, "y": 21.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "up", "x": 42.5, "y": 21.5}})
+	wait(t, "the bar over the first row's part", bar(right, above))
+
+	// Scrolled back nine rows, only the selection's first row is still in
+	// the view, as its last row; one more and none of it is.
+	a.Send(Command{Name: "scroll", Args: map[string]any{"rows": -9.0}})
+	wait(t, "the bar over the row left in the view", bar(right, 29*17-selbar.Gap-selbar.Height))
+	a.Send(Command{Name: "scroll", Args: map[string]any{"rows": -1.0}})
+	wait(t, "the bar at the top", bar(80*8/2-selbar.Width/2, selbar.Gap))
+
+	a.Send(Command{Name: "unselect"})
+	wait(t, "no selection", func() bool { return p.get("selected") == "" })
 	a.Quit()
 	if err := <-done; err != nil {
 		t.Errorf("Run returned %v", err)

@@ -82,6 +82,8 @@ TabbedPane {
             // "open" for one that a drag may still stretch, "done" for one
             // that has been copied and only stays shown until the next touch.
             property string selected: ""
+            property real selBarX: 0         // where the selection's bar goes
+            property real selBarY: 0
             property real padThreshold: 64   // the arrow pad's two numbers, from Go:
             property real padAxisRule: 1.5   // see internal/arrowpad
             property real cellW: 0           // a cell in pixels, from Go
@@ -121,6 +123,8 @@ TabbedPane {
                     if (s.alt !== undefined) page.alt = s.alt
                     if (s.cw !== undefined) page.cellW = s.cw
                     if (s.selected !== undefined) page.selected = s.selected
+                    if (s.selBarX !== undefined) page.selBarX = s.selBarX
+                    if (s.selBarY !== undefined) page.selBarY = s.selBarY
                     if (s.padThreshold !== undefined) page.padThreshold = s.padThreshold
                     if (s.padAxis !== undefined) page.padAxisRule = s.padAxis
                     if (s.ch !== undefined) page.cellH = s.ch
@@ -264,8 +268,8 @@ TabbedPane {
                 // The terminal. Position, Size and Visible: Cascades keeps Go's
                 // window over this control's area. A vertical drag scrolls the
                 // scrollback. A press and hold selects the word under the finger
-                // and opens the standard context menu (on text that is already
-                // selected it keeps the selection). A tap brings up the on-screen
+                // (on text that is already selected it keeps the selection),
+                // and a selection has its bar of buttons. A tap brings up the on-screen
                 // keyboard rows (the phone's own swipe down puts them away).
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
@@ -295,7 +299,7 @@ TabbedPane {
                         // which arrow, by the same two numbers Go uses. A
                         // finger that lifts without having swiped has
                         // selected the word under it instead, and gets the
-                        // menu with Copy.
+                        // selection's bar with Copy.
                         property bool padOn: false
                         property bool padSwiped: false  // the finger left the middle
                         property real padX: 0           // the pad's corner in the control
@@ -304,15 +308,14 @@ TabbedPane {
                         property real padFill: 0        // and how far: 1 at the threshold
                         property string padAxis: ""     // "h" or "v" once past the threshold
                         property string padSent: ""     // the arrow whose key has gone out
-                        property bool menuDue: false    // the next context menu is ours to show
 
                         // Stretching the selection. While there is one that
                         // has not been copied, a drag does not scroll: the
                         // finger moves the selection's nearer end, and Go is
                         // told the cell it came down on and each cell it is
                         // over (internal/session, internal/stretch for the
-                        // scrolling at the edges). When it lifts, the menu
-                        // opens again. A copied selection is dropped by the
+                        // scrolling at the edges). The selection's bar is
+                        // away meanwhile. A copied selection is dropped by the
                         // first drag, which then scrolls as usual.
                         property bool stretching: false
                         property bool dropped: false    // this drag has dropped a copied selection
@@ -358,16 +361,10 @@ TabbedPane {
                         contextMenuHandler: ContextMenuHandler {
                             // The system tells of a press and hold by being
                             // about to show the context menu. That menu is
-                            // stopped and the arrow pad shown instead: 300
-                            // pixels square, above the finger, or below it
-                            // where there is no room above. The one menu let
-                            // through is the one this page asks for itself
-                            // when the finger lifts without a swipe.
+                            // always stopped, and the arrow pad shown instead:
+                            // 300 pixels square, above the finger, or below it
+                            // where there is no room above.
                             onPopulating: {
-                                if (fwc.menuDue) {
-                                    fwc.menuDue = false
-                                    return
-                                }
                                 event.abort()
                                 if (fwc.stretching)
                                     return // a finger resting while it stretches
@@ -380,37 +377,6 @@ TabbedPane {
                                 fwc.padY = fwc.downY - 300 - 60 >= 0 ? fwc.downY - 300 - 60 : fwc.downY + 60
                                 fwc.padOn = true
                                 page.send("pad", { phase: "hold" })
-                            }
-                        }
-                        contextActions: ActionSet {
-                            title: "Selection"
-                            ActionItem {
-                                title: "Copy"
-                                imageSource: "asset:///images/copy.png"
-                                onTriggered: page.send("copy")
-                            }
-                            ActionItem {
-                                title: "Select Line"
-                                imageSource: "asset:///images/selectline.png"
-                                onTriggered: page.send("selectline")
-                            }
-                            ActionItem {
-                                title: "Select All"
-                                imageSource: "asset:///images/selectall.png"
-                                onTriggered: page.send("selectall")
-                            }
-                            ActionItem {
-                                title: "Paste"
-                                imageSource: "asset:///images/paste.png"
-                                onTriggered: {
-                                    page.send("unselect")
-                                    page.pasteClipboard()
-                                }
-                            }
-                            ActionItem {
-                                title: "Cancel Selection"
-                                imageSource: "asset:///images/cancel.png"
-                                onTriggered: page.send("unselect")
                             }
                         }
                         onTouch: {
@@ -434,10 +400,6 @@ TabbedPane {
                             } else if ((event.isUp() || event.isCancel()) && fwc.stretching) {
                                 fwc.stretching = false
                                 fwc.stretch("up", event.localX, event.localY)
-                                if (event.isUp()) {
-                                    fwc.menuDue = true
-                                    fwc.showContextMenu()
-                                }
                             } else if (event.isMove() && page.cellH > 0) {
                                 if (page.selected == "done" && !fwc.dropped) {
                                     fwc.dropped = true
@@ -451,11 +413,8 @@ TabbedPane {
                             } else if ((event.isUp() || event.isCancel()) && fwc.padOn) {
                                 fwc.padOn = false
                                 page.send("pad", { phase: "lift" })
-                                if (event.isUp() && !fwc.padSwiped && page.cellW > 0 && page.cellH > 0) {
+                                if (event.isUp() && !fwc.padSwiped && page.cellW > 0 && page.cellH > 0)
                                     page.send("selectword", { x: Math.floor(fwc.touchX / page.cellW), y: Math.floor(fwc.downY / page.cellH) })
-                                    fwc.menuDue = true
-                                    fwc.showContextMenu()
-                                }
                             }
                         }
                     }
@@ -590,6 +549,46 @@ TabbedPane {
                             preferredWidth: 81
                             preferredHeight: 81
                             layoutProperties: AbsoluteLayoutProperties { positionX: 0; positionY: 0 }
+                        }
+                    }
+                }
+                // The selection's bar: Copy, Paste, Select Line and Select
+                // All, floating by the selected text where Go says
+                // (internal/selbar) for as long as the selection is open,
+                // but not while a finger is stretching it. It is not part of
+                // the terminal: a touch on it is the bar's alone.
+                Container {
+                    visible: page.selected == "open" && !fwc.stretching && !fwc.padOn
+                    layout: AbsoluteLayout {}
+                    preferredWidth: 448
+                    preferredHeight: 104
+                    translationX: page.selBarX
+                    translationY: page.selBarY
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Top
+                    ImageView {
+                        imageSource: "asset:///images/selbar.png"
+                    }
+                    Container {
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                        SelCell {
+                            imageSource: "asset:///images/copy.png"
+                            onPressed: page.send("copy")
+                        }
+                        SelCell {
+                            imageSource: "asset:///images/paste.png"
+                            onPressed: {
+                                page.send("unselect")
+                                page.pasteClipboard()
+                            }
+                        }
+                        SelCell {
+                            imageSource: "asset:///images/selectline.png"
+                            onPressed: page.send("selectline")
+                        }
+                        SelCell {
+                            imageSource: "asset:///images/selectall.png"
+                            onPressed: page.send("selectall")
                         }
                     }
                 }

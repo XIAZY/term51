@@ -13,6 +13,7 @@ import (
 	"term51/internal/arrowpad"
 	"term51/internal/cells"
 	"term51/internal/keys"
+	"term51/internal/selbar"
 	"term51/internal/session"
 	"term51/internal/stretch"
 )
@@ -142,7 +143,8 @@ func (a *App) Run() error {
 		}
 	}
 	var lastPost time.Time
-	toldSel := "" // what the page was last told about the selection
+	toldSel := ""                // what the page was last told about the selection,
+	toldBarX, toldBarY := -1, -1 // and about the place of its bar
 	post := func() {
 		lastPost = time.Now()
 		if cur < 0 {
@@ -166,6 +168,24 @@ func (a *App) Run() error {
 		if sel != toldSel {
 			toldSel = sel
 			a.state(map[string]any{"selected": sel})
+		}
+		// And where its bar of buttons goes (internal/selbar), by the rows
+		// of the view that have selected text in them.
+		if sel == "open" {
+			var first, last selbar.Row
+			seen := false
+			for y := range rs.RowData {
+				if part := rs.RowData[y].Selection; part.Valid {
+					last = selbar.Row{Y: y, Left: int(part.Value[0]), Right: int(part.Value[1])}
+					if !seen {
+						first, seen = last, true
+					}
+				}
+			}
+			if x, y := selbar.Place(first, last, seen, cols, rows, cw, ch); x != toldBarX || y != toldBarY {
+				toldBarX, toldBarY = x, y
+				a.state(map[string]any{"selBarX": x, "selBarY": y})
+			}
 		}
 		// Update draws the characters it meets for the first time into
 		// the sheet, so the sheet's new part is taken after it.

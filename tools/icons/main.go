@@ -1,10 +1,10 @@
 // Command icons draws the pictures the system has none for into
 // assets/images: the menu icons (close tab, paste, copy, select line, select
-// all, cancel, settings), the signs of the three keys on the system's bar (Esc, Ctrl,
+// all, settings), the signs of the three keys on the system's bar (Esc, Ctrl,
 // Tab) and the arrow pad's four arrows, as thin white line drawings on
 // a clear background, 81 by 81 pixels, the size BlackBerry 10 uses for
-// action icons and after the look of the icons in its browser; and the arrow
-// pad's ground. They are drawn four times as large and scaled down, which
+// action icons and after the look of the icons in its browser; and the
+// grounds of the arrow pad and of the selection's bar. They are drawn four times as large and scaled down, which
 // smooths the slanted and round edges.
 // Run from the repository's root: go run ./tools/icons
 package main
@@ -16,6 +16,8 @@ import (
 	"log"
 	"math"
 	"os"
+
+	"term51/internal/selbar"
 )
 
 const (
@@ -129,12 +131,13 @@ func tabKey(i *icon) {
 // padSize is the arrow pad's side in pixels.
 const padSize = 300
 
-// pad draws the arrow pad's ground: a dark square with round corners and a
-// thin lighter rim, a little see-through, as large as the pad, with a grey
-// dot in the middle where the finger's swipe starts from.
-func pad() image.Image {
-	const radius, rim = 36.0, 2.0
-	// inside reports how much of the pixel x, y lies in the square with
+// ground draws what the arrow pad and the selection's bar lie on: a dark
+// rectangle (#262626) of w by h pixels with round corners and a thin
+// lighter rim (#5a5a5a), a little see-through. mark gives the grey of the
+// pixels that are drawn in another one (the pad's dot, the bar's dividers).
+func ground(w, h int, radius float64, mark func(x, y int) (float64, bool)) image.Image {
+	const rim = 2.0
+	// inside reports how much of the pixel x, y lies in the rectangle with
 	// round corners that is inset by d.
 	inside := func(x, y int, d float64) float64 {
 		n := 0
@@ -143,28 +146,45 @@ func pad() image.Image {
 				px, py := float64(x)+(float64(sx)+0.5)/scale, float64(y)+(float64(sy)+0.5)/scale
 				// The distance to the nearest corner's centre, where the
 				// point is in a corner.
-				cx := math.Max(math.Max(d+radius-px, px-(padSize-d-radius)), 0)
-				cy := math.Max(math.Max(d+radius-py, py-(padSize-d-radius)), 0)
-				if px >= d && py >= d && px <= padSize-d && py <= padSize-d && cx*cx+cy*cy <= radius*radius {
+				cx := math.Max(math.Max(d+radius-px, px-(float64(w)-d-radius)), 0)
+				cy := math.Max(math.Max(d+radius-py, py-(float64(h)-d-radius)), 0)
+				if px >= d && py >= d && px <= float64(w)-d && py <= float64(h)-d && cx*cx+cy*cy <= radius*radius {
 					n++
 				}
 			}
 		}
 		return float64(n) / (scale * scale)
 	}
-	out := image.NewNRGBA(image.Rect(0, 0, padSize, padSize))
-	for y := 0; y < padSize; y++ {
-		for x := 0; x < padSize; x++ {
+	out := image.NewNRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
 			whole, core := inside(x, y, 0), inside(x, y, rim)
-			// The rim is #5a5a5a, the ground #262626; 235 of 255 opaque.
 			grey := 0x26 + (0x5a-0x26)*(whole-core)/math.Max(whole, 1.0/255)
-			if dx, dy := float64(x)+0.5-padSize/2, float64(y)+0.5-padSize/2; dx*dx+dy*dy <= 6.5*6.5 {
-				grey = 0x80
+			if g, ok := mark(x, y); ok {
+				grey = g
 			}
 			out.SetNRGBA(x, y, color.NRGBA{uint8(grey), uint8(grey), uint8(grey), uint8(235 * whole)})
 		}
 	}
 	return out
+}
+
+// pad draws the arrow pad's ground, with a grey dot in the middle where the
+// finger's swipe starts from.
+func pad() image.Image {
+	return ground(padSize, padSize, 36, func(x, y int) (float64, bool) {
+		dx, dy := float64(x)+0.5-padSize/2, float64(y)+0.5-padSize/2
+		return 0x80, dx*dx+dy*dy <= 6.5*6.5
+	})
+}
+
+// selectionBar draws the ground of the selection's bar: four cells with a
+// thin divider between them.
+func selectionBar() image.Image {
+	const cell = selbar.Width / 4
+	return ground(selbar.Width, selbar.Height, 14, func(x, y int) (float64, bool) {
+		return 0x4a, x >= cell-1 && x < selbar.Width-cell+1 && (x+1)%cell < 2 && y >= 16 && y < selbar.Height-16
+	})
 }
 
 func save(name string, img image.Image) {
@@ -182,6 +202,7 @@ func save(name string, img image.Image) {
 
 func main() {
 	save("pad", pad())
+	save("selbar", selectionBar())
 	draw := map[string]func(*icon){
 		"key-esc":     escape,
 		"key-ctrl":    control,
@@ -230,15 +251,6 @@ func main() {
 			i.box(10, 20, 71, 20+line, true)
 			i.box(10, 32, 71, 49, true)
 			i.box(10, 57, 71, 57+line, true)
-		},
-		// A ring with a stroke through it.
-		"cancel": func(i *icon) {
-			i.where(func(x, y float64) bool {
-				d := (x-40.5)*(x-40.5) + (y-40.5)*(y-40.5)
-				ring := d <= 30*30 && d >= (30-line)*(30-line)
-				e := x + y - 81
-				return ring || (d <= 30*30 && e > -2.8 && e < 2.8)
-			})
 		},
 		// Three sliders: lines with a knob each.
 		"settings": func(i *icon) {

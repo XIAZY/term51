@@ -10,6 +10,7 @@ import (
 
 	"github.com/XIAZY/libghostty-vt-go/vt"
 
+	"term51/internal/arrowpad"
 	"term51/internal/cells"
 	"term51/internal/keys"
 	"term51/internal/session"
@@ -122,7 +123,10 @@ func (a *App) Run() error {
 		for i, t := range tabs {
 			titles[i], rang[i] = t.title, t.rang
 		}
-		a.state(map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt})
+		a.state(map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt,
+			// For the page's drawing of the arrow pad: the same numbers the
+			// rule uses.
+			"padThreshold": arrowpad.Threshold, "padAxis": arrowpad.Axis})
 	}
 	sticky := func() {
 		if cur < 0 {
@@ -300,6 +304,28 @@ func (a *App) Run() error {
 		return nil
 	}
 
+	// arrows asks the arrow pad's rule what the finger's place means now:
+	// a key to send, and when to ask again if the finger stays where it is.
+	// The page is told of each key sent, to show it on the pad.
+	var pad arrowpad.Pad
+	var padX, padY float64
+	var padDue <-chan time.Time
+	arrows := func() {
+		padDue = nil
+		if cur < 0 {
+			return
+		}
+		name, again := pad.Update(padX, padY, time.Now())
+		if name != "" {
+			a.bar(tabs[cur].sess, &tabs[cur].tr, key, Command{Name: "bar", Args: map[string]any{"name": name}})
+			sticky()
+			a.event(map[string]any{"pad": name})
+		}
+		if again > 0 {
+			padDue = time.After(again)
+		}
+	}
+
 	var pending <-chan time.Time // set while an update is due
 	var quiet <-chan time.Time   // set while a new size waits to be used
 	for {
@@ -346,6 +372,20 @@ func (a *App) Run() error {
 			case "bar":
 				a.bar(sess, &tabs[cur].tr, key, c)
 				sticky()
+			case "pad":
+				// The arrow pad (internal/arrowpad): the terminal was
+				// pressed and held ("hold"), the finger is at dx, dy from
+				// where it went down ("move"), or it has lifted ("lift").
+				switch phase, _ := c.Args["phase"].(string); phase {
+				case "hold":
+					pad, padX, padY, padDue = arrowpad.Pad{}, 0, 0, nil
+				case "move":
+					padX, _ = c.Args["dx"].(float64)
+					padY, _ = c.Args["dy"].(float64)
+					arrows()
+				case "lift":
+					padDue = nil
+				}
 			case "paste":
 				if text, _ := c.Args["text"].(string); text != "" {
 					sess.ScrollToBottom()
@@ -507,6 +547,8 @@ func (a *App) Run() error {
 			if err := fit(); err != nil {
 				return err
 			}
+		case <-padDue:
+			arrows()
 		case <-pending:
 			pending = nil
 			post()

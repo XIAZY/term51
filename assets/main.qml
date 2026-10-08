@@ -382,10 +382,11 @@ TabbedPane {
                         }
                     }
 
-                    // The keys the phone's keyboard lacks: a strip directly on
-                    // top of the system's bar and in its colour, with a hair-line
-                    // above. Nothing on it takes the focus. Ctrl and Alt are
-                    // sticky: they apply to the next key and stay lit until then.
+                    // The keys the phone's keyboard lacks, but for the arrows,
+                    // which are the arrow pad's: a strip directly on top of the
+                    // system's bar and in its colour, with a hair-line above.
+                    // Nothing on it takes the focus. Ctrl and Alt are sticky:
+                    // they apply to the next key and stay lit until then.
                     Container {
                         background: Color.create("#383838")
                         preferredHeight: 2
@@ -408,18 +409,6 @@ TabbedPane {
                         KeyCell { text: "Tab"
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                   onPressed: page.send("bar", { name: "tab" }) }
-                        KeyCell { text: "←"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "left" }) }
-                        KeyCell { text: "↓"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "down" }) }
-                        KeyCell { text: "↑"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "up" }) }
-                        KeyCell { text: "→"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "right" }) }
                     }
                 }
                 // The arrow pad's picture: its ground, the four arrows in

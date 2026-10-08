@@ -74,7 +74,7 @@ var cursors = map[string]session.CursorShape{
 // vt100, ansi and qansi (QNX's own), so the default is one its programs
 // know. It has no xterm-256color: that one is for programs on other
 // machines, over ssh, where the other machine's database counts.
-var Terms = []string{"xterm", "xterm-256color", "vt100", "ansi", "qansi"}
+var Terms = []string{session.DefaultTerm, "xterm-256color", "vt100", "ansi", "qansi"}
 
 // Themes are the colour sets the settings sheet offers, by name. A theme
 // is not a setting of its own: choosing one fills the four colour settings,

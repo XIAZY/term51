@@ -584,6 +584,27 @@ func TestStretchSelection(t *testing.T) {
 	if p.screen() != before {
 		t.Error("the screen went on scrolling after the finger lifted")
 	}
+	a.Send(Command{Name: "unselect"})
+
+	// A finger that slides off the terminal (onto the key bar below it)
+	// selects to the last row, and held there the selection keeps growing
+	// as the screen scrolls. The view is still scrolled back, so there is
+	// text below it.
+	wait(t, "the selection gone", func() bool { return p.get("selected") == "" })
+	top := strings.Fields(p.screen())[0]
+	if !strings.HasPrefix(top, "line-") || strings.Contains(p.screen(), "line-30") {
+		t.Fatalf("the view is not scrolled back onto the lines:\n%s", p.screen())
+	}
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 2.0, "y": 0.0}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "down", "x": 9.5, "y": 0.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "move", "x": 40.0, "y": 9.5}})
+	wait(t, "the screen scrolled forwards", func() bool { return strings.Contains(p.screen(), "line-30 end") })
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "up", "x": 40.0, "y": 9.5}})
+	a.Send(Command{Name: "copy"})
+	wait(t, "the selection grown past the bottom copied", func() bool {
+		c := clipboard()
+		return strings.HasPrefix(c, top+" end\n") && strings.Contains(c, "line-29 end\nline-30 end")
+	})
 	a.Quit()
 	if err := <-done; err != nil {
 		t.Errorf("Run returned %v", err)

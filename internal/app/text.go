@@ -355,6 +355,12 @@ func (a *App) Run() error {
 	var stretching bool
 	var stretchX, stretchY float64
 	var stretchDue <-chan time.Time
+	// stretchCell is the cell the stretching finger selects to: the one
+	// under it, or the nearest one of the view when the finger has slid off
+	// the terminal (onto the key bar below it, say).
+	stretchCell := func() (int, int) {
+		return min(max(int(stretchX), 0), cols-1), min(max(int(stretchY), 0), rows-1)
+	}
 	scrollEdge := func() {
 		stretchDue = nil
 		if cur < 0 || !stretching {
@@ -363,7 +369,7 @@ func (a *App) Run() error {
 		n, again := edge.Update(stretchY, rows, time.Now())
 		if n != 0 {
 			tabs[cur].sess.ScrollViewport(n)
-			tabs[cur].sess.StretchTo(int(stretchX), int(stretchY))
+			tabs[cur].sess.StretchTo(stretchCell())
 		}
 		if again > 0 {
 			stretchDue = time.After(again)
@@ -473,11 +479,11 @@ func (a *App) Run() error {
 				switch phase, _ := c.Args["phase"].(string); phase {
 				case "down":
 					edge, stretchDue = stretch.Edge{}, nil
-					stretching = sess.StretchStart(int(stretchX), int(stretchY))
+					stretching = sess.StretchStart(stretchCell())
 					tabs[cur].copied = false
 				case "move":
 					if stretching {
-						sess.StretchTo(int(stretchX), int(stretchY))
+						sess.StretchTo(stretchCell())
 						scrollEdge()
 					}
 				case "up":

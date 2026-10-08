@@ -140,13 +140,17 @@ TabbedPane {
                 })
             }
 
-            // The system's bar and the menu of its three dots. Paste is on
-            // the bar too.
+            // The menu of the system bar's three dots, and after it the three
+            // keys that are on the bar itself, which is all the bar takes:
+            // Esc, Ctrl and Tab. The system lists what is on the bar in the
+            // menu as well; they come last here so as to be out of the way
+            // there. Each key's picture is a sign and its title the name. The
+            // sticky Ctrl is in the primary colour while it is armed.
             actions: [
                 ActionItem {
                     title: "Paste"
                     imageSource: "asset:///images/paste.png"
-                    ActionBar.placement: ActionBarPlacement.OnBar
+                    ActionBar.placement: ActionBarPlacement.InOverflow
                     onTriggered: page.pasteClipboard()
                 },
                 ActionItem {
@@ -166,6 +170,24 @@ TabbedPane {
                     imageSource: "asset:///images/settings.png"
                     ActionBar.placement: ActionBarPlacement.InOverflow
                     onTriggered: settingsSheet.open()
+                },
+                ActionItem {
+                    title: "Esc"
+                    imageSource: "asset:///images/key-esc.png"
+                    ActionBar.placement: ActionBarPlacement.OnBar
+                    onTriggered: page.send("bar", { name: "esc" })
+                },
+                ActionItem {
+                    title: "Ctrl"
+                    imageSource: page.ctrl ? "asset:///images/key-ctrl-armed.png" : "asset:///images/key-ctrl.png"
+                    ActionBar.placement: ActionBarPlacement.OnBar
+                    onTriggered: page.send("bar", { name: "ctrl" })
+                },
+                ActionItem {
+                    title: "Tab"
+                    imageSource: "asset:///images/key-tab.png"
+                    ActionBar.placement: ActionBarPlacement.OnBar
+                    onTriggered: page.send("bar", { name: "tab" })
                 }
             ]
 
@@ -382,14 +404,14 @@ TabbedPane {
                         }
                     }
 
-                    // The keys the phone's keyboard lacks (but for the arrows,
-                    // which are the arrow pad's), and six characters that a
-                    // shell needs all the time and the keyboard only has behind
-                    // its symbol key: a strip directly on top of the system's
-                    // bar and in its colour, with a hair-line above. Nothing on
-                    // it takes the focus. Ctrl and Alt are sticky: they apply
-                    // to the next key, one of these characters included, and
-                    // stay lit until then.
+                    // The key bar, directly on top of the system's bar and in
+                    // its colour, with a hair-line above: Alt, and six
+                    // characters that a shell needs all the time and the
+                    // keyboard only has behind its symbol key. (Esc, Ctrl and
+                    // Tab are on the system's bar; the arrows are the arrow
+                    // pad's.) Nothing on it takes the focus. Alt and Ctrl are
+                    // sticky: they apply to the next key, one of these
+                    // characters included, and Alt stays lit until then.
                     Container {
                         background: Color.create("#383838")
                         preferredHeight: 2
@@ -400,18 +422,9 @@ TabbedPane {
                         background: Color.create("#262626")
                         preferredHeight: 84
                         horizontalAlignment: HorizontalAlignment.Fill
-                        KeyCell { text: "Esc"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "esc" }) }
-                        KeyCell { text: "Ctrl"; armed: page.ctrl
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "ctrl" }) }
                         KeyCell { text: "Alt"; armed: page.alt
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                   onPressed: page.send("bar", { name: "alt" }) }
-                        KeyCell { text: "Tab"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "tab" }) }
                         KeyCell { text: "-"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                   onPressed: page.send("text", { text: "-" }) }

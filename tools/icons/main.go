@@ -1,6 +1,7 @@
 // Command icons draws the pictures the system has none for into
 // assets/images: the menu icons (close tab, paste, copy, select all, cancel,
-// settings) and the arrow pad's four arrows, as thin white line drawings on
+// settings), the signs of the three keys on the system's bar (Esc, Ctrl,
+// Tab) and the arrow pad's four arrows, as thin white line drawings on
 // a clear background, 81 by 81 pixels, the size BlackBerry 10 uses for
 // action icons and after the look of the icons in its browser; and the arrow
 // pad's ground. They are drawn four times as large and scaled down, which
@@ -84,6 +85,47 @@ func arrow(dx, dy float64) func(*icon) {
 	}
 }
 
+// stroke reports whether the point x, y is on the line from x0, y0 to x1, y1,
+// drawn as thick as the icons' lines, with round ends.
+func stroke(x, y, x0, y0, x1, y1 float64) bool {
+	dx, dy := x1-x0, y1-y0
+	t := math.Max(0, math.Min(1, ((x-x0)*dx+(y-y0)*dy)/(dx*dx+dy*dy)))
+	px, py := x0+t*dx-x, y0+t*dy-y
+	return px*px+py*py <= (line/2.0+0.4)*(line/2.0+0.4)
+}
+
+// The three keys on the system's bar. Each is a sign, not its name: the
+// name is the button's title.
+
+// escape draws the escape sign: a ring, and an arrow leaving it up and to
+// the left.
+func escape(i *icon) {
+	i.where(func(x, y float64) bool {
+		d := (x-48)*(x-48) + (y-48)*(y-48)
+		ring := d <= 21*21 && d >= (21-line)*(21-line)
+		// The ring is open where the arrow leaves it.
+		if ring && x < 42 && y < 42 {
+			ring = false
+		}
+		return ring || stroke(x, y, 46, 46, 14, 14) || stroke(x, y, 14, 14, 14, 32) || stroke(x, y, 14, 14, 32, 14)
+	})
+}
+
+// control draws the caret that stands for the Control key.
+func control(i *icon) {
+	i.where(func(x, y float64) bool {
+		return stroke(x, y, 40.5, 24, 18, 50) || stroke(x, y, 40.5, 24, 63, 50)
+	})
+}
+
+// tabKey draws an arrow running into a bar.
+func tabKey(i *icon) {
+	i.where(func(x, y float64) bool {
+		return stroke(x, y, 12, 40.5, 56, 40.5) || stroke(x, y, 56, 40.5, 42, 26.5) || stroke(x, y, 56, 40.5, 42, 54.5) ||
+			stroke(x, y, 67, 22, 67, 59)
+	})
+}
+
 // padSize is the arrow pad's side in pixels.
 const padSize = 300
 
@@ -141,6 +183,9 @@ func save(name string, img image.Image) {
 func main() {
 	save("pad", pad())
 	draw := map[string]func(*icon){
+		"key-esc":     escape,
+		"key-ctrl":    control,
+		"key-tab":     tabKey,
 		"arrow-left":  arrow(-1, 0),
 		"arrow-right": arrow(1, 0),
 		"arrow-up":    arrow(0, -1),
@@ -198,24 +243,31 @@ func main() {
 		},
 	}
 	for name, f := range draw {
-		var big icon
-		f(&big)
-		// Each pixel is as opaque as the share of its points that are
-		// white.
-		out := image.NewNRGBA(image.Rect(0, 0, size, size))
-		for y := 0; y < size; y++ {
-			for x := 0; x < size; x++ {
-				n := 0
-				for dy := 0; dy < scale; dy++ {
-					for dx := 0; dx < scale; dx++ {
-						if big[y*scale+dy][x*scale+dx] {
-							n++
-						}
+		save(name, render(f, color.NRGBA{255, 255, 255, 255}))
+	}
+	// Ctrl once more in BlackBerry blue, for while it is armed: the bar
+	// shows an action's picture as it is and cannot colour it.
+	save("key-ctrl-armed", render(control, color.NRGBA{0x00, 0xa8, 0xdf, 255}))
+}
+
+// render draws an icon in the colour c: each pixel is as opaque as the share
+// of its points that the drawing covers.
+func render(f func(*icon), c color.NRGBA) image.Image {
+	var big icon
+	f(&big)
+	out := image.NewNRGBA(image.Rect(0, 0, size, size))
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			n := 0
+			for dy := 0; dy < scale; dy++ {
+				for dx := 0; dx < scale; dx++ {
+					if big[y*scale+dy][x*scale+dx] {
+						n++
 					}
 				}
-				out.SetNRGBA(x, y, color.NRGBA{255, 255, 255, uint8(n * 255 / (scale * scale))})
 			}
+			out.SetNRGBA(x, y, color.NRGBA{c.R, c.G, c.B, uint8(n * 255 / (scale * scale))})
 		}
-		save(name, out)
 	}
+	return out
 }

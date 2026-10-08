@@ -7,8 +7,9 @@ package selbar
 const (
 	Width  = 448 // the bar, in pixels: four cells of 112
 	Height = 104
-	Gap    = 20 // between the bar and the selected text
-	Margin = 8  // between the bar and the terminal's sides
+	Gap    = 20  // between the bar and the selected text above which it is,
+	Below  = 160 // and the text below which it is: the handles hang there
+	Margin = 8   // between the bar and the terminal's sides
 )
 
 // Row is the selected part of one row of the view: the row, and its first
@@ -18,7 +19,8 @@ type Row struct{ Y, Left, Right int }
 // Place gives the bar's top left corner in the terminal, in pixels. first
 // and last are the first and the last row of the view with selected text in
 // them. The bar goes above the first, centred over its selected part; below
-// the last where there is no room above; and at the top of the terminal
+// the last, clear of the selection's handles, where there is no room above;
+// and at the top of the terminal
 // where there is room for neither (the selection fills the view) or where
 // none of the selection is in the view (seen is false). It never leaves the
 // terminal's sides. cols and rows are the view in cells, cw and ch a cell in
@@ -34,7 +36,7 @@ func Place(first, last Row, seen bool, cols, rows, cw, ch int) (x, y int) {
 	if y := first.Y*ch - Gap - Height; y >= 0 {
 		return centre(first), y
 	}
-	if y := (last.Y+1)*ch + Gap; y+Height <= rows*ch {
+	if y := (last.Y+1)*ch + Below; y+Height <= rows*ch {
 		return centre(last), y
 	}
 	return centre(Row{0, 0, cols - 1}), Gap

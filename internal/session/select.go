@@ -79,6 +79,37 @@ func (s *Session) HasSelection() bool {
 	return !s.closed && s.term.Screens.Active.Selection.Valid
 }
 
+// End is one end of the selection: the cell of the view it is on, or that
+// it is not in the view (Seen is false).
+type End struct {
+	X, Y int
+	Seen bool
+}
+
+// SelectionEnds gives the two ends of the selection, the first in the text
+// and the last, both part of it. With nothing selected neither is seen.
+func (s *Session) SelectionEnds() (first, last End) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
+	scr := s.term.Screens.Active
+	if !scr.Selection.Valid {
+		return
+	}
+	// A pin above the view has no point in it; one below it has a point
+	// past the last row.
+	end := func(p vt.Pin) End {
+		pt := scr.Pages.PointFromPin(vt.PointTagViewport, p)
+		if !pt.Valid || int(pt.Value.Viewport.Y) >= int(s.term.Rows) {
+			return End{}
+		}
+		return End{X: int(pt.Value.Viewport.X), Y: int(pt.Value.Viewport.Y), Seen: true}
+	}
+	return end(scr.Selection.Value.TopLeft(scr)), end(scr.Selection.Value.BottomRight(scr))
+}
+
 // order is a pin's place in the text, for comparing two pins: its row
 // counted from the top of the scrollback, and its column.
 func (s *Session) order(scr *vt.Screen, p vt.Pin) (row int64, col int64) {

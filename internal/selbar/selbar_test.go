@@ -17,7 +17,8 @@ func TestPlace(t *testing.T) {
 		{"kept inside the left side", Row{10, 0, 3}, Row{10, 0, 3}, true, 8, 10*40 - 20 - 104},
 		{"kept inside the right side", Row{10, 76, 79}, Row{10, 76, 79}, true, 80*18 - 448 - 8, 10*40 - 20 - 104},
 		{"the lowest row that still has room above", Row{4, 40, 49}, Row{4, 40, 49}, true, 45*18 - 224, 36},
-		{"no room above: below the last row, over its part", Row{2, 40, 79}, Row{4, 0, 9}, true, 8, 5*40 + 20},
+		{"no room above: below the last row, over its part", Row{2, 40, 79}, Row{4, 0, 9}, true, 8, 5*40 + 160},
+		{"room for neither: at the top", Row{2, 40, 79}, Row{24, 0, 9}, true, 40*18 - 224, 20},
 		{"the whole view selected: at the top", Row{0, 0, 79}, Row{29, 0, 79}, true, 40*18 - 224, 20},
 		{"none of it in the view: at the top", Row{}, Row{}, false, 40*18 - 224, 20},
 	} {

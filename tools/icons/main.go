@@ -4,7 +4,8 @@
 // Tab) and the arrow pad's four arrows, as thin white line drawings on
 // a clear background, 81 by 81 pixels, the size BlackBerry 10 uses for
 // action icons and after the look of the icons in its browser; and the
-// grounds of the arrow pad and of the selection's bar. They are drawn four times as large and scaled down, which
+// grounds of the arrow pad and of the selection's bar, and the dot of a
+// selection handle. They are drawn four times as large and scaled down, which
 // smooths the slanted and round edges.
 // Run from the repository's root: go run ./tools/icons
 package main
@@ -187,6 +188,37 @@ func selectionBar() image.Image {
 	})
 }
 
+// handle draws the dot of a selection handle: a disc in BlackBerry blue
+// with a thin white rim, 44 pixels across.
+func handle() image.Image {
+	const side, rim = 44, 2.5
+	out := image.NewNRGBA(image.Rect(0, 0, side, side))
+	for y := 0; y < side; y++ {
+		for x := 0; x < side; x++ {
+			whole, core := 0, 0
+			for sy := 0; sy < scale; sy++ {
+				for sx := 0; sx < scale; sx++ {
+					dx, dy := float64(x)+(float64(sx)+0.5)/scale-side/2, float64(y)+(float64(sy)+0.5)/scale-side/2
+					if d := math.Hypot(dx, dy); d <= side/2-rim {
+						whole, core = whole+1, core+1
+					} else if d <= side/2 {
+						whole++
+					}
+				}
+			}
+			if whole == 0 {
+				continue
+			}
+			// White where the rim is, blue (#00a8df) where the disc is.
+			mix := func(blue float64) uint8 {
+				return uint8((blue*float64(core) + 255*float64(whole-core)) / float64(whole))
+			}
+			out.SetNRGBA(x, y, color.NRGBA{mix(0x00), mix(0xa8), mix(0xdf), uint8(255 * whole / (scale * scale))})
+		}
+	}
+	return out
+}
+
 func save(name string, img image.Image) {
 	file, err := os.Create("assets/images/" + name + ".png")
 	if err != nil {
@@ -203,6 +235,7 @@ func save(name string, img image.Image) {
 func main() {
 	save("pad", pad())
 	save("selbar", selectionBar())
+	save("handle", handle())
 	draw := map[string]func(*icon){
 		"key-esc":     escape,
 		"key-ctrl":    control,

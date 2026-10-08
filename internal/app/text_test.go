@@ -633,9 +633,17 @@ func TestSelectionBar(t *testing.T) {
 	const above = 20*17 - selbar.Gap - selbar.Height
 	const right = 80*8 - selbar.Width - selbar.Margin
 
-	// A word: above it and centred over it.
+	ends := func(sx, sy int, son bool, ex, ey int, eon bool) func() bool {
+		return func() bool {
+			return p.get("selStartOn") == son && (!son || p.get("selStartX") == float64(sx) && p.get("selStartY") == float64(sy)) &&
+				p.get("selEndOn") == eon && (!eon || p.get("selEndX") == float64(ex) && p.get("selEndY") == float64(ey))
+		}
+	}
+
+	// A word: the bar above it and centred over it, a handle at each end.
 	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 42.0, "y": 20.0}})
 	wait(t, "the bar over the word", bar((40+46)*8/2-selbar.Width/2, above))
+	wait(t, "the word's ends", ends(40, 20, true, 45, 20, true))
 
 	// Stretched into the next row, the first row is selected from the word
 	// to its end: the bar is over that part, and stays inside the right
@@ -644,13 +652,29 @@ func TestSelectionBar(t *testing.T) {
 	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "move", "x": 42.5, "y": 21.5}})
 	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "up", "x": 42.5, "y": 21.5}})
 	wait(t, "the bar over the first row's part", bar(right, above))
+	wait(t, "the ends of two rows", ends(40, 20, true, 42, 21, true))
 
-	// Scrolled back nine rows, only the selection's first row is still in
-	// the view, as its last row; one more and none of it is.
+	// The start's handle dragged: the finger is taken to come down on the
+	// start's own cell, so the start is the end that moves, and the other
+	// stays.
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "down", "x": 40.5, "y": 20.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "move", "x": 2.5, "y": 19.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "up", "x": 2.5, "y": 19.5}})
+	wait(t, "the start moved, the end left", ends(2, 19, true, 42, 21, true))
+	const left = (2+80)*8/2 - selbar.Width/2
+	wait(t, "the bar over the new first row", bar(left, 19*17-selbar.Gap-selbar.Height))
+
+	// Scrolled back nine rows, the selection's last row is below the view,
+	// and its end with it; one more and only its first row is left; one
+	// more and none of it.
 	a.Send(Command{Name: "scroll", Args: map[string]any{"rows": -9.0}})
-	wait(t, "the bar over the row left in the view", bar(right, 29*17-selbar.Gap-selbar.Height))
+	wait(t, "the end out of the view", ends(2, 28, true, 0, 0, false))
+	wait(t, "the bar still over the first row", bar(left, 28*17-selbar.Gap-selbar.Height))
+	a.Send(Command{Name: "scroll", Args: map[string]any{"rows": -1.0}})
+	wait(t, "the bar over the row left in the view", bar(left, 29*17-selbar.Gap-selbar.Height))
 	a.Send(Command{Name: "scroll", Args: map[string]any{"rows": -1.0}})
 	wait(t, "the bar at the top", bar(80*8/2-selbar.Width/2, selbar.Gap))
+	wait(t, "both ends out of the view", ends(0, 0, false, 0, 0, false))
 
 	a.Send(Command{Name: "unselect"})
 	wait(t, "no selection", func() bool { return p.get("selected") == "" })

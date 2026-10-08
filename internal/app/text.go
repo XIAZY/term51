@@ -143,8 +143,9 @@ func (a *App) Run() error {
 		}
 	}
 	var lastPost time.Time
-	toldSel := ""                // what the page was last told about the selection,
-	toldBarX, toldBarY := -1, -1 // and about the place of its bar
+	toldSel := ""                       // what the page was last told about the selection,
+	toldBarX, toldBarY := -1, -1        // about the place of its bar,
+	var toldFirst, toldLast session.End // and about its two ends
 	post := func() {
 		lastPost = time.Now()
 		if cur < 0 {
@@ -185,6 +186,13 @@ func (a *App) Run() error {
 			if x, y := selbar.Place(first, last, seen, cols, rows, cw, ch); x != toldBarX || y != toldBarY {
 				toldBarX, toldBarY = x, y
 				a.state(map[string]any{"selBarX": x, "selBarY": y})
+			}
+			// And where its two handles go: the cells of its ends, as far
+			// as they are in the view.
+			if first, last := tabs[cur].sess.SelectionEnds(); first != toldFirst || last != toldLast {
+				toldFirst, toldLast = first, last
+				a.state(map[string]any{"selStartX": first.X, "selStartY": first.Y, "selStartOn": first.Seen,
+					"selEndX": last.X, "selEndY": last.Y, "selEndOn": last.Seen})
 			}
 		}
 		// Update draws the characters it meets for the first time into

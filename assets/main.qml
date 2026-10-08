@@ -84,6 +84,12 @@ TabbedPane {
             property string selected: ""
             property real selBarX: 0         // where the selection's bar goes
             property real selBarY: 0
+            property bool selStartOn: false  // the selection's two ends: whether
+            property int selStartX: 0        // each is in the view, and its cell
+            property int selStartY: 0
+            property bool selEndOn: false
+            property int selEndX: 0
+            property int selEndY: 0
             property real padThreshold: 64   // the arrow pad's two numbers, from Go:
             property real padAxisRule: 1.5   // see internal/arrowpad
             property real cellW: 0           // a cell in pixels, from Go
@@ -125,6 +131,12 @@ TabbedPane {
                     if (s.selected !== undefined) page.selected = s.selected
                     if (s.selBarX !== undefined) page.selBarX = s.selBarX
                     if (s.selBarY !== undefined) page.selBarY = s.selBarY
+                    if (s.selStartOn !== undefined) page.selStartOn = s.selStartOn
+                    if (s.selStartX !== undefined) page.selStartX = s.selStartX
+                    if (s.selStartY !== undefined) page.selStartY = s.selStartY
+                    if (s.selEndOn !== undefined) page.selEndOn = s.selEndOn
+                    if (s.selEndX !== undefined) page.selEndX = s.selEndX
+                    if (s.selEndY !== undefined) page.selEndY = s.selEndY
                     if (s.padThreshold !== undefined) page.padThreshold = s.padThreshold
                     if (s.padAxis !== undefined) page.padAxisRule = s.padAxis
                     if (s.ch !== undefined) page.cellH = s.ch
@@ -321,6 +333,41 @@ TabbedPane {
                         property bool dropped: false    // this drag has dropped a copied selection
                         function stretch(phase, x, y) {
                             page.send("stretch", { phase: phase, x: x / page.cellW, y: y / page.cellH })
+                        }
+
+                        // The selection's handles: a dot hanging under each
+                        // end, on a thin line from the top of the end's row.
+                        // A dot that is dragged stretches the selection by
+                        // its own end: Go is told the finger came down on
+                        // that end's cell, and then the cell that is as far
+                        // from there as the finger is from where it took the
+                        // dot, so the end stays above the finger and the
+                        // text in sight. The dot hangs 100 pixels under its
+                        // row; less under the last rows, where it would
+                        // leave the page: there it lies on the key bar.
+                        property real grabX: 0  // the grabbed end's cell, its middle
+                        property real grabY: 0
+                        property real dragX: 0  // where the drag has taken it
+                        property real dragY: 0
+                        function hang(row) {
+                            return Math.min(100, fwc.h + 86 - 22 - (row + 1) * page.cellH)
+                        }
+                        function handleGrabbed(col, row) {
+                            grabX = (col + 0.5) * page.cellW
+                            grabY = (row + 0.5) * page.cellH
+                            dragX = grabX
+                            dragY = grabY
+                            stretching = true
+                            stretch("down", grabX, grabY)
+                        }
+                        function handleDragged(dx, dy) {
+                            dragX = grabX + dx
+                            dragY = grabY + dy
+                            stretch("move", dragX, dragY)
+                        }
+                        function handleDropped() {
+                            stretching = false
+                            stretch("up", dragX, dragY)
                         }
 
                         function padMove(dx, dy) {
@@ -551,6 +598,52 @@ TabbedPane {
                             layoutProperties: AbsoluteLayoutProperties { positionX: 0; positionY: 0 }
                         }
                     }
+                }
+                // The selection's two handles (see the terminal's
+                // handleGrabbed): for each end that is in the view a line,
+                // which takes no touches, and its dot. They show for as long
+                // as the selection is open, also while it is stretched.
+                Container {
+                    visible: page.selected == "open" && page.selStartOn && !fwc.padOn
+                    background: Color.create("#00a8df")
+                    preferredWidth: 2
+                    preferredHeight: page.cellH + fwc.hang(page.selStartY)
+                    translationX: page.selStartX * page.cellW - 1
+                    translationY: page.selStartY * page.cellH
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Top
+                    touchPropagationMode: TouchPropagationMode.None
+                }
+                SelHandle {
+                    visible: page.selected == "open" && page.selStartOn && !fwc.padOn
+                    translationX: page.selStartX * page.cellW - 50
+                    translationY: (page.selStartY + 1) * page.cellH + fwc.hang(page.selStartY) - 50
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Top
+                    onGrabbed: fwc.handleGrabbed(page.selStartX, page.selStartY)
+                    onDragged: fwc.handleDragged(dx, dy)
+                    onDropped: fwc.handleDropped()
+                }
+                Container {
+                    visible: page.selected == "open" && page.selEndOn && !fwc.padOn
+                    background: Color.create("#00a8df")
+                    preferredWidth: 2
+                    preferredHeight: page.cellH + fwc.hang(page.selEndY)
+                    translationX: (page.selEndX + 1) * page.cellW - 1
+                    translationY: page.selEndY * page.cellH
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Top
+                    touchPropagationMode: TouchPropagationMode.None
+                }
+                SelHandle {
+                    visible: page.selected == "open" && page.selEndOn && !fwc.padOn
+                    translationX: (page.selEndX + 1) * page.cellW - 50
+                    translationY: (page.selEndY + 1) * page.cellH + fwc.hang(page.selEndY) - 50
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Top
+                    onGrabbed: fwc.handleGrabbed(page.selEndX, page.selEndY)
+                    onDragged: fwc.handleDragged(dx, dy)
+                    onDropped: fwc.handleDropped()
                 }
                 // The selection's bar: Copy, Paste, Select Line and Select
                 // All, floating by the selected text where Go says

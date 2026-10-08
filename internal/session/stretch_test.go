@@ -127,3 +127,46 @@ func TestSelectLineAndWideCharacters(t *testing.T) {
 		t.Errorf("stretched over wide characters: %q", got)
 	}
 }
+
+// The two ends of the selection are told by their cells of the view, the
+// first in the text first whichever way it was selected, and an end that is
+// out of the view is told as not seen.
+func TestSelectionEnds(t *testing.T) {
+	s := start(t, `for i in $(seq 1 30); do echo "line-$i end"; done; sleep 5`)
+	waitText(t, s, "line-30 end")
+	ends := func(what string, first, last End) {
+		t.Helper()
+		if f, l := s.SelectionEnds(); f != first || l != last {
+			t.Errorf("%s: the ends are %+v and %+v, want %+v and %+v", what, f, l, first, last)
+		}
+	}
+	// The view shows lines 22 to 30 and an empty row; "line-30" is row 8.
+	ends("nothing selected", End{}, End{})
+	s.SelectWordAt(9, 8) // "end", cells 8 to 10
+	ends("a word", End{8, 8, true}, End{10, 8, true})
+
+	// Stretched backwards into the row above: the anchor is now the last.
+	s.StretchStart(8, 8)
+	s.StretchTo(5, 7)
+	s.StretchEnd()
+	ends("two rows, selected backwards", End{5, 7, true}, End{10, 8, true})
+
+	// Scrolled back, the text moves down the view, and out of it.
+	s.ScrollViewport(-1)
+	ends("one row down", End{5, 8, true}, End{10, 9, true})
+	s.ScrollViewport(-1)
+	ends("the last end below the view", End{5, 9, true}, End{})
+	s.ScrollViewport(-1)
+	ends("both below the view", End{}, End{})
+
+	// And up out of it: selected further back, then scrolled forwards.
+	s.ScrollViewport(-2)
+	if err := s.Select(3, 0, 4, 1); err != nil {
+		t.Fatal(err)
+	}
+	ends("two rows at the top", End{3, 0, true}, End{4, 1, true})
+	s.ScrollViewport(1)
+	ends("the first end above the view", End{}, End{4, 0, true})
+	s.ScrollViewport(1)
+	ends("both above the view", End{}, End{})
+}

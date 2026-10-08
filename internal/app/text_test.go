@@ -25,6 +25,7 @@ type page struct {
 	state     map[string]any
 	clipboard string
 	notices   []string
+	saved     []settings.Settings // each time the app saved the settings
 	scr       *screen
 }
 
@@ -240,7 +241,12 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	a := New(cfg, p, func(group, id string, w, h int) (Screen, error) {
 		scr.Resize(w, h)
 		return scr, nil
-	}, fonts)
+	}, fonts, func(s settings.Settings) error {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		p.saved = append(p.saved, s)
+		return nil
+	})
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	// The page's place for the terminal: 40 by 8 cells and a few pixels over.
@@ -293,6 +299,14 @@ func TestTabs(t *testing.T) {
 	typeLine(a, "echo in-second-tab")
 	wait(t, "the second tab's output", func() bool { return strings.Contains(p.screen(), "in-second-tab") })
 
+	// The second tab will ring its bell in a moment, when it is no longer
+	// the one shown.
+	typeLine(a, "sleep 1; printf '\\a'")
+	rang := func(i int) bool {
+		r, _ := p.get("rang").([]any)
+		return len(r) > i && r[i] == true
+	}
+
 	// Output in a tab that is not shown does not reach the page; switching
 	// back shows that tab as it is now.
 	a.Send(Command{Name: "tab", Args: map[string]any{"index": 0.0}})
@@ -300,6 +314,13 @@ func TestTabs(t *testing.T) {
 		s := p.screen()
 		return strings.Contains(s, "in-first-tab") && !strings.Contains(s, "in-second-tab")
 	})
+
+	// The bell of the tab that is not shown marks it, until it is shown.
+	wait(t, "the second tab marked as having rung", func() bool { return rang(1) && !rang(0) })
+	a.Send(Command{Name: "tab", Args: map[string]any{"index": 1.0}})
+	wait(t, "the mark gone", func() bool { return p.get("current") == 1.0 && !rang(1) })
+	a.Send(Command{Name: "tab", Args: map[string]any{"index": 0.0}})
+	wait(t, "the first tab once more", func() bool { return p.get("current") == 0.0 })
 
 	// Closing the shown tab shows the other one.
 	a.Send(Command{Name: "closetab"})
@@ -315,6 +336,94 @@ func TestTabs(t *testing.T) {
 	case <-done:
 	case <-time.After(10 * time.Second):
 		t.Fatal("the app did not end when its last shell exited")
+	}
+}
+
+// A setting changed on the settings sheet is saved at once; the text size
+// also changes what is on screen. A value that makes no sense changes
+// nothing and says so.
+func TestSettingsFromThePage(t *testing.T) {
+	a, p, done := startApp(t)
+	setting := func(name string) any {
+		m, _ := p.get("settings").(map[string]any)
+		return m[name]
+	}
+	lastSaved := func() (settings.Settings, int) {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		if len(p.saved) == 0 {
+			return settings.Settings{}, 0
+		}
+		return p.saved[len(p.saved)-1], len(p.saved)
+	}
+	wait(t, "the settings on the page", func() bool { return setting("fontPt") == "7" && setting("shell") == "/bin/bash" })
+	if p.get("cols") != 40.0 {
+		t.Fatalf("columns at the start: %v", p.get("cols"))
+	}
+
+	// Twice the text size: about half the columns in the same window (19:
+	// the cell is 17 pixels wide, the window 323).
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "fontPt", "value": "14"}})
+	wait(t, "the larger text", func() bool {
+		s, n := lastSaved()
+		cols, _ := p.scr.size()
+		return n == 1 && s.FontPt == 14 && setting("fontPt") == "14" && p.get("cols") == 19.0 && cols == 19
+	})
+
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "fontPt", "value": "400"}})
+	wait(t, "the refusal", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return len(p.notices) == 1 && strings.Contains(p.notices[0], "fontPt")
+	})
+	if _, n := lastSaved(); n != 1 || setting("fontPt") != "14" || p.get("cols") != 19.0 {
+		t.Errorf("a refused value changed something: saved %d times, fontPt %v, %v columns", n, setting("fontPt"), p.get("cols"))
+	}
+
+	// The program is for tabs opened from now on.
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "/bin/sh"}})
+	wait(t, "the program saved", func() bool {
+		s, n := lastSaved()
+		return n == 2 && s.Shell == "/bin/sh" && setting("shell") == "/bin/sh"
+	})
+
+	// A theme and the cursor's shape change what is on screen: the last
+	// cell (blank) gets the theme's background, and some cell the bar.
+	lastCell := func() []byte {
+		p.scr.mu.Lock()
+		defer p.scr.mu.Unlock()
+		if len(p.scr.table) < 16 {
+			return make([]byte, 16)
+		}
+		return append([]byte(nil), p.scr.table[len(p.scr.table)-16:]...)
+	}
+	hasFlag := func(flag byte) bool {
+		p.scr.mu.Lock()
+		defer p.scr.mu.Unlock()
+		for i := 0; i+16 <= len(p.scr.table); i += 16 {
+			if p.scr.table[i+2]&flag != 0 {
+				return true
+			}
+		}
+		return false
+	}
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "theme", "value": "light"}})
+	wait(t, "the light theme on screen", func() bool {
+		c := lastCell()
+		return setting("theme") == "light" && c[8] == 0xfa && c[9] == 0xfa && c[10] == 0xf5
+	})
+	if hasFlag(cells.FlagCursorBar) {
+		t.Error("a bar cursor before it was chosen")
+	}
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "cursor", "value": "bar"}})
+	wait(t, "the bar cursor on screen", func() bool { return hasFlag(cells.FlagCursorBar) })
+	if s, n := lastSaved(); n != 4 || s.Cursor != "bar" || s.ThemeName() != "light" {
+		t.Errorf("saved %d times; cursor %q, theme %q", n, s.Cursor, s.ThemeName())
+	}
+
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
 	}
 }
 
@@ -336,6 +445,20 @@ func TestCopyAndResize(t *testing.T) {
 		p.mu.Lock()
 		defer p.mu.Unlock()
 		return strings.Contains(p.clipboard, "copy-me")
+	})
+
+	// A press and hold on text that is already selected keeps the
+	// selection (it only opens the menu): after Select all, Copy still
+	// copies everything, not the one word under the finger.
+	typeLine(a, "echo second-mark")
+	wait(t, "the second line", func() bool { return strings.Contains(p.screen(), "second-mark") })
+	a.Send(Command{Name: "selectall"})
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 0.0, "y": 0.0}})
+	a.Send(Command{Name: "copy"})
+	wait(t, "everything in the clipboard", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return strings.Contains(p.clipboard, "copy-me") && strings.Contains(p.clipboard, "second-mark")
 	})
 
 	// The sizes of one slide of the on-screen rows, close together, are

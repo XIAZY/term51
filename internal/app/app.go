@@ -57,11 +57,13 @@ type App struct {
 	pub   Publisher
 	open  OpenScreen
 	fonts cells.Fonts
+	save  func(settings.Settings) error
 }
 
-// New makes the app; Run starts it.
-func New(cfg settings.Settings, pub Publisher, open OpenScreen, fonts cells.Fonts) *App {
-	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub, open: open, fonts: fonts}
+// New makes the app; Run starts it. save writes the settings when the user
+// changes one.
+func New(cfg settings.Settings, pub Publisher, open OpenScreen, fonts cells.Fonts, save func(settings.Settings) error) *App {
+	return &App{cfg: cfg, cmds: make(chan Command, 256), pub: pub, open: open, fonts: fonts, save: save}
 }
 
 // Send queues a command from QML. It is called on the UI thread and never

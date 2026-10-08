@@ -38,7 +38,7 @@ func TestAnEmptyOrPartialFileKeepsTheDefaults(t *testing.T) {
 fontPt = 8
   identity.terminal=xterm
 theme.cursor = #FF8000
-IDENTITY.DARK = no
+IDENTITY.STATUSREPORTS = no
 identity.answerback = " hello "
 `))
 	if err != nil || len(warnings) != 0 {
@@ -48,7 +48,7 @@ identity.answerback = " hello "
 	want.FontPt = 8
 	want.Identity.Terminal = "xterm"
 	want.Theme.Cursor = "#FF8000"
-	want.Identity.Dark = false
+	want.Identity.StatusReports = false
 	want.Identity.Answerback = " hello "
 	if !reflect.DeepEqual(s, want) {
 		t.Errorf("a partial file:\n got %+v\nwant %+v", s, want)
@@ -122,6 +122,60 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 		}
 		if !reflect.DeepEqual(s, Default()) {
 			t.Errorf("Parse(%q): a bad file changed the settings: %+v", c.in, s)
+		}
+	}
+}
+
+func TestSetAndValues(t *testing.T) {
+	s := Default()
+	v := s.Values()
+	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["identity.statusReports"] != "true" {
+		t.Errorf("values: fontPt %q, shell %q, identity.statusReports %q", v["fontPt"], v["shell"], v["identity.statusReports"])
+	}
+	if _, ok := v["arg"]; ok {
+		t.Error("the list arg is among the single values")
+	}
+	if err := s.Set("fontPt", "5.5"); err != nil || s.FontPt != 5.5 {
+		t.Errorf("Set fontPt: %v, %v", s.FontPt, err)
+	}
+	// A theme is chosen by name and fills the colour settings; the name in
+	// force is read back from the colours.
+	if v["theme"] != "dark" {
+		t.Errorf("the default colours are theme %q, want dark", v["theme"])
+	}
+	for name, theme := range Themes {
+		if err := s.Set("theme", name); err != nil || s.ThemeName() != name || s.Theme.Background != theme.Background {
+			t.Errorf("Set theme %s: %v, name %q, background %s", name, err, s.ThemeName(), s.Theme.Background)
+		}
+		if err := s.Validate(); err != nil {
+			t.Errorf("theme %s: %v", name, err)
+		}
+	}
+	// A program asking for the colour scheme is told what the colours make.
+	for name, dark := range map[string]bool{"dark": true, "black": true, "light": false, "solarized": true} {
+		s.Set("theme", name)
+		if got := s.Replies().Dark; got != dark {
+			t.Errorf("theme %s is reported as dark=%v", name, got)
+		}
+	}
+	s.Theme.Background = "#123456"
+	if s.ThemeName() != "custom" {
+		t.Errorf("someone's own colours are theme %q", s.ThemeName())
+	}
+	if err := s.Set("cursor", "bar"); err != nil || s.SessionCursor() != session.CursorBar {
+		t.Errorf("Set cursor: %v, %v", s.SessionCursor(), err)
+	}
+
+	// A value that makes no sense, a name that is not a setting and a list
+	// are refused, and nothing changes.
+	for _, bad := range [][2]string{{"fontPt", "400"}, {"fontPt", "big"}, {"shell", ""}, {"colour", "red"}, {"arg", "-l"}, {"cursor", "dot"}, {"theme", "pink"}} {
+		before := s
+		before.Args, before.Theme.Palette = nil, nil
+		err := s.Set(bad[0], bad[1])
+		after := s
+		after.Args, after.Theme.Palette = nil, nil
+		if err == nil || !reflect.DeepEqual(before, after) {
+			t.Errorf("Set(%q, %q): error %v, changed %v", bad[0], bad[1], err, !reflect.DeepEqual(before, after))
 		}
 	}
 }

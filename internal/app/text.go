@@ -2,6 +2,7 @@ package app
 
 import (
 	"log"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -34,6 +35,7 @@ type tab struct {
 	sess  *session.Session
 	tr    keys.Translator
 	title string
+	rang  bool          // its bell rang while another tab was shown
 	stop  chan struct{} // closed when the tab is closed
 }
 
@@ -100,6 +102,7 @@ func (a *App) Run() error {
 	inbox := make(chan news, 16)
 	rs := vt.RenderStateEmpty()
 	cols, rows, cw, ch := 0, 0, 0, 0
+	sentW, sentH := 0, 0 // the cell size the shells were last told
 
 	open := func() *tab {
 		sess, err := session.Start(a.cfg.Session(cols, rows, cw, ch, nil))
@@ -115,15 +118,11 @@ func (a *App) Run() error {
 	// tell publishes what the page shows about the tabs and the key bar.
 	stickyCtrl, stickyAlt := false, false
 	tell := func() {
-		titles := make([]string, len(tabs))
+		titles, rang := make([]string, len(tabs)), make([]bool, len(tabs))
 		for i, t := range tabs {
-			titles[i] = t.title
+			titles[i], rang[i] = t.title, t.rang
 		}
-		st := map[string]any{"tabs": titles, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt}
-		if cur >= 0 {
-			st["title"] = tabs[cur].title
-		}
-		a.state(st)
+		a.state(map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt})
 	}
 	sticky := func() {
 		if cur < 0 {
@@ -160,6 +159,7 @@ func (a *App) Run() error {
 	// show makes tab i the one on screen: its whole table is drawn.
 	show := func(i int) {
 		cur = i
+		tabs[i].rang = false
 		table = cells.Table{}
 		sticky()
 		tell()
@@ -226,6 +226,48 @@ func (a *App) Run() error {
 		sticky()
 	}
 
+	// font makes the character sheet for the settings' text size. The size
+	// is in points: real ones, by the display's dots per inch.
+	font := func() error {
+		s, err := cells.NewSheet(a.fonts, a.cfg.FontPt*float64(scr.DPI())/72)
+		if err != nil {
+			return err
+		}
+		sheet = s
+		cw, ch = sheet.CellSize()
+		return nil
+	}
+	// grid lays the cells out in the window and makes the shells fit.
+	grid := func() {
+		nc, nr := sheet.Grid(winW, winH)
+		scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
+		table = cells.Table{} // the screen's table is new: all of it goes again
+		switch {
+		case len(tabs) == 0:
+			// The first size starts the first shell.
+			cols, rows = nc, nr
+			if t := open(); t != nil {
+				tabs = append(tabs, t)
+				show(0)
+			}
+		case nc != cols || nr != rows || cw != sentW || ch != sentH:
+			cols, rows = nc, nr
+			for _, t := range tabs {
+				if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
+					log.Printf("app: %v", err)
+				}
+			}
+			tell()
+			post() // the reflowed screen, without waiting for output
+		default:
+			post()
+		}
+		sentW, sentH = cw, ch
+	}
+	// settings tells the page every setting's value, for its settings
+	// sheet.
+	settings := func() { a.state(map[string]any{"settings": a.cfg.Values(), "bell": a.cfg.Bell}) }
+
 	// fit makes the window, the grid and the shells fit the place the page
 	// last reported (want).
 	var want Command
@@ -246,40 +288,15 @@ func (a *App) Run() error {
 				return nil
 			}
 			scr = s
-			// The font size is in points: real ones, by the display's
-			// dots per inch.
-			sheet, err = cells.NewSheet(a.fonts, a.cfg.FontPt*float64(scr.DPI())/72)
-			if err != nil {
+			if err := font(); err != nil {
 				return err
 			}
-			cw, ch = sheet.CellSize()
+			settings()
 		} else if err := scr.Resize(w, h); err != nil {
 			log.Printf("app: %v", err)
 			return nil
 		}
-		nc, nr := sheet.Grid(w, h)
-		scr.Grid(nc, nr, cw, ch, bg.R, bg.G, bg.B)
-		table = cells.Table{} // the screen's table is new: all of it goes again
-		switch {
-		case len(tabs) == 0:
-			// The first size starts the first shell.
-			cols, rows = nc, nr
-			if t := open(); t != nil {
-				tabs = append(tabs, t)
-				show(0)
-			}
-		case nc != cols || nr != rows:
-			cols, rows = nc, nr
-			for _, t := range tabs {
-				if err := t.sess.Resize(cols, rows, cw, ch); err != nil {
-					log.Printf("app: %v", err)
-				}
-			}
-			tell()
-			post() // the reflowed screen, without waiting for output
-		default:
-			post()
-		}
+		grid()
 		return nil
 	}
 
@@ -335,7 +352,15 @@ func (a *App) Run() error {
 					_ = sess.Paste([]byte(text))
 				}
 			case "selectword":
-				if found, _ := sess.SelectWordAt(num(c.Args["x"]), num(c.Args["y"])); !found {
+				// A press and hold selects the word under the finger; on
+				// text that is already selected it keeps the selection, so
+				// that the menu it opens can copy it (after Select all, for
+				// one).
+				x, y := num(c.Args["x"]), num(c.Args["y"])
+				if sess.Selected(x, y) {
+					break
+				}
+				if found, _ := sess.SelectWordAt(x, y); !found {
 					sess.ClearSelection()
 				}
 			case "select":
@@ -344,6 +369,46 @@ func (a *App) Run() error {
 				_ = sess.SelectAll()
 			case "unselect":
 				sess.ClearSelection()
+			case "set":
+				// One setting changed on the settings sheet. It is written
+				// to the file at once. The text size, the colours and the
+				// cursor's shape apply to what is on screen; the rest to
+				// tabs opened from now on.
+				name, _ := c.Args["name"].(string)
+				value, _ := c.Args["value"].(string)
+				before := a.cfg
+				if err := a.cfg.Set(name, value); err != nil {
+					a.notice(err.Error())
+				} else if err := a.save(a.cfg); err != nil {
+					log.Printf("app: %v", err)
+					a.notice("The settings could not be saved: " + err.Error())
+				}
+				redraw := false
+				if a.cfg.FontPt != before.FontPt {
+					if err := font(); err != nil {
+						return err
+					}
+					redraw = true
+				}
+				if theme := a.cfg.SessionTheme(); !reflect.DeepEqual(theme, before.SessionTheme()) {
+					bg = theme.Background
+					for _, t := range tabs {
+						t.sess.SetTheme(theme)
+					}
+					redraw = true
+				}
+				if a.cfg.Cursor != before.Cursor {
+					for _, t := range tabs {
+						t.sess.SetCursor(a.cfg.SessionCursor())
+					}
+					redraw = true
+				}
+				if redraw {
+					grid()
+				}
+				// Also after a refused value, so that the sheet shows
+				// what is in force.
+				settings()
 			case "copy":
 				// The selection goes back to the page, which owns the
 				// clipboard.
@@ -405,11 +470,15 @@ func (a *App) Run() error {
 					n.t.title = n.ev.Text
 					tell()
 				case session.EventBell:
-					// With the tab, so that the page can mark a tab that
-					// is not shown instead of beeping for it.
+					// A tab that is not shown is marked in the list of
+					// tabs until it is looked at.
 					for i, t := range tabs {
 						if t == n.t {
 							a.event(map[string]any{"bell": true, "tab": i, "shown": i == cur})
+							if i != cur {
+								t.rang = true
+								tell()
+							}
 						}
 					}
 				}

@@ -44,6 +44,10 @@ func (h *handler) Vt(action vt.StreamActionKey, value *vt.StreamAction) error {
 		h.answer(replies.Query{Kind: replies.XTVersion})
 	case vt.StreamActionKeyEnquiry:
 		h.answer(replies.Query{Kind: replies.Enquiry})
+	case vt.StreamActionKeyCursorStyle:
+		// A program asking for the default shape gets the user's again.
+		h.s.cursorChosen = value.CursorStyle != vt.CursorStyleReqDefault
+		return h.ro.Vt(action, value)
 	case vt.StreamActionKeyDeviceStatus:
 		switch value.DeviceStatus.Request {
 		case devicestatus.RequestOperatingStatus:

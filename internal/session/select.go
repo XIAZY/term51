@@ -58,6 +58,18 @@ func (s *Session) SelectWordAt(x, y int) (bool, error) {
 	return err == nil, err
 }
 
+// Selected reports whether a cell of the view is part of the selection.
+func (s *Session) Selected(x, y int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return false
+	}
+	scr := s.term.Screens.Active
+	p, ok := s.pin(x, y)
+	return ok && scr.Selection.Valid && scr.Selection.Value.Contains(scr, p)
+}
+
 // SelectAll selects everything, the scrollback included.
 func (s *Session) SelectAll() error {
 	s.mu.Lock()

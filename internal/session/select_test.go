@@ -45,6 +45,9 @@ func TestSelection(t *testing.T) {
 	if text, _, _ := s.SelectionText(); text != "brave" {
 		t.Errorf("word: %q", text)
 	}
+	if !s.Selected(6, 0) || !s.Selected(10, 0) || s.Selected(5, 0) || s.Selected(11, 0) || s.Selected(6, 1) {
+		t.Error("Selected does not agree with the selected word, cells 6 to 10 of row 0")
+	}
 	if found, _ := s.SelectWordAt(30, 5); found {
 		t.Error("a word was found on an empty cell")
 	}

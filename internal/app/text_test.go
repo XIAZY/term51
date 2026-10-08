@@ -528,6 +528,68 @@ func TestCopyIsCapped(t *testing.T) {
 	a.Quit()
 }
 
+// Stretching a selection, end to end: the word a hold selected is stretched
+// by a drag, the page is told that there is a selection, Copy takes it and
+// leaves it shown as a finished one, and the next touch clears it. Held at
+// the top edge, the screen scrolls and the selection runs into the
+// scrollback. Select Line takes the whole line.
+func TestStretchSelection(t *testing.T) {
+	a, p, done := startApp(t)
+	clipboard := func() string {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return p.clipboard
+	}
+	typeLine(a, "clear; for i in $(seq 1 30); do echo line-$i end; done")
+	wait(t, "the output", func() bool { return strings.Contains(p.screen(), "line-30 end") })
+	// The view is 8 rows: lines 24 to 30 and the prompt. "line-30" is in row 6.
+	if p.get("selected") != nil && p.get("selected") != "" {
+		t.Fatalf("selected at the start: %v", p.get("selected"))
+	}
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 2.0, "y": 6.0}})
+	wait(t, "the page told of the selection", func() bool { return p.get("selected") == "open" })
+
+	// A finger down to the right of the word, dragged to the end of the row.
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "down", "x": 9.5, "y": 6.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "move", "x": 10.5, "y": 6.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "up", "x": 10.5, "y": 6.5}})
+	a.Send(Command{Name: "copy"})
+	wait(t, "the stretched selection copied", func() bool { return clipboard() == "line-30 end" })
+	wait(t, "the selection finished but shown", func() bool { return p.get("selected") == "done" })
+	a.Send(Command{Name: "unselect"})
+	wait(t, "the selection gone", func() bool { return p.get("selected") == "" })
+
+	// Select Line from a word.
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 9.0, "y": 5.0}}) // "end" of line-29
+	a.Send(Command{Name: "selectline"})
+	a.Send(Command{Name: "copy"})
+	wait(t, "the line copied", func() bool { return clipboard() == "line-29 end" })
+	a.Send(Command{Name: "unselect"})
+
+	// The start of a word dragged up to the top edge and held there: the
+	// screen scrolls back by itself and the selection grows with it.
+	a.Send(Command{Name: "selectword", Args: map[string]any{"x": 2.0, "y": 6.0}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "down", "x": 0.5, "y": 5.5}})
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "move", "x": 0.5, "y": 0.2}})
+	wait(t, "the screen scrolled back", func() bool { return strings.Contains(p.screen(), "line-15 end") })
+	a.Send(Command{Name: "stretch", Args: map[string]any{"phase": "up", "x": 0.5, "y": 0.2}})
+	a.Send(Command{Name: "copy"})
+	wait(t, "the selection into the scrollback copied", func() bool {
+		c := clipboard()
+		return strings.Contains(c, "line-15 end\nline-16 end") && strings.HasSuffix(c, "line-29 end\nline-30")
+	})
+	// And it no longer scrolls once the finger has lifted.
+	before := p.screen()
+	time.Sleep(300 * time.Millisecond)
+	if p.screen() != before {
+		t.Error("the screen went on scrolling after the finger lifted")
+	}
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
 // The arrow pad: after a press and hold, the finger past the threshold sends
 // that arrow key once at once, repeats it while it stays out there, and
 // stops when it lifts. The page is told of each key.

@@ -70,6 +70,114 @@ func (s *Session) Selected(x, y int) bool {
 	return ok && scr.Selection.Valid && scr.Selection.Value.Contains(scr, p)
 }
 
+// HasSelection reports whether anything is selected. A selection goes away
+// by itself when its text does (the screen is cleared, the text leaves the
+// scrollback).
+func (s *Session) HasSelection() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return !s.closed && s.term.Screens.Active.Selection.Valid
+}
+
+// order is a pin's place in the text, for comparing two pins: its row
+// counted from the top of the scrollback, and its column.
+func (s *Session) order(scr *vt.Screen, p vt.Pin) (row int64, col int64) {
+	pt := scr.Pages.PointFromPin(vt.PointTagScreen, p)
+	return int64(pt.Value.Screen.Y), int64(pt.Value.Screen.X)
+}
+
+// StretchStart begins stretching the selection by a finger that has come
+// down on the cell x, y of the view. The end of the selection nearer to that
+// cell is the one the finger will move; the other end stays where it is in
+// the text (the anchor), however the screen scrolls meanwhile. It reports
+// false when nothing is selected or the cell is outside the view.
+func (s *Session) StretchStart(x, y int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stretchEnd()
+	if s.closed {
+		return false
+	}
+	scr := s.term.Screens.Active
+	at, ok := s.pin(x, y)
+	if !ok || !scr.Selection.Valid {
+		return false
+	}
+	// How far a pin is from the finger, in cells along the text.
+	cols := int64(s.term.Cols)
+	ar, ac := s.order(scr, at)
+	far := func(p vt.Pin) int64 {
+		r, c := s.order(scr, p)
+		d := (r-ar)*cols + (c - ac)
+		if d < 0 {
+			return -d
+		}
+		return d
+	}
+	start, end := scr.Selection.Value.Start(), scr.Selection.Value.End()
+	anchor := start
+	if far(start) < far(end) {
+		anchor = end
+	}
+	tracked, err := scr.Pages.TrackPin(anchor)
+	if err != nil {
+		return false
+	}
+	s.anchor, s.anchorScreen = tracked, scr
+	return true
+}
+
+// StretchTo makes the selection run from the anchor to the cell x, y of the
+// view, both included. Outside a stretch, or for a cell outside the view,
+// it does nothing.
+func (s *Session) StretchTo(x, y int) {
+	s.mu.Lock()
+	if !s.closed && s.anchor != nil && s.anchorScreen == s.term.Screens.Active {
+		if at, ok := s.pin(x, y); ok {
+			_ = s.anchorScreen.Select(vt.Some(vt.NewSelection(*s.anchor, at, false)))
+		}
+	}
+	s.mu.Unlock()
+	s.signal()
+}
+
+// StretchEnd ends the stretch: the selection stays as it is.
+func (s *Session) StretchEnd() {
+	s.mu.Lock()
+	s.stretchEnd()
+	s.mu.Unlock()
+}
+
+// stretchEnd lets go of the anchor. The caller holds mu.
+func (s *Session) stretchEnd() {
+	if s.anchor != nil && !s.closed {
+		s.anchorScreen.Pages.UntrackPin(s.anchor)
+	}
+	s.anchor, s.anchorScreen = nil, nil
+}
+
+// SelectLine widens the selection to the whole line its start is in: a line
+// as it was written, so a long command that was wrapped onto several rows
+// is one line. It reports whether there was a selection to widen.
+func (s *Session) SelectLine() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return false
+	}
+	scr := s.term.Screens.Active
+	if !scr.Selection.Valid {
+		return false
+	}
+	line := scr.SelectLine(vt.ScreenSelectLine{Pin: scr.Selection.Value.Start(), Whitespace: vt.Some([]uint32{0, ' ', '\t'})})
+	if !line.Valid {
+		return false
+	}
+	_ = scr.Select(line)
+	s.signal()
+	return true
+}
+
 // SelectAll selects everything, the scrollback included.
 func (s *Session) SelectAll() error {
 	s.mu.Lock()

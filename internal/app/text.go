@@ -14,6 +14,7 @@ import (
 	"term51/internal/cells"
 	"term51/internal/keys"
 	"term51/internal/session"
+	"term51/internal/stretch"
 )
 
 // copyLimit is the most text Copy hands to the page: the text travels as
@@ -36,8 +37,11 @@ type tab struct {
 	sess  *session.Session
 	tr    keys.Translator
 	title string
-	rang  bool          // its bell rang while another tab was shown
-	stop  chan struct{} // closed when the tab is closed
+	rang  bool // its bell rang while another tab was shown
+	// copied: its selection has been copied. Such a selection is finished:
+	// it stays shown until the next touch, and is not stretched any more.
+	copied bool
+	stop   chan struct{} // closed when the tab is closed
 }
 
 // news is something a tab's session reported.
@@ -138,6 +142,7 @@ func (a *App) Run() error {
 		}
 	}
 	var lastPost time.Time
+	toldSel := "" // what the page was last told about the selection
 	post := func() {
 		lastPost = time.Now()
 		if cur < 0 {
@@ -145,6 +150,22 @@ func (a *App) Run() error {
 		}
 		if err := tabs[cur].sess.Snapshot(&rs); err != nil {
 			return
+		}
+		// The page is told with every frame whether there is a selection,
+		// and whether it is still open to being stretched: a selection can
+		// go away by itself, with its text.
+		sel := ""
+		if tabs[cur].sess.HasSelection() {
+			sel = "open"
+			if tabs[cur].copied {
+				sel = "done"
+			}
+		} else {
+			tabs[cur].copied = false
+		}
+		if sel != toldSel {
+			toldSel = sel
+			a.state(map[string]any{"selected": sel})
 		}
 		// Update draws the characters it meets for the first time into
 		// the sheet, so the sheet's new part is taken after it.
@@ -326,6 +347,29 @@ func (a *App) Run() error {
 		}
 	}
 
+	// scrollEdge asks the edge-scrolling rule what the stretching finger's
+	// place means now: rows to scroll, after which the selection runs to the
+	// cell that is under the finger then, and when to ask again if the
+	// finger stays where it is.
+	var edge stretch.Edge
+	var stretching bool
+	var stretchX, stretchY float64
+	var stretchDue <-chan time.Time
+	scrollEdge := func() {
+		stretchDue = nil
+		if cur < 0 || !stretching {
+			return
+		}
+		n, again := edge.Update(stretchY, rows, time.Now())
+		if n != 0 {
+			tabs[cur].sess.ScrollViewport(n)
+			tabs[cur].sess.StretchTo(int(stretchX), int(stretchY))
+		}
+		if again > 0 {
+			stretchDue = time.After(again)
+		}
+	}
+
 	var pending <-chan time.Time // set while an update is due
 	var quiet <-chan time.Time   // set while a new size waits to be used
 	for {
@@ -400,15 +444,46 @@ func (a *App) Run() error {
 				if sess.Selected(x, y) {
 					break
 				}
+				tabs[cur].copied = false
 				if found, _ := sess.SelectWordAt(x, y); !found {
 					sess.ClearSelection()
 				}
 			case "select":
+				tabs[cur].copied = false
 				_ = sess.Select(num(c.Args["x0"]), num(c.Args["y0"]), num(c.Args["x1"]), num(c.Args["y1"]))
 			case "selectall":
+				tabs[cur].copied = false
 				_ = sess.SelectAll()
+			case "selectline":
+				// The selection widened to its whole line, a wrapped
+				// command being one line.
+				tabs[cur].copied = false
+				sess.SelectLine()
 			case "unselect":
 				sess.ClearSelection()
+			case "stretch":
+				// A finger is stretching the selection: it came down on a
+				// cell ("down": the nearer end of the selection is the one
+				// it moves), is now over another ("move"), or has lifted
+				// ("up"). x and y are in cells and may lie between two.
+				// Near the top or bottom edge the screen scrolls by itself
+				// (internal/stretch).
+				stretchX, _ = c.Args["x"].(float64)
+				stretchY, _ = c.Args["y"].(float64)
+				switch phase, _ := c.Args["phase"].(string); phase {
+				case "down":
+					edge, stretchDue = stretch.Edge{}, nil
+					stretching = sess.StretchStart(int(stretchX), int(stretchY))
+					tabs[cur].copied = false
+				case "move":
+					if stretching {
+						sess.StretchTo(int(stretchX), int(stretchY))
+						scrollEdge()
+					}
+				case "up":
+					sess.StretchEnd()
+					stretching, stretchDue = false, nil
+				}
 			case "set":
 				// One setting changed on the settings sheet. It is written
 				// to the file at once. The text size, the colours and the
@@ -467,7 +542,10 @@ func (a *App) Run() error {
 					a.notice("The selection is very long: its last 512 KB were copied")
 				}
 				a.event(msg)
-				sess.ClearSelection()
+				// The selection stays shown, as a finished one: the page
+				// clears it at the next touch.
+				tabs[cur].copied = true
+				post()
 			case "scroll":
 				sess.ScrollViewport(num(c.Args["rows"]))
 			case "newtab":
@@ -549,6 +627,8 @@ func (a *App) Run() error {
 			}
 		case <-padDue:
 			arrows()
+		case <-stretchDue:
+			scrollEdge()
 		case <-pending:
 			pending = nil
 			post()

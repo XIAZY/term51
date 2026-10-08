@@ -195,7 +195,12 @@ type Session struct {
 	exitErr      error         // set before done is closed
 	cursor       CursorShape   // the user's shape
 	cursorChosen bool          // a program asked for a shape (DECSCUSR)
-	closeOnce    sync.Once
+	// While the selection is being stretched: the end that stays, tied to
+	// its text, and the screen it is on.
+	anchor       *vt.Pin
+	anchorScreen *vt.Screen
+
+	closeOnce sync.Once
 }
 
 // Start starts the shell and the reader.

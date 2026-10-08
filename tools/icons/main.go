@@ -1,6 +1,6 @@
 // Command icons draws the pictures the system has none for into
-// assets/images: the menu icons (close tab, paste, copy, select all, cancel,
-// settings), the signs of the three keys on the system's bar (Esc, Ctrl,
+// assets/images: the menu icons (close tab, paste, copy, select line, select
+// all, cancel, settings), the signs of the three keys on the system's bar (Esc, Ctrl,
 // Tab) and the arrow pad's four arrows, as thin white line drawings on
 // a clear background, 81 by 81 pixels, the size BlackBerry 10 uses for
 // action icons and after the look of the icons in its browser; and the arrow
@@ -223,6 +223,13 @@ func main() {
 				i.box(10, at, 71, at+line, false)
 			}
 			i.box(29, 29, 52, 52, true)
+		},
+		// A line of text marked from end to end: a filled bar with a
+		// thin line above and below it.
+		"selectline": func(i *icon) {
+			i.box(10, 20, 71, 20+line, true)
+			i.box(10, 32, 71, 49, true)
+			i.box(10, 57, 71, 57+line, true)
 		},
 		// A ring with a stroke through it.
 		"cancel": func(i *icon) {

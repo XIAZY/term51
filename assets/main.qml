@@ -78,6 +78,10 @@ TabbedPane {
             property string termBackground: "#101418" // the theme's, around the terminal
             property bool bell: true         // a program's bell makes a sound
             property bool covered: false     // the settings sheet is over the terminal
+            // What Go says of the selection with every frame: "" for none,
+            // "open" for one that a drag may still stretch, "done" for one
+            // that has been copied and only stays shown until the next touch.
+            property string selected: ""
             property real padThreshold: 64   // the arrow pad's two numbers, from Go:
             property real padAxisRule: 1.5   // see internal/arrowpad
             property real cellW: 0           // a cell in pixels, from Go
@@ -116,6 +120,7 @@ TabbedPane {
                     if (s.ctrl !== undefined) page.ctrl = s.ctrl
                     if (s.alt !== undefined) page.alt = s.alt
                     if (s.cw !== undefined) page.cellW = s.cw
+                    if (s.selected !== undefined) page.selected = s.selected
                     if (s.padThreshold !== undefined) page.padThreshold = s.padThreshold
                     if (s.padAxis !== undefined) page.padAxisRule = s.padAxis
                     if (s.ch !== undefined) page.cellH = s.ch
@@ -301,6 +306,20 @@ TabbedPane {
                         property string padSent: ""     // the arrow whose key has gone out
                         property bool menuDue: false    // the next context menu is ours to show
 
+                        // Stretching the selection. While there is one that
+                        // has not been copied, a drag does not scroll: the
+                        // finger moves the selection's nearer end, and Go is
+                        // told the cell it came down on and each cell it is
+                        // over (internal/session, internal/stretch for the
+                        // scrolling at the edges). When it lifts, the menu
+                        // opens again. A copied selection is dropped by the
+                        // first drag, which then scrolls as usual.
+                        property bool stretching: false
+                        property bool dropped: false    // this drag has dropped a copied selection
+                        function stretch(phase, x, y) {
+                            page.send("stretch", { phase: phase, x: x / page.cellW, y: y / page.cellH })
+                        }
+
                         function padMove(dx, dy) {
                             var ax = Math.abs(dx), ay = Math.abs(dy)
                             var horizontal = ax >= ay
@@ -326,7 +345,15 @@ TabbedPane {
                             }
                         }
                         gestureHandlers: TapHandler {
-                            onTapped: input.requestFocus()
+                            // A tap brings the on-screen rows up; but while
+                            // something is selected it only drops the
+                            // selection, and leaves the rows as they are.
+                            onTapped: {
+                                if (page.selected != "")
+                                    page.send("unselect")
+                                else
+                                    input.requestFocus()
+                            }
                         }
                         contextMenuHandler: ContextMenuHandler {
                             // The system tells of a press and hold by being
@@ -342,6 +369,8 @@ TabbedPane {
                                     return
                                 }
                                 event.abort()
+                                if (fwc.stretching)
+                                    return // a finger resting while it stretches
                                 fwc.padDir = ""
                                 fwc.padFill = 0
                                 fwc.padAxis = ""
@@ -359,6 +388,11 @@ TabbedPane {
                                 title: "Copy"
                                 imageSource: "asset:///images/copy.png"
                                 onTriggered: page.send("copy")
+                            }
+                            ActionItem {
+                                title: "Select Line"
+                                imageSource: "asset:///images/selectline.png"
+                                onTriggered: page.send("selectline")
                             }
                             ActionItem {
                                 title: "Select All"
@@ -384,9 +418,31 @@ TabbedPane {
                                 fwc.touchX = event.localX
                                 fwc.downY = event.localY
                                 fwc.touchY = event.localY
+                                fwc.dropped = false
                             } else if (event.isMove() && fwc.padOn) {
                                 fwc.padMove(event.localX - fwc.touchX, event.localY - fwc.downY)
+                            } else if (event.isMove() && page.cellH > 0 && (fwc.stretching || page.selected == "open")) {
+                                // A finger that has hardly moved may still
+                                // become a press and hold.
+                                if (!fwc.stretching && Math.abs(event.localX - fwc.touchX) <= 12 && Math.abs(event.localY - fwc.downY) <= 12)
+                                    return
+                                if (!fwc.stretching) {
+                                    fwc.stretching = true
+                                    fwc.stretch("down", fwc.touchX, fwc.downY)
+                                }
+                                fwc.stretch("move", event.localX, event.localY)
+                            } else if ((event.isUp() || event.isCancel()) && fwc.stretching) {
+                                fwc.stretching = false
+                                fwc.stretch("up", event.localX, event.localY)
+                                if (event.isUp()) {
+                                    fwc.menuDue = true
+                                    fwc.showContextMenu()
+                                }
                             } else if (event.isMove() && page.cellH > 0) {
+                                if (page.selected == "done" && !fwc.dropped) {
+                                    fwc.dropped = true
+                                    page.send("unselect")
+                                }
                                 var d = Math.floor((event.localY - fwc.touchY) / page.cellH)
                                 if (d != 0) {
                                     page.send("scroll", { rows: -d })

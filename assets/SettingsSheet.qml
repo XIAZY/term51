@@ -26,20 +26,8 @@ Sheet {
         cursor.selectedIndex = { "block": 0, "bar": 1, "underline": 2 }[v["cursor"]]
         bell.checked = v["bell"] == "true"
         shell.text = v["shell"]
-        term.text = v["term"]
+        term.selectedIndex = { "xterm-256color": 0, "xterm": 1, "vt220": 2, "vt100": 3, "ansi": 4, "qansi": 5 }[v["term"]]
         scrollback.text = "" + (parseInt(v["scrollbackBytes"]) / 1048576)
-        termModel.selectedIndex = { "vt220": 0, "vt100": 1, "xterm": 2 }[v["identity.terminal"]]
-        idName.text = v["identity.name"]
-        idVersion.text = v["identity.version"]
-        versionNumber.text = v["identity.versionNumber"]
-        answerback.text = v["identity.answerback"]
-        deviceAttributes.checked = v["identity.deviceAttributes"] == "true"
-        statusReports.checked = v["identity.statusReports"] == "true"
-        colorScheme.checked = v["identity.colorScheme"] == "true"
-        modeQueries.checked = v["identity.modeQueries"] == "true"
-        colorQueries.checked = v["identity.colorQueries"] == "true"
-        sizeReports.checked = v["identity.sizeReports"] == "true"
-        kittyKeyboard.checked = v["identity.kittyKeyboard"] == "true"
         filling = false
     }
 
@@ -141,10 +129,19 @@ Sheet {
                     title: "Program"
                     onEdited: sheet.set("shell", text)
                 }
-                SettingText {
+                DropDown {
+                    // The values the app accepts (settings.Terms in Go). The
+                    // first two the phone's own programs do not all know;
+                    // they are for programs on other machines, over ssh.
                     id: term
-                    title: "Terminal type (TERM)"
-                    onEdited: sheet.set("term", text)
+                    title: "Terminal type"
+                    Option { text: "xterm-256color"; description: "For other machines, over ssh"; value: "xterm-256color" }
+                    Option { text: "xterm"; value: "xterm" }
+                    Option { text: "vt220"; description: "For other machines, over ssh"; value: "vt220" }
+                    Option { text: "vt100"; value: "vt100" }
+                    Option { text: "ansi"; value: "ansi" }
+                    Option { text: "qansi"; description: "QNX's own"; value: "qansi" }
+                    onSelectedValueChanged: sheet.set("term", selectedValue)
                 }
                 SettingText {
                     id: scrollback
@@ -153,71 +150,6 @@ Sheet {
                         var mb = parseFloat(text)
                         sheet.set("scrollbackBytes", isNaN(mb) ? text : Math.round(mb * 1048576))
                     }
-                }
-
-                Header { title: "What the terminal tells programs"; subtitle: "For tabs opened from now on" }
-                DropDown {
-                    id: termModel
-                    title: "Terminal model"
-                    Option { text: "VT220"; value: "vt220" }
-                    Option { text: "VT100"; value: "vt100" }
-                    Option { text: "xterm"; value: "xterm" }
-                    onSelectedValueChanged: sheet.set("identity.terminal", selectedValue)
-                }
-                SettingText {
-                    id: idName
-                    title: "Name"
-                    onEdited: sheet.set("identity.name", text)
-                }
-                SettingText {
-                    id: idVersion
-                    title: "Version"
-                    onEdited: sheet.set("identity.version", text)
-                }
-                SettingText {
-                    id: versionNumber
-                    title: "Firmware version number"
-                    onEdited: sheet.set("identity.versionNumber", text)
-                }
-                SettingText {
-                    id: answerback
-                    title: "Answerback (sent for Ctrl-E; empty sends nothing)"
-                    onEdited: sheet.set("identity.answerback", text)
-                }
-                SettingToggle {
-                    id: deviceAttributes
-                    text: "Answer \"what are you\" and the name and version query"
-                    onFlipped: sheet.set("identity.deviceAttributes", on)
-                }
-                SettingToggle {
-                    id: statusReports
-                    text: "Answer status and cursor position queries"
-                    onFlipped: sheet.set("identity.statusReports", on)
-                }
-                SettingToggle {
-                    id: colorScheme
-                    text: "Answer the dark-or-light query"
-                    onFlipped: sheet.set("identity.colorScheme", on)
-                }
-                SettingToggle {
-                    id: modeQueries
-                    text: "Answer queries about terminal modes"
-                    onFlipped: sheet.set("identity.modeQueries", on)
-                }
-                SettingToggle {
-                    id: colorQueries
-                    text: "Answer queries about colours"
-                    onFlipped: sheet.set("identity.colorQueries", on)
-                }
-                SettingToggle {
-                    id: sizeReports
-                    text: "Answer queries about the size of the terminal"
-                    onFlipped: sheet.set("identity.sizeReports", on)
-                }
-                SettingToggle {
-                    id: kittyKeyboard
-                    text: "Answer the keyboard protocol query"
-                    onFlipped: sheet.set("identity.kittyKeyboard", on)
                 }
 
                 Header { title: "In the settings file only" }

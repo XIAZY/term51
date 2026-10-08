@@ -8,7 +8,7 @@
 //	shell = /bin/sh
 //	arg = -l
 //	theme.background = #101418
-//	identity.terminal = xterm
+//	term = xterm
 //
 // One setting per line, `name = value`. A line starting with # is a comment.
 // `arg` and `theme.palette` may be given several times, one value each. A
@@ -30,6 +30,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -59,8 +60,7 @@ type Settings struct {
 	// Bell makes a sound when a program rings the bell.
 	Bell bool
 
-	Theme    Theme
-	Identity Identity
+	Theme Theme
 }
 
 var cursors = map[string]session.CursorShape{
@@ -68,6 +68,12 @@ var cursors = map[string]session.CursorShape{
 	"bar":       session.CursorBar,
 	"underline": session.CursorUnderline,
 }
+
+// Terms are the terminal types the shell can be given as TERM, the default
+// first. xterm-256color and vt220 are for programs on other machines, over
+// ssh; the phone's own terminal database has xterm, vt100, ansi and qansi
+// (QNX's own), and neither of the first two.
+var Terms = []string{session.DefaultTerm, "xterm", "vt220", "vt100", "ansi", "qansi"}
 
 // Themes are the colour sets the settings sheet offers, by name. A theme
 // is not a setting of its own: choosing one fills the four colour settings,
@@ -116,53 +122,11 @@ type Theme struct {
 	Palette []string
 }
 
-// Identity is what the terminal tells programs about itself, and which of
-// their questions it answers at all.
-type Identity struct {
-	// Terminal is the model answered to "what are you": "vt220", "vt100"
-	// or "xterm".
-	Terminal string
-	// Name and Version are reported to the "what is your name and version"
-	// query (XTVERSION).
-	Name    string
-	Version string
-	// VersionNumber is the firmware version in the secondary device
-	// attributes answer.
-	VersionNumber int
-	// Answerback is sent for ENQ (Ctrl-E); empty sends nothing.
-	Answerback string
-
-	// Which kinds of question are answered.
-	DeviceAttributes bool
-	StatusReports    bool
-	ColorScheme      bool
-	ModeQueries      bool
-	ColorQueries     bool
-	SizeReports      bool
-	KittyKeyboard    bool
-}
-
-var terminals = map[string]replies.Identity{
-	"vt220": replies.VT220,
-	"vt100": replies.VT100,
-	"xterm": replies.XTerm,
-}
-
-func terminalName(id replies.Identity) string {
-	for name, v := range terminals {
-		if v == id {
-			return name
-		}
-	}
-	return "vt220"
-}
-
 func hex(c session.RGB) string { return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B) }
 
 // Default is the settings of a fresh install. It suits the Passport: a
 // 1440 pixel wide screen at about 450 pixels per inch.
 func Default() Settings {
-	r := replies.DefaultConfig()
 	t := session.DefaultTheme
 	return Settings{
 		FontPt:          7,
@@ -176,20 +140,6 @@ func Default() Settings {
 			Foreground: hex(t.Foreground),
 			Background: hex(t.Background),
 			Palette:    []string{},
-		},
-		Identity: Identity{
-			Terminal:         terminalName(r.Identity),
-			Name:             r.Name,
-			Version:          r.Version,
-			VersionNumber:    r.VersionNumber,
-			Answerback:       r.Answerback,
-			DeviceAttributes: r.DeviceAttributes,
-			StatusReports:    r.StatusReports,
-			ColorScheme:      r.ColorScheme,
-			ModeQueries:      r.ModeQueries,
-			ColorQueries:     r.ColorQueries,
-			SizeReports:      r.SizeReports,
-			KittyKeyboard:    r.KittyKeyboard,
 		},
 	}
 }
@@ -237,8 +187,8 @@ func (s Settings) Validate() error {
 	if s.Shell == "" {
 		return bad("shell", "empty")
 	}
-	if s.Term == "" {
-		return bad("term", "empty")
+	if !slices.Contains(Terms, s.Term) {
+		return bad("term", "%q is not one of %s", s.Term, strings.Join(Terms, ", "))
 	}
 	if s.ScrollbackBytes > MaxScrollbackBytes {
 		return bad("scrollbackBytes", "%d is more than %d", s.ScrollbackBytes, MaxScrollbackBytes)
@@ -265,14 +215,6 @@ func (s Settings) Validate() error {
 		if _, err := parseColor(c); err != nil {
 			return bad(fmt.Sprintf("theme.palette[%d]", i), "%v", err)
 		}
-	}
-
-	id := s.Identity
-	if _, ok := terminals[id.Terminal]; !ok {
-		return bad("identity.terminal", "%q is not one of vt220, vt100, xterm", id.Terminal)
-	}
-	if id.VersionNumber < 0 {
-		return bad("identity.versionNumber", "%d is negative", id.VersionNumber)
 	}
 	return nil
 }
@@ -329,7 +271,7 @@ var fields = []field{
 	{"arg", "An argument for the shell; one line per argument.",
 		func(s *Settings, v string) error { s.Args = append(s.Args, v); return nil },
 		func(s *Settings) []string { return s.Args }},
-	textField("term", "The TERM the shell is given.", func(s *Settings) *string { return &s.Term }),
+	textField("term", "The terminal type (TERM) the shell is given: "+strings.Join(Terms, ", ")+".", func(s *Settings) *string { return &s.Term }),
 	{"scrollbackBytes", "The scrollback limit in bytes.",
 		func(s *Settings, v string) error {
 			n, err := strconv.ParseUint(v, 10, 64)
@@ -349,37 +291,6 @@ var fields = []field{
 	{"theme.palette", "The first colours of the 256-colour palette (the 16 ANSI colours, usually); one line per colour, in order.",
 		func(s *Settings, v string) error { s.Theme.Palette = append(s.Theme.Palette, v); return nil },
 		func(s *Settings) []string { return s.Theme.Palette }},
-
-	textField("identity.terminal", "The model answered to \"what are you\": vt220, vt100 or xterm.",
-		func(s *Settings) *string { return &s.Identity.Terminal }),
-	textField("identity.name", "The name reported to the name-and-version query.", func(s *Settings) *string { return &s.Identity.Name }),
-	textField("identity.version", "The version reported with it.", func(s *Settings) *string { return &s.Identity.Version }),
-	{"identity.versionNumber", "The firmware version in the secondary device attributes answer.",
-		func(s *Settings, v string) error {
-			n, err := strconv.Atoi(v)
-			if err != nil {
-				return fmt.Errorf("%q is not a whole number", v)
-			}
-			s.Identity.VersionNumber = n
-			return nil
-		},
-		func(s *Settings) []string { return []string{strconv.Itoa(s.Identity.VersionNumber)} }},
-	textField("identity.answerback", "Sent when a program sends ENQ (Ctrl-E); empty sends nothing.",
-		func(s *Settings) *string { return &s.Identity.Answerback }),
-	boolField("identity.deviceAttributes", "Answer \"what are you\" and the name-and-version query.",
-		func(s *Settings) *bool { return &s.Identity.DeviceAttributes }),
-	boolField("identity.statusReports", "Answer status and cursor position queries.",
-		func(s *Settings) *bool { return &s.Identity.StatusReports }),
-	boolField("identity.colorScheme", "Answer the dark-or-light query.",
-		func(s *Settings) *bool { return &s.Identity.ColorScheme }),
-	boolField("identity.modeQueries", "Answer queries about terminal modes.",
-		func(s *Settings) *bool { return &s.Identity.ModeQueries }),
-	boolField("identity.colorQueries", "Answer queries about colours.",
-		func(s *Settings) *bool { return &s.Identity.ColorQueries }),
-	boolField("identity.sizeReports", "Answer queries about the size of the terminal.",
-		func(s *Settings) *bool { return &s.Identity.SizeReports }),
-	boolField("identity.kittyKeyboard", "Answer the keyboard protocol query.",
-		func(s *Settings) *bool { return &s.Identity.KittyKeyboard }),
 }
 
 // repeated is the settings that may be given several times.
@@ -573,25 +484,13 @@ func Save(path string, s Settings) error {
 	return nil
 }
 
-// Replies is the configuration of the answers to programs' queries.
+// Replies is the configuration of the answers to programs' queries. What
+// the terminal says about itself is not a setting: it is the replies
+// package's own, except the colour scheme, which is the one the colours make.
 func (s Settings) Replies() replies.Config {
-	id := s.Identity
-	return replies.Config{
-		Identity:         terminals[id.Terminal],
-		Name:             id.Name,
-		Version:          id.Version,
-		VersionNumber:    id.VersionNumber,
-		DeviceAttributes: id.DeviceAttributes,
-		StatusReports:    id.StatusReports,
-		ColorScheme:      id.ColorScheme,
-		ModeQueries:      id.ModeQueries,
-		ColorQueries:     id.ColorQueries,
-		SizeReports:      id.SizeReports,
-		KittyKeyboard:    id.KittyKeyboard,
-		// The colour scheme a program is told is the one the colours make.
-		Dark:       s.SessionTheme().Dark(),
-		Answerback: id.Answerback,
-	}
+	r := replies.DefaultConfig()
+	r.Dark = s.SessionTheme().Dark()
+	return r
 }
 
 // SessionTheme is the theme a session starts with.

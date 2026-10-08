@@ -129,7 +129,15 @@ The same error text is in the system log of an installed copy that fails
   action menu"). An action's icon and its title are both shown, so an icon
   that is a word reads twice. Besides actions the bar takes one text field
   (`TextInputActionItem`, since 10.3: the browser's address field) and no
-  control of an app's own.
+  control of an app's own. The field does not count among the three: the
+  phone's own text-message app shows a field and three buttons. The bar is
+  always at the bottom of the page; nothing in the public SDK moves it to
+  the top.
+- **The phone's terminal database is small** (2026-10-08): `/usr/lib/terminfo`
+  has `xterm`, `xterms`, `vt100`, `vt102`, `vt52`, `ansi` and QNX's own
+  (`qansi`, `qnx` and their variants), and neither `xterm-256color` nor
+  `vt220`. Those two are still offered as terminal types, for programs on
+  other machines over ssh, where the other machine's database counts.
 
 ## Still to look at
 

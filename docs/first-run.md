@@ -140,6 +140,23 @@ The same error text is in the system log of an installed copy that fails
   and `xterm-256color` is still offered, for programs on other machines
   over ssh, where the other machine's database counts.
 
+- **Enter brought the on-screen rows up** (2026-10-08). With nothing
+  focused, Enter on the physical keyboard gave the hidden input field the
+  focus, and a focused text field is what makes the phone show its rows; no
+  other key did that. Changed: the field's focus policy is "none" (the
+  SDK: "only focusable programmatically") and it is no target for key
+  navigation, so only the page's own `requestFocus()` on a tap focuses it.
+
+- **A changed default does not reach a phone that has a settings file**
+  (2026-10-08). The file holds every setting, written out in full at the
+  first start and at every change on the settings sheet, so the value in it
+  is the default of the build that wrote it, and a file always wins over a
+  default. Seen with the terminal type: after the default became `xterm`,
+  the owner's file still said `xterm-256color`, because switching the bell
+  off earlier had saved everything. Kept as it is for now (one phone, one
+  file); whoever changes a default next has to change the file on the phone
+  as well, or say so to its user.
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

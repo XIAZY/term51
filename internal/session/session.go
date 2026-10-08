@@ -134,8 +134,10 @@ func (t Theme) colors() vt.TerminalColors {
 	return c
 }
 
-// DefaultTerm is the TERM the shell gets when Config.Env does not set one.
-const DefaultTerm = "xterm-256color"
+// DefaultTerm is the TERM the shell gets when Config.Env does not set one:
+// xterm, which the phone's own terminal database has (it has no
+// xterm-256color).
+const DefaultTerm = "xterm"
 
 // feedChunk is how much output is fed to the terminal per hold of the lock,
 // so that drawing (Snapshot) is never locked out for long: at the phone's

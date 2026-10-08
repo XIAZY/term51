@@ -157,6 +157,15 @@ The same error text is in the system log of an installed copy that fails
   file); whoever changes a default next has to change the file on the phone
   as well, or say so to its user.
 
+- **A stopped context menu leaves the finger with the control**
+  (2026-10-08, 29a793a on the phone). The system tells a control of a press
+  and hold by being about to show its context menu
+  (`ContextMenuHandler.onPopulating`). Calling `abort()` on that event stops
+  the menu, and the finger's later moves and its lift still reach the
+  control's `onTouch`. That is how the arrow pad takes over a press and hold
+  without a timer of the app's own; the menu is then opened from code when
+  wanted (`ForeignWindowControl.showContextMenu()`).
+
 ## Still to look at
 
 1. The input field: symbols, Enter, Backspace, and that no character is

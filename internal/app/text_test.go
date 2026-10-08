@@ -25,6 +25,7 @@ type page struct {
 	state     map[string]any
 	clipboard string
 	notices   []string
+	pads      []string            // the arrow keys the app said it sent for the arrow pad
 	saved     []settings.Settings // each time the app saved the settings
 	scr       *screen
 }
@@ -45,6 +46,7 @@ func (p *page) Event(js string) {
 	var e struct {
 		Clipboard *string `json:"clipboard"`
 		Notice    *string `json:"notice"`
+		Pad       *string `json:"pad"`
 	}
 	if json.Unmarshal([]byte(js), &e) != nil {
 		return
@@ -56,6 +58,9 @@ func (p *page) Event(js string) {
 	}
 	if e.Notice != nil {
 		p.notices = append(p.notices, *e.Notice)
+	}
+	if e.Pad != nil {
+		p.pads = append(p.pads, *e.Pad)
 	}
 }
 
@@ -521,6 +526,49 @@ func TestCopyIsCapped(t *testing.T) {
 		t.Errorf("copied %d bytes (limit %d), end kept: %v, notices: %d", n, copyLimit, end, notices)
 	}
 	a.Quit()
+}
+
+// The arrow pad: after a press and hold, the finger past the threshold sends
+// that arrow key once at once, repeats it while it stays out there, and
+// stops when it lifts. The page is told of each key.
+func TestArrowPad(t *testing.T) {
+	a, p, done := startApp(t)
+	pads := func() []string {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return append([]string(nil), p.pads...)
+	}
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "echo abcdefgh"}})
+	wait(t, "the typed line", func() bool { return strings.Contains(p.screen(), "echo abcdefgh") })
+
+	// Not far enough: nothing. Then past the threshold to the left: one
+	// Left, so that an X typed now lands before the h.
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "hold"}})
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "move", "dx": -40.0, "dy": 3.0}})
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "move", "dx": -70.0, "dy": 3.0}})
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "lift"}})
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "X"}})
+	wait(t, "the X before the h", func() bool { return strings.Contains(p.screen(), "echo abcdefgXh") })
+	if got := pads(); len(got) != 1 || got[0] != "left" {
+		t.Errorf("the page was told %v, want one left", got)
+	}
+
+	// Held out there, it repeats until the finger lifts: several more
+	// Lefts, and none after the lift.
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "hold"}})
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "move", "dx": -200.0, "dy": 0.0}})
+	wait(t, "the repeats", func() bool { return len(pads()) >= 5 })
+	a.Send(Command{Name: "pad", Args: map[string]any{"phase": "lift"}})
+	time.Sleep(50 * time.Millisecond) // the loop takes the lift
+	n := len(pads())
+	time.Sleep(300 * time.Millisecond)
+	if after := len(pads()); after != n {
+		t.Errorf("%d keys were sent after the finger lifted", after-n)
+	}
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
 }
 
 // Characters typed into the page's input field arrive as "text"; the key

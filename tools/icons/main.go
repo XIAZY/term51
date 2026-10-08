@@ -1,9 +1,10 @@
-// Command icons draws the icons the system has none for (the tabs, new tab,
-// close tab, paste, copy, select all, cancel, settings) into assets/images:
-// thin white line drawings on a clear background, 81 by 81 pixels, the size
-// BlackBerry 10 uses for action icons, after the look of the icons in its
-// browser. They are drawn four times as large and scaled down, which smooths
-// the slanted and round edges.
+// Command icons draws the pictures the system has none for into
+// assets/images: the menu icons (close tab, paste, copy, select all, cancel,
+// settings) and the arrow pad's four arrows, as thin white line drawings on
+// a clear background, 81 by 81 pixels, the size BlackBerry 10 uses for
+// action icons and after the look of the icons in its browser; and the arrow
+// pad's ground. They are drawn four times as large and scaled down, which
+// smooths the slanted and round edges.
 // Run from the repository's root: go run ./tools/icons
 package main
 
@@ -12,6 +13,7 @@ import (
 	"image/color"
 	"image/png"
 	"log"
+	"math"
 	"os"
 )
 
@@ -64,6 +66,65 @@ func sheets(i *icon) {
 	i.frame(10, 24, 57, 71)
 }
 
+// arrow draws an arrow from the icon's middle outwards in the direction dx,
+// dy (one of them 0, the other 1 or -1): a shaft and a head. The arrow pad
+// shows the four of them, and colours them itself.
+func arrow(dx, dy float64) func(*icon) {
+	return func(i *icon) {
+		i.where(func(x, y float64) bool {
+			// Along the arrow (a) and across it (b), from the middle.
+			x, y = x-40.5, y-40.5
+			a, b := x*dx+y*dy, math.Abs(x*dy-y*dx)
+			shaft := a >= -26 && a <= 24 && b <= line/2.0+0.5
+			// The head: two strokes meeting at the tip.
+			d := math.Abs((26-a)-b) / math.Sqrt2
+			head := a >= 4 && a <= 26.5 && b <= 22 && d <= line/2.0+0.5
+			return shaft || head
+		})
+	}
+}
+
+// padSize is the arrow pad's side in pixels.
+const padSize = 300
+
+// pad draws the arrow pad's ground: a dark square with round corners and a
+// thin lighter rim, a little see-through, as large as the pad, with a grey
+// dot in the middle where the finger's swipe starts from.
+func pad() image.Image {
+	const radius, rim = 36.0, 2.0
+	// inside reports how much of the pixel x, y lies in the square with
+	// round corners that is inset by d.
+	inside := func(x, y int, d float64) float64 {
+		n := 0
+		for sy := 0; sy < scale; sy++ {
+			for sx := 0; sx < scale; sx++ {
+				px, py := float64(x)+(float64(sx)+0.5)/scale, float64(y)+(float64(sy)+0.5)/scale
+				// The distance to the nearest corner's centre, where the
+				// point is in a corner.
+				cx := math.Max(math.Max(d+radius-px, px-(padSize-d-radius)), 0)
+				cy := math.Max(math.Max(d+radius-py, py-(padSize-d-radius)), 0)
+				if px >= d && py >= d && px <= padSize-d && py <= padSize-d && cx*cx+cy*cy <= radius*radius {
+					n++
+				}
+			}
+		}
+		return float64(n) / (scale * scale)
+	}
+	out := image.NewNRGBA(image.Rect(0, 0, padSize, padSize))
+	for y := 0; y < padSize; y++ {
+		for x := 0; x < padSize; x++ {
+			whole, core := inside(x, y, 0), inside(x, y, rim)
+			// The rim is #5a5a5a, the ground #262626; 235 of 255 opaque.
+			grey := 0x26 + (0x5a-0x26)*(whole-core)/math.Max(whole, 1.0/255)
+			if dx, dy := float64(x)+0.5-padSize/2, float64(y)+0.5-padSize/2; dx*dx+dy*dy <= 6.5*6.5 {
+				grey = 0x80
+			}
+			out.SetNRGBA(x, y, color.NRGBA{uint8(grey), uint8(grey), uint8(grey), uint8(235 * whole)})
+		}
+	}
+	return out
+}
+
 func save(name string, img image.Image) {
 	file, err := os.Create("assets/images/" + name + ".png")
 	if err != nil {
@@ -78,9 +139,14 @@ func save(name string, img image.Image) {
 }
 
 func main() {
+	save("pad", pad())
 	draw := map[string]func(*icon){
-		"tabs": sheets,
-		"copy": sheets,
+		"arrow-left":  arrow(-1, 0),
+		"arrow-right": arrow(1, 0),
+		"arrow-up":    arrow(0, -1),
+		"arrow-down":  arrow(0, 1),
+		"tabs":        sheets,
+		"copy":        sheets,
 		// A sheet with a plus at its lower right corner: the browser's
 		// new tab icon.
 		"newtab": func(i *icon) {

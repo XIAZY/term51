@@ -78,6 +78,8 @@ TabbedPane {
             property string termBackground: "#101418" // the theme's, around the terminal
             property bool bell: true         // a program's bell makes a sound
             property bool covered: false     // the settings sheet is over the terminal
+            property real padThreshold: 64   // the arrow pad's two numbers, from Go:
+            property real padAxisRule: 1.5   // see internal/arrowpad
             property real cellW: 0           // a cell in pixels, from Go
             property real cellH: 0
 
@@ -114,6 +116,8 @@ TabbedPane {
                     if (s.ctrl !== undefined) page.ctrl = s.ctrl
                     if (s.alt !== undefined) page.alt = s.alt
                     if (s.cw !== undefined) page.cellW = s.cw
+                    if (s.padThreshold !== undefined) page.padThreshold = s.padThreshold
+                    if (s.padAxis !== undefined) page.padAxisRule = s.padAxis
                     if (s.ch !== undefined) page.cellH = s.ch
                     if (s.bell !== undefined) page.bell = s.bell
                     if (s.settings !== undefined) page.termBackground = s.settings["theme.background"]
@@ -127,6 +131,8 @@ TabbedPane {
                     }
                     if (e.bell !== undefined && page.bell)
                         bellSound.play()
+                    if (e.pad !== undefined)
+                        fwc.padSent = e.pad // an arrow key has gone out
                     if (e.notice !== undefined) {
                         toast.body = e.notice
                         toast.show()
@@ -251,16 +257,78 @@ TabbedPane {
                         property real touchX: 0 // where the finger went down,
                         property real downY: 0  // for the press and hold
                         property real touchY: 0 // the drag so far
+                        property real w: 0      // the control's size
+                        property real h: 0
+
+                        // The arrow pad. A press and hold brings it up near
+                        // the finger. From then on the finger is a joystick
+                        // whose middle is where it went down: Go is told its
+                        // offset and sends the arrow keys (internal/arrowpad);
+                        // this page only draws how far the finger is along
+                        // which arrow, by the same two numbers Go uses. A
+                        // finger that lifts without having swiped has
+                        // selected the word under it instead, and gets the
+                        // menu with Copy.
+                        property bool padOn: false
+                        property bool padSwiped: false  // the finger left the middle
+                        property real padX: 0           // the pad's corner in the control
+                        property real padY: 0
+                        property string padDir: ""      // the arrow the finger is along,
+                        property real padFill: 0        // and how far: 1 at the threshold
+                        property string padAxis: ""     // "h" or "v" once past the threshold
+                        property string padSent: ""     // the arrow whose key has gone out
+                        property bool menuDue: false    // the next context menu is ours to show
+
+                        function padMove(dx, dy) {
+                            var ax = Math.abs(dx), ay = Math.abs(dy)
+                            var horizontal = ax >= ay
+                            if (padAxis == "h") horizontal = ay < page.padAxisRule * ax
+                            else if (padAxis == "v") horizontal = ax >= page.padAxisRule * ay
+                            var dist = horizontal ? ax : ay
+                            var dir = horizontal ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down")
+                            padAxis = dist >= page.padThreshold ? (horizontal ? "h" : "v") : ""
+                            if (dir != padDir || dist < page.padThreshold)
+                                padSent = ""
+                            padDir = dir
+                            padFill = Math.min(dist / page.padThreshold, 1)
+                            if (ax > 12 || ay > 12)
+                                padSwiped = true
+                            page.send("pad", { phase: "move", dx: dx, dy: dy })
+                        }
+
                         attachedObjects: LayoutUpdateHandler {
-                            onLayoutFrameChanged: page.sized(layoutFrame)
+                            onLayoutFrameChanged: {
+                                fwc.w = layoutFrame.width
+                                fwc.h = layoutFrame.height
+                                page.sized(layoutFrame)
+                            }
                         }
                         gestureHandlers: TapHandler {
                             onTapped: input.requestFocus()
                         }
                         contextMenuHandler: ContextMenuHandler {
+                            // The system tells of a press and hold by being
+                            // about to show the context menu. That menu is
+                            // stopped and the arrow pad shown instead: 300
+                            // pixels square, above the finger, or below it
+                            // where there is no room above. The one menu let
+                            // through is the one this page asks for itself
+                            // when the finger lifts without a swipe.
                             onPopulating: {
-                                if (page.cellW > 0 && page.cellH > 0)
-                                    page.send("selectword", { x: Math.floor(fwc.touchX / page.cellW), y: Math.floor(fwc.downY / page.cellH) })
+                                if (fwc.menuDue) {
+                                    fwc.menuDue = false
+                                    return
+                                }
+                                event.abort()
+                                fwc.padDir = ""
+                                fwc.padFill = 0
+                                fwc.padAxis = ""
+                                fwc.padSent = ""
+                                fwc.padSwiped = false
+                                fwc.padX = Math.max(0, Math.min(fwc.touchX - 150, fwc.w - 300))
+                                fwc.padY = fwc.downY - 300 - 60 >= 0 ? fwc.downY - 300 - 60 : fwc.downY + 60
+                                fwc.padOn = true
+                                page.send("pad", { phase: "hold" })
                             }
                         }
                         contextActions: ActionSet {
@@ -294,20 +362,31 @@ TabbedPane {
                                 fwc.touchX = event.localX
                                 fwc.downY = event.localY
                                 fwc.touchY = event.localY
+                            } else if (event.isMove() && fwc.padOn) {
+                                fwc.padMove(event.localX - fwc.touchX, event.localY - fwc.downY)
                             } else if (event.isMove() && page.cellH > 0) {
                                 var d = Math.floor((event.localY - fwc.touchY) / page.cellH)
                                 if (d != 0) {
                                     page.send("scroll", { rows: -d })
                                     fwc.touchY += d * page.cellH
                                 }
+                            } else if ((event.isUp() || event.isCancel()) && fwc.padOn) {
+                                fwc.padOn = false
+                                page.send("pad", { phase: "lift" })
+                                if (event.isUp() && !fwc.padSwiped && page.cellW > 0 && page.cellH > 0) {
+                                    page.send("selectword", { x: Math.floor(fwc.touchX / page.cellW), y: Math.floor(fwc.downY / page.cellH) })
+                                    fwc.menuDue = true
+                                    fwc.showContextMenu()
+                                }
                             }
                         }
                     }
 
-                    // The keys the phone's keyboard lacks: a strip directly on
-                    // top of the system's bar and in its colour, with a hair-line
-                    // above. Nothing on it takes the focus. Ctrl and Alt are
-                    // sticky: they apply to the next key and stay lit until then.
+                    // The keys the phone's keyboard lacks, but for the arrows,
+                    // which are the arrow pad's: a strip directly on top of the
+                    // system's bar and in its colour, with a hair-line above.
+                    // Nothing on it takes the focus. Ctrl and Alt are sticky:
+                    // they apply to the next key and stay lit until then.
                     Container {
                         background: Color.create("#383838")
                         preferredHeight: 2
@@ -330,22 +409,101 @@ TabbedPane {
                         KeyCell { text: "Tab"
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
                                   onPressed: page.send("bar", { name: "tab" }) }
-                        KeyCell { text: "←"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "left" }) }
-                        KeyCell { text: "↓"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "down" }) }
-                        KeyCell { text: "↑"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "up" }) }
-                        KeyCell { text: "→"
-                                  layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "right" }) }
+                    }
+                }
+                // The arrow pad's picture: its ground, the four arrows in
+                // grey, and over each arrow the same arrow in white, cut off
+                // so that only as much of it shows, from the pad's middle
+                // outwards, as the finger has gone that way. The white turns
+                // to the primary colour once the arrow's key has gone out.
+                // It takes no touches: the finger stays the terminal's.
+                Container {
+                    visible: fwc.padOn
+                    layout: AbsoluteLayout {}
+                    preferredWidth: 300
+                    preferredHeight: 300
+                    translationX: fwc.padX
+                    translationY: fwc.padY
+                    horizontalAlignment: HorizontalAlignment.Left
+                    verticalAlignment: VerticalAlignment.Top
+                    touchPropagationMode: TouchPropagationMode.None
+                    ImageView {
+                        imageSource: "asset:///images/pad.png"
+                    }
+                    ImageView {
+                        imageSource: "asset:///images/arrow-up.png"
+                        filterColor: Color.create("#808080")
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 110; positionY: 18 }
+                    }
+                    Container {
+                        layout: AbsoluteLayout {}
+                        clipContentToBounds: true
+                        preferredWidth: 81; preferredHeight: 81 * (fwc.padDir == "up" ? fwc.padFill : 0)
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 110; positionY: 18 + 81 * (1 - (fwc.padDir == "up" ? fwc.padFill : 0)) }
+                        ImageView {
+                            imageSource: "asset:///images/arrow-up.png"
+                            filterColor: fwc.padSent == "up" ? ui.palette.primary : Color.White
+                            preferredWidth: 81
+                            preferredHeight: 81
+                            layoutProperties: AbsoluteLayoutProperties { positionX: 0; positionY: -81 * (1 - (fwc.padDir == "up" ? fwc.padFill : 0)) }
+                        }
+                    }
+                    ImageView {
+                        imageSource: "asset:///images/arrow-down.png"
+                        filterColor: Color.create("#808080")
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 110; positionY: 201 }
+                    }
+                    Container {
+                        layout: AbsoluteLayout {}
+                        clipContentToBounds: true
+                        preferredWidth: 81; preferredHeight: 81 * (fwc.padDir == "down" ? fwc.padFill : 0)
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 110; positionY: 201 }
+                        ImageView {
+                            imageSource: "asset:///images/arrow-down.png"
+                            filterColor: fwc.padSent == "down" ? ui.palette.primary : Color.White
+                            preferredWidth: 81
+                            preferredHeight: 81
+                            layoutProperties: AbsoluteLayoutProperties { positionX: 0; positionY: 0 }
+                        }
+                    }
+                    ImageView {
+                        imageSource: "asset:///images/arrow-left.png"
+                        filterColor: Color.create("#808080")
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 18; positionY: 110 }
+                    }
+                    Container {
+                        layout: AbsoluteLayout {}
+                        clipContentToBounds: true
+                        preferredWidth: 81 * (fwc.padDir == "left" ? fwc.padFill : 0); preferredHeight: 81
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 18 + 81 * (1 - (fwc.padDir == "left" ? fwc.padFill : 0)); positionY: 110 }
+                        ImageView {
+                            imageSource: "asset:///images/arrow-left.png"
+                            filterColor: fwc.padSent == "left" ? ui.palette.primary : Color.White
+                            preferredWidth: 81
+                            preferredHeight: 81
+                            layoutProperties: AbsoluteLayoutProperties { positionX: -81 * (1 - (fwc.padDir == "left" ? fwc.padFill : 0)); positionY: 0 }
+                        }
+                    }
+                    ImageView {
+                        imageSource: "asset:///images/arrow-right.png"
+                        filterColor: Color.create("#808080")
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 201; positionY: 110 }
+                    }
+                    Container {
+                        layout: AbsoluteLayout {}
+                        clipContentToBounds: true
+                        preferredWidth: 81 * (fwc.padDir == "right" ? fwc.padFill : 0); preferredHeight: 81
+                        layoutProperties: AbsoluteLayoutProperties { positionX: 201; positionY: 110 }
+                        ImageView {
+                            imageSource: "asset:///images/arrow-right.png"
+                            filterColor: fwc.padSent == "right" ? ui.palette.primary : Color.White
+                            preferredWidth: 81
+                            preferredHeight: 81
+                            layoutProperties: AbsoluteLayoutProperties { positionX: 0; positionY: 0 }
+                        }
                     }
                 }
             }
         }
     ]
 }
-

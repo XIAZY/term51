@@ -164,7 +164,7 @@ The same error text is in the system log of an installed copy that fails
    events).
 2. What the keyboard delivers for Alt, Shift and the symbol key, against
    what `internal/keys` assumes.
-3. The key bar: sticky Ctrl and Alt, Esc, Tab, the arrows; an Enter typed
+3. The key bar: sticky Ctrl and Alt, Esc, Tab; the arrow pad; an Enter typed
    after tapping a button reaches the shell.
 4. Colours: a background colour inside a row, the cursor as an inverted
    cell.

@@ -36,25 +36,22 @@ func TestAnEmptyOrPartialFileKeepsTheDefaults(t *testing.T) {
 	s, warnings, err := Parse([]byte(`
 # what a person would type on the phone
 fontPt = 8
-  identity.terminal=xterm
+  term=xterm
 theme.cursor = #FF8000
-IDENTITY.STATUSREPORTS = no
-identity.answerback = " hello "
+BELL = no
+shell = " /bin/odd name "
 `))
 	if err != nil || len(warnings) != 0 {
 		t.Fatal(warnings, err)
 	}
 	want := Default()
 	want.FontPt = 8
-	want.Identity.Terminal = "xterm"
+	want.Term = "xterm"
 	want.Theme.Cursor = "#FF8000"
-	want.Identity.StatusReports = false
-	want.Identity.Answerback = " hello "
+	want.Bell = false
+	want.Shell = " /bin/odd name "
 	if !reflect.DeepEqual(s, want) {
 		t.Errorf("a partial file:\n got %+v\nwant %+v", s, want)
-	}
-	if s.Replies().Identity != replies.XTerm {
-		t.Error("identity.terminal xterm did not reach the replies")
 	}
 	if c := s.SessionTheme().Cursor; c == nil || *c != (session.RGB{R: 0xFF, G: 0x80, B: 0}) {
 		t.Errorf("theme.cursor: %v", c)
@@ -105,11 +102,11 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 		{"theme.background = #12345", "theme.background"},
 		{"theme.cursor = #gggggg", "theme.cursor"},
 		{"theme.palette = #000000\ntheme.palette = blue", "theme.palette[1]"},
-		{"identity.terminal = vt52", "identity.terminal"},
-		{"identity.versionNumber = -1", "identity.versionNumber"},
+		{"term = vt52", "term"},
+		{"bell = perhaps", "bell"},
 		{"fontPt = 8\nfontPt = 30", "fontPt is set twice"},
 		{"fontPt = 8\njust some words", "line 4"}, // two lines come before each case
-		{`identity.name = "unclosed`, "identity.name"},
+		{`shell = "unclosed`, "shell"},
 	}
 	for _, c := range cases {
 		s, _, err := Parse([]byte("# a comment first\nshell = /bin/bash\n" + c.in + "\n"))
@@ -129,8 +126,8 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 func TestSetAndValues(t *testing.T) {
 	s := Default()
 	v := s.Values()
-	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["identity.statusReports"] != "true" {
-		t.Errorf("values: fontPt %q, shell %q, identity.statusReports %q", v["fontPt"], v["shell"], v["identity.statusReports"])
+	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["bell"] != "true" {
+		t.Errorf("values: fontPt %q, shell %q, bell %q", v["fontPt"], v["shell"], v["bell"])
 	}
 	if _, ok := v["arg"]; ok {
 		t.Error("the list arg is among the single values")
@@ -209,9 +206,8 @@ func TestSaveAndLoad(t *testing.T) {
 	s.Term = "xterm"
 	s.ScrollbackBytes = 1 << 20
 	s.Theme = Theme{Foreground: "#ffffff", Background: "#000080", Cursor: "#ff0000", Palette: []string{"#010203", "#040506"}}
-	s.Identity.Terminal = "vt100"
-	s.Identity.Answerback = "term51 # not a comment"
-	s.Identity.ColorQueries = false
+	s.Cursor = "underline"
+	s.Bell = false
 	if err := Save(path, s); err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +251,8 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 // The settings start a real session: the shell named is run with the TERM
-// named, and the terminal identity reaches a program that asks.
+// named, and a program that asks what the terminal is gets the app's fixed
+// answer (a VT220), whatever the terminal type.
 func TestTheSettingsReachARunningSession(t *testing.T) {
 	s := Default()
 	s.Shell = "/bin/bash"
@@ -263,7 +260,6 @@ func TestTheSettingsReachARunningSession(t *testing.T) {
 		// Ask "what are you" (primary device attributes) and print the answer.
 		`echo "term=$TERM"; stty -echo raw; printf '\033[c'; IFS= read -r -s -d c -t 5 a; stty sane; printf 'answer=%q\n' "$a"; sleep 5`}
 	s.Term = "vt100"
-	s.Identity.Terminal = "vt100"
 	sess, err := session.Start(s.Session(60, 10, 9, 18, []string{"PATH=/usr/bin:/bin", "TERM=dumb"}))
 	if err != nil {
 		t.Fatal(err)
@@ -275,7 +271,7 @@ func TestTheSettingsReachARunningSession(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(text, "term=vt100") && strings.Contains(text, `answer=$'\E[?1;2'`) {
+		if strings.Contains(text, "term=vt100") && strings.Contains(text, `answer=$'\E[?62;22'`) {
 			return
 		}
 		if time.Now().After(deadline) {

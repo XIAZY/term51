@@ -10,6 +10,7 @@ Container {
     id: cell
     property alias text: label.text
     property bool armed: false
+    property bool symbol: false // a single character: shown larger, to be read
     property bool down: false
     property real w: 0
     property real h: 0
@@ -29,7 +30,7 @@ Container {
     }
     Label {
         id: label
-        textStyle.fontSize: FontSize.Small
+        textStyle.fontSize: symbol ? FontSize.Large : FontSize.Small
         textStyle.color: cell.armed ? ui.palette.textOnPrimary : ui.palette.textOnPlain
         horizontalAlignment: HorizontalAlignment.Center
         verticalAlignment: VerticalAlignment.Center

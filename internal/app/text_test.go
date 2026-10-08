@@ -571,6 +571,27 @@ func TestArrowPad(t *testing.T) {
 	}
 }
 
+// A character cell of the key bar types its character like one from the
+// input field; with Ctrl armed it sends the control character and Ctrl is
+// no longer armed.
+func TestBarCharacters(t *testing.T) {
+	a, p, done := startApp(t)
+	typeLine(a, "cat -v")
+	// What a "$" cell sends, then Ctrl and what a "_" cell sends: cat shows
+	// the dollar as it is and the control character as ^_.
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "$"}})
+	a.Send(Command{Name: "bar", Args: map[string]any{"name": "ctrl"}})
+	wait(t, "Ctrl shown as armed", func() bool { return p.get("ctrl") == true })
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "_"}})
+	wait(t, "Ctrl used up", func() bool { return p.get("ctrl") == false })
+	a.Send(Command{Name: "key", Args: map[string]any{"down": true, "key": 13.0, "keycap": 13.0}})
+	wait(t, "cat's echo of both", func() bool { return strings.Contains(p.screen(), "$^_") })
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
 // Characters typed into the page's input field arrive as "text"; the key
 // bar's sticky Ctrl applies to the next of them.
 func TestTextFromTheInputField(t *testing.T) {

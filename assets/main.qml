@@ -64,7 +64,11 @@ TabbedPane {
         SystemSound { id: bellSound; sound: SystemSound.GeneralNotification },
         SettingsSheet {
             id: settingsSheet
-            onOpened: page.covered = true
+            onOpened: {
+                page.covered = true
+                // Is there a newer PowerShell than the one that is here?
+                page.send("pwsh", { action: "check" })
+            }
             onClosed: page.covered = false
         },
 
@@ -142,6 +146,7 @@ TabbedPane {
                     if (s.ch !== undefined) page.cellH = s.ch
                     if (s.bell !== undefined) page.bell = s.bell
                     if (s.settings !== undefined) page.termBackground = s.settings["theme.background"]
+                    if (s.pwsh !== undefined) settingsSheet.pwsh(s.pwsh)
                     if (s.tabs !== undefined) pane.syncTabs(s.tabs, s.rang, s.current)
                 })
                 bridge.event.connect(function(json) {

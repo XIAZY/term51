@@ -9,11 +9,13 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 
 	"term51/internal/cells"
 	"term51/internal/keys"
+	"term51/internal/pwsh"
 	"term51/internal/session"
 	"term51/internal/settings"
 )
@@ -58,6 +60,41 @@ type App struct {
 	open  OpenScreen
 	fonts cells.Fonts
 	save  func(settings.Settings) error
+
+	// Bundled says where the programs the app ships are (BusyBox's tools),
+	// and where PowerShell is once it has been downloaded. It is set before
+	// Run.
+	Bundled settings.Bundled
+
+	// PowerShell is the PowerShell the user can download from the settings
+	// sheet. It is set before Run, and tells the app of its changes
+	// through PowerShellChanged.
+	PowerShell PowerShell
+}
+
+// PowerShell is what the app asks of the downloadable PowerShell: on the
+// phone a pwsh.Store.
+type PowerShell interface {
+	State() pwsh.State
+	Check(ctx context.Context) error
+	Download(ctx context.Context) error
+	Remove() error
+}
+
+// PowerShellChanged tells the page where the downloadable PowerShell is
+// now, and shows why a download did not work. The store calls it with every
+// new state, from its own goroutine.
+func (a *App) PowerShellChanged(st pwsh.State) {
+	a.state(map[string]any{"pwsh": pwshValues(st)})
+	if st.Reason != "" {
+		a.notice("PowerShell could not be downloaded: " + st.Reason)
+	}
+}
+
+// pwshValues is a state of the downloadable PowerShell as the page gets it.
+func pwshValues(st pwsh.State) map[string]any {
+	return map[string]any{"phase": st.Phase, "done": st.Done, "total": st.Total,
+		"version": st.Version, "available": st.Available, "reason": st.Reason}
 }
 
 // New makes the app; Run starts it. save writes the settings when the user

@@ -9,16 +9,21 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"time"
 
+	_ "golang.org/x/crypto/x509roots/fallback" // root certificates: the phone has none where Go looks
 	"golang.org/x/image/font/opentype"
 
 	"term51/internal/app"
+	"term51/internal/busybox"
 	"term51/internal/cells"
 	"term51/internal/gpu"
+	"term51/internal/pwsh"
 	"term51/internal/settings"
 	"term51/internal/ui"
 )
@@ -58,6 +63,20 @@ func main() {
 	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
 		return gpu.Open(group, id, w, h)
 	}, phoneFonts(), func(s settings.Settings) error { return settings.Save(settingsFile, s) })
+	// The app's folder is where it is started: app/native holds the
+	// package, data is its own to write.
+	root, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("the app's folder: %v", err)
+	}
+	a.Bundled = bundled(root)
+	// PowerShell is not in the package: the settings sheet downloads it
+	// into the data folder, with the certificates of the Go team's copy of
+	// Mozilla's list (the fallback import), since the phone keeps its own
+	// where Go does not look.
+	store := pwsh.Open(filepath.Join(root, "data"), pwsh.ManifestURL, pwsh.Target, &http.Client{}, a.PowerShellChanged)
+	a.Bundled.PowerShell = store.Program()
+	a.PowerShell = store
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
@@ -89,6 +108,42 @@ func main() {
 	case <-time.After(4 * time.Second):
 	}
 	os.Exit(rc)
+}
+
+// bundled sets up the programs that come in the package, and says where
+// they and PowerShell's folders are. The package is read-only; what is
+// written goes in the data folder. root is the app's folder.
+//
+// BusyBox's tools are run by their names (head, tr, ash ...) through links
+// to it in data/bin, which goes at the end of the shells' PATH; the
+// Dropbear SSH client's names (ssh, scp ...) are links there as well. The links
+// are checked at every start and made again when the package brought
+// another BusyBox. Without them the app still runs: the log says why, and
+// the shells get no such folder.
+//
+// PowerShell is given a home folder and a folder for temporary files.
+func bundled(root string) settings.Bundled {
+	b := settings.Bundled{
+		PowerShellHome: filepath.Join(root, "data/pwsh-home"),
+		PowerShellTmp:  filepath.Join(root, "data/pwsh-tmp"),
+	}
+	tools := filepath.Join(root, "data/bin")
+	// The Dropbear SSH client is one program too: ssh and the rest by name.
+	dropbear := busybox.Tool{
+		Program: filepath.Join(root, "app/native/dropbear/dropbearmulti"),
+		Names:   []string{"ssh", "dbclient", "scp", "dropbearkey", "dropbearconvert"},
+	}
+	if err := busybox.Links(filepath.Join(root, "app/native/busybox/busybox"), tools, dropbear); err != nil {
+		log.Printf("%v; the shells get no BusyBox tools and no ssh", err)
+	} else {
+		b.Tools = tools
+	}
+	for _, dir := range []string{b.PowerShellHome, b.PowerShellTmp} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			log.Printf("bundled: %v", err)
+		}
+	}
+	return b
 }
 
 // The phone's own font files; the app ships none.

@@ -32,9 +32,6 @@
     <asset path="third_party/dropbear">dropbear/licences</asset>
 
     <permission system="true">run_native</permission>
-    <!-- The network, for what the app and its shells fetch and connect to:
-         the download of PowerShell, wget, ssh. -->
-    <permission>access_internet</permission>
     <env var="LD_LIBRARY_PATH" value="/usr/lib/qt4/lib"/>
     <env var="CASCADES_THEME" value="dark"/>
 </qnx>

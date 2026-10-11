@@ -1,6 +1,6 @@
 # The BusyBox that goes into the package: a release of
 # https://github.com/XIAZY/busybox-qnx and the sha256 of its file for
 # BlackBerry 10. To update, change both lines.
-tag = v1.38.0-qnx1
+tag = v1.38.0-qnx2
 file = busybox-1.38.0-bb10-armle-v7
-sha256 = 2a1ad7783f816dba407c9456e6b8910579c5c6383530547ab34bb5571ed6cf17
+sha256 = 5066100b090e7acc84fdc025a31d8a0acd7117b799df7eb3cb0da6181304e35c

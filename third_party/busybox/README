@@ -6,7 +6,7 @@ BlackBerry 10, exactly as released by
 
     https://github.com/XIAZY/busybox-qnx
 
-under the tag named in term51's tools/busybox.lock (v1.38.0-qnx1 at the
+under the tag named in term51's tools/busybox.lock (v1.38.0-qnx2 at the
 time of writing). term51 does not change or build it: its build downloads
 the released file and checks its sha256. The source of that file, with
 every change made to BusyBox for QNX and the way to build the same bytes

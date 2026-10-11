@@ -43,8 +43,8 @@ type Settings struct {
 	// FontPt is the size of the terminal's text, in points.
 	FontPt float64
 
-	// Shell is the program to run and Args its arguments. Term is the TERM
-	// it is given.
+	// Shell is the shell to run: ShellSystem, ShellBusyBox, or the path of
+	// a program. Args are its arguments. Term is the TERM it is given.
 	Shell string
 	Args  []string
 	Term  string
@@ -68,6 +68,17 @@ var cursors = map[string]session.CursorShape{
 	"bar":       session.CursorBar,
 	"underline": session.CursorUnderline,
 }
+
+// The shells the settings sheet offers. Any other value of the shell
+// setting is the path of a program to run instead.
+const (
+	// ShellSystem is the phone's own shell.
+	ShellSystem = "system"
+	// ShellBusyBox is the ash of the BusyBox the app ships.
+	ShellBusyBox = "busybox"
+
+	systemShell = "/bin/sh"
+)
 
 // Terms are the terminal types the shell can be given as TERM, the default
 // first. The phone's own terminal database (/usr/lib/terminfo) has xterm,
@@ -131,7 +142,7 @@ func Default() Settings {
 	t := session.DefaultTheme
 	return Settings{
 		FontPt:          7,
-		Shell:           "/bin/sh",
+		Shell:           ShellSystem,
 		Args:            []string{},
 		Term:            Terms[0],
 		ScrollbackBytes: 8 << 20,
@@ -268,7 +279,17 @@ var fields = []field{
 			return nil
 		},
 		func(s *Settings) []string { return []string{strconv.FormatFloat(s.FontPt, 'g', -1, 64)} }},
-	textField("shell", "The program to run.", func(s *Settings) *string { return &s.Shell }),
+	{"shell", "The shell: " + ShellSystem + " (the phone's own, " + systemShell + "), " + ShellBusyBox + " (the ash of the BusyBox the app ships), or the path of a program.",
+		func(s *Settings, v string) error {
+			// The phone's shell by its path, as older files have it, is
+			// the system shell.
+			if v == systemShell {
+				v = ShellSystem
+			}
+			s.Shell = v
+			return nil
+		},
+		func(s *Settings) []string { return []string{s.Shell} }},
 	{"arg", "An argument for the shell; one line per argument.",
 		func(s *Settings, v string) error { s.Args = append(s.Args, v); return nil },
 		func(s *Settings) []string { return s.Args }},
@@ -516,20 +537,43 @@ func (s Settings) SessionCursor() session.CursorShape { return cursors[s.Cursor]
 
 // Session is the session to start for a terminal of cols by rows cells of
 // cellW by cellH pixels. env is the environment the shell gets besides
-// TERM (nil: the app's own).
-func (s Settings) Session(cols, rows, cellW, cellH int, env []string) session.Config {
+// TERM (nil: the app's own). toolsDir is the folder with the links to the
+// tools of the app's BusyBox ("" when there is none): it goes at the end of
+// the shell's PATH, so that the phone's own tools come first, and the
+// BusyBox shell is the ash in it.
+func (s Settings) Session(cols, rows, cellW, cellH int, env []string, toolsDir string) session.Config {
 	if env == nil {
 		env = os.Environ()
 	}
-	out := make([]string, 0, len(env)+1)
+	shell := s.Shell
+	switch s.Shell {
+	case ShellSystem:
+		shell = systemShell
+	case ShellBusyBox:
+		shell = filepath.Join(toolsDir, "ash")
+	}
+	out := make([]string, 0, len(env)+2)
+	path := false
 	for _, kv := range env {
-		if !strings.HasPrefix(kv, "TERM=") {
-			out = append(out, kv)
+		switch {
+		case strings.HasPrefix(kv, "TERM="):
+			continue
+		case strings.HasPrefix(kv, "ENV=") && s.Shell == ShellBusyBox:
+			// The file a shell reads when it starts: the phone's is
+			// written for the phone's shell, not for ash.
+			continue
+		case strings.HasPrefix(kv, "PATH=") && toolsDir != "":
+			kv += ":" + toolsDir
+			path = true
 		}
+		out = append(out, kv)
+	}
+	if toolsDir != "" && !path {
+		out = append(out, "PATH="+toolsDir)
 	}
 	out = append(out, "TERM="+s.Term)
 	return session.Config{
-		Shell: s.Shell, Args: append([]string(nil), s.Args...), Env: out,
+		Shell: shell, Args: append([]string(nil), s.Args...), Env: out,
 		Cols: cols, Rows: rows, CellW: cellW, CellH: cellH,
 		MaxScrollback: s.ScrollbackBytes,
 		Theme:         s.SessionTheme(),

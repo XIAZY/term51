@@ -2,6 +2,8 @@ package app
 
 import (
 	"encoding/json"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -14,6 +16,7 @@ import (
 	"golang.org/x/image/font/gofont/gomonoitalic"
 	"golang.org/x/image/font/opentype"
 
+	"term51/internal/busybox"
 	"term51/internal/cells"
 	"term51/internal/selbar"
 	"term51/internal/settings"
@@ -387,10 +390,10 @@ func TestSettingsFromThePage(t *testing.T) {
 	}
 
 	// The program is for tabs opened from now on.
-	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "/bin/sh"}})
-	wait(t, "the program saved", func() bool {
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "busybox"}})
+	wait(t, "the shell saved", func() bool {
 		s, n := lastSaved()
-		return n == 2 && s.Shell == "/bin/sh" && setting("shell") == "/bin/sh"
+		return n == 2 && s.Shell == settings.ShellBusyBox && setting("shell") == "busybox"
 	})
 
 	// A theme and the cursor's shape change what is on screen: the last
@@ -765,5 +768,40 @@ func TestTextFromTheInputField(t *testing.T) {
 	case <-done:
 	case <-time.After(10 * time.Second):
 		t.Fatal("Ctrl-D from the input field did not end the shell")
+	}
+}
+
+// The BusyBox shell: with the shell setting on it, a new tab runs the ash
+// of the tools folder, and that folder is at the end of its PATH. The
+// machine's own BusyBox stands in for the one in the package.
+func TestBusyBoxShell(t *testing.T) {
+	program, err := exec.LookPath("busybox")
+	if err != nil {
+		t.Skip("no busybox on this machine")
+	}
+	tools := filepath.Join(t.TempDir(), "t51tools")
+	if err := busybox.Links(program, tools); err != nil {
+		t.Fatal(err)
+	}
+	a, p, done := startApp(t)
+	a.ToolsDir = tools
+
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "busybox"}})
+	a.Send(Command{Name: "newtab"})
+	wait(t, "the second tab", func() bool {
+		tabs, _ := p.get("tabs").([]any)
+		return len(tabs) == 2 && tabs[1] == filepath.Join(tools, "ash")
+	})
+	// What runs is BusyBox's ash (its help names it), found through the
+	// folder that is last on the PATH.
+	a.Send(Command{Name: "text", Args: map[string]any{"text": "clear; ash --help 2>&1 | head -n 1; echo ${PATH##*/} | tr a-z A-Z"}})
+	a.Send(Command{Name: "key", Args: map[string]any{"down": true, "key": 13.0, "keycap": 13.0}})
+	wait(t, "the BusyBox shell's answer", func() bool {
+		s := p.screen()
+		return strings.Contains(s, "BusyBox v") && strings.Contains(s, "\nT51TOOLS")
+	})
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
 	}
 }

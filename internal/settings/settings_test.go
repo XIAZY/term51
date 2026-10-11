@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -126,7 +127,7 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 func TestSetAndValues(t *testing.T) {
 	s := Default()
 	v := s.Values()
-	if v["fontPt"] != "7" || v["shell"] != "/bin/sh" || v["bell"] != "true" {
+	if v["fontPt"] != "7" || v["shell"] != "system" || v["bell"] != "true" {
 		t.Errorf("values: fontPt %q, shell %q, bell %q", v["fontPt"], v["shell"], v["bell"])
 	}
 	if _, ok := v["arg"]; ok {
@@ -260,7 +261,7 @@ func TestTheSettingsReachARunningSession(t *testing.T) {
 		// Ask "what are you" (primary device attributes) and print the answer.
 		`echo "term=$TERM"; stty -echo raw; printf '\033[c'; IFS= read -r -s -d c -t 5 a; stty sane; printf 'answer=%q\n' "$a"; sleep 5`}
 	s.Term = "vt100"
-	sess, err := session.Start(s.Session(60, 10, 9, 18, []string{"PATH=/usr/bin:/bin", "TERM=dumb"}))
+	sess, err := session.Start(s.Session(60, 10, 9, 18, []string{"PATH=/usr/bin:/bin", "TERM=dumb"}, ""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,6 +281,74 @@ func TestTheSettingsReachARunningSession(t *testing.T) {
 		select {
 		case <-sess.Changed():
 		case <-time.After(50 * time.Millisecond):
+		}
+	}
+}
+
+// The shell setting names the phone's shell, the app's BusyBox shell, or a
+// program by its path; and the tools folder goes at the end of the PATH.
+func TestTheShellSetting(t *testing.T) {
+	env := []string{"HOME=/h", "PATH=/usr/bin:/bin", "ENV=/etc/kshrc", "TERM=dumb"}
+	has := func(c session.Config, kv string) bool { return slices.Contains(c.Env, kv) }
+
+	s := Default()
+	if s.Shell != ShellSystem {
+		t.Fatalf("the default shell is %q", s.Shell)
+	}
+	c := s.Session(80, 24, 9, 18, env, "/data/bin")
+	if c.Shell != "/bin/sh" {
+		t.Errorf("the system shell is %q", c.Shell)
+	}
+	if !has(c, "PATH=/usr/bin:/bin:/data/bin") {
+		t.Errorf("the tools folder is not at the end of the PATH: %v", c.Env)
+	}
+	if !has(c, "ENV=/etc/kshrc") || !has(c, "HOME=/h") || !has(c, "TERM=xterm") || has(c, "TERM=dumb") {
+		t.Errorf("the system shell's environment: %v", c.Env)
+	}
+
+	s.Shell = ShellBusyBox
+	c = s.Session(80, 24, 9, 18, env, "/data/bin")
+	if c.Shell != "/data/bin/ash" {
+		t.Errorf("the BusyBox shell is %q", c.Shell)
+	}
+	if has(c, "ENV=/etc/kshrc") {
+		t.Errorf("the BusyBox shell is given the phone shell's start file: %v", c.Env)
+	}
+	if !has(c, "PATH=/usr/bin:/bin:/data/bin") {
+		t.Errorf("the BusyBox shell's PATH: %v", c.Env)
+	}
+
+	s.Shell = "/opt/bin/zsh"
+	c = s.Session(80, 24, 9, 18, env, "/data/bin")
+	if c.Shell != "/opt/bin/zsh" || !has(c, "ENV=/etc/kshrc") {
+		t.Errorf("a shell by its path: %q, %v", c.Shell, c.Env)
+	}
+
+	// No tools folder: the PATH is left as it is. No PATH at all: the
+	// tools folder is all of it.
+	c = Default().Session(80, 24, 9, 18, env, "")
+	if !has(c, "PATH=/usr/bin:/bin") {
+		t.Errorf("the PATH without a tools folder: %v", c.Env)
+	}
+	c = Default().Session(80, 24, 9, 18, []string{"HOME=/h"}, "/data/bin")
+	if !has(c, "PATH=/data/bin") {
+		t.Errorf("the PATH where there was none: %v", c.Env)
+	}
+
+	// A settings file from before the list, with the phone's shell by its
+	// path, means the system shell; any other path is kept as it is.
+	old, _, err := Parse([]byte("shell = /bin/sh\n"))
+	if err != nil || old.Shell != ShellSystem {
+		t.Errorf("shell = /bin/sh is read as %q (%v)", old.Shell, err)
+	}
+	other, _, err := Parse([]byte("shell = /base/bin/ksh\n"))
+	if err != nil || other.Shell != "/base/bin/ksh" {
+		t.Errorf("shell = /base/bin/ksh is read as %q (%v)", other.Shell, err)
+	}
+	for _, v := range []string{ShellSystem, ShellBusyBox} {
+		got, _, err := Parse(Settings.Format(func() Settings { x := Default(); x.Shell = v; return x }()))
+		if err != nil || got.Shell != v {
+			t.Errorf("shell = %s written and read back is %q (%v)", v, got.Shell, err)
 		}
 	}
 }

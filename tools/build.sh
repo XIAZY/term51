@@ -12,6 +12,8 @@ goqnx=${GOQNX:?set GOQNX to a go-qnx checkout built with src/make.bash}
 image=${BB10_BUILDER_IMAGE:-ghcr.io/xiazy/blackberry10-toolchain:latest}
 [ -x "$goqnx/bin/go" ] || { echo "error: no Go toolchain in $goqnx (run src/make.bash there)" >&2; exit 1; }
 mkdir -p "$repo/build"
+# The BusyBox that the package carries (tools/busybox.lock).
+"$repo/tools/busybox.sh"
 
 exec docker run --rm --user "$(id -u):$(id -g)" \
     -e HOME=/tmp/home -e GOCACHE=/src/build/go-cache -e GOMODCACHE=/src/build/go-mod \

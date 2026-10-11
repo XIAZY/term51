@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"golang.org/x/image/font/opentype"
 
 	"term51/internal/app"
+	"term51/internal/busybox"
 	"term51/internal/cells"
 	"term51/internal/gpu"
 	"term51/internal/settings"
@@ -58,6 +60,7 @@ func main() {
 	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
 		return gpu.Open(group, id, w, h)
 	}, phoneFonts(), func(s settings.Settings) error { return settings.Save(settingsFile, s) })
+	a.ToolsDir = busyboxTools()
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
@@ -89,6 +92,26 @@ func main() {
 	case <-time.After(4 * time.Second):
 	}
 	os.Exit(rc)
+}
+
+// busyboxTools makes sure the tools of the BusyBox in the package can be
+// run by their names (head, tr, ash ...): links to it in the data folder,
+// the one place the app can write. It returns that folder, for the end of
+// the shells' PATH. The links are checked at every start and made again
+// when the package brought another BusyBox. Without them the app still
+// runs: the log says why, and the shells get no such folder.
+func busyboxTools() string {
+	program, err := filepath.Abs("app/native/busybox/busybox")
+	if err == nil {
+		var dir string
+		if dir, err = filepath.Abs("data/bin"); err == nil {
+			if err = busybox.Links(program, dir); err == nil {
+				return dir
+			}
+		}
+	}
+	log.Printf("%v; the shells get no BusyBox tools", err)
+	return ""
 }
 
 // The phone's own font files; the app ships none.

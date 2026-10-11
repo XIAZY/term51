@@ -1,0 +1,25 @@
+BusyBox in term51
+=================
+
+The file busybox in this folder of the package is BusyBox 1.38.0 for
+BlackBerry 10, exactly as released by
+
+    https://github.com/XIAZY/busybox-qnx
+
+under the tag named in term51's tools/busybox.lock (v1.38.0-qnx1 at the
+time of writing). term51 does not change or build it: its build downloads
+the released file and checks its sha256. The source of that file, with
+every change made to BusyBox for QNX and the way to build the same bytes
+again, is that repository at that tag; its qnx/README.md says which tools
+are in it and why some are not.
+
+BusyBox is free software under the GNU General Public License, version 2:
+see LICENSE here. Its option parsing on QNX comes from musl libc, under
+the MIT licence: see musl-getopt.MIT. The program also contains helper
+functions of LLVM's compiler-rt (Apache License 2.0 with LLVM exceptions)
+and parts of the BlackBerry 10 SDK's static C library, which the toolchain
+links in.
+
+term51 runs it as a separate program: for the tools the phone lacks
+(head, tr, id and others), found at the end of the shell's PATH, and for
+the BusyBox shell (ash) that the settings offer.

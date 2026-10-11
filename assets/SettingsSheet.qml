@@ -25,7 +25,13 @@ Sheet {
         theme.selectedIndex = { "dark": 0, "black": 1, "light": 2, "solarized": 3, "custom": 4 }[v["theme"]]
         cursor.selectedIndex = { "block": 0, "bar": 1, "underline": 2 }[v["cursor"]]
         bell.checked = v["bell"] == "true"
-        shell.text = v["shell"]
+        // A shell that is neither of the two (the path of a program, from
+        // the settings file) leaves the list without a choice.
+        var shells = { "system": 0, "busybox": 1 }
+        if (v["shell"] in shells)
+            shell.selectedIndex = shells[v["shell"]]
+        else
+            shell.resetSelectedIndex()
         term.selectedIndex = { "xterm": 0, "xterm-256color": 1, "vt100": 2, "ansi": 3, "qansi": 4 }[v["term"]]
         scrollback.text = "" + (parseInt(v["scrollbackBytes"]) / 1048576)
         filling = false
@@ -124,10 +130,15 @@ Sheet {
                 }
 
                 Header { title: "Shell"; subtitle: "For tabs opened from now on" }
-                SettingText {
+                DropDown {
+                    // settings.ShellSystem and settings.ShellBusyBox in Go.
+                    // Any other program is named by its path in the
+                    // settings file.
                     id: shell
-                    title: "Program"
-                    onEdited: sheet.set("shell", text)
+                    title: "Shell"
+                    Option { text: "System shell"; description: "The phone's own, /bin/sh"; value: "system" }
+                    Option { text: "BusyBox shell"; description: "ash, from the BusyBox in the app"; value: "busybox" }
+                    onSelectedValueChanged: if (selectedIndex >= 0) sheet.set("shell", selectedValue)
                 }
                 DropDown {
                     // The values the app accepts (settings.Terms in Go). All

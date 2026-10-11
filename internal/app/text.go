@@ -111,13 +111,14 @@ func (a *App) Run() error {
 	sentW, sentH := 0, 0 // the cell size the shells were last told
 
 	open := func() *tab {
-		sess, err := session.Start(a.cfg.Session(cols, rows, cw, ch, nil))
+		conf := a.cfg.Session(cols, rows, cw, ch, nil, a.ToolsDir)
+		sess, err := session.Start(conf)
 		if err != nil {
 			log.Printf("app: %v", err)
 			a.notice("The shell could not be started: " + err.Error())
 			return nil
 		}
-		t := &tab{sess: sess, title: a.cfg.Shell, stop: make(chan struct{})}
+		t := &tab{sess: sess, title: conf.Shell, stop: make(chan struct{})}
 		go t.follow(inbox)
 		return t
 	}

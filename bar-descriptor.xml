@@ -19,9 +19,13 @@
     <configuration name="Device-Debug">
         <platformArchitecture>armle-v7</platformArchitecture>
         <asset path="build/term51" entry="true" type="Qnx/Elf">term51</asset>
+        <!-- BusyBox: the tools the phone lacks (head, tr, ...) and the BusyBox
+             shell. tools/busybox.sh fetches it; its licences are beside it. -->
+        <asset path="build/busybox/busybox" type="Qnx/Elf">busybox/busybox</asset>
     </configuration>
 
     <asset path="assets">assets</asset>
+    <asset path="third_party/busybox">busybox/licences</asset>
 
     <permission system="true">run_native</permission>
     <env var="LD_LIBRARY_PATH" value="/usr/lib/qt4/lib"/>

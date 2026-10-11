@@ -58,6 +58,10 @@ type App struct {
 	open  OpenScreen
 	fonts cells.Fonts
 	save  func(settings.Settings) error
+
+	// ToolsDir is the folder with the links to the tools of the BusyBox
+	// the app ships, or "" when there is none. It is set before Run.
+	ToolsDir string
 }
 
 // New makes the app; Run starts it. save writes the settings when the user

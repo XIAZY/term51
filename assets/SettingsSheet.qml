@@ -11,6 +11,39 @@ Sheet {
     property bool filling: false   // the controls are being set from values
     property int cols: 0           // the terminal's columns, for the text size
 
+    // The PowerShell that can be downloaded (internal/pwsh in Go): where it
+    // is, as Go tells with every change.
+    property string pwshPhase: "absent"  // absent, downloading, unpacking, ready, failed
+    property real pwshDone: 0            // bytes so far, and of how many
+    property real pwshTotal: 0
+    property string pwshVersion: ""      // the version that is here
+    property string pwshAvailable: ""    // a newer one that could be downloaded
+    property string pwshReason: ""       // why the last download did not work
+    function pwsh(v) {
+        pwshPhase = v.phase
+        pwshDone = v.done
+        pwshTotal = v.total
+        pwshVersion = v.version
+        pwshAvailable = v.available
+        pwshReason = v.reason
+    }
+    function mb(bytes) {
+        return Math.round(bytes / 104857.6) / 10
+    }
+    function pwshText() {
+        if (pwshPhase == "downloading")
+            return pwshTotal > 0 ? "Downloading: " + mb(pwshDone) + " of " + mb(pwshTotal) + " MB" : "Downloading"
+        if (pwshPhase == "unpacking")
+            return "Unpacking"
+        if (pwshPhase == "ready")
+            return "Version " + pwshVersion + " is on the phone"
+                + (pwshAvailable != "" ? "; version " + pwshAvailable + " can be downloaded" : "")
+                + (pwshReason != "" ? ". The last download did not work: " + pwshReason : "")
+        if (pwshPhase == "failed")
+            return "The download did not work: " + pwshReason
+        return "Not on the phone. It is a download of 44 MB and takes 129 MB."
+    }
+
     function set(name, value) {
         var text = "" + value
         if (filling || values === undefined || values[name] === text)
@@ -138,7 +171,12 @@ Sheet {
                     title: "Shell"
                     Option { text: "System shell"; description: "The phone's own, /bin/sh"; value: "system" }
                     Option { text: "BusyBox shell"; description: "ash, from the BusyBox in the app"; value: "busybox" }
-                    Option { text: "PowerShell"; description: "PowerShell 7, in the app; a few seconds to start"; value: "powershell" }
+                    Option {
+                        text: "PowerShell"
+                        description: sheet.pwshPhase == "ready" ? "PowerShell 7; a few seconds to start" : "Download it below first"
+                        value: "powershell"
+                        enabled: sheet.pwshPhase == "ready"
+                    }
                     onSelectedValueChanged: if (selectedIndex >= 0) sheet.set("shell", selectedValue)
                 }
                 DropDown {
@@ -160,6 +198,32 @@ Sheet {
                     onEdited: {
                         var mb = parseFloat(text)
                         sheet.set("scrollbackBytes", isNaN(mb) ? text : Math.round(mb * 1048576))
+                    }
+                }
+
+                // PowerShell is not in the app: it is fetched from its
+                // releases when asked for here, and can be removed again.
+                Header { title: "PowerShell" }
+                Container {
+                    leftPadding: ui.du(3)
+                    rightPadding: ui.du(3)
+                    topPadding: ui.du(2)
+                    bottomPadding: ui.du(2)
+                    Label {
+                        multiline: true
+                        text: sheet.pwshText()
+                    }
+                    Button {
+                        text: sheet.pwshAvailable != "" ? "Download " + sheet.pwshAvailable : "Download"
+                        visible: sheet.pwshPhase == "absent" || sheet.pwshPhase == "failed" || (sheet.pwshPhase == "ready" && sheet.pwshAvailable != "")
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        onClicked: bridge.send("pwsh", JSON.stringify({ action: "download" }))
+                    }
+                    Button {
+                        text: "Remove"
+                        visible: sheet.pwshPhase == "ready"
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        onClicked: bridge.send("pwsh", JSON.stringify({ action: "remove" }))
                     }
                 }
 

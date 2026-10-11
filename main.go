@@ -9,18 +9,21 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"time"
 
+	_ "golang.org/x/crypto/x509roots/fallback" // root certificates: the phone has none where Go looks
 	"golang.org/x/image/font/opentype"
 
 	"term51/internal/app"
 	"term51/internal/busybox"
 	"term51/internal/cells"
 	"term51/internal/gpu"
+	"term51/internal/pwsh"
 	"term51/internal/settings"
 	"term51/internal/ui"
 )
@@ -60,7 +63,20 @@ func main() {
 	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
 		return gpu.Open(group, id, w, h)
 	}, phoneFonts(), func(s settings.Settings) error { return settings.Save(settingsFile, s) })
-	a.Bundled = bundled()
+	// The app's folder is where it is started: app/native holds the
+	// package, data is its own to write.
+	root, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("the app's folder: %v", err)
+	}
+	a.Bundled = bundled(root)
+	// PowerShell is not in the package: the settings sheet downloads it
+	// into the data folder, with the certificates of the Go team's copy of
+	// Mozilla's list (the fallback import), since the phone keeps its own
+	// where Go does not look.
+	store := pwsh.Open(filepath.Join(root, "data"), pwsh.ManifestURL, pwsh.Target, &http.Client{}, a.PowerShellChanged)
+	a.Bundled.PowerShell = store.Program()
+	a.PowerShell = store
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
@@ -95,8 +111,8 @@ func main() {
 }
 
 // bundled sets up the programs that come in the package, and says where
-// they are. The package is read-only; what they need written goes in the
-// data folder.
+// they and PowerShell's folders are. The package is read-only; what is
+// written goes in the data folder. root is the app's folder.
 //
 // BusyBox's tools are run by their names (head, tr, ash ...) through links
 // to it in data/bin, which goes at the end of the shells' PATH. The links
@@ -104,16 +120,9 @@ func main() {
 // another BusyBox. Without them the app still runs: the log says why, and
 // the shells get no such folder.
 //
-// PowerShell runs from where it is in the package, with a home folder and
-// a folder for temporary files in the data folder.
-func bundled() settings.Bundled {
-	root, err := os.Getwd()
-	if err != nil {
-		log.Printf("bundled: %v; the shells get no BusyBox tools and no PowerShell", err)
-		return settings.Bundled{}
-	}
+// PowerShell is given a home folder and a folder for temporary files.
+func bundled(root string) settings.Bundled {
 	b := settings.Bundled{
-		PowerShell:     filepath.Join(root, "app/native/powershell/pwsh/pwsh"),
 		PowerShellHome: filepath.Join(root, "data/pwsh-home"),
 		PowerShellTmp:  filepath.Join(root, "data/pwsh-tmp"),
 	}

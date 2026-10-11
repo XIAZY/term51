@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -18,6 +20,7 @@ import (
 
 	"term51/internal/busybox"
 	"term51/internal/cells"
+	"term51/internal/pwsh"
 	"term51/internal/selbar"
 	"term51/internal/settings"
 )
@@ -256,12 +259,60 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 		p.saved = append(p.saved, s)
 		return nil
 	})
+	a.PowerShell = &fakePowerShell{a: a, st: pwsh.State{Phase: pwsh.Absent}}
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	// The page's place for the terminal: 40 by 8 cells and a few pixels over.
 	a.Send(Command{Name: "window", Args: map[string]any{"group": "g", "id": "term51", "w": float64(40*scr.cw + 3), "h": float64(8*scr.ch + 5)}})
 	wait(t, "the first prompt", func() bool { return strings.Contains(p.screen(), "$") })
 	return a, p, done
+}
+
+// fakePowerShell stands in for the downloadable PowerShell (pwsh.Store):
+// each call succeeds at once, or fails with fail, and the app is told the
+// new state as the store would tell it.
+type fakePowerShell struct {
+	a    *App
+	mu   sync.Mutex
+	st   pwsh.State
+	fail string
+	n    map[string]int
+}
+
+func (f *fakePowerShell) State() pwsh.State {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.st
+}
+
+func (f *fakePowerShell) to(call string, st pwsh.State) error {
+	f.mu.Lock()
+	if f.n == nil {
+		f.n = map[string]int{}
+	}
+	f.n[call]++
+	var err error
+	if f.fail != "" {
+		st, err = pwsh.State{Phase: pwsh.Failed, Reason: f.fail}, errors.New(f.fail)
+	}
+	f.st = st
+	f.mu.Unlock()
+	f.a.PowerShellChanged(st)
+	return err
+}
+
+func (f *fakePowerShell) calls(call string) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.n[call]
+}
+
+func (f *fakePowerShell) Download(context.Context) error {
+	return f.to("download", pwsh.State{Phase: pwsh.Ready, Version: "7.6.6"})
+}
+func (f *fakePowerShell) Remove() error { return f.to("remove", pwsh.State{Phase: pwsh.Absent}) }
+func (f *fakePowerShell) Check(context.Context) error {
+	return f.to("check", pwsh.State{Phase: pwsh.Ready, Version: "7.6.6", Available: "7.6.7"})
 }
 
 // typeLine pastes a line and presses Enter. (The Enter is a key: bash turns
@@ -768,6 +819,76 @@ func TestTextFromTheInputField(t *testing.T) {
 	case <-done:
 	case <-time.After(10 * time.Second):
 		t.Fatal("Ctrl-D from the input field did not end the shell")
+	}
+}
+
+// The downloadable PowerShell, from the settings sheet: the page is told
+// where it is; it cannot be chosen as the shell, and no tab opens with it,
+// until it is downloaded; a download that does not work is a notice with
+// the reason.
+func TestPowerShellFromThePage(t *testing.T) {
+	a, p, done := startApp(t)
+	// bash stands in for pwsh, at the place the download would put it.
+	a.Bundled.PowerShell = "/bin/bash"
+	fake := a.PowerShell.(*fakePowerShell)
+	told := func(key string) any {
+		m, _ := p.get("pwsh").(map[string]any)
+		return m[key]
+	}
+	notices := func() []string {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return append([]string(nil), p.notices...)
+	}
+	setting := func(name string) any {
+		m, _ := p.get("settings").(map[string]any)
+		return m[name]
+	}
+	wait(t, "the page told there is none", func() bool { return told("phase") == "absent" })
+
+	// Not downloaded: the shell cannot be chosen.
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "powershell"}})
+	wait(t, "the refusal", func() bool { n := notices(); return len(n) == 1 && n[0] == noPowerShell })
+	if setting("shell") == "powershell" {
+		t.Error("the PowerShell shell was set although it is not downloaded")
+	}
+
+	// A download that does not work: the reason is shown.
+	fake.fail = "the list of releases could not be read"
+	a.Send(Command{Name: "pwsh", Args: map[string]any{"action": "download"}})
+	wait(t, "the failure told", func() bool {
+		n := notices()
+		return told("phase") == "failed" && len(n) == 2 && n[1] == "PowerShell could not be downloaded: the list of releases could not be read"
+	})
+
+	// One that works: ready, with its version; now it can be chosen, and
+	// a new tab runs it.
+	fake.fail = ""
+	a.Send(Command{Name: "pwsh", Args: map[string]any{"action": "download"}})
+	wait(t, "ready", func() bool { return told("phase") == "ready" && told("version") == "7.6.6" })
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "powershell"}})
+	wait(t, "the shell set", func() bool { return setting("shell") == "powershell" })
+	a.Send(Command{Name: "newtab"})
+	wait(t, "a PowerShell tab", func() bool {
+		tabs, _ := p.get("tabs").([]any)
+		return len(tabs) == 2 && tabs[1] == "PowerShell"
+	})
+
+	// The sheet being opened asks for a newer release.
+	a.Send(Command{Name: "pwsh", Args: map[string]any{"action": "check"}})
+	wait(t, "a newer release told", func() bool { return told("available") == "7.6.7" })
+
+	// Removed: the setting stays, but no tab opens with it.
+	a.Send(Command{Name: "pwsh", Args: map[string]any{"action": "remove"}})
+	wait(t, "removed", func() bool { return told("phase") == "absent" && fake.calls("remove") == 1 })
+	a.Send(Command{Name: "newtab"})
+	wait(t, "the second refusal", func() bool { n := notices(); return len(n) == 3 && n[2] == noPowerShell })
+	if tabs, _ := p.get("tabs").([]any); len(tabs) != 2 {
+		t.Errorf("%d tabs, want the two there were", len(tabs))
+	}
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
 	}
 }
 

@@ -76,7 +76,7 @@ const (
 	ShellSystem = "system"
 	// ShellBusyBox is the ash of the BusyBox the app ships.
 	ShellBusyBox = "busybox"
-	// ShellPowerShell is the PowerShell the app ships.
+	// ShellPowerShell is the PowerShell the app can download.
 	ShellPowerShell = "powershell"
 
 	systemShell = "/bin/sh"
@@ -281,7 +281,7 @@ var fields = []field{
 			return nil
 		},
 		func(s *Settings) []string { return []string{strconv.FormatFloat(s.FontPt, 'g', -1, 64)} }},
-	{"shell", "The shell: " + ShellSystem + " (the phone's own, " + systemShell + "), " + ShellBusyBox + " (the ash of the BusyBox the app ships), " + ShellPowerShell + " (the PowerShell the app ships), or the path of a program.",
+	{"shell", "The shell: " + ShellSystem + " (the phone's own, " + systemShell + "), " + ShellBusyBox + " (the ash of the BusyBox the app ships), " + ShellPowerShell + " (PowerShell, once it has been downloaded from the settings), or the path of a program.",
 		func(s *Settings, v string) error {
 			// The phone's shell by its path, as older files have it, is
 			// the system shell.
@@ -559,7 +559,8 @@ type Bundled struct {
 	// BusyBox, or "" when there is none.
 	Tools string
 
-	// PowerShell is the PowerShell program (pwsh). PowerShellHome is its
+	// PowerShell is the PowerShell program (pwsh), where a download puts
+	// it (internal/pwsh). PowerShellHome is its
 	// home folder, where it keeps its history and profile, and
 	// PowerShellTmp its folder for temporary files: the phone's /tmp will
 	// not do, since no directory can be made in it.

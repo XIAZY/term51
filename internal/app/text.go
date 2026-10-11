@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log"
 	"reflect"
 	"runtime"
@@ -13,6 +14,7 @@ import (
 	"term51/internal/arrowpad"
 	"term51/internal/cells"
 	"term51/internal/keys"
+	"term51/internal/pwsh"
 	"term51/internal/selbar"
 	"term51/internal/session"
 	"term51/internal/settings"
@@ -33,6 +35,10 @@ const textFrame = 33 * time.Millisecond
 // sizes while the on-screen keyboard rows slide in or out, and each resize
 // makes the window's buffers again and reflows every shell.
 const sizeQuiet = 150 * time.Millisecond
+
+// noPowerShell is what the user is told on choosing the PowerShell shell,
+// or opening a tab with it, while it is not downloaded.
+const noPowerShell = "PowerShell is not downloaded: Settings, PowerShell, Download"
 
 // tab is one shell.
 type tab struct {
@@ -112,6 +118,10 @@ func (a *App) Run() error {
 	sentW, sentH := 0, 0 // the cell size the shells were last told
 
 	open := func() *tab {
+		if a.cfg.Shell == settings.ShellPowerShell && a.PowerShell.State().Phase != pwsh.Ready {
+			a.notice(noPowerShell)
+			return nil
+		}
 		if a.cfg.Shell == settings.ShellBusyBox && a.Bundled.Tools == "" {
 			// The start-up could not make the links (the log has the
 			// reason), so there is no ash to run.
@@ -327,7 +337,13 @@ func (a *App) Run() error {
 	}
 	// settings tells the page every setting's value, for its settings
 	// sheet.
-	settings := func() { a.state(map[string]any{"settings": a.cfg.Values(), "bell": a.cfg.Bell}) }
+	tellSettings := func() {
+		a.state(map[string]any{"settings": a.cfg.Values(), "bell": a.cfg.Bell, "pwsh": pwshValues(a.PowerShell.State())})
+	}
+	// What the downloadable PowerShell does in the background (a download
+	// takes minutes) ends with the app.
+	background, stop := context.WithCancel(context.Background())
+	defer stop()
 
 	// fit makes the window, the grid and the shells fit the place the page
 	// last reported (want).
@@ -352,7 +368,7 @@ func (a *App) Run() error {
 			if err := font(); err != nil {
 				return err
 			}
-			settings()
+			tellSettings()
 		} else if err := scr.Resize(w, h); err != nil {
 			log.Printf("app: %v", err)
 			return nil
@@ -526,6 +542,30 @@ func (a *App) Run() error {
 					sess.StretchEnd()
 					stretching, stretchDue = false, nil
 				}
+			case "pwsh":
+				// The settings sheet's PowerShell button, or the sheet
+				// being opened ("check": is there a newer release than
+				// the one that is here). The store tells the page of
+				// every step (PowerShellChanged).
+				switch action, _ := c.Args["action"].(string); action {
+				case "download":
+					go a.PowerShell.Download(background)
+				case "remove":
+					go func() {
+						if err := a.PowerShell.Remove(); err != nil {
+							log.Printf("app: %v", err)
+							a.notice("PowerShell could not be removed: " + err.Error())
+						}
+					}()
+				case "check":
+					go func() {
+						// Asked for by nobody in particular: the log
+						// keeps why it could not be found out.
+						if err := a.PowerShell.Check(background); err != nil {
+							log.Printf("app: looking for a newer PowerShell: %v", err)
+						}
+					}()
+				}
 			case "set":
 				// One setting changed on the settings sheet. It is written
 				// to the file at once. The text size, the colours and the
@@ -534,7 +574,11 @@ func (a *App) Run() error {
 				name, _ := c.Args["name"].(string)
 				value, _ := c.Args["value"].(string)
 				before := a.cfg
-				if err := a.cfg.Set(name, value); err != nil {
+				if name == "shell" && value == settings.ShellPowerShell && a.PowerShell.State().Phase != pwsh.Ready {
+					// Not a shell that can be chosen yet. The sheet is
+					// told the setting again, which puts its list back.
+					a.notice(noPowerShell)
+				} else if err := a.cfg.Set(name, value); err != nil {
 					a.notice(err.Error())
 				} else if err := a.save(a.cfg); err != nil {
 					log.Printf("app: %v", err)
@@ -565,7 +609,7 @@ func (a *App) Run() error {
 				}
 				// Also after a refused value, so that the sheet shows
 				// what is in force.
-				settings()
+				tellSettings()
 			case "copy":
 				// The selection goes back to the page, which owns the
 				// clipboard.

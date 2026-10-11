@@ -27,7 +27,7 @@ Sheet {
         bell.checked = v["bell"] == "true"
         // A shell that is neither of the two (the path of a program, from
         // the settings file) leaves the list without a choice.
-        var shells = { "system": 0, "busybox": 1 }
+        var shells = { "system": 0, "busybox": 1, "powershell": 2 }
         if (v["shell"] in shells)
             shell.selectedIndex = shells[v["shell"]]
         else
@@ -131,13 +131,14 @@ Sheet {
 
                 Header { title: "Shell"; subtitle: "For tabs opened from now on" }
                 DropDown {
-                    // settings.ShellSystem and settings.ShellBusyBox in Go.
+                    // settings.ShellSystem, ShellBusyBox and ShellPowerShell in Go.
                     // Any other program is named by its path in the
                     // settings file.
                     id: shell
                     title: "Shell"
                     Option { text: "System shell"; description: "The phone's own, /bin/sh"; value: "system" }
                     Option { text: "BusyBox shell"; description: "ash, from the BusyBox in the app"; value: "busybox" }
+                    Option { text: "PowerShell"; description: "PowerShell 7, in the app; a few seconds to start"; value: "powershell" }
                     onSelectedValueChanged: if (selectedIndex >= 0) sheet.set("shell", selectedValue)
                 }
                 DropDown {

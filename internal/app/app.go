@@ -59,9 +59,9 @@ type App struct {
 	fonts cells.Fonts
 	save  func(settings.Settings) error
 
-	// ToolsDir is the folder with the links to the tools of the BusyBox
-	// the app ships, or "" when there is none. It is set before Run.
-	ToolsDir string
+	// Bundled says where the programs the app ships are (BusyBox's tools,
+	// PowerShell). It is set before Run.
+	Bundled settings.Bundled
 }
 
 // New makes the app; Run starts it. save writes the settings when the user

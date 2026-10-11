@@ -112,13 +112,13 @@ func (a *App) Run() error {
 	sentW, sentH := 0, 0 // the cell size the shells were last told
 
 	open := func() *tab {
-		if a.cfg.Shell == settings.ShellBusyBox && a.ToolsDir == "" {
+		if a.cfg.Shell == settings.ShellBusyBox && a.Bundled.Tools == "" {
 			// The start-up could not make the links (the log has the
 			// reason), so there is no ash to run.
 			a.notice("The BusyBox shell could not be started: its tools could not be set up (see the log)")
 			return nil
 		}
-		conf := a.cfg.Session(cols, rows, cw, ch, nil, a.ToolsDir)
+		conf := a.cfg.Session(cols, rows, cw, ch, nil, a.Bundled)
 		sess, err := session.Start(conf)
 		if err != nil {
 			log.Printf("app: %v", err)

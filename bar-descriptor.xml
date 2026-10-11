@@ -22,6 +22,11 @@
         <!-- BusyBox: the tools the phone lacks (head, tr, ...) and the BusyBox
              shell. tools/busybox.sh fetches it; its licences are beside it. -->
         <asset path="build/busybox/busybox" type="Qnx/Elf">busybox/busybox</asset>
+        <!-- PowerShell: the release's tree as it is (tools/powershell.sh
+             fetches it). Its launcher is named once more as a program,
+             which is what gives it its execute permission. -->
+        <asset path="build/powershell">powershell</asset>
+        <asset path="build/powershell/pwsh/pwsh" type="Qnx/Elf">powershell/pwsh/pwsh</asset>
     </configuration>
 
     <asset path="assets">assets</asset>

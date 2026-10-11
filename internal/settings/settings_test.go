@@ -261,7 +261,7 @@ func TestTheSettingsReachARunningSession(t *testing.T) {
 		// Ask "what are you" (primary device attributes) and print the answer.
 		`echo "term=$TERM"; stty -echo raw; printf '\033[c'; IFS= read -r -s -d c -t 5 a; stty sane; printf 'answer=%q\n' "$a"; sleep 5`}
 	s.Term = "vt100"
-	sess, err := session.Start(s.Session(60, 10, 9, 18, []string{"PATH=/usr/bin:/bin", "TERM=dumb"}, ""))
+	sess, err := session.Start(s.Session(60, 10, 9, 18, []string{"PATH=/usr/bin:/bin", "TERM=dumb"}, Bundled{}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +295,7 @@ func TestTheShellSetting(t *testing.T) {
 	if s.Shell != ShellSystem {
 		t.Fatalf("the default shell is %q", s.Shell)
 	}
-	c := s.Session(80, 24, 9, 18, env, "/data/bin")
+	c := s.Session(80, 24, 9, 18, env, Bundled{Tools: "/data/bin"})
 	if c.Shell != "/bin/sh" {
 		t.Errorf("the system shell is %q", c.Shell)
 	}
@@ -307,7 +307,7 @@ func TestTheShellSetting(t *testing.T) {
 	}
 
 	s.Shell = ShellBusyBox
-	c = s.Session(80, 24, 9, 18, env, "/data/bin")
+	c = s.Session(80, 24, 9, 18, env, Bundled{Tools: "/data/bin"})
 	if c.Shell != "/data/bin/ash" {
 		t.Errorf("the BusyBox shell is %q", c.Shell)
 	}
@@ -318,13 +318,30 @@ func TestTheShellSetting(t *testing.T) {
 		t.Errorf("the BusyBox shell's PATH: %v", c.Env)
 	}
 
+	// PowerShell: the program from the package, a home and a temporary
+	// folder of its own in place of the app's, and xterm whatever the
+	// terminal type setting says.
+	s.Shell, s.Term = ShellPowerShell, "vt100"
+	places := Bundled{Tools: "/data/bin", PowerShell: "/app/native/powershell/pwsh/pwsh", PowerShellHome: "/data/pwsh-home", PowerShellTmp: "/data/pwsh-tmp"}
+	c = s.Session(80, 24, 9, 18, append(env, "TMPDIR=/tmp"), places)
+	if c.Shell != "/app/native/powershell/pwsh/pwsh" {
+		t.Errorf("PowerShell is %q", c.Shell)
+	}
+	if !has(c, "HOME=/data/pwsh-home") || has(c, "HOME=/h") || !has(c, "TMPDIR=/data/pwsh-tmp") || has(c, "TMPDIR=/tmp") {
+		t.Errorf("PowerShell's home and temporary folders: %v", c.Env)
+	}
+	if !has(c, "TERM=xterm") || has(c, "TERM=vt100") || !has(c, "PATH=/usr/bin:/bin:/data/bin") || !has(c, "ENV=/etc/kshrc") {
+		t.Errorf("PowerShell's environment: %v", c.Env)
+	}
+	s.Term = "xterm"
+
 	s.Shell = "/opt/bin/zsh"
-	c = s.Session(80, 24, 9, 18, env, "/data/bin")
+	c = s.Session(80, 24, 9, 18, env, Bundled{Tools: "/data/bin"})
 	if c.Shell != "/opt/bin/zsh" || !has(c, "ENV=/etc/kshrc") {
 		t.Errorf("a shell by its path: %q, %v", c.Shell, c.Env)
 	}
 
-	for shell, name := range map[string]string{ShellSystem: "System shell", ShellBusyBox: "BusyBox shell", "/opt/bin/zsh": "zsh"} {
+	for shell, name := range map[string]string{ShellSystem: "System shell", ShellBusyBox: "BusyBox shell", ShellPowerShell: "PowerShell", "/opt/bin/zsh": "zsh"} {
 		x := Default()
 		x.Shell = shell
 		if x.ShellName() != name {
@@ -334,11 +351,11 @@ func TestTheShellSetting(t *testing.T) {
 
 	// No tools folder: the PATH is left as it is. No PATH at all: the
 	// tools folder is all of it.
-	c = Default().Session(80, 24, 9, 18, env, "")
+	c = Default().Session(80, 24, 9, 18, env, Bundled{})
 	if !has(c, "PATH=/usr/bin:/bin") {
 		t.Errorf("the PATH without a tools folder: %v", c.Env)
 	}
-	c = Default().Session(80, 24, 9, 18, []string{"HOME=/h"}, "/data/bin")
+	c = Default().Session(80, 24, 9, 18, []string{"HOME=/h"}, Bundled{Tools: "/data/bin"})
 	if !has(c, "PATH=/data/bin") {
 		t.Errorf("the PATH where there was none: %v", c.Env)
 	}
@@ -353,7 +370,7 @@ func TestTheShellSetting(t *testing.T) {
 	if err != nil || other.Shell != "/base/bin/ksh" {
 		t.Errorf("shell = /base/bin/ksh is read as %q (%v)", other.Shell, err)
 	}
-	for _, v := range []string{ShellSystem, ShellBusyBox} {
+	for _, v := range []string{ShellSystem, ShellBusyBox, ShellPowerShell} {
 		got, _, err := Parse(Settings.Format(func() Settings { x := Default(); x.Shell = v; return x }()))
 		if err != nil || got.Shell != v {
 			t.Errorf("shell = %s written and read back is %q (%v)", v, got.Shell, err)

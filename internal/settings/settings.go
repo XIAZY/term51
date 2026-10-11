@@ -43,8 +43,8 @@ type Settings struct {
 	// FontPt is the size of the terminal's text, in points.
 	FontPt float64
 
-	// Shell is the shell to run: ShellSystem, ShellBusyBox, or the path of
-	// a program. Args are its arguments. Term is the TERM it is given.
+	// Shell is the shell to run: ShellSystem, ShellBusyBox, ShellPowerShell,
+	// or the path of a program. Args are its arguments. Term is the TERM it is given.
 	Shell string
 	Args  []string
 	Term  string
@@ -76,6 +76,8 @@ const (
 	ShellSystem = "system"
 	// ShellBusyBox is the ash of the BusyBox the app ships.
 	ShellBusyBox = "busybox"
+	// ShellPowerShell is the PowerShell the app ships.
+	ShellPowerShell = "powershell"
 
 	systemShell = "/bin/sh"
 )
@@ -279,7 +281,7 @@ var fields = []field{
 			return nil
 		},
 		func(s *Settings) []string { return []string{strconv.FormatFloat(s.FontPt, 'g', -1, 64)} }},
-	{"shell", "The shell: " + ShellSystem + " (the phone's own, " + systemShell + "), " + ShellBusyBox + " (the ash of the BusyBox the app ships), or the path of a program.",
+	{"shell", "The shell: " + ShellSystem + " (the phone's own, " + systemShell + "), " + ShellBusyBox + " (the ash of the BusyBox the app ships), " + ShellPowerShell + " (the PowerShell the app ships), or the path of a program.",
 		func(s *Settings, v string) error {
 			// The phone's shell by its path, as older files have it, is
 			// the system shell.
@@ -544,47 +546,73 @@ func (s Settings) ShellName() string {
 		return "System shell"
 	case ShellBusyBox:
 		return "BusyBox shell"
+	case ShellPowerShell:
+		return "PowerShell"
 	}
 	return filepath.Base(s.Shell)
 }
 
+// Bundled says where the programs that the app ships are, and the folders
+// they need. All paths are absolute.
+type Bundled struct {
+	// Tools is the folder with the links to the tools of the app's
+	// BusyBox, or "" when there is none.
+	Tools string
+
+	// PowerShell is the PowerShell program (pwsh). PowerShellHome is its
+	// home folder, where it keeps its history and profile, and
+	// PowerShellTmp its folder for temporary files: the phone's /tmp will
+	// not do, since no directory can be made in it.
+	PowerShell     string
+	PowerShellHome string
+	PowerShellTmp  string
+}
+
 // Session is the session to start for a terminal of cols by rows cells of
 // cellW by cellH pixels. env is the environment the shell gets besides
-// TERM (nil: the app's own). toolsDir is the folder with the links to the
-// tools of the app's BusyBox ("" when there is none): it goes at the end of
-// the shell's PATH, so that the phone's own tools come first, and the
-// BusyBox shell is the ash in it.
-func (s Settings) Session(cols, rows, cellW, cellH int, env []string, toolsDir string) session.Config {
+// TERM (nil: the app's own). The tools folder of b goes at the end of the
+// shell's PATH, so that the phone's own tools come first; the BusyBox
+// shell is the ash in it. PowerShell gets its own home and temporary
+// folders, and the terminal type it was built for.
+func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled) session.Config {
 	if env == nil {
 		env = os.Environ()
 	}
-	shell := s.Shell
+	shell, term := s.Shell, s.Term
+	// What the shell's environment does not take over from env, and what
+	// it gets instead.
+	drop := []string{"TERM="}
+	var add []string
 	switch s.Shell {
 	case ShellSystem:
 		shell = systemShell
 	case ShellBusyBox:
-		shell = filepath.Join(toolsDir, "ash")
+		shell = filepath.Join(b.Tools, "ash")
+		// The file a shell reads when it starts: the phone's is written
+		// for the phone's shell, not for ash.
+		drop = append(drop, "ENV=")
+	case ShellPowerShell:
+		shell, term = b.PowerShell, session.DefaultTerm
+		drop = append(drop, "HOME=", "TMPDIR=")
+		add = []string{"HOME=" + b.PowerShellHome, "TMPDIR=" + b.PowerShellTmp}
 	}
-	out := make([]string, 0, len(env)+2)
+	out := make([]string, 0, len(env)+4)
 	path := false
 	for _, kv := range env {
-		switch {
-		case strings.HasPrefix(kv, "TERM="):
+		if slices.ContainsFunc(drop, func(name string) bool { return strings.HasPrefix(kv, name) }) {
 			continue
-		case strings.HasPrefix(kv, "ENV=") && s.Shell == ShellBusyBox:
-			// The file a shell reads when it starts: the phone's is
-			// written for the phone's shell, not for ash.
-			continue
-		case strings.HasPrefix(kv, "PATH=") && toolsDir != "":
-			kv += ":" + toolsDir
+		}
+		if strings.HasPrefix(kv, "PATH=") && b.Tools != "" {
+			kv += ":" + b.Tools
 			path = true
 		}
 		out = append(out, kv)
 	}
-	if toolsDir != "" && !path {
-		out = append(out, "PATH="+toolsDir)
+	if b.Tools != "" && !path {
+		out = append(out, "PATH="+b.Tools)
 	}
-	out = append(out, "TERM="+s.Term)
+	out = append(out, add...)
+	out = append(out, "TERM="+term)
 	return session.Config{
 		Shell: shell, Args: append([]string(nil), s.Args...), Env: out,
 		Cols: cols, Rows: rows, CellW: cellW, CellH: cellH,

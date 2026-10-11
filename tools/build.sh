@@ -14,6 +14,8 @@ image=${BB10_BUILDER_IMAGE:-ghcr.io/xiazy/blackberry10-toolchain:latest}
 mkdir -p "$repo/build"
 # The BusyBox that the package carries (tools/busybox.lock).
 "$repo/tools/busybox.sh"
+# And the PowerShell (tools/powershell.lock).
+"$repo/tools/powershell.sh"
 
 exec docker run --rm --user "$(id -u):$(id -g)" \
     -e HOME=/tmp/home -e GOCACHE=/src/build/go-cache -e GOMODCACHE=/src/build/go-mod \

@@ -60,7 +60,7 @@ func main() {
 	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
 		return gpu.Open(group, id, w, h)
 	}, phoneFonts(), func(s settings.Settings) error { return settings.Save(settingsFile, s) })
-	a.ToolsDir = busyboxTools()
+	a.Bundled = bundled()
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
@@ -94,24 +94,41 @@ func main() {
 	os.Exit(rc)
 }
 
-// busyboxTools makes sure the tools of the BusyBox in the package can be
-// run by their names (head, tr, ash ...): links to it in the data folder,
-// the one place the app can write. It returns that folder, for the end of
-// the shells' PATH. The links are checked at every start and made again
-// when the package brought another BusyBox. Without them the app still
-// runs: the log says why, and the shells get no such folder.
-func busyboxTools() string {
-	program, err := filepath.Abs("app/native/busybox/busybox")
-	if err == nil {
-		var dir string
-		if dir, err = filepath.Abs("data/bin"); err == nil {
-			if err = busybox.Links(program, dir); err == nil {
-				return dir
-			}
+// bundled sets up the programs that come in the package, and says where
+// they are. The package is read-only; what they need written goes in the
+// data folder.
+//
+// BusyBox's tools are run by their names (head, tr, ash ...) through links
+// to it in data/bin, which goes at the end of the shells' PATH. The links
+// are checked at every start and made again when the package brought
+// another BusyBox. Without them the app still runs: the log says why, and
+// the shells get no such folder.
+//
+// PowerShell runs from where it is in the package, with a home folder and
+// a folder for temporary files in the data folder.
+func bundled() settings.Bundled {
+	root, err := os.Getwd()
+	if err != nil {
+		log.Printf("bundled: %v; the shells get no BusyBox tools and no PowerShell", err)
+		return settings.Bundled{}
+	}
+	b := settings.Bundled{
+		PowerShell:     filepath.Join(root, "app/native/powershell/pwsh/pwsh"),
+		PowerShellHome: filepath.Join(root, "data/pwsh-home"),
+		PowerShellTmp:  filepath.Join(root, "data/pwsh-tmp"),
+	}
+	tools := filepath.Join(root, "data/bin")
+	if err := busybox.Links(filepath.Join(root, "app/native/busybox/busybox"), tools); err != nil {
+		log.Printf("%v; the shells get no BusyBox tools", err)
+	} else {
+		b.Tools = tools
+	}
+	for _, dir := range []string{b.PowerShellHome, b.PowerShellTmp} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			log.Printf("bundled: %v", err)
 		}
 	}
-	log.Printf("%v; the shells get no BusyBox tools", err)
-	return ""
+	return b
 }
 
 // The phone's own font files; the app ships none.

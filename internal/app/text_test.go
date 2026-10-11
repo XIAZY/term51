@@ -784,7 +784,7 @@ func TestBusyBoxShell(t *testing.T) {
 		t.Fatal(err)
 	}
 	a, p, done := startApp(t)
-	a.ToolsDir = tools
+	a.Bundled.Tools = tools
 
 	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "busybox"}})
 	a.Send(Command{Name: "newtab"})

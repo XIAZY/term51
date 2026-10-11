@@ -790,7 +790,7 @@ func TestBusyBoxShell(t *testing.T) {
 	a.Send(Command{Name: "newtab"})
 	wait(t, "the second tab", func() bool {
 		tabs, _ := p.get("tabs").([]any)
-		return len(tabs) == 2 && tabs[1] == filepath.Join(tools, "ash")
+		return len(tabs) == 2 && tabs[0] == "bash" && tabs[1] == "BusyBox shell"
 	})
 	// What runs is BusyBox's ash (its help names it), found through the
 	// folder that is last on the PATH.
@@ -800,6 +800,26 @@ func TestBusyBoxShell(t *testing.T) {
 		s := p.screen()
 		return strings.Contains(s, "BusyBox v") && strings.Contains(s, "\nT51TOOLS")
 	})
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
+// Without the tools folder (the links could not be made at the start), the
+// BusyBox shell does not start: no tab is opened, and the page is told why.
+func TestBusyBoxShellWithoutItsTools(t *testing.T) {
+	a, p, done := startApp(t)
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "shell", "value": "busybox"}})
+	a.Send(Command{Name: "newtab"})
+	wait(t, "the notice", func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return len(p.notices) == 1 && p.notices[0] == "The BusyBox shell could not be started: its tools could not be set up (see the log)"
+	})
+	if tabs, _ := p.get("tabs").([]any); len(tabs) != 1 {
+		t.Errorf("%d tabs, want the one there was", len(tabs))
+	}
 	a.Quit()
 	if err := <-done; err != nil {
 		t.Errorf("Run returned %v", err)

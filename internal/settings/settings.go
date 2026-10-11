@@ -535,6 +535,19 @@ func (s Settings) SessionTheme() session.Theme {
 // SessionCursor is the cursor's shape as a session takes it.
 func (s Settings) SessionCursor() session.CursorShape { return cursors[s.Cursor] }
 
+// ShellName is what the shell is called where the app names it (a tab's
+// first title): the settings sheet's name for one of the two it offers,
+// and for a program by its path the last part of the path.
+func (s Settings) ShellName() string {
+	switch s.Shell {
+	case ShellSystem:
+		return "System shell"
+	case ShellBusyBox:
+		return "BusyBox shell"
+	}
+	return filepath.Base(s.Shell)
+}
+
 // Session is the session to start for a terminal of cols by rows cells of
 // cellW by cellH pixels. env is the environment the shell gets besides
 // TERM (nil: the app's own). toolsDir is the folder with the links to the

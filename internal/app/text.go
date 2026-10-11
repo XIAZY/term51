@@ -15,6 +15,7 @@ import (
 	"term51/internal/keys"
 	"term51/internal/selbar"
 	"term51/internal/session"
+	"term51/internal/settings"
 	"term51/internal/stretch"
 )
 
@@ -111,6 +112,12 @@ func (a *App) Run() error {
 	sentW, sentH := 0, 0 // the cell size the shells were last told
 
 	open := func() *tab {
+		if a.cfg.Shell == settings.ShellBusyBox && a.ToolsDir == "" {
+			// The start-up could not make the links (the log has the
+			// reason), so there is no ash to run.
+			a.notice("The BusyBox shell could not be started: its tools could not be set up (see the log)")
+			return nil
+		}
 		conf := a.cfg.Session(cols, rows, cw, ch, nil, a.ToolsDir)
 		sess, err := session.Start(conf)
 		if err != nil {
@@ -118,7 +125,7 @@ func (a *App) Run() error {
 			a.notice("The shell could not be started: " + err.Error())
 			return nil
 		}
-		t := &tab{sess: sess, title: conf.Shell, stop: make(chan struct{})}
+		t := &tab{sess: sess, title: a.cfg.ShellName(), stop: make(chan struct{})}
 		go t.follow(inbox)
 		return t
 	}

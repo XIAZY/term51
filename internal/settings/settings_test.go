@@ -324,6 +324,14 @@ func TestTheShellSetting(t *testing.T) {
 		t.Errorf("a shell by its path: %q, %v", c.Shell, c.Env)
 	}
 
+	for shell, name := range map[string]string{ShellSystem: "System shell", ShellBusyBox: "BusyBox shell", "/opt/bin/zsh": "zsh"} {
+		x := Default()
+		x.Shell = shell
+		if x.ShellName() != name {
+			t.Errorf("the shell %q is called %q, want %q", shell, x.ShellName(), name)
+		}
+	}
+
 	// No tools folder: the PATH is left as it is. No PATH at all: the
 	// tools folder is all of it.
 	c = Default().Session(80, 24, 9, 18, env, "")

@@ -115,7 +115,8 @@ func main() {
 // written goes in the data folder. root is the app's folder.
 //
 // BusyBox's tools are run by their names (head, tr, ash ...) through links
-// to it in data/bin, which goes at the end of the shells' PATH. The links
+// to it in data/bin, which goes at the end of the shells' PATH; the
+// Dropbear SSH client's names (ssh, scp ...) are links there as well. The links
 // are checked at every start and made again when the package brought
 // another BusyBox. Without them the app still runs: the log says why, and
 // the shells get no such folder.
@@ -127,8 +128,13 @@ func bundled(root string) settings.Bundled {
 		PowerShellTmp:  filepath.Join(root, "data/pwsh-tmp"),
 	}
 	tools := filepath.Join(root, "data/bin")
-	if err := busybox.Links(filepath.Join(root, "app/native/busybox/busybox"), tools); err != nil {
-		log.Printf("%v; the shells get no BusyBox tools", err)
+	// The Dropbear SSH client is one program too: ssh and the rest by name.
+	dropbear := busybox.Tool{
+		Program: filepath.Join(root, "app/native/dropbear/dropbearmulti"),
+		Names:   []string{"ssh", "dbclient", "scp", "dropbearkey", "dropbearconvert"},
+	}
+	if err := busybox.Links(filepath.Join(root, "app/native/busybox/busybox"), tools, dropbear); err != nil {
+		log.Printf("%v; the shells get no BusyBox tools and no ssh", err)
 	} else {
 		b.Tools = tools
 	}

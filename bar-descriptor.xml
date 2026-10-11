@@ -22,10 +22,14 @@
         <!-- BusyBox: the tools the phone lacks (head, tr, ...) and the BusyBox
              shell. tools/busybox.sh fetches it; its licences are beside it. -->
         <asset path="build/busybox/busybox" type="Qnx/Elf">busybox/busybox</asset>
+        <!-- The Dropbear SSH client: ssh, scp and its key tools, one program.
+             tools/dropbear.sh builds it; its licences are beside it. -->
+        <asset path="build/dropbear/dropbearmulti" type="Qnx/Elf">dropbear/dropbearmulti</asset>
     </configuration>
 
     <asset path="assets">assets</asset>
     <asset path="third_party/busybox">busybox/licences</asset>
+    <asset path="third_party/dropbear">dropbear/licences</asset>
 
     <permission system="true">run_native</permission>
     <env var="LD_LIBRARY_PATH" value="/usr/lib/qt4/lib"/>

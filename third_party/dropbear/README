@@ -1,0 +1,25 @@
+The Dropbear SSH client in term51
+=================================
+
+The file dropbearmulti in this folder of the package is the client side of
+Dropbear 2026.94 for BlackBerry 10: ssh (Dropbear's dbclient), scp,
+dropbearkey and dropbearconvert in one program. There is no SSH server in
+it. term51 builds it, unchanged, from the repository dropbear-qnx at the
+commit named in term51's tools/dropbear.lock; that repository holds every
+change made to Dropbear for QNX, its settings and the way to build the same
+bytes again (qnx/README.md there).
+
+Dropbear is under an MIT-style licence: see LICENSE here, which also names
+the parts taken from elsewhere (scp and a few helpers from OpenSSH, BSD
+licence). Its cryptography is libtomcrypt and libtommath, released into the
+public domain: see libtomcrypt.LICENSE and libtommath.LICENSE. The program
+also contains helper functions of LLVM's compiler-rt (Apache License 2.0
+with LLVM exceptions), which the toolchain links in.
+
+term51 runs it as a separate program, by the names ssh, dbclient, scp,
+dropbearkey and dropbearconvert at the end of the shell's PATH.
+
+Two things to know when using it: keys are in Dropbear's own file format
+(dropbearkey makes one; dropbearconvert brings an OpenSSH key over), and
+the algorithms based on SHA-1 are switched on beside the modern ones,
+because older servers, QNX 6.5's among them, know no others.

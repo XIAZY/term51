@@ -14,6 +14,8 @@ image=${BB10_BUILDER_IMAGE:-ghcr.io/xiazy/blackberry10-toolchain:latest}
 mkdir -p "$repo/build"
 # The BusyBox that the package carries (tools/busybox.lock).
 "$repo/tools/busybox.sh"
+# And the Dropbear SSH client (tools/dropbear.lock).
+"$repo/tools/dropbear.sh"
 
 exec docker run --rm --user "$(id -u):$(id -g)" \
     -e HOME=/tmp/home -e GOCACHE=/src/build/go-cache -e GOMODCACHE=/src/build/go-mod \

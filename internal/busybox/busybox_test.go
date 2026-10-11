@@ -89,6 +89,62 @@ func TestLinks(t *testing.T) {
 	}
 }
 
+// Another program of the package gets its names in the same folder; they
+// are made again when it changes, and a name BusyBox has too goes to it.
+func TestLinksOfAnotherTool(t *testing.T) {
+	prog := program(t)
+	dir := filepath.Join(t.TempDir(), "bin")
+	other := filepath.Join(t.TempDir(), "dropbearmulti")
+	if err := os.WriteFile(other, []byte("#!/bin/sh\necho \"called as $(basename \"$0\")\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// "head" is one of BusyBox's names as well.
+	tool := Tool{Program: other, Names: []string{"ssh", "scp", "head"}}
+	if err := Links(prog, dir, tool); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range tool.Names {
+		if target, err := os.Readlink(filepath.Join(dir, name)); err != nil || target != other {
+			t.Errorf("%s links to %q (%v), want %q", name, target, err, other)
+		}
+	}
+	out, err := exec.Command(filepath.Join(dir, "ssh")).CombinedOutput()
+	if err != nil || strings.TrimSpace(string(out)) != "called as ssh" {
+		t.Errorf("ssh through its link: %q, %v", out, err)
+	}
+	if target, _ := os.Readlink(filepath.Join(dir, "tr")); target != prog {
+		t.Errorf("tr links to %q, want BusyBox", target)
+	}
+
+	// Nothing changed: left alone. The other tool changed: made again.
+	mark := filepath.Join(dir, "mark")
+	if err := os.WriteFile(mark, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Links(prog, dir, tool); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(mark); err != nil {
+		t.Error("the links were made again although nothing changed")
+	}
+	if err := os.WriteFile(other, []byte("#!/bin/sh\necho changed\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := Links(prog, dir, tool); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(mark); err == nil {
+		t.Error("the links were not made again for a changed tool")
+	}
+
+	// A tool that is not there: an error, and no folder left half made
+	// for the next start to trust.
+	gone := Tool{Program: filepath.Join(t.TempDir(), "none"), Names: []string{"ssh"}}
+	if err := Links(prog, dir, gone); err == nil {
+		t.Error("no error for a tool that is not there")
+	}
+}
+
 func TestLinksWithoutTheProgram(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "bin")
 	err := Links(filepath.Join(t.TempDir(), "none"), dir)

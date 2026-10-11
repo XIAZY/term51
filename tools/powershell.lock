@@ -3,4 +3,4 @@
 # BlackBerry 10. To update, change the three lines.
 tag = v7.6.6
 file = powershell-7.6.6-qnx-arm.tar.gz
-sha256 = 06dccf056b3ad1f923e92896d93d23ee2e5eeefb0f33280ac6649c449d014ef2
+sha256 = 82d96669c9032ca7eb9ec4a97d2ee7dcb880412af5e92627cea5f930fd84ae4b

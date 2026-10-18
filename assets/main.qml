@@ -261,6 +261,12 @@ TabbedPane {
                     // which no other key did.
                     focusPolicy: FocusPolicy.None
                     navigation.focusPolicy: NavigationFocusPolicy.NotFocusable
+                    // It keeps the focus when the user touches outside it (our
+                    // key strip, the system's bar, the terminal): by the
+                    // phone's default rule any such touch took it, and the
+                    // rows went down. It gives the focus only to a control
+                    // that takes it, such as a field of the settings sheet.
+                    focusRetentionPolicyFlags: FocusRetentionPolicy.LoseToFocusable
                     verticalAlignment: VerticalAlignment.Bottom
                     horizontalAlignment: HorizontalAlignment.Fill
                     inputMode: TextFieldInputMode.Text
@@ -403,11 +409,17 @@ TabbedPane {
                             // A tap brings the on-screen rows up; but while
                             // something is selected it only drops the
                             // selection, and leaves the rows as they are.
+                            // The field keeps the focus when the user has
+                            // swiped the rows down, so it is given up and
+                            // asked for again, which shows the rows.
                             onTapped: {
                                 if (page.selected != "")
                                     page.send("unselect")
-                                else
+                                else {
+                                    if (input.focused)
+                                        input.loseFocus()
                                     input.requestFocus()
+                                }
                             }
                         }
                         contextMenuHandler: ContextMenuHandler {

@@ -124,6 +124,25 @@ func TestABadValueNamesTheSettingAndNothingIsUsed(t *testing.T) {
 	}
 }
 
+// A drag scrolls programs unless the setting is off.
+func TestScrollProgram(t *testing.T) {
+	s := Default()
+	if !s.ScrollProgram || s.Values()["scrollProgram"] != "true" {
+		t.Errorf("by default: %v, %q", s.ScrollProgram, s.Values()["scrollProgram"])
+	}
+	if err := s.Set("scrollProgram", "false"); err != nil || s.ScrollProgram || s.Values()["scrollProgram"] != "false" {
+		t.Errorf("set off: %v, %v", s.ScrollProgram, err)
+	}
+	parsed, warnings, err := Parse([]byte("scrollProgram = no\n"))
+	if err != nil || len(warnings) != 0 || parsed.ScrollProgram {
+		t.Errorf("from a file: %v, %v, %v", parsed.ScrollProgram, warnings, err)
+	}
+	// It reaches the session.
+	if !Default().Session(80, 24, 9, 18, nil, Bundled{}).ScrollProgram || parsed.Session(80, 24, 9, 18, nil, Bundled{}).ScrollProgram {
+		t.Error("the setting does not reach the session's config")
+	}
+}
+
 func TestSetAndValues(t *testing.T) {
 	s := Default()
 	v := s.Values()

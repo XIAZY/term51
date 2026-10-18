@@ -58,6 +58,7 @@ Sheet {
         theme.selectedIndex = { "dark": 0, "black": 1, "light": 2, "solarized": 3, "custom": 4 }[v["theme"]]
         cursor.selectedIndex = { "block": 0, "bar": 1, "underline": 2 }[v["cursor"]]
         bell.checked = v["bell"] == "true"
+        scrollProgram.checked = v["scrollProgram"] == "true"
         // A shell that is neither of the two (the path of a program, from
         // the settings file) leaves the list without a choice.
         var shells = { "system": 0, "busybox": 1, "powershell": 2 }
@@ -160,6 +161,13 @@ Sheet {
                     id: bell
                     text: "Bell: a sound when a program rings it"
                     onFlipped: sheet.set("bell", on)
+                }
+
+                Header { title: "Scrolling"; subtitle: "Applies at once" }
+                SettingToggle {
+                    id: scrollProgram
+                    text: "A drag scrolls the program (vi, less, tmux, pi), as a mouse wheel does"
+                    onFlipped: sheet.set("scrollProgram", on)
                 }
 
                 Header { title: "Shell"; subtitle: "For tabs opened from now on" }

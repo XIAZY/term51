@@ -106,6 +106,32 @@ func TestScrollMovesTheViewOtherwise(t *testing.T) {
 	}
 }
 
+// With the user's setting off, a drag only moves the view: the program is
+// sent nothing, whether it reads the mouse or fills the alternate screen.
+func TestScrollProgramOff(t *testing.T) {
+	for _, modes := range []string{`\033[?1000h\033[?1006h`, `\033[?1049h`, `\033[?1049h\033[?1000h`} {
+		got := scrollReport(t, modes, func(s *Session) {
+			s.SetScrollProgram(false)
+			s.Scroll(3, fingerX, fingerY)
+		})
+		if got != "" {
+			t.Errorf("%q: sent %s, want nothing", modes, got)
+		}
+	}
+	// And the view moves, as in a plain shell.
+	s := start(t, `for i in $(seq 1 30); do printf 'line-%s\r\n' $i; done; printf '\033[?1000h'; sleep 5`)
+	waitText(t, s, "line-30")
+	time.Sleep(100 * time.Millisecond)
+	s.SetScrollProgram(false)
+	s.Scroll(-10, fingerX, fingerY)
+	if found, _ := s.SelectWordAt(2, 0); !found {
+		t.Fatal("no word at the top of the view")
+	}
+	if got := selected(t, s); got != "line-12" {
+		t.Errorf("the top of the view: %q, want line-12", got)
+	}
+}
+
 func hex(s string) string {
 	const digits = "0123456789abcdef"
 	out := make([]byte, 0, 2*len(s))

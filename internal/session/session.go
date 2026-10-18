@@ -57,6 +57,10 @@ type Config struct {
 
 	// Replies configures the answers to programs' queries.
 	Replies replies.Config
+
+	// ScrollProgram makes Scroll scroll a program that asks for it (the
+	// mouse wheel or the arrows); false, Scroll always moves the view.
+	ScrollProgram bool
 }
 
 // RGB is a colour.
@@ -189,13 +193,14 @@ type Session struct {
 	// the reader).
 	wmu sync.Mutex
 
-	changed      chan struct{}
-	events       chan Event
-	readerDone   chan struct{} // the reader saw the end of the shell's output
-	done         chan struct{} // the shell has exited and been waited for
-	exitErr      error         // set before done is closed
-	cursor       CursorShape   // the user's shape
-	cursorChosen bool          // a program asked for a shape (DECSCUSR)
+	changed       chan struct{}
+	events        chan Event
+	readerDone    chan struct{} // the reader saw the end of the shell's output
+	done          chan struct{} // the shell has exited and been waited for
+	exitErr       error         // set before done is closed
+	cursor        CursorShape   // the user's shape
+	scrollProgram bool          // Config.ScrollProgram, changed by SetScrollProgram
+	cursorChosen  bool          // a program asked for a shape (DECSCUSR)
 	// While the selection is being stretched: the end that stays, tied to
 	// its text, and the screen it is on.
 	anchor       *vt.Pin
@@ -217,15 +222,16 @@ func Start(cfg Config) (*Session, error) {
 		return nil, err
 	}
 	s := &Session{
-		cfg:        cfg.Replies,
-		term:       term,
-		cellW:      cfg.CellW,
-		cellH:      cfg.CellH,
-		cursor:     cfg.Cursor,
-		changed:    make(chan struct{}, 1),
-		events:     make(chan Event, 64),
-		readerDone: make(chan struct{}),
-		done:       make(chan struct{}),
+		cfg:           cfg.Replies,
+		term:          term,
+		cellW:         cfg.CellW,
+		cellH:         cfg.CellH,
+		cursor:        cfg.Cursor,
+		scrollProgram: cfg.ScrollProgram,
+		changed:       make(chan struct{}, 1),
+		events:        make(chan Event, 64),
+		readerDone:    make(chan struct{}),
+		done:          make(chan struct{}),
 	}
 	s.h = handler{s: s, ro: vt.NewReadonlyHandler(&s.term)}
 	s.stream = vt.NewStream(&s.h)
@@ -480,7 +486,8 @@ func (s *Session) ScrollViewport(delta int) {
 // reporting on, one wheel report per row at the finger's cell; else, on the
 // alternate screen with alternate scroll on (mode 1007, the default), one Up
 // or Down key per row, in the cursor-key mode the program set; else the
-// view moves into the scrollback.
+// view moves into the scrollback. With the user's ScrollProgram off, the view
+// always moves.
 func (s *Session) Scroll(rows, px, py int) {
 	if rows == 0 {
 		return
@@ -496,6 +503,10 @@ func (s *Session) Scroll(rows, px, py int) {
 	}
 	t := &s.term
 	switch {
+	case !s.scrollProgram:
+		t.ScrollViewport(vt.TerminalScrollViewport{Tag: vt.TerminalScrollViewportDelta, Delta: int64(rows)})
+		s.mu.Unlock()
+		s.signal()
 	case t.Flags.MouseEvent != vt.TerminalMouseEventsNone:
 		// X10 mode (?9) reports button presses only, not the wheel.
 		var report []byte
@@ -527,6 +538,13 @@ func (s *Session) Scroll(rows, px, py int) {
 		s.mu.Unlock()
 		s.signal()
 	}
+}
+
+// SetScrollProgram changes Config.ScrollProgram, for the next drag.
+func (s *Session) SetScrollProgram(on bool) {
+	s.mu.Lock()
+	s.scrollProgram = on
+	s.mu.Unlock()
 }
 
 // cellAt is the cell, 0 to n-1, of the pixel p in cells of size pixels.

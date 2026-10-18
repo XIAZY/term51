@@ -318,16 +318,16 @@ func TestTheShellSetting(t *testing.T) {
 		t.Errorf("the BusyBox shell's PATH: %v", c.Env)
 	}
 
-	// PowerShell: the program from the package, a home of its own in place
-	// of the app's, the app's folder for temporary files, and xterm whatever
-	// the terminal type setting says.
+	// PowerShell: the downloaded program, the app's home and folder for
+	// temporary files like every shell's, and xterm whatever the terminal
+	// type setting says.
 	s.Shell, s.Term = ShellPowerShell, "vt100"
-	places := Bundled{Tools: "/data/bin", PowerShell: "/app/native/powershell/pwsh/pwsh", PowerShellHome: "/data/pwsh-home", Tmp: "/app/tmp"}
+	places := Bundled{Tools: "/data/bin", PowerShell: "/data/.local/share/term51/powershell/pwsh/pwsh", Tmp: "/app/tmp"}
 	c = s.Session(80, 24, 9, 18, append(env, "TMPDIR=/tmp"), places)
-	if c.Shell != "/app/native/powershell/pwsh/pwsh" {
+	if c.Shell != "/data/.local/share/term51/powershell/pwsh/pwsh" {
 		t.Errorf("PowerShell is %q", c.Shell)
 	}
-	if !has(c, "HOME=/data/pwsh-home") || has(c, "HOME=/h") || !has(c, "TMPDIR=/app/tmp") || has(c, "TMPDIR=/tmp") {
+	if !has(c, "HOME=/h") || !has(c, "TMPDIR=/app/tmp") || has(c, "TMPDIR=/tmp") {
 		t.Errorf("PowerShell's home and temporary folders: %v", c.Env)
 	}
 	if !has(c, "TERM=xterm") || has(c, "TERM=vt100") || !has(c, "PATH=/usr/bin:/bin:/data/bin") || !has(c, "ENV=/etc/kshrc") {
@@ -363,7 +363,7 @@ func TestTheShellSetting(t *testing.T) {
 	// The user's own programs go at the front of every shell's PATH, and
 	// every shell gets the app's folder for temporary files.
 	home := Bundled{Tools: "/data/bin", Bin: "/data/.local/bin", Tmp: "/app/tmp",
-		PowerShell: "/data/powershell/pwsh/pwsh", PowerShellHome: "/data/pwsh-home"}
+		PowerShell: "/data/.local/share/term51/powershell/pwsh/pwsh"}
 	for _, shell := range []string{ShellSystem, ShellBusyBox, ShellPowerShell, "/opt/bin/zsh"} {
 		x := Default()
 		x.Shell = shell

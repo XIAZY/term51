@@ -560,10 +560,9 @@ type Bundled struct {
 	Tools string
 
 	// PowerShell is the PowerShell program (pwsh), where a download puts
-	// it (internal/pwsh). PowerShellHome is its home folder, where it keeps
-	// its history and profile.
-	PowerShell     string
-	PowerShellHome string
+	// it (internal/pwsh). Its home is the app's, like every shell's: it
+	// keeps its profile and history in its conventional places there.
+	PowerShell string
 
 	// Bin is $HOME/.local/bin, the conventional folder for a user's own
 	// programs, where the app links pwsh when PowerShell is there; it goes
@@ -600,8 +599,8 @@ func (b Bundled) path(p string) string {
 // TERM (nil: the app's own). The tools folder of b goes at the end of the
 // shell's PATH, so that the phone's own tools come first, and the user's
 // own programs (b.Bin) at the front; the BusyBox shell is the ash in it.
-// Every shell gets b.Tmp for its temporary files. PowerShell also gets its
-// own home folder, and the terminal type it was built for.
+// Every shell gets b.Tmp for its temporary files. PowerShell gets the
+// terminal type it was built for.
 func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled) session.Config {
 	if env == nil {
 		env = os.Environ()
@@ -621,8 +620,6 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 		drop = append(drop, "ENV=")
 	case ShellPowerShell:
 		shell, term = b.PowerShell, session.DefaultTerm
-		drop = append(drop, "HOME=")
-		add = []string{"HOME=" + b.PowerShellHome}
 	}
 	if b.Tmp != "" {
 		drop = append(drop, "TMPDIR=")

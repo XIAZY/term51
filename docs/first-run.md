@@ -8,8 +8,10 @@ only be seen on the phone.
 
 Build with `GOQNX=<go-qnx> tools/build.sh`; install with
 `tools/install.sh <ssh-host>` (the app must be closed: the phone does not
-replace an open app). The settings are `data/settings.conf` in the app's
-sandbox (`internal/settings`); the log is `data/term51.log`.
+replace an open app). The settings are `~/.config/term51/settings.conf`,
+where `~` is the app's home, the `data` folder of its sandbox
+(`internal/layout`, `internal/settings`); the log is `logs/term51.log` in the
+sandbox.
 
 ## Checking a page change before it is installed
 

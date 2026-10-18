@@ -235,7 +235,7 @@ Sheet {
                     bottomPadding: ui.du(4)
                     Label {
                         multiline: true
-                        text: "Colours of your own and the shell's arguments: data/settings.conf in the app's folder."
+                        text: "Colours of your own and the shell's arguments: ~/.config/term51/settings.conf in the app's home."
                         textStyle.color: Color.Gray
                     }
                 }

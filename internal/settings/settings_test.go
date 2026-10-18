@@ -318,16 +318,16 @@ func TestTheShellSetting(t *testing.T) {
 		t.Errorf("the BusyBox shell's PATH: %v", c.Env)
 	}
 
-	// PowerShell: the program from the package, a home and a temporary
-	// folder of its own in place of the app's, and xterm whatever the
-	// terminal type setting says.
+	// PowerShell: the downloaded program, the app's home and folder for
+	// temporary files like every shell's, and xterm whatever the terminal
+	// type setting says.
 	s.Shell, s.Term = ShellPowerShell, "vt100"
-	places := Bundled{Tools: "/data/bin", PowerShell: "/app/native/powershell/pwsh/pwsh", PowerShellHome: "/data/pwsh-home", PowerShellTmp: "/data/pwsh-tmp"}
+	places := Bundled{Tools: "/data/bin", PowerShell: "/data/.local/share/term51/powershell/pwsh/pwsh", Tmp: "/app/tmp"}
 	c = s.Session(80, 24, 9, 18, append(env, "TMPDIR=/tmp"), places)
-	if c.Shell != "/app/native/powershell/pwsh/pwsh" {
+	if c.Shell != "/data/.local/share/term51/powershell/pwsh/pwsh" {
 		t.Errorf("PowerShell is %q", c.Shell)
 	}
-	if !has(c, "HOME=/data/pwsh-home") || has(c, "HOME=/h") || !has(c, "TMPDIR=/data/pwsh-tmp") || has(c, "TMPDIR=/tmp") {
+	if !has(c, "HOME=/h") || !has(c, "TMPDIR=/app/tmp") || has(c, "TMPDIR=/tmp") {
 		t.Errorf("PowerShell's home and temporary folders: %v", c.Env)
 	}
 	if !has(c, "TERM=xterm") || has(c, "TERM=vt100") || !has(c, "PATH=/usr/bin:/bin:/data/bin") || !has(c, "ENV=/etc/kshrc") {
@@ -360,6 +360,26 @@ func TestTheShellSetting(t *testing.T) {
 		t.Errorf("the PATH where there was none: %v", c.Env)
 	}
 
+	// The user's own programs go at the front of every shell's PATH, and
+	// every shell gets the app's folder for temporary files.
+	home := Bundled{Tools: "/data/bin", Bin: "/data/.local/bin", Tmp: "/app/tmp",
+		PowerShell: "/data/.local/share/term51/powershell/pwsh/pwsh"}
+	for _, shell := range []string{ShellSystem, ShellBusyBox, ShellPowerShell, "/opt/bin/zsh"} {
+		x := Default()
+		x.Shell = shell
+		c = x.Session(80, 24, 9, 18, append(env, "TMPDIR=/tmp"), home)
+		if !has(c, "PATH=/data/.local/bin:/usr/bin:/bin:/data/bin") {
+			t.Errorf("%s: the PATH with the user's own programs: %v", shell, c.Env)
+		}
+		if !has(c, "TMPDIR=/app/tmp") || has(c, "TMPDIR=/tmp") {
+			t.Errorf("%s: the folder for temporary files: %v", shell, c.Env)
+		}
+	}
+	c = Default().Session(80, 24, 9, 18, []string{"HOME=/h"}, home)
+	if !has(c, "PATH=/data/.local/bin:/data/bin") {
+		t.Errorf("the PATH where there was none, with the user's own programs: %v", c.Env)
+	}
+
 	// A settings file from before the list, with the phone's shell by its
 	// path, means the system shell; any other path is kept as it is.
 	old, _, err := Parse([]byte("shell = /bin/sh\n"))
@@ -375,5 +395,21 @@ func TestTheShellSetting(t *testing.T) {
 		if err != nil || got.Shell != v {
 			t.Errorf("shell = %s written and read back is %q (%v)", v, got.Shell, err)
 		}
+	}
+}
+
+// Without a home there is no .local/bin, so a shell does not get one on
+// its PATH; with one, it is in it.
+func TestHomeBin(t *testing.T) {
+	if bin := HomeBin(""); bin != "" {
+		t.Errorf("HomeBin(\"\") = %q; want none", bin)
+	}
+	if bin := HomeBin("/data"); bin != "/data/.local/bin" {
+		t.Errorf("HomeBin(/data) = %q", bin)
+	}
+	b := Bundled{Tools: "/data/bin", Bin: HomeBin("")}
+	c := Default().Session(80, 24, 9, 18, []string{"PATH=/usr/bin:/bin", "TMPDIR=/tmp"}, b)
+	if !slices.Contains(c.Env, "PATH=/usr/bin:/bin:/data/bin") || !slices.Contains(c.Env, "TMPDIR=/tmp") {
+		t.Errorf("a shell without a home folder or the app's tmp: %v", c.Env)
 	}
 }

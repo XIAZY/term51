@@ -560,31 +560,27 @@ type Bundled struct {
 	Tools string
 
 	// PowerShell is the PowerShell program (pwsh), where a download puts
-	// it (internal/pwsh). PowerShellHome is its
-	// home folder, where it keeps its history and profile, and
-	// PowerShellTmp its folder for temporary files: the phone's /tmp will
-	// not do, since no directory can be made in it.
+	// it (internal/pwsh). PowerShellHome is its home folder, where it keeps
+	// its history and profile.
 	PowerShell     string
 	PowerShellHome string
-	PowerShellTmp  string
 
 	// Bin is $HOME/.local/bin, the conventional folder for a user's own
 	// programs, where the app links pwsh when PowerShell is there; it goes
-	// at the front of every shell's PATH. Tmp is $HOME/tmp, every shell's
-	// TMPDIR but PowerShell's (which has its own): the phone's /tmp cannot
-	// hold directories. Either is "" when there is none.
+	// at the front of every shell's PATH. Tmp is the tmp folder of the
+	// app's sandbox, every shell's TMPDIR: the phone's /tmp cannot hold
+	// directories. Either is "" when there is none.
 	Bin string
 	Tmp string
 }
 
-// HomeFolders are Bin and Tmp in the app's home folder home: "" both when
-// there is no home, so that no shell gets a folder relative to wherever it
-// is started.
-func HomeFolders(home string) (bin, tmp string) {
+// HomeBin is Bin in the app's home folder home: "" when there is no home,
+// so that no shell gets a folder relative to wherever it is started.
+func HomeBin(home string) string {
 	if home == "" {
-		return "", ""
+		return ""
 	}
-	return filepath.Join(home, ".local/bin"), filepath.Join(home, "tmp")
+	return filepath.Join(home, ".local/bin")
 }
 
 // path is the PATH a shell gets for the PATH p: the user's own programs
@@ -604,9 +600,8 @@ func (b Bundled) path(p string) string {
 // TERM (nil: the app's own). The tools folder of b goes at the end of the
 // shell's PATH, so that the phone's own tools come first, and the user's
 // own programs (b.Bin) at the front; the BusyBox shell is the ash in it.
-// Every shell gets b.Tmp for its temporary files, except PowerShell, which
-// gets its own home and temporary folders, and the terminal type it was
-// built for.
+// Every shell gets b.Tmp for its temporary files. PowerShell also gets its
+// own home folder, and the terminal type it was built for.
 func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled) session.Config {
 	if env == nil {
 		env = os.Environ()
@@ -626,10 +621,10 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 		drop = append(drop, "ENV=")
 	case ShellPowerShell:
 		shell, term = b.PowerShell, session.DefaultTerm
-		drop = append(drop, "HOME=", "TMPDIR=")
-		add = []string{"HOME=" + b.PowerShellHome, "TMPDIR=" + b.PowerShellTmp}
+		drop = append(drop, "HOME=")
+		add = []string{"HOME=" + b.PowerShellHome}
 	}
-	if s.Shell != ShellPowerShell && b.Tmp != "" {
+	if b.Tmp != "" {
 		drop = append(drop, "TMPDIR=")
 		add = append(add, "TMPDIR="+b.Tmp)
 	}

@@ -137,13 +137,12 @@ func main() {
 // another BusyBox. Without them the app still runs: the log says why, and
 // the shells get no such folder.
 //
-// PowerShell is given a home folder and a folder for temporary files. The
-// app's home (its data folder) gets the conventional .local/bin, at the
-// front of the shells' PATH, and tmp, their TMPDIR.
+// PowerShell is given a home folder. The app's home (its data folder) gets
+// the conventional .local/bin, at the front of the shells' PATH; the tmp
+// folder of the app's sandbox, which the system makes, is their TMPDIR.
 func bundled(root string) settings.Bundled {
 	b := settings.Bundled{
 		PowerShellHome: filepath.Join(root, "data/pwsh-home"),
-		PowerShellTmp:  filepath.Join(root, "data/pwsh-tmp"),
 	}
 	tools := filepath.Join(root, "data/bin")
 	// The Dropbear SSH client is one program too: ssh and the rest by name.
@@ -156,13 +155,25 @@ func bundled(root string) settings.Bundled {
 	} else {
 		b.Tools = tools
 	}
-	// The conventional places in the app's home, its data folder: the
-	// user's own programs (where pwsh is linked) and temporary files.
-	b.Bin, b.Tmp = settings.HomeFolders(os.Getenv("HOME"))
+	// The user's own programs (where pwsh is linked), in the conventional
+	// place in the app's home, its data folder.
+	b.Bin = settings.HomeBin(os.Getenv("HOME"))
 	if b.Bin == "" {
-		log.Printf("bundled: no HOME; the shells get no .local/bin, no TMPDIR of the app's, and pwsh is not linked")
+		log.Printf("bundled: no HOME; the shells get no .local/bin, and pwsh is not linked")
 	}
-	for _, dir := range []string{b.PowerShellHome, b.PowerShellTmp, b.Bin, b.Tmp} {
+	if tmp := filepath.Join(root, "tmp"); isDir(tmp) {
+		b.Tmp = tmp
+	} else {
+		log.Printf("bundled: the sandbox has no %s; the shells get no TMPDIR of the app's", tmp)
+	}
+	// The folders for temporary files the app made before it used the
+	// sandbox's.
+	for _, old := range []string{"data/tmp", "data/pwsh-tmp"} {
+		if err := os.RemoveAll(filepath.Join(root, old)); err != nil {
+			log.Printf("bundled: %v", err)
+		}
+	}
+	for _, dir := range []string{b.PowerShellHome, b.Bin} {
 		if dir == "" {
 			continue
 		}
@@ -207,4 +218,10 @@ func phoneFonts() cells.Fonts {
 			read("monotype/malgun.ttf"),
 		},
 	}
+}
+
+// isDir reports whether path is a directory.
+func isDir(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.IsDir()
 }

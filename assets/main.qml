@@ -469,7 +469,7 @@ TabbedPane {
                                 }
                                 var d = Math.floor((event.localY - fwc.touchY) / page.cellH)
                                 if (d != 0) {
-                                    page.send("scroll", { rows: -d })
+                                    page.send("scroll", { rows: -d, x: Math.round(event.localX), y: Math.round(event.localY) })
                                     fwc.touchY += d * page.cellH
                                 }
                             } else if ((event.isUp() || event.isCancel()) && fwc.padOn) {

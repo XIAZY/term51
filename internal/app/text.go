@@ -633,7 +633,7 @@ func (a *App) Run() error {
 				tabs[cur].copied = true
 				post()
 			case "scroll":
-				sess.ScrollViewport(num(c.Args["rows"]))
+				sess.Scroll(num(c.Args["rows"]), num(c.Args["x"]), num(c.Args["y"]))
 			case "newtab":
 				if t := open(); t != nil {
 					tabs = append(tabs, t)

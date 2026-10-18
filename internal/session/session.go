@@ -25,6 +25,7 @@ import (
 
 	"term51/internal/pty"
 	"term51/internal/replies"
+	"term51/internal/wheel"
 )
 
 // Config describes the session to start.
@@ -470,6 +471,86 @@ func (s *Session) ScrollViewport(delta int) {
 	}
 	s.mu.Unlock()
 	s.signal()
+}
+
+// Scroll is a vertical drag of rows rows (negative: the finger moved down,
+// towards older content) at the pixel px, py inside the terminal. It does
+// what a mouse wheel does in a desktop terminal, decided by what the program
+// asked for (upstream Ghostty's rule, Surface.scrollCallback): with mouse
+// reporting on, one wheel report per row at the finger's cell; else, on the
+// alternate screen with alternate scroll on (mode 1007, the default), one Up
+// or Down key per row, in the cursor-key mode the program set; else the
+// view moves into the scrollback.
+func (s *Session) Scroll(rows, px, py int) {
+	if rows == 0 {
+		return
+	}
+	n := rows
+	if n < 0 {
+		n = -n
+	}
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return
+	}
+	t := &s.term
+	switch {
+	case t.Flags.MouseEvent != vt.TerminalMouseEventsNone:
+		// X10 mode (?9) reports button presses only, not the wheel.
+		var report []byte
+		if t.Flags.MouseEvent != vt.TerminalMouseEventsX10 {
+			b := wheel.Down
+			if rows < 0 {
+				b = wheel.Up
+			}
+			col, row := cellAt(px, s.cellW, int(t.Cols)), cellAt(py, s.cellH, int(t.Rows))
+			report = wheel.Encode(wheelFormat(t.Flags.MouseFormat), b, col, row, px, py)
+		}
+		s.mu.Unlock()
+		for range n {
+			if len(report) > 0 {
+				s.write(report)
+			}
+		}
+	case t.Screens.ActiveKey == vt.ScreenSetKeyAlternate && t.Modes.Get(vt.ModeMouseAlternateScroll):
+		s.mu.Unlock()
+		key := input.KeyArrowDown
+		if rows < 0 {
+			key = input.KeyArrowUp
+		}
+		for range n {
+			s.Key(input.KeyEvent{Action: input.KeyActionPress, Key: key})
+		}
+	default:
+		t.ScrollViewport(vt.TerminalScrollViewport{Tag: vt.TerminalScrollViewportDelta, Delta: int64(rows)})
+		s.mu.Unlock()
+		s.signal()
+	}
+}
+
+// cellAt is the cell, 0 to n-1, of the pixel p in cells of size pixels.
+func cellAt(p, size, n int) int {
+	c := 0
+	if size > 0 {
+		c = p / size
+	}
+	return max(0, min(c, n-1))
+}
+
+// wheelFormat is the wheel's name for the mouse format a program asked for.
+func wheelFormat(f vt.TerminalMouseFormat) wheel.Format {
+	switch f {
+	case vt.TerminalMouseFormatUtf8:
+		return wheel.UTF8
+	case vt.TerminalMouseFormatSgr:
+		return wheel.SGR
+	case vt.TerminalMouseFormatUrxvt:
+		return wheel.URXVT
+	case vt.TerminalMouseFormatSgrPixels:
+		return wheel.SGRPixels
+	}
+	return wheel.X10
 }
 
 // ScrollToBottom returns the view to the live screen.

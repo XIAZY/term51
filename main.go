@@ -74,9 +74,22 @@ func main() {
 	// into the data folder, with the certificates of the Go team's copy of
 	// Mozilla's list (the fallback import), since the phone keeps its own
 	// where Go does not look.
-	store := pwsh.Open(filepath.Join(root, "data"), pwsh.ManifestURL, pwsh.Target, &http.Client{}, a.PowerShellChanged)
+	// pwsh is linked into the user's own programs, at the front of every
+	// shell's PATH, so that it is found by name from any tab (pi-go's
+	// powershell tool looks for it so).
+	var link func(pwsh.State)
+	store := pwsh.Open(filepath.Join(root, "data"), pwsh.ManifestURL, pwsh.Target, &http.Client{}, func(st pwsh.State) {
+		link(st)
+		a.PowerShellChanged(st)
+	})
 	a.Bundled.PowerShell = store.Program()
 	a.PowerShell = store
+	link = func(st pwsh.State) {
+		if err := pwsh.SyncLink(filepath.Join(a.Bundled.Bin, "pwsh"), a.Bundled.PowerShell, st); err != nil {
+			log.Printf("linking pwsh: %v", err)
+		}
+	}
+	link(store.State())
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()
@@ -121,7 +134,9 @@ func main() {
 // another BusyBox. Without them the app still runs: the log says why, and
 // the shells get no such folder.
 //
-// PowerShell is given a home folder and a folder for temporary files.
+// PowerShell is given a home folder and a folder for temporary files. The
+// app's home (its data folder) gets the conventional .local/bin, at the
+// front of the shells' PATH, and tmp, their TMPDIR.
 func bundled(root string) settings.Bundled {
 	b := settings.Bundled{
 		PowerShellHome: filepath.Join(root, "data/pwsh-home"),
@@ -138,7 +153,12 @@ func bundled(root string) settings.Bundled {
 	} else {
 		b.Tools = tools
 	}
-	for _, dir := range []string{b.PowerShellHome, b.PowerShellTmp} {
+	// The conventional places in the app's home, its data folder: the
+	// user's own programs (where pwsh is linked) and temporary files.
+	home := os.Getenv("HOME")
+	b.Bin = filepath.Join(home, ".local/bin")
+	b.Tmp = filepath.Join(home, "tmp")
+	for _, dir := range []string{b.PowerShellHome, b.PowerShellTmp, b.Bin, b.Tmp} {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			log.Printf("bundled: %v", err)
 		}

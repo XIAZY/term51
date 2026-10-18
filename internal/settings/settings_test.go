@@ -360,6 +360,32 @@ func TestTheShellSetting(t *testing.T) {
 		t.Errorf("the PATH where there was none: %v", c.Env)
 	}
 
+	// The user's own programs go at the front of every shell's PATH, and
+	// every shell but PowerShell gets the app's folder for temporary files.
+	home := Bundled{Tools: "/data/bin", Bin: "/data/.local/bin", Tmp: "/data/tmp",
+		PowerShell: "/data/powershell/pwsh/pwsh", PowerShellHome: "/data/pwsh-home", PowerShellTmp: "/data/pwsh-tmp"}
+	for _, shell := range []string{ShellSystem, ShellBusyBox, "/opt/bin/zsh"} {
+		x := Default()
+		x.Shell = shell
+		c = x.Session(80, 24, 9, 18, append(env, "TMPDIR=/tmp"), home)
+		if !has(c, "PATH=/data/.local/bin:/usr/bin:/bin:/data/bin") {
+			t.Errorf("%s: the PATH with the user's own programs: %v", shell, c.Env)
+		}
+		if !has(c, "TMPDIR=/data/tmp") || has(c, "TMPDIR=/tmp") {
+			t.Errorf("%s: the folder for temporary files: %v", shell, c.Env)
+		}
+	}
+	x := Default()
+	x.Shell = ShellPowerShell
+	c = x.Session(80, 24, 9, 18, append(env, "TMPDIR=/tmp"), home)
+	if !has(c, "PATH=/data/.local/bin:/usr/bin:/bin:/data/bin") || !has(c, "TMPDIR=/data/pwsh-tmp") || has(c, "TMPDIR=/data/tmp") {
+		t.Errorf("PowerShell with the user's own programs: %v", c.Env)
+	}
+	c = Default().Session(80, 24, 9, 18, []string{"HOME=/h"}, home)
+	if !has(c, "PATH=/data/.local/bin:/data/bin") {
+		t.Errorf("the PATH where there was none, with the user's own programs: %v", c.Env)
+	}
+
 	// A settings file from before the list, with the phone's shell by its
 	// path, means the system shell; any other path is kept as it is.
 	old, _, err := Parse([]byte("shell = /bin/sh\n"))

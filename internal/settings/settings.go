@@ -567,14 +567,36 @@ type Bundled struct {
 	PowerShell     string
 	PowerShellHome string
 	PowerShellTmp  string
+
+	// Bin is $HOME/.local/bin, the conventional folder for a user's own
+	// programs, where the app links pwsh when PowerShell is there; it goes
+	// at the front of every shell's PATH. Tmp is $HOME/tmp, every shell's
+	// TMPDIR but PowerShell's (which has its own): the phone's /tmp cannot
+	// hold directories. Either is "" when there is none.
+	Bin string
+	Tmp string
+}
+
+// path is the PATH a shell gets for the PATH p: the user's own programs
+// first, then p, then the tools of the app's BusyBox.
+func (b Bundled) path(p string) string {
+	var parts []string
+	for _, x := range []string{b.Bin, p, b.Tools} {
+		if x != "" {
+			parts = append(parts, x)
+		}
+	}
+	return strings.Join(parts, ":")
 }
 
 // Session is the session to start for a terminal of cols by rows cells of
 // cellW by cellH pixels. env is the environment the shell gets besides
 // TERM (nil: the app's own). The tools folder of b goes at the end of the
-// shell's PATH, so that the phone's own tools come first; the BusyBox
-// shell is the ash in it. PowerShell gets its own home and temporary
-// folders, and the terminal type it was built for.
+// shell's PATH, so that the phone's own tools come first, and the user's
+// own programs (b.Bin) at the front; the BusyBox shell is the ash in it.
+// Every shell gets b.Tmp for its temporary files, except PowerShell, which
+// gets its own home and temporary folders, and the terminal type it was
+// built for.
 func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled) session.Config {
 	if env == nil {
 		env = os.Environ()
@@ -597,20 +619,24 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 		drop = append(drop, "HOME=", "TMPDIR=")
 		add = []string{"HOME=" + b.PowerShellHome, "TMPDIR=" + b.PowerShellTmp}
 	}
+	if s.Shell != ShellPowerShell && b.Tmp != "" {
+		drop = append(drop, "TMPDIR=")
+		add = append(add, "TMPDIR="+b.Tmp)
+	}
 	out := make([]string, 0, len(env)+4)
 	path := false
 	for _, kv := range env {
 		if slices.ContainsFunc(drop, func(name string) bool { return strings.HasPrefix(kv, name) }) {
 			continue
 		}
-		if strings.HasPrefix(kv, "PATH=") && b.Tools != "" {
-			kv += ":" + b.Tools
+		if strings.HasPrefix(kv, "PATH=") {
+			kv = "PATH=" + b.path(strings.TrimPrefix(kv, "PATH="))
 			path = true
 		}
 		out = append(out, kv)
 	}
-	if b.Tools != "" && !path {
-		out = append(out, "PATH="+b.Tools)
+	if p := b.path(""); p != "" && !path {
+		out = append(out, "PATH="+p)
 	}
 	out = append(out, add...)
 	out = append(out, "TERM="+term)

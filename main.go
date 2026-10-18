@@ -85,6 +85,9 @@ func main() {
 	a.Bundled.PowerShell = store.Program()
 	a.PowerShell = store
 	link = func(st pwsh.State) {
+		if a.Bundled.Bin == "" {
+			return
+		}
 		if err := pwsh.SyncLink(filepath.Join(a.Bundled.Bin, "pwsh"), a.Bundled.PowerShell, st); err != nil {
 			log.Printf("linking pwsh: %v", err)
 		}
@@ -155,10 +158,14 @@ func bundled(root string) settings.Bundled {
 	}
 	// The conventional places in the app's home, its data folder: the
 	// user's own programs (where pwsh is linked) and temporary files.
-	home := os.Getenv("HOME")
-	b.Bin = filepath.Join(home, ".local/bin")
-	b.Tmp = filepath.Join(home, "tmp")
+	b.Bin, b.Tmp = settings.HomeFolders(os.Getenv("HOME"))
+	if b.Bin == "" {
+		log.Printf("bundled: no HOME; the shells get no .local/bin, no TMPDIR of the app's, and pwsh is not linked")
+	}
 	for _, dir := range []string{b.PowerShellHome, b.PowerShellTmp, b.Bin, b.Tmp} {
+		if dir == "" {
+			continue
+		}
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			log.Printf("bundled: %v", err)
 		}

@@ -403,3 +403,21 @@ func TestTheShellSetting(t *testing.T) {
 		}
 	}
 }
+
+// Without a home there is no .local/bin and no tmp, so a shell gets neither
+// on its PATH nor as its TMPDIR; with one, they are in it.
+func TestHomeFolders(t *testing.T) {
+	if bin, tmp := HomeFolders(""); bin != "" || tmp != "" {
+		t.Errorf("HomeFolders(\"\") = %q, %q; want none", bin, tmp)
+	}
+	bin, tmp := HomeFolders("/data")
+	if bin != "/data/.local/bin" || tmp != "/data/tmp" {
+		t.Errorf("HomeFolders(/data) = %q, %q", bin, tmp)
+	}
+	b := Bundled{Tools: "/data/bin"}
+	b.Bin, b.Tmp = HomeFolders("")
+	c := Default().Session(80, 24, 9, 18, []string{"PATH=/usr/bin:/bin", "TMPDIR=/tmp"}, b)
+	if !slices.Contains(c.Env, "PATH=/usr/bin:/bin:/data/bin") || !slices.Contains(c.Env, "TMPDIR=/tmp") {
+		t.Errorf("a shell without a home folder: %v", c.Env)
+	}
+}

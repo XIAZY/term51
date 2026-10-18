@@ -577,6 +577,16 @@ type Bundled struct {
 	Tmp string
 }
 
+// HomeFolders are Bin and Tmp in the app's home folder home: "" both when
+// there is no home, so that no shell gets a folder relative to wherever it
+// is started.
+func HomeFolders(home string) (bin, tmp string) {
+	if home == "" {
+		return "", ""
+	}
+	return filepath.Join(home, ".local/bin"), filepath.Join(home, "tmp")
+}
+
 // path is the PATH a shell gets for the PATH p: the user's own programs
 // first, then p, then the tools of the app's BusyBox.
 func (b Bundled) path(p string) string {

@@ -1,0 +1,6 @@
+# The BusyBox shell's start-up file in term51 (its ENV). The prompt is ash's
+# own (\w \$), with the shell's directory reported to the terminal before it
+# in the standard way (OSC 7, a file URL), from which the tab is named while
+# the shell waits at its prompt. \[ and \] keep the report out of the
+# prompt's width; $PWD is read at each prompt.
+PS1='\[\e]7;file://${PWD}\a\]\w \$ '

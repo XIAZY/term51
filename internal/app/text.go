@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log"
+	"os"
 	"reflect"
 	"runtime"
 	"sync"
@@ -19,6 +20,7 @@ import (
 	"term51/internal/session"
 	"term51/internal/settings"
 	"term51/internal/stretch"
+	"term51/internal/tabname"
 )
 
 // copyLimit is the most text Copy hands to the page: the text travels as
@@ -42,10 +44,10 @@ const noPowerShell = "PowerShell is not downloaded: Settings, PowerShell, Downlo
 
 // tab is one shell.
 type tab struct {
-	sess  *session.Session
-	tr    keys.Translator
-	title string
-	rang  bool // its bell rang while another tab was shown
+	sess *session.Session
+	tr   keys.Translator
+	name tabname.Tab
+	rang bool // its bell rang while another tab was shown
 	// copied: its selection has been copied. Such a selection is finished:
 	// it stays shown until the next touch, and is not stretched any more.
 	copied bool
@@ -135,7 +137,7 @@ func (a *App) Run() error {
 			a.notice("The shell could not be started: " + err.Error())
 			return nil
 		}
-		t := &tab{sess: sess, title: a.cfg.ShellName(), stop: make(chan struct{})}
+		t := &tab{sess: sess, name: tabname.Tab{Shell: a.cfg.ShellName(), Home: os.Getenv("HOME")}, stop: make(chan struct{})}
 		go t.follow(inbox)
 		return t
 	}
@@ -144,7 +146,7 @@ func (a *App) Run() error {
 	tell := func() {
 		titles, rang := make([]string, len(tabs)), make([]bool, len(tabs))
 		for i, t := range tabs {
-			titles[i], rang[i] = t.title, t.rang
+			titles[i], rang[i] = t.name.Name(), t.rang
 		}
 		a.state(map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt,
 			// For the page's drawing of the arrow pad: the same numbers the
@@ -227,9 +229,23 @@ func (a *App) Run() error {
 			log.Printf("app: %v", err)
 		}
 	}
+	// rename looks up again what runs in tab t and says whether its name
+	// changed.
+	rename := func(t *tab) bool {
+		before := t.name.Name()
+		if err := t.name.Refresh(t.sess.Foreground); err != nil {
+			log.Printf("app: naming a tab: %v", err)
+		}
+		return t.name.Name() != before
+	}
+	// The shown tab's program is looked up when its output has gone quiet.
+	nameDue := time.NewTimer(tabname.Quiet)
+	nameDue.Stop()
+	defer nameDue.Stop()
 	// show makes tab i the one on screen: its whole table is drawn.
 	show := func(i int) {
 		cur = i
+		rename(tabs[i])
 		tabs[i].rang = false
 		table = cells.Table{}
 		sticky()
@@ -676,8 +692,14 @@ func (a *App) Run() error {
 			case n.ev != nil:
 				switch n.ev.Kind {
 				case session.EventTitle:
-					n.t.title = n.ev.Text
+					n.t.name.Title = n.ev.Text
 					tell()
+				case session.EventPwd:
+					before := n.t.name.Name()
+					n.t.name.Pwd(n.ev.Text)
+					if n.t.name.Name() != before {
+						tell()
+					}
 				case session.EventBell:
 					// A tab that is not shown is marked in the list of
 					// tabs until it is looked at.
@@ -692,7 +714,12 @@ func (a *App) Run() error {
 					}
 				}
 			case n.changed:
-				if cur < 0 || tabs[cur] != n.t || pending != nil {
+				if cur < 0 || tabs[cur] != n.t {
+					break
+				}
+				n.t.name.Output(time.Now())
+				nameDue.Reset(tabname.Quiet)
+				if pending != nil {
 					break
 				}
 				// The first change after a quiet moment is shown at once
@@ -723,6 +750,17 @@ func (a *App) Run() error {
 		case <-pending:
 			pending = nil
 			post()
+		case <-nameDue.C:
+			if cur < 0 {
+				break
+			}
+			if due, wait := tabs[cur].name.Due(time.Now()); due {
+				if rename(tabs[cur]) {
+					tell()
+				}
+			} else if wait > 0 {
+				nameDue.Reset(wait)
+			}
 		}
 	}
 }

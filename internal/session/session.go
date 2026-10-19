@@ -25,6 +25,7 @@ import (
 
 	"term51/internal/pty"
 	"term51/internal/replies"
+	"term51/internal/tabname"
 	"term51/internal/wheel"
 )
 
@@ -385,6 +386,25 @@ func (s *Session) ExitErr() error {
 	default:
 		return nil
 	}
+}
+
+// Foreground says what runs in the foreground of the shell's terminal: the
+// shell itself, or the program at the path it gives (internal/pty for how
+// it is found on each system).
+func (s *Session) Foreground() (tabname.Program, error) {
+	shell := s.cmd.Process.Pid
+	pid, err := pty.Foreground(s.master, shell)
+	if err != nil {
+		return tabname.Program{}, err
+	}
+	if pid == shell {
+		return tabname.Program{Shell: true}, nil
+	}
+	path, err := pty.ProgramPath(pid)
+	if err != nil {
+		return tabname.Program{}, err
+	}
+	return tabname.Program{Path: path}, nil
 }
 
 // Send writes bytes to the shell as they are.

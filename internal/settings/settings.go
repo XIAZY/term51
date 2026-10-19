@@ -578,6 +578,11 @@ type Bundled struct {
 	// directories. Either is "" when there is none.
 	Bin string
 	Tmp string
+
+	// AshEnv is the BusyBox shell's start-up file (its ENV), from the
+	// package: its prompt reports the directory (OSC 7). "" when there is
+	// none.
+	AshEnv string
 }
 
 // HomeBin is Bin in the app's home folder home: "" when there is no home,
@@ -623,8 +628,11 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 	case ShellBusyBox:
 		shell = filepath.Join(b.Tools, "ash")
 		// The file a shell reads when it starts: the phone's is written
-		// for the phone's shell, not for ash.
+		// for the phone's shell, not for ash; ash gets the app's.
 		drop = append(drop, "ENV=")
+		if b.AshEnv != "" {
+			add = append(add, "ENV="+b.AshEnv)
+		}
 	case ShellPowerShell:
 		shell, term = b.PowerShell, session.DefaultTerm
 	}

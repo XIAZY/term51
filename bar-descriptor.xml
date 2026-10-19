@@ -29,6 +29,9 @@
 
     <asset path="assets">assets</asset>
     <asset path="third_party/busybox">busybox/licences</asset>
+    <!-- The BusyBox shell's start-up file: a prompt that reports the
+         directory, which names the tab (shell/ashrc). -->
+    <asset path="shell/ashrc">busybox/ashrc</asset>
     <asset path="third_party/dropbear">dropbear/licences</asset>
 
     <permission system="true">run_native</permission>

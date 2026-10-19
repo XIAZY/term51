@@ -333,6 +333,11 @@ func TestTheShellSetting(t *testing.T) {
 	if has(c, "ENV=/etc/kshrc") {
 		t.Errorf("the BusyBox shell is given the phone shell's start file: %v", c.Env)
 	}
+	// With the package's start-up file, ash gets it as its ENV.
+	c = s.Session(80, 24, 9, 18, env, Bundled{Tools: "/data/bin", AshEnv: "/app/native/busybox/ashrc"})
+	if !has(c, "ENV=/app/native/busybox/ashrc") || has(c, "ENV=/etc/kshrc") {
+		t.Errorf("the BusyBox shell's start file: %v", c.Env)
+	}
 	if !has(c, "PATH=/usr/bin:/bin:/data/bin") {
 		t.Errorf("the BusyBox shell's PATH: %v", c.Env)
 	}

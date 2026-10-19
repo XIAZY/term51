@@ -78,6 +78,7 @@ TabbedPane {
 
             property bool ctrl: false
             property bool alt: false
+            property real inputLeft: 0       // when the input field last lost the focus
             property bool created: false     // the terminal's window has been asked for
             property string termBackground: "#101418" // the theme's, around the terminal
             property bool bell: true         // a program's bell makes a sound
@@ -201,21 +202,31 @@ TabbedPane {
                     title: "Esc"
                     imageSource: "asset:///images/key-esc.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "esc" })
+                    onTriggered: { page.send("bar", { name: "esc" }); page.keepRows() }
                 },
                 ActionItem {
                     title: "Ctrl"
                     imageSource: page.ctrl ? "asset:///images/key-ctrl-armed.png" : "asset:///images/key-ctrl.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "ctrl" })
+                    onTriggered: { page.send("bar", { name: "ctrl" }); page.keepRows() }
                 },
                 ActionItem {
                     title: "Tab"
                     imageSource: "asset:///images/key-tab.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: page.send("bar", { name: "tab" })
+                    onTriggered: { page.send("bar", { name: "tab" }); page.keepRows() }
                 }
             ]
+
+            // A touch outside the input field takes the focus from it, by the
+            // phone's rule, and the on-screen rows go down with it: so a key of
+            // our strip, or Esc, Ctrl or Tab on the system's bar, gives the field
+            // the focus back when it lost it during that press. (The phone's own
+            // swipe down still puts the rows away.)
+            function keepRows() {
+                if (Date.now() - page.inputLeft < 500)
+                    input.requestFocus()
+            }
 
             // Keys reach the shell in one of two ways. Until the terminal is
             // tapped nothing has the focus, and the page's key listener below sends
@@ -267,6 +278,10 @@ TabbedPane {
                     input.flags: TextInputFlag.AutoCapitalizationOff | TextInputFlag.AutoCorrectionOff | TextInputFlag.PredictionOff | TextInputFlag.SpellCheckOff | TextInputFlag.WordSubstitutionOff | TextInputFlag.AutoPeriodOff
                     input.submitKey: SubmitKey.EnterKey
                     input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
+                    onFocusedChanged: {
+                        if (!focused)
+                            page.inputLeft = Date.now()
+                    }
                     input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
                     onTextChanging: {
                         if (text.length > 0) {
@@ -501,25 +516,25 @@ TabbedPane {
                         horizontalAlignment: HorizontalAlignment.Fill
                         KeyCell { text: "Alt"; armed: page.alt
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("bar", { name: "alt" }) }
+                                  onPressed: { page.send("bar", { name: "alt" }); page.keepRows() } }
                         KeyCell { text: "-"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("text", { text: "-" }) }
+                                  onPressed: { page.send("text", { text: "-" }); page.keepRows() } }
                         KeyCell { text: "_"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("text", { text: "_" }) }
+                                  onPressed: { page.send("text", { text: "_" }); page.keepRows() } }
                         KeyCell { text: "/"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("text", { text: "/" }) }
+                                  onPressed: { page.send("text", { text: "/" }); page.keepRows() } }
                         KeyCell { text: "$"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("text", { text: "$" }) }
+                                  onPressed: { page.send("text", { text: "$" }); page.keepRows() } }
                         KeyCell { text: "|"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("text", { text: "|" }) }
+                                  onPressed: { page.send("text", { text: "|" }); page.keepRows() } }
                         KeyCell { text: "~"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: page.send("text", { text: "~" }) }
+                                  onPressed: { page.send("text", { text: "~" }); page.keepRows() } }
                     }
                 }
                 // The arrow pad's picture: its ground, the four arrows in

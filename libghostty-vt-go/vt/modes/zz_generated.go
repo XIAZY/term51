@@ -5,7 +5,7 @@
 package modes
 
 import (
-	"github.com/XIAZY/libghostty-vt-go/terminal"
+	"github.com/XIAZY/term51/libghostty-vt-go/terminal"
 )
 
 // Mode is [terminal.ModesMode].

@@ -1,8 +1,9 @@
 # term51
 
 A terminal emulator for BlackBerry 10, written in Go with a Cascades UI.
-The terminal core is `github.com/XIAZY/libghostty-vt-go`, a port of
-libghostty-vt (Ghostty v1.3.1).
+The terminal core is [libghostty-vt-go](libghostty-vt-go/), a port of
+libghostty-vt (the terminal emulation core of Ghostty, v1.3.1) to Go, kept
+in this repository with its own history and the rules it was ported by.
 
 ## Screenshots
 

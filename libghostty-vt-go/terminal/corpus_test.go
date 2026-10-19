@@ -1,9 +1,11 @@
 package terminal
 
 // Tests against the recorded corpus: outputs of the pinned upstream
-// libghostty-vt, kept in the term51 repository. The corpus location is
-// LIBGHOSTTY_VT_CORPUS, defaulting to a term51 checkout next to this
-// repository. A missing corpus fails the tests; it never skips them.
+// libghostty-vt, kept in the reference-tests repository (term51 on the
+// project's machine; not published). The corpus location is
+// LIBGHOSTTY_VT_CORPUS, defaulting to a checkout named term51 beside the
+// repository this library is part of. A missing corpus fails the tests; it
+// never skips them.
 
 import (
 	"bufio"
@@ -22,7 +24,7 @@ func corpusDir(t testing.TB) string {
 	t.Helper()
 	dir := os.Getenv("LIBGHOSTTY_VT_CORPUS")
 	if dir == "" {
-		dir = filepath.Join("..", "..", "term51")
+		dir = filepath.Join("..", "..", "..", "term51")
 	}
 	if _, err := os.Stat(filepath.Join(dir, "golden", "MANIFEST")); err != nil {
 		t.Fatalf("corpus not found at %q (set LIBGHOSTTY_VT_CORPUS): %v", dir, err)

@@ -35,7 +35,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const termPath = "github.com/XIAZY/libghostty-vt-go/terminal"
+const termPath = "github.com/XIAZY/term51/libghostty-vt-go/terminal"
 
 // entry maps the declarations named Prefix... to New... in package Pkg.
 type entry struct{ Prefix, New string }

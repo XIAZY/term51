@@ -19,9 +19,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
-	"github.com/XIAZY/libghostty-vt-go/vt/color"
-	"github.com/XIAZY/libghostty-vt-go/vt/input"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/color"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/input"
 
 	"term51/internal/pty"
 	"term51/internal/replies"

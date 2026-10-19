@@ -1,3 +1,3 @@
-module github.com/XIAZY/libghostty-vt-go
+module github.com/XIAZY/term51/libghostty-vt-go
 
 go 1.27

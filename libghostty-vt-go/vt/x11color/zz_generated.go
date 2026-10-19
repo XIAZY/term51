@@ -5,7 +5,7 @@
 package x11color
 
 import (
-	"github.com/XIAZY/libghostty-vt-go/terminal"
+	"github.com/XIAZY/term51/libghostty-vt-go/terminal"
 )
 
 // ColorMap is [terminal.X11ColorColorMap].

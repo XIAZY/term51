@@ -3,7 +3,7 @@ package session
 import (
 	"testing"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
 )
 
 // The theme and the cursor's shape can change while the shell runs.

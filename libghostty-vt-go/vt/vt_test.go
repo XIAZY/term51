@@ -3,8 +3,8 @@ package vt_test
 import (
 	"testing"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
-	"github.com/XIAZY/libghostty-vt-go/vt/osc"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/osc"
 )
 
 // A program outside the library creates a terminal, feeds it output and reads

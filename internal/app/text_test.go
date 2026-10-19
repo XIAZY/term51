@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
 	"golang.org/x/image/font/gofont/gomono"
 	"golang.org/x/image/font/gofont/gomonobold"
 	"golang.org/x/image/font/gofont/gomonobolditalic"

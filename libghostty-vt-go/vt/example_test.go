@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
-	"github.com/XIAZY/libghostty-vt-go/vt/color"
-	"github.com/XIAZY/libghostty-vt-go/vt/input"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/color"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/input"
 )
 
 // A terminal is fed the bytes a program writes, and its screen is read back:

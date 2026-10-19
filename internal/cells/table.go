@@ -1,10 +1,10 @@
 package cells
 
 import (
-	"github.com/XIAZY/libghostty-vt-go/vt"
-	"github.com/XIAZY/libghostty-vt-go/vt/color"
-	"github.com/XIAZY/libghostty-vt-go/vt/page"
-	"github.com/XIAZY/libghostty-vt-go/vt/sgr"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/color"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/page"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/sgr"
 )
 
 // RecordSize is the size of one cell's record in the table, in bytes:

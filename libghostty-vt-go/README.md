@@ -157,9 +157,12 @@ change.
 
 ## Tests
 
-    scripts/test.sh
+    scripts/test.sh -timeout 0
 
-runs `go vet` and every test, and compiles for 32-bit ARM. The tests
+runs `go vet` and every test, and compiles for 32-bit ARM. The argument
+goes to `go test`: the recorded cases take longer than Go's default
+ten-minute limit on a busy machine, and a run cut off by that limit shows
+no failed assertion, only the clock. The tests
 include the recorded cases, which live in the reference-tests repository
 (the pinned upstream source, the Zig harness and about 7 GB of recorded
 state; it is kept on the project's machine as `term51` and is not

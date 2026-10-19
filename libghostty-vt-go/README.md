@@ -31,11 +31,12 @@ every place the port has to differ from upstream, are in `docs/mapping.md`.
 1. **Faithful, but in the form a Go user expects.** The same features and
    behaviour as upstream, within the scope set by the owner: libghostty-vt
    without Kitty graphics, tmux control mode and search, which are compiled
-   out upstream too and are left for later. One Go file per Zig file with the same name, one
-   Go function per Zig function in the same order with the same control
-   flow, and upstream's comments carried over. No redesign and no
-   optimisation during the port; the speed work came after it, on its own
-   branches, measured against upstream (`docs/post-port-optimizations.md`).
+   out upstream too and are left for later. One Go file per Zig file with
+   the same name, one Go function per Zig function in the same order with
+   the same control flow, and upstream's comments carried over. No redesign
+   and no optimisation during the port; the speed work came after it, on
+   its own branches, measured against upstream
+   (`docs/post-port-optimizations.md`).
 2. **Ordinary Go memory.** Pages are Go slices of rows and cells, references
    are pointers or indexes, the garbage collector frees. No raw byte blocks
    and no offset arithmetic; functions that only compute byte layouts or

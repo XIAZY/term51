@@ -1,0 +1,1 @@
+search.NewSlidingWindow = terminal.SearchSlidingWindowInit: its signature needs a type that is not exported

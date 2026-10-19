@@ -1,0 +1,349 @@
+// exportfields renames the unexported fields of struct types in a package
+// to exported Go names (snake_case -> CamelCase, with Go's spelling of
+// common abbreviations: id -> ID, uri -> URI), updating every definition and
+// use, tests included. Zig struct fields are always public; this gives the
+// types a user of the library reads or fills in the same visibility.
+//
+// Which types: the list given with -types (one name, or a prefix ending in
+// *, per line); see docs/public-api.md. Left alone: fields whose Go name a
+// method of the type already has, padding fields (leading underscore), and
+// fields whose type cannot be named outside the package.
+//
+// With -rename the tool renames the given declarations instead (types,
+// functions, constants, or Type.Method).
+//
+// usage: exportfields [-w] [-types list] [-rename a=b,...] <package dir>
+package main
+
+import (
+	"flag"
+	"fmt"
+	"go/ast"
+	"go/types"
+	"os"
+	"sort"
+	"strings"
+	"unicode"
+
+	"golang.org/x/tools/go/packages"
+)
+
+func camel(s string) string {
+	trail := strings.HasSuffix(s, "_") && len(s) > 1
+	parts := strings.Split(strings.Trim(s, "_"), "_")
+	var b strings.Builder
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		if up, ok := initialisms[p]; ok {
+			b.WriteString(up)
+			continue
+		}
+		r := []rune(p)
+		r[0] = unicode.ToUpper(r[0])
+		b.WriteString(string(r))
+	}
+	out := b.String()
+	_ = trail
+	return out
+}
+
+// initialisms are the words Go spells in capitals.
+var initialisms = map[string]string{"id": "ID", "uri": "URI", "url": "URL", "rgb": "RGB", "utf8": "UTF8", "html": "HTML"}
+
+// snake is the inverse the corpus replayer uses (zigSnake): a new word
+// starts at a capital that follows a lower-case letter or digit, or that is
+// followed by a lower-case letter; `StyleID` is `style_id`.
+func snake(name string) string {
+	r := []rune(name)
+	var sb strings.Builder
+	for i, c := range r {
+		if c >= 'A' && c <= 'Z' {
+			prevLower := i > 0 && !(r[i-1] >= 'A' && r[i-1] <= 'Z')
+			nextLower := i+1 < len(r) && r[i+1] >= 'a' && r[i+1] <= 'z'
+			if i > 0 && (prevLower || nextLower) {
+				sb.WriteByte('_')
+			}
+			c += 'a' - 'A'
+		}
+		sb.WriteRune(c)
+	}
+	return sb.String()
+}
+
+// nameable reports whether t can be written outside package p.
+func nameable(t types.Type, p *types.Package, seen map[types.Type]bool) bool {
+	if seen[t] {
+		return true
+	}
+	seen[t] = true
+	switch t := t.(type) {
+	case *types.Named:
+		if o := t.Obj(); o.Pkg() == p && !o.Exported() {
+			return false
+		}
+		if ta := t.TypeArgs(); ta != nil {
+			for i := 0; i < ta.Len(); i++ {
+				if !nameable(ta.At(i), p, seen) {
+					return false
+				}
+			}
+		}
+	case *types.Alias:
+		if o := t.Obj(); o.Pkg() == p && !o.Exported() {
+			return false
+		}
+	case *types.Pointer:
+		return nameable(t.Elem(), p, seen)
+	case *types.Slice:
+		return nameable(t.Elem(), p, seen)
+	case *types.Array:
+		return nameable(t.Elem(), p, seen)
+	case *types.Map:
+		return nameable(t.Key(), p, seen) && nameable(t.Elem(), p, seen)
+	}
+	return true
+}
+
+type edit struct {
+	off int
+	old string
+	new string
+}
+
+func main() {
+	write := flag.Bool("w", false, "write the files")
+	allowFile := flag.String("types", "", "file listing the types whose fields are exported, one name or prefix* per line (default: every exported struct type)")
+	renames := flag.String("rename", "", "comma-separated Type.Method=new or Func=new: rename these functions instead of exporting fields")
+	flag.Parse()
+	dir := flag.Arg(0)
+	var allowExact = map[string]bool{}
+	var allowPrefix []string
+	if *allowFile != "" {
+		b, err := os.ReadFile(*allowFile)
+		if err != nil {
+			panic(err)
+		}
+		for _, l := range strings.Split(string(b), "\n") {
+			l = strings.TrimSpace(l)
+			if l == "" || strings.HasPrefix(l, "#") {
+				continue
+			}
+			if strings.HasSuffix(l, "*") {
+				allowPrefix = append(allowPrefix, strings.TrimSuffix(l, "*"))
+			} else {
+				allowExact[l] = true
+			}
+		}
+	}
+	allowed := func(name string) bool {
+		if *allowFile == "" || allowExact[name] {
+			return true
+		}
+		for _, p := range allowPrefix {
+			if strings.HasPrefix(name, p) {
+				return true
+			}
+		}
+		return false
+	}
+	cfg := &packages.Config{Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedCompiledGoFiles, Dir: dir, Tests: true}
+	pkgs, err := packages.Load(cfg, ".")
+	if err != nil {
+		panic(err)
+	}
+	// Pick the package variant that includes the in-package tests.
+	var pkg *packages.Package
+	for _, p := range pkgs {
+		if len(p.Errors) > 0 {
+			for _, e := range p.Errors {
+				fmt.Fprintln(os.Stderr, e)
+			}
+			os.Exit(1)
+		}
+		if strings.HasSuffix(p.ID, ".test") {
+			continue
+		}
+		if pkg == nil || len(p.Syntax) > len(pkg.Syntax) {
+			pkg = p
+		}
+	}
+	fset := pkg.Fset
+	info := pkg.TypesInfo
+
+	// Collect the fields to rename: unexported fields of structs reachable
+	// from exported named types of this package (nested anonymous structs
+	// included).
+	rename := map[*types.Var]string{}
+	var collisions []string
+	seen := map[types.Type]bool{}
+	var visitStruct func(owner *types.Named, st *types.Struct, path string)
+	visitStruct = func(owner *types.Named, st *types.Struct, path string) {
+		if seen[st] {
+			return
+		}
+		seen[st] = true
+		names := map[string]bool{}
+		for i := 0; i < st.NumFields(); i++ {
+			names[st.Field(i).Name()] = true
+		}
+		if owner != nil {
+			for i := 0; i < owner.NumMethods(); i++ {
+				names[owner.Method(i).Name()] = true
+			}
+		}
+		for i := 0; i < st.NumFields(); i++ {
+			f := st.Field(i)
+			if f.Pkg() != pkg.Types {
+				continue
+			}
+			if !f.Exported() && !f.Embedded() && !strings.HasPrefix(f.Name(), "_") && !nameable(f.Type(), pkg.Types, map[types.Type]bool{}) {
+				fmt.Printf("left unexported (its type is internal): %s.%s\n", path, f.Name())
+			} else if !f.Exported() && !f.Embedded() && !strings.HasPrefix(f.Name(), "_") {
+				n := camel(f.Name())
+				if snake(n) != strings.TrimSuffix(f.Name(), "_") {
+					fmt.Printf("no round trip: %s.%s -> %s -> %s\n", path, f.Name(), n, snake(n))
+				}
+				if names[n] {
+					// A method already has the name: the field stays
+					// unexported and the method is the access.
+					collisions = append(collisions, fmt.Sprintf("%s.%s -> %s (taken)", path, f.Name(), n))
+				} else {
+					names[n] = true
+					rename[f] = n
+				}
+			}
+			// Nested anonymous struct types (directly, or behind pointer,
+			// slice, array, map).
+			t := f.Type()
+			for {
+				switch u := t.(type) {
+				case *types.Pointer:
+					t = u.Elem()
+					continue
+				case *types.Slice:
+					t = u.Elem()
+					continue
+				case *types.Array:
+					t = u.Elem()
+					continue
+				}
+				break
+			}
+			if s, ok := t.(*types.Struct); ok {
+				visitStruct(nil, s, path+"."+f.Name())
+			}
+		}
+	}
+	scope := pkg.Types.Scope()
+	for _, name := range scope.Names() {
+		tn, ok := scope.Lookup(name).(*types.TypeName)
+		if !ok || !tn.Exported() || tn.IsAlias() || !allowed(name) {
+			continue
+		}
+		named, ok := tn.Type().(*types.Named)
+		if !ok {
+			continue
+		}
+		if st, ok := named.Underlying().(*types.Struct); ok {
+			visitStruct(named, st, name)
+		}
+	}
+
+	// -rename: functions and methods by name, instead of fields.
+	funcRename := map[types.Object]string{}
+	if *renames != "" {
+		rename = map[*types.Var]string{}
+		collisions = nil
+		for _, r := range strings.Split(*renames, ",") {
+			old, nn, ok := strings.Cut(strings.TrimSpace(r), "=")
+			if !ok {
+				panic("bad -rename entry " + r)
+			}
+			var obj types.Object
+			if tname, mname, isMethod := strings.Cut(old, "."); isMethod {
+				tn, _ := scope.Lookup(tname).(*types.TypeName)
+				if tn == nil {
+					panic("no type " + tname)
+				}
+				obj, _, _ = types.LookupFieldOrMethod(tn.Type(), true, pkg.Types, mname)
+			} else {
+				obj = scope.Lookup(old)
+			}
+			if obj == nil {
+				panic("no declaration " + old)
+			}
+			if f, ok := obj.(*types.Func); ok {
+				obj = f.Origin()
+			}
+			funcRename[obj] = nn
+		}
+	}
+
+	// Every identifier that defines or uses one of those fields.
+	edits := map[string][]edit{}
+	add := func(id *ast.Ident, obj types.Object) {
+		if len(funcRename) > 0 {
+			key := obj
+			if f, ok := obj.(*types.Func); ok {
+				key = f.Origin()
+			}
+			if n, ok := funcRename[key]; ok {
+				pos := fset.Position(id.Pos())
+				edits[pos.Filename] = append(edits[pos.Filename], edit{pos.Offset, id.Name, n})
+			}
+			return
+		}
+		v, ok := obj.(*types.Var)
+		if !ok || !v.IsField() {
+			return
+		}
+		v = v.Origin()
+		n, ok := rename[v]
+		if !ok {
+			return
+		}
+		pos := fset.Position(id.Pos())
+		edits[pos.Filename] = append(edits[pos.Filename], edit{pos.Offset, id.Name, n})
+	}
+	for id, obj := range info.Defs {
+		if obj != nil {
+			add(id, obj)
+		}
+	}
+	for id, obj := range info.Uses {
+		add(id, obj)
+	}
+
+	total := 0
+	for file, es := range edits {
+		sort.Slice(es, func(i, j int) bool { return es[i].off > es[j].off })
+		src, err := os.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		last := -1
+		for _, e := range es {
+			if e.off == last {
+				continue
+			}
+			last = e.off
+			if string(src[e.off:e.off+len(e.old)]) != e.old {
+				panic(fmt.Sprintf("%s:%d: expected %q", file, e.off, e.old))
+			}
+			src = append(src[:e.off:e.off], append([]byte(e.new), src[e.off+len(e.old):]...)...)
+			total++
+		}
+		if *write {
+			if err := os.WriteFile(file, src, 0o644); err != nil {
+				panic(err)
+			}
+		}
+	}
+	sort.Strings(collisions)
+	for _, c := range collisions {
+		fmt.Println("collision:", c)
+	}
+	fmt.Printf("fields renamed: %d, identifiers rewritten: %d, files: %d, collisions: %d\n", len(rename), total, len(edits), len(collisions))
+}

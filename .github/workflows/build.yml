@@ -1,0 +1,113 @@
+# Builds the app's package, build/io.github.xiazy.term51.bar, with
+# tools/build.sh in the toolchain's container image, as a development build
+# does. Every push to main, every pull request and a run by hand keep the
+# package and its checksum as the run's build result; a tag v* publishes
+# them as a release.
+#
+# The terminal library is part of this repository (libghostty-vt-go/), and
+# Dropbear's source is its submodule third_party/dropbear (upstream, pinned),
+# which tools/dropbear.sh patches and builds in the image its lock names.
+# What the build needs besides, each pinned:
+# - Go with the QNX port: XIAZY/go-qnx at GO_QNX_COMMIT, built here with
+#   src/make.bash from a stock Go (it has no releases); kept in the cache
+#   between runs.
+# - BusyBox: the release in tools/busybox.lock, which tools/busybox.sh fetches.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # ghcr.io/xiazy/blackberry10-toolchain, pinned by digest (the multi-arch
+  # tag), the same as tools/dropbear.lock's; tools/build.sh takes it as
+  # BB10_BUILDER_IMAGE.
+  BB10_BUILDER_IMAGE: ghcr.io/xiazy/blackberry10-toolchain@sha256:60ce49510a37ed92368cca010bbaabf97b12d209b9fab179e8491b266bb2578f
+  GO_QNX_COMMIT: 90f0964dba0281fc83d1d241613f30d4e5a716c7
+  # The Go that builds go-qnx: at least its src/cmd/dist minBootstrap.
+  GO_BOOTSTRAP: 1.24.6
+
+jobs:
+  bar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: term51
+          submodules: true
+      - name: Restore Go with the QNX port
+        id: goqnx
+        uses: actions/cache@v4
+        with:
+          path: go-qnx
+          key: go-qnx-${{ env.GO_QNX_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
+      - uses: actions/checkout@v4
+        if: steps.goqnx.outputs.cache-hit != 'true'
+        with:
+          repository: XIAZY/go-qnx
+          ref: ${{ env.GO_QNX_COMMIT }}
+          path: go-qnx
+      - uses: actions/setup-go@v5
+        if: steps.goqnx.outputs.cache-hit != 'true'
+        with:
+          go-version: ${{ env.GO_BOOTSTRAP }}
+          cache: false
+      - name: Build Go with the QNX port
+        if: steps.goqnx.outputs.cache-hit != 'true'
+        run: cd go-qnx/src && GOROOT_BOOTSTRAP="$(go env GOROOT)" ./make.bash
+      - name: Build the package
+        env:
+          GOQNX: ${{ github.workspace }}/go-qnx
+        run: term51/tools/build.sh
+      - name: Check what the package carries
+        run: |
+          # The app, BusyBox, the BusyBox shell's start-up file, Dropbear and
+          # the page.
+          unzip -l term51/build/io.github.xiazy.term51.bar > contents.txt
+          for f in native/term51 native/busybox/busybox native/busybox/ashrc native/dropbear/dropbearmulti native/assets/main.qml; do
+            grep -q " $f\$" contents.txt || { echo "missing: $f"; exit 1; }
+          done
+      - name: Write its checksum
+        run: |
+          cd term51/build
+          sha256sum io.github.xiazy.term51.bar > io.github.xiazy.term51.bar.sha256
+          cat io.github.xiazy.term51.bar.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: term51-bar
+          path: |
+            term51/build/io.github.xiazy.term51.bar
+            term51/build/io.github.xiazy.term51.bar.sha256
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: bar
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: term51-bar
+          path: out
+      - name: Notes
+        run: |
+          {
+            echo "term51 for BlackBerry 10, as a package for installing in development mode. Built from this tag by the build workflow."
+            echo
+            echo '```'
+            cat out/*.sha256
+            echo '```'
+          } > notes.md
+          cat notes.md
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file notes.md

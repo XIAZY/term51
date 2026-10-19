@@ -4,10 +4,10 @@ The Dropbear SSH client in term51
 The file dropbearmulti in this folder of the package is the client side of
 Dropbear 2026.94 for BlackBerry 10: ssh (Dropbear's dbclient), scp,
 dropbearkey and dropbearconvert in one program. There is no SSH server in
-it. term51 builds it, unchanged, from the repository dropbear-qnx at the
-commit named in term51's tools/dropbear.lock; that repository holds every
-change made to Dropbear for QNX, its settings and the way to build the same
-bytes again (qnx/README.md there).
+it. term51 builds it from upstream Dropbear at its 2026.94 release (the
+submodule third_party/dropbear) with term51's changes for QNX: about a
+hundred lines in tools/dropbear/qnx.patch, and the settings, the build
+script and the way to build the same bytes again in tools/dropbear/qnx/.
 
 Dropbear is under an MIT-style licence: see LICENSE here, which also names
 the parts taken from elsewhere (scp and a few helpers from OpenSSH, BSD

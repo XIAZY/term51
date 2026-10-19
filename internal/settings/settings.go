@@ -60,6 +60,11 @@ type Settings struct {
 	// Bell makes a sound when a program rings the bell.
 	Bell bool
 
+	// ScrollProgram makes a drag scroll the program that fills the screen
+	// (vi, less, pi, tmux) as a mouse wheel does, when the program asks for
+	// it (session.Scroll); off, a drag always moves the scrollback.
+	ScrollProgram bool
+
 	Theme Theme
 }
 
@@ -150,6 +155,7 @@ func Default() Settings {
 		ScrollbackBytes: 8 << 20,
 		Cursor:          "block",
 		Bell:            true,
+		ScrollProgram:   true,
 		Theme: Theme{
 			Foreground: hex(t.Foreground),
 			Background: hex(t.Background),
@@ -308,6 +314,7 @@ var fields = []field{
 		func(s *Settings) []string { return []string{strconv.FormatUint(s.ScrollbackBytes, 10)} }},
 	textField("cursor", "The cursor's shape while no program asks for one: block, bar or underline.", func(s *Settings) *string { return &s.Cursor }),
 	boolField("bell", "Make a sound when a program rings the bell.", func(s *Settings) *bool { return &s.Bell }),
+	boolField("scrollProgram", "A drag scrolls the program that fills the screen (vi, less, pi, tmux); off, a drag always moves the scrollback.", func(s *Settings) *bool { return &s.ScrollProgram }),
 
 	textField("theme.foreground", "The text colour, as #rrggbb.", func(s *Settings) *string { return &s.Theme.Foreground }),
 	textField("theme.background", "The background colour.", func(s *Settings) *string { return &s.Theme.Background }),
@@ -649,5 +656,6 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 		Theme:         s.SessionTheme(),
 		Cursor:        s.SessionCursor(),
 		Replies:       s.Replies(),
+		ScrollProgram: s.ScrollProgram,
 	}
 }

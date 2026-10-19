@@ -568,9 +568,9 @@ func (a *App) Run() error {
 				}
 			case "set":
 				// One setting changed on the settings sheet. It is written
-				// to the file at once. The text size, the colours and the
-				// cursor's shape apply to what is on screen; the rest to
-				// tabs opened from now on.
+				// to the file at once. The text size, the colours, the
+				// cursor's shape and scrolling apply to the open tabs; the
+				// rest to tabs opened from now on.
 				name, _ := c.Args["name"].(string)
 				value, _ := c.Args["value"].(string)
 				before := a.cfg
@@ -604,6 +604,11 @@ func (a *App) Run() error {
 					}
 					redraw = true
 				}
+				if a.cfg.ScrollProgram != before.ScrollProgram {
+					for _, t := range tabs {
+						t.sess.SetScrollProgram(a.cfg.ScrollProgram)
+					}
+				}
 				if redraw {
 					grid()
 				}
@@ -633,7 +638,7 @@ func (a *App) Run() error {
 				tabs[cur].copied = true
 				post()
 			case "scroll":
-				sess.ScrollViewport(num(c.Args["rows"]))
+				sess.Scroll(num(c.Args["rows"]), num(c.Args["x"]), num(c.Args["y"]))
 			case "newtab":
 				if t := open(); t != nil {
 					tabs = append(tabs, t)

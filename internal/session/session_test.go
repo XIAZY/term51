@@ -18,6 +18,7 @@ func start(t *testing.T, script string) *Session {
 		Cols: 40, Rows: 10, CellW: 9, CellH: 18,
 		MaxScrollback: 1 << 20,
 		Replies:       replies.DefaultConfig(),
+		ScrollProgram: true,
 	})
 	if err != nil {
 		t.Fatal(err)

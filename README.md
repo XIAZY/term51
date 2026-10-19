@@ -4,6 +4,16 @@ A terminal emulator for BlackBerry 10, written in Go with a Cascades UI.
 The terminal core is `github.com/XIAZY/libghostty-vt-go`, a port of
 libghostty-vt (Ghostty v1.3.1).
 
+## Using term51
+
+**Scrolling.** A vertical drag does what a mouse wheel does in a desktop
+terminal. In a plain shell it moves the view back through what has scrolled
+away. In a program that takes the whole screen (vi, less, man, pi, a coding
+agent) it scrolls that program: the drag reaches it as wheel turns when the
+program reads the mouse, and otherwise as Up and Down keys. tmux scrolls its
+panes once its mouse is on (`set -g mouse on`). Settings, Scrolling, turns
+this off: then a drag always moves the view.
+
 ## Layout (planned)
 
 - `main.go`: keeps the main goroutine on the process's main thread for the

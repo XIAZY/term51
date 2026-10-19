@@ -3,7 +3,7 @@ package session
 import (
 	"testing"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
 )
 
 func TestSelection(t *testing.T) {

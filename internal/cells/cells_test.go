@@ -14,8 +14,8 @@ import (
 	"golang.org/x/image/font/gofont/gomonoitalic"
 	"golang.org/x/image/font/opentype"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
-	"github.com/XIAZY/libghostty-vt-go/vt/color"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/color"
 )
 
 // wideFont is a font with Chinese and Japanese characters on the development

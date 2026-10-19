@@ -3,11 +3,11 @@ package session
 import (
 	"bytes"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
-	"github.com/XIAZY/libghostty-vt-go/vt/color"
-	"github.com/XIAZY/libghostty-vt-go/vt/devicestatus"
-	"github.com/XIAZY/libghostty-vt-go/vt/modes"
-	"github.com/XIAZY/libghostty-vt-go/vt/osc"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/color"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/devicestatus"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/modes"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/osc"
 
 	"term51/internal/replies"
 )

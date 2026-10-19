@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/XIAZY/libghostty-vt-go/vt/input"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/input"
 
 	"term51/internal/replies"
 )

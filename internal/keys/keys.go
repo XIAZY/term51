@@ -19,7 +19,7 @@ package keys
 import (
 	"unicode/utf8"
 
-	"github.com/XIAZY/libghostty-vt-go/vt/input"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt/input"
 )
 
 // Modifier bits of a Raw event (the KEYMOD_* values of <sys/keycodes.h>).

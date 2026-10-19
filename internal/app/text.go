@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/XIAZY/libghostty-vt-go/vt"
+	"github.com/XIAZY/term51/libghostty-vt-go/vt"
 
 	"term51/internal/arrowpad"
 	"term51/internal/cells"

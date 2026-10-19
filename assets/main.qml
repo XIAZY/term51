@@ -78,7 +78,7 @@ TabbedPane {
 
             property bool ctrl: false
             property bool alt: false
-            property real inputLeft: 0       // when the input field last lost the focus
+            property bool letGo: false       // the input field is letting go of the focus by our own call
             property bool created: false     // the terminal's window has been asked for
             property string termBackground: "#101418" // the theme's, around the terminal
             property bool bell: true         // a program's bell makes a sound
@@ -199,37 +199,39 @@ TabbedPane {
                     // The sheet's fields can take the focus only from a field
                     // that gives it up (the input field refuses focusable
                     // controls).
-                    onTriggered: { input.loseFocus(); settingsSheet.open() }
+                    onTriggered: { page.letGoOfFocus(); settingsSheet.open() }
                 },
                 ActionItem {
                     title: "Esc"
                     imageSource: "asset:///images/key-esc.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: { page.send("bar", { name: "esc" }); page.keepRows() }
+                    onTriggered: page.send("bar", { name: "esc" })
                 },
                 ActionItem {
                     title: "Ctrl"
                     imageSource: page.ctrl ? "asset:///images/key-ctrl-armed.png" : "asset:///images/key-ctrl.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: { page.send("bar", { name: "ctrl" }); page.keepRows() }
+                    onTriggered: page.send("bar", { name: "ctrl" })
                 },
                 ActionItem {
                     title: "Tab"
                     imageSource: "asset:///images/key-tab.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: { page.send("bar", { name: "tab" }); page.keepRows() }
+                    onTriggered: page.send("bar", { name: "tab" })
                 }
             ]
 
-            // Esc, Ctrl and Tab are on the system's bar, which takes the focus
-            // from the input field for its press to count, so the on-screen
-            // rows go down for a moment: each gives the field the focus back
-            // when it lost it during that press. (The phone tells of the loss
-            // before the press. The keys of our strip cost no focus at all;
-            // see the input field.)
-            function keepRows() {
-                if (Date.now() - page.inputLeft < 500)
-                    input.requestFocus()
+            // The input field gives up the focus only when this page lets
+            // it go (a tap on the terminal with the rows up, the settings
+            // sheet); a loss to anything else, which is only the system's bar
+            // and its menu now (see the input field), is undone at the moment
+            // it happens, before the on-screen rows begin to move. The phone's
+            // swipe down puts the rows away without taking the focus.
+            function letGoOfFocus() {
+                if (input.focused) {
+                    page.letGo = true
+                    input.loseFocus()
+                }
             }
 
             // Keys reach the shell in one of two ways. Until the terminal is
@@ -293,8 +295,12 @@ TabbedPane {
                     input.submitKey: SubmitKey.EnterKey
                     input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
                     onFocusedChanged: {
-                        if (!focused)
-                            page.inputLeft = Date.now()
+                        if (focused)
+                            return
+                        if (page.letGo)
+                            page.letGo = false
+                        else
+                            input.requestFocus()
                     }
                     input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
                     onTextChanging: {
@@ -447,10 +453,9 @@ TabbedPane {
                                 if (page.selected != "")
                                     page.send("unselect")
                                 else if (fwc.rowsUp())
-                                    input.loseFocus()
+                                    page.letGoOfFocus()
                                 else {
-                                    if (input.focused)
-                                        input.loseFocus()
+                                    page.letGoOfFocus()
                                     input.requestFocus()
                                 }
                             }

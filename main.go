@@ -159,6 +159,13 @@ func bundled(root string, places layout.Places) settings.Bundled {
 	} else {
 		b.Tools = tools
 	}
+	// The BusyBox shell's start-up file, whose prompt reports the
+	// directory that names the tab.
+	if env := filepath.Join(root, "app/native/busybox/ashrc"); isFile(env) {
+		b.AshEnv = env
+	} else {
+		log.Printf("bundled: the package has no %s; the BusyBox shell's tabs show no directory", env)
+	}
 	// The user's own programs (where pwsh is linked), in the conventional
 	// place in the app's home, its data folder.
 	b.Bin = settings.HomeBin(os.Getenv("HOME"))
@@ -218,4 +225,9 @@ func phoneFonts() cells.Fonts {
 func isDir(path string) bool {
 	fi, err := os.Stat(path)
 	return err == nil && fi.IsDir()
+}
+
+func isFile(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.Mode().IsRegular()
 }

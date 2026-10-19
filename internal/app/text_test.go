@@ -871,7 +871,7 @@ func TestPowerShellFromThePage(t *testing.T) {
 	a.Send(Command{Name: "newtab"})
 	wait(t, "a PowerShell tab", func() bool {
 		tabs, _ := p.get("tabs").([]any)
-		return len(tabs) == 2 && tabs[1] == "PowerShell"
+		return len(tabs) == 2 && tabs[1] == "bash" // the program the test runs as pwsh
 	})
 
 	// The sheet being opened asks for a newer release.
@@ -911,7 +911,7 @@ func TestBusyBoxShell(t *testing.T) {
 	a.Send(Command{Name: "newtab"})
 	wait(t, "the second tab", func() bool {
 		tabs, _ := p.get("tabs").([]any)
-		return len(tabs) == 2 && tabs[0] == "bash" && tabs[1] == "BusyBox shell"
+		return len(tabs) == 2 && tabs[0] == "bash" && tabs[1] == "ash"
 	})
 	// What runs is BusyBox's ash (its help names it), found through the
 	// folder that is last on the PATH.

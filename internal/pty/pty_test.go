@@ -213,3 +213,51 @@ func TestAProgramThatCannotBeRunIsReportedInTheTerminal(t *testing.T) {
 		t.Error("the process ended without a failure")
 	}
 }
+
+// Foreground finds the shell while it waits, and the program it runs while
+// that runs, with the program's path.
+func TestForeground(t *testing.T) {
+	cmd := exec.Command(shell(t), "-i")
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "PS1=$ "}
+	m, err := Start(cmd, Size{Rows: 24, Cols: 80})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	// What is typed before the prompt may be thrown away when the shell
+	// sets up its line editing (the phone's does), so the prompt first.
+	readUntil(t, m, "$ ", 10*time.Second)
+	go io.Copy(io.Discard, m)
+	shellPid := cmd.Process.Pid
+
+	wait := func(what string, ok func(pid int) bool) int {
+		t.Helper()
+		deadline := time.Now().Add(10 * time.Second)
+		for {
+			pid, err := Foreground(m, shellPid)
+			if err == nil && ok(pid) {
+				return pid
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("%s: last answer %d, %v", what, pid, err)
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+	wait("the shell at its prompt", func(pid int) bool { return pid == shellPid })
+	if _, err := m.Write([]byte("sleep 30\n")); err != nil {
+		t.Fatal(err)
+	}
+	pid := wait("sleep in the foreground", func(pid int) bool { return pid != shellPid })
+	path, err := ProgramPath(pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Base(path) != "sleep" {
+		t.Errorf("the foreground program is %q", path)
+	}
+	m.Write([]byte{3}) // Ctrl-C: the sleep ends
+	wait("the shell again", func(pid int) bool { return pid == shellPid })
+	m.Write([]byte("exit\n"))
+	cmd.Wait()
+}

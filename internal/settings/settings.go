@@ -544,21 +544,6 @@ func (s Settings) SessionTheme() session.Theme {
 // SessionCursor is the cursor's shape as a session takes it.
 func (s Settings) SessionCursor() session.CursorShape { return cursors[s.Cursor] }
 
-// ShellName is what the shell is called where the app names it (a tab's
-// first title): the settings sheet's name for one of the two it offers,
-// and for a program by its path the last part of the path.
-func (s Settings) ShellName() string {
-	switch s.Shell {
-	case ShellSystem:
-		return "System shell"
-	case ShellBusyBox:
-		return "BusyBox shell"
-	case ShellPowerShell:
-		return "PowerShell"
-	}
-	return filepath.Base(s.Shell)
-}
-
 // Bundled says where the programs that the app ships are, and the folders
 // they need. All paths are absolute.
 type Bundled struct {
@@ -578,6 +563,11 @@ type Bundled struct {
 	// directories. Either is "" when there is none.
 	Bin string
 	Tmp string
+
+	// AshEnv is the BusyBox shell's start-up file (its ENV), from the
+	// package: its prompt reports the directory (OSC 7). "" when there is
+	// none.
+	AshEnv string
 }
 
 // HomeBin is Bin in the app's home folder home: "" when there is no home,
@@ -623,8 +613,11 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 	case ShellBusyBox:
 		shell = filepath.Join(b.Tools, "ash")
 		// The file a shell reads when it starts: the phone's is written
-		// for the phone's shell, not for ash.
+		// for the phone's shell, not for ash; ash gets the app's.
 		drop = append(drop, "ENV=")
+		if b.AshEnv != "" {
+			add = append(add, "ENV="+b.AshEnv)
+		}
 	case ShellPowerShell:
 		shell, term = b.PowerShell, session.DefaultTerm
 	}
@@ -649,8 +642,15 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 	}
 	out = append(out, add...)
 	out = append(out, "TERM="+term)
+	// Every shell starts in the home folder, as on other systems' terminals.
+	var home string
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, "HOME="); ok {
+			home = v
+		}
+	}
 	return session.Config{
-		Shell: shell, Args: append([]string(nil), s.Args...), Env: out,
+		Shell: shell, Args: append([]string(nil), s.Args...), Env: out, Dir: home,
 		Cols: cols, Rows: rows, CellW: cellW, CellH: cellH,
 		MaxScrollback: s.ScrollbackBytes,
 		Theme:         s.SessionTheme(),

@@ -178,6 +178,7 @@ type Event struct {
 type Session struct {
 	cfg    replies.Config
 	cmd    *exec.Cmd
+	shell  string // the shell's path (cmd's is the start-up step's, pty.Start)
 	master *os.File
 
 	// mu guards the terminal, the stream, the sizes and closed.
@@ -244,7 +245,7 @@ func Start(cfg Config) (*Session, error) {
 		s.term.Deinit()
 		return nil, err
 	}
-	s.cmd, s.master = cmd, master
+	s.cmd, s.shell, s.master = cmd, cfg.Shell, master
 	go s.read()
 	go s.wait()
 	return s, nil
@@ -385,6 +386,23 @@ func (s *Session) ExitErr() error {
 	default:
 		return nil
 	}
+}
+
+// Foreground is the path of the program in the foreground of the shell's
+// terminal, the shell's own included (internal/pty for how it is found on
+// each system). The shell is the session's leader; it is named by its path
+// rather than by what the leader runs, which for a moment after the start
+// is still the step that becomes the shell (pty.Start).
+func (s *Session) Foreground() (string, error) {
+	leader := s.cmd.Process.Pid
+	pid, err := pty.Foreground(s.master, leader)
+	if err != nil {
+		return "", err
+	}
+	if pid == leader {
+		return s.shell, nil
+	}
+	return pty.ProgramPath(pid)
 }
 
 // Send writes bytes to the shell as they are.

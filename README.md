@@ -7,14 +7,15 @@ libghostty-vt (Ghostty v1.3.1).
 ## Screenshots
 
 <p>
-<img src="docs/images/shell.png" width="32%" alt="A shell tab: the prompt at the home folder, uname, the PATH, and the key strip with Alt and the shell's symbols above the phone's keyboard">
-<img src="docs/images/tabs.png" width="32%" alt="The tab list: New Tab, two shell tabs named with their folder and program, and a PowerShell tab">
-<img src="docs/images/settings.png" width="32%" alt="Settings: text size with a preview, theme, cursor shape, bell, scrolling the program, and the shell">
+<img src="docs/images/shell.png" width="24%" alt="A shell tab: the prompt at the home folder, uname, the PATH, and the key strip with Alt and the shell's symbols above the phone's keyboard">
+<img src="docs/images/tabs.png" width="24%" alt="The tab list: New Tab, two shell tabs named with their folder and program, and a PowerShell tab">
+<img src="docs/images/settings.png" width="24%" alt="Settings: text size with a preview, theme, cursor shape, bell, scrolling the program, and the shell">
+<img src="docs/images/pi.png" width="24%" alt="pi, a coding agent, in a term51 tab: a question, its answer, and the token count">
 </p>
 
 A shell tab on a BlackBerry Passport, with the key strip above the phone's
 keyboard; the tab list, where each tab is named by its folder and the program
-in the foreground; and Settings.
+in the foreground; Settings; and pi, a coding agent, running in a tab.
 
 ## Using term51
 

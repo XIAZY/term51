@@ -1,10 +1,12 @@
-// Package tabname decides what a tab is called, as the live terminals do
-// (Terminal.app, iTerm2, Konsole, WezTerm, Ghostty): a title that a program
-// set (OSC 0 or 2) is the name; without one, the name of the program in the
-// foreground of the tab's terminal; and while that is the shell itself,
-// waiting at its prompt, the last part of the directory the shell reported
-// (OSC 7, ~ for home), or the shell's name as the settings call it when it
-// reported none.
+// Package tabname decides what a tab is called. It follows macOS
+// Terminal.app's tab title, "Working directory or document — Active process
+// name": "~ — ash" at the shell's prompt at home, "term51 — vi" with vi open
+// in that directory, "pwsh" for PowerShell, which reports no directory. The
+// first part is the title a program set (OSC 0 or 2), as Terminal.app puts
+// a document there, or else the last part of the directory the shell
+// reported (OSC 7, ~ for home); the second is the file name of the program
+// in the foreground of the tab's terminal, the shell included. With no
+// first part the program stands alone.
 //
 // The program is looked up again when the tab's output has gone quiet
 // after a burst, since a program that starts or ends almost always writes
@@ -21,39 +23,44 @@ import (
 // looked up again.
 const Quiet = 300 * time.Millisecond
 
-// Program is what runs in the foreground of a terminal.
-type Program struct {
-	Shell bool   // it is the tab's shell itself
-	Path  string // the path it was started by, when it is not the shell
-}
+// Separator is Terminal.app's, between the directory and the program.
+const Separator = " — "
 
-// Source finds the program in the foreground of a tab's terminal.
-type Source func() (Program, error)
+// Source gives the path of the program in the foreground of a tab's
+// terminal.
+type Source func() (string, error)
 
 // Tab is one tab's name.
 type Tab struct {
-	Shell string // the shell's name, as the settings call it
-	Home  string // the home folder, shown as ~
 	Title string // the title a program set; empty when none is set
 
+	home    string
 	dir     string // the directory the shell last reported; empty if none
-	program string // the foreground program's name, empty for the shell
+	program string // the foreground program's file name
 	due     time.Time
+}
+
+// New is the name of a tab whose shell is the program at shell, in the
+// home folder home.
+func New(home, shell string) Tab {
+	return Tab{home: home, program: filepath.Base(shell)}
 }
 
 // Name is what the tab is called.
 func (t *Tab) Name() string {
+	first := t.Title
 	switch {
-	case t.Title != "":
-		return t.Title
-	case t.program != "":
-		return t.program
+	case first != "":
 	case t.dir == "":
-		return t.Shell
-	case t.dir == t.Home:
-		return "~"
+	case t.dir == t.home:
+		first = "~"
+	default:
+		first = filepath.Base(t.dir)
 	}
-	return filepath.Base(t.dir)
+	if first == "" {
+		return t.program
+	}
+	return first + Separator + t.program
 }
 
 // Pwd takes the directory the shell reported, a file URL (OSC 7). A report
@@ -86,13 +93,10 @@ func (t *Tab) Due(now time.Time) (bool, time.Duration) {
 // name as it was.
 func (t *Tab) Refresh(src Source) error {
 	t.due = time.Time{}
-	p, err := src()
+	path, err := src()
 	if err != nil {
 		return err
 	}
-	t.program = ""
-	if !p.Shell && p.Path != "" {
-		t.program = filepath.Base(p.Path)
-	}
+	t.program = filepath.Base(path)
 	return nil
 }

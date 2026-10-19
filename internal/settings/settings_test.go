@@ -324,6 +324,9 @@ func TestTheShellSetting(t *testing.T) {
 	if !has(c, "ENV=/etc/kshrc") || !has(c, "HOME=/h") || !has(c, "TERM=xterm") || has(c, "TERM=dumb") {
 		t.Errorf("the system shell's environment: %v", c.Env)
 	}
+	if c.Dir != "/h" {
+		t.Errorf("the shell starts in %q, not the home folder", c.Dir)
+	}
 
 	s.Shell = ShellBusyBox
 	c = s.Session(80, 24, 9, 18, env, Bundled{Tools: "/data/bin"})
@@ -363,14 +366,6 @@ func TestTheShellSetting(t *testing.T) {
 	c = s.Session(80, 24, 9, 18, env, Bundled{Tools: "/data/bin"})
 	if c.Shell != "/opt/bin/zsh" || !has(c, "ENV=/etc/kshrc") {
 		t.Errorf("a shell by its path: %q, %v", c.Shell, c.Env)
-	}
-
-	for shell, name := range map[string]string{ShellSystem: "System shell", ShellBusyBox: "BusyBox shell", ShellPowerShell: "PowerShell", "/opt/bin/zsh": "zsh"} {
-		x := Default()
-		x.Shell = shell
-		if x.ShellName() != name {
-			t.Errorf("the shell %q is called %q, want %q", shell, x.ShellName(), name)
-		}
 	}
 
 	// No tools folder: the PATH is left as it is. No PATH at all: the

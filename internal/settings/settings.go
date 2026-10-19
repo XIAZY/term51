@@ -544,21 +544,6 @@ func (s Settings) SessionTheme() session.Theme {
 // SessionCursor is the cursor's shape as a session takes it.
 func (s Settings) SessionCursor() session.CursorShape { return cursors[s.Cursor] }
 
-// ShellName is what the shell is called where the app names it (a tab's
-// first title): the settings sheet's name for one of the two it offers,
-// and for a program by its path the last part of the path.
-func (s Settings) ShellName() string {
-	switch s.Shell {
-	case ShellSystem:
-		return "System shell"
-	case ShellBusyBox:
-		return "BusyBox shell"
-	case ShellPowerShell:
-		return "PowerShell"
-	}
-	return filepath.Base(s.Shell)
-}
-
 // Bundled says where the programs that the app ships are, and the folders
 // they need. All paths are absolute.
 type Bundled struct {
@@ -657,8 +642,15 @@ func (s Settings) Session(cols, rows, cellW, cellH int, env []string, b Bundled)
 	}
 	out = append(out, add...)
 	out = append(out, "TERM="+term)
+	// Every shell starts in the home folder, as on other systems' terminals.
+	var home string
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, "HOME="); ok {
+			home = v
+		}
+	}
 	return session.Config{
-		Shell: shell, Args: append([]string(nil), s.Args...), Env: out,
+		Shell: shell, Args: append([]string(nil), s.Args...), Env: out, Dir: home,
 		Cols: cols, Rows: rows, CellW: cellW, CellH: cellH,
 		MaxScrollback: s.ScrollbackBytes,
 		Theme:         s.SessionTheme(),

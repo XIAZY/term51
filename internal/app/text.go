@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"log"
-	"os"
 	"reflect"
 	"runtime"
 	"sync"
@@ -137,7 +136,7 @@ func (a *App) Run() error {
 			a.notice("The shell could not be started: " + err.Error())
 			return nil
 		}
-		t := &tab{sess: sess, name: tabname.Tab{Shell: a.cfg.ShellName(), Home: os.Getenv("HOME")}, stop: make(chan struct{})}
+		t := &tab{sess: sess, name: tabname.New(conf.Dir, conf.Shell), stop: make(chan struct{})}
 		go t.follow(inbox)
 		return t
 	}

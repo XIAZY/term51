@@ -78,7 +78,7 @@ TabbedPane {
 
             property bool ctrl: false
             property bool alt: false
-            property real inputLeft: 0       // when the input field last lost the focus
+            property bool letGo: false       // the input field is letting go of the focus by our own call
             property bool created: false     // the terminal's window has been asked for
             property string termBackground: "#101418" // the theme's, around the terminal
             property bool bell: true         // a program's bell makes a sound
@@ -196,36 +196,40 @@ TabbedPane {
                     title: "Settings"
                     imageSource: "asset:///images/settings.png"
                     ActionBar.placement: ActionBarPlacement.InOverflow
-                    onTriggered: settingsSheet.open()
+                    // The input field lets go first: it would take the focus
+                    // back from the sheet's fields otherwise.
+                    onTriggered: { page.letGoOfFocus(); settingsSheet.open() }
                 },
                 ActionItem {
                     title: "Esc"
                     imageSource: "asset:///images/key-esc.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: { page.send("bar", { name: "esc" }); page.keepRows() }
+                    onTriggered: page.send("bar", { name: "esc" })
                 },
                 ActionItem {
                     title: "Ctrl"
                     imageSource: page.ctrl ? "asset:///images/key-ctrl-armed.png" : "asset:///images/key-ctrl.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: { page.send("bar", { name: "ctrl" }); page.keepRows() }
+                    onTriggered: page.send("bar", { name: "ctrl" })
                 },
                 ActionItem {
                     title: "Tab"
                     imageSource: "asset:///images/key-tab.png"
                     ActionBar.placement: ActionBarPlacement.OnBar
-                    onTriggered: { page.send("bar", { name: "tab" }); page.keepRows() }
+                    onTriggered: page.send("bar", { name: "tab" })
                 }
             ]
 
-            // A touch outside the input field takes the focus from it, by the
-            // phone's rule, and the on-screen rows go down with it: so a key of
-            // our strip, or Esc, Ctrl or Tab on the system's bar, gives the field
-            // the focus back when it lost it during that press. (The phone's own
-            // swipe down still puts the rows away.)
-            function keepRows() {
-                if (Date.now() - page.inputLeft < 500)
-                    input.requestFocus()
+            // The input field gives up the focus only when this page lets
+            // it go (a tap on the terminal with the rows up, the settings
+            // sheet); a loss to anything else (see the input field for why
+            // a touch hardly ever takes it) is undone at the moment it
+            // happens.
+            function letGoOfFocus() {
+                if (input.focused) {
+                    page.letGo = true
+                    input.loseFocus()
+                }
             }
 
             // Keys reach the shell in one of two ways. Until the terminal is
@@ -272,6 +276,15 @@ TabbedPane {
                     // which no other key did.
                     focusPolicy: FocusPolicy.None
                     navigation.focusPolicy: NavigationFocusPolicy.NotFocusable
+                    // A touch takes the focus from it only when it lands on a
+                    // control that takes the focus itself, which nothing on
+                    // this page does: our key strip, the system's bar (its
+                    // buttons work without the focus), the terminal and the
+                    // selection leave it, and the on-screen rows, where they
+                    // are. By the phone's default rule any touch elsewhere
+                    // took it, a quick press with the finger sliding a little
+                    // as well (as scrolling), and the rows went down with it.
+                    focusRetentionPolicyFlags: FocusRetentionPolicy.LoseToFocusable
                     verticalAlignment: VerticalAlignment.Bottom
                     horizontalAlignment: HorizontalAlignment.Fill
                     inputMode: TextFieldInputMode.Text
@@ -279,8 +292,12 @@ TabbedPane {
                     input.submitKey: SubmitKey.EnterKey
                     input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
                     onFocusedChanged: {
-                        if (!focused)
-                            page.inputLeft = Date.now()
+                        if (focused)
+                            return
+                        if (page.letGo)
+                            page.letGo = false
+                        else
+                            input.requestFocus()
                     }
                     input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
                     onTextChanging: {
@@ -322,6 +339,11 @@ TabbedPane {
                         property real touchY: 0 // the drag so far
                         property real w: 0      // the control's size
                         property real h: 0
+                        // The largest height it has had at this width: the
+                        // on-screen rows are up while it is clearly less (the
+                        // phone does not say whether they show).
+                        property real fullH: 0
+                        function rowsUp() { return h < fullH - 10 }
 
                         // The arrow pad. A press and hold brings it up near
                         // the finger. From then on the finger is a joystick
@@ -409,20 +431,30 @@ TabbedPane {
 
                         attachedObjects: LayoutUpdateHandler {
                             onLayoutFrameChanged: {
+                                if (layoutFrame.width != fwc.w || layoutFrame.height > fwc.fullH)
+                                    fwc.fullH = layoutFrame.height // a new width (rotation) starts over
                                 fwc.w = layoutFrame.width
                                 fwc.h = layoutFrame.height
                                 page.sized(layoutFrame)
                             }
                         }
                         gestureHandlers: TapHandler {
-                            // A tap brings the on-screen rows up; but while
-                            // something is selected it only drops the
-                            // selection, and leaves the rows as they are.
+                            // A tap brings the on-screen rows up, and puts them
+                            // away when they are up; but while something is
+                            // selected it only drops the selection, and leaves
+                            // the rows as they are. The phone's swipe down puts
+                            // the rows away and leaves the input field the
+                            // focus, which it then gives up and asks for
+                            // again, so that the rows show.
                             onTapped: {
                                 if (page.selected != "")
                                     page.send("unselect")
-                                else
+                                else if (fwc.rowsUp())
+                                    page.letGoOfFocus()
+                                else {
+                                    page.letGoOfFocus()
                                     input.requestFocus()
+                                }
                             }
                         }
                         contextMenuHandler: ContextMenuHandler {
@@ -516,25 +548,25 @@ TabbedPane {
                         horizontalAlignment: HorizontalAlignment.Fill
                         KeyCell { text: "Alt"; armed: page.alt
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("bar", { name: "alt" }); page.keepRows() } }
+                                  onPressed: page.send("bar", { name: "alt" }) }
                         KeyCell { text: "-"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("text", { text: "-" }); page.keepRows() } }
+                                  onPressed: page.send("text", { text: "-" }) }
                         KeyCell { text: "_"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("text", { text: "_" }); page.keepRows() } }
+                                  onPressed: page.send("text", { text: "_" }) }
                         KeyCell { text: "/"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("text", { text: "/" }); page.keepRows() } }
+                                  onPressed: page.send("text", { text: "/" }) }
                         KeyCell { text: "$"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("text", { text: "$" }); page.keepRows() } }
+                                  onPressed: page.send("text", { text: "$" }) }
                         KeyCell { text: "|"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("text", { text: "|" }); page.keepRows() } }
+                                  onPressed: page.send("text", { text: "|" }) }
                         KeyCell { text: "~"; symbol: true
                                   layoutProperties: StackLayoutProperties { spaceQuota: 1 }
-                                  onPressed: { page.send("text", { text: "~" }); page.keepRows() } }
+                                  onPressed: page.send("text", { text: "~" }) }
                     }
                 }
                 // The arrow pad's picture: its ground, the four arrows in

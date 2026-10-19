@@ -4,13 +4,13 @@
 # package and its checksum as the run's build result; a tag v* publishes
 # them as a release.
 #
-# The terminal library is part of this repository (libghostty-vt-go/). What
-# the build needs besides it, each pinned:
+# The terminal library is part of this repository (libghostty-vt-go/), and
+# Dropbear's source is its submodule third_party/dropbear (upstream, pinned),
+# which tools/dropbear.sh patches and builds in the image its lock names.
+# What the build needs besides, each pinned:
 # - Go with the QNX port: XIAZY/go-qnx at GO_QNX_COMMIT, built here with
 #   src/make.bash from a stock Go (it has no releases); kept in the cache
 #   between runs.
-# - Dropbear: XIAZY/dropbear-qnx at the commit in tools/dropbear.lock, which
-#   tools/dropbear.sh builds in the image the lock names.
 # - BusyBox: the release in tools/busybox.lock, which tools/busybox.sh fetches.
 name: build
 
@@ -40,14 +40,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: term51
-      - name: Read the Dropbear commit from tools/dropbear.lock
-        id: dropbear
-        run: echo "commit=$(sed -n 's/^commit = //p' term51/tools/dropbear.lock)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: XIAZY/dropbear-qnx
-          ref: ${{ steps.dropbear.outputs.commit }}
-          path: dropbear-qnx
+          submodules: true
       - name: Restore Go with the QNX port
         id: goqnx
         uses: actions/cache@v4
@@ -71,7 +64,6 @@ jobs:
       - name: Build the package
         env:
           GOQNX: ${{ github.workspace }}/go-qnx
-          DROPBEAR_QNX: ${{ github.workspace }}/dropbear-qnx
         run: term51/tools/build.sh
       - name: Check what the package carries
         run: |

@@ -1,0 +1,155 @@
+Dropbear 2026.94's source changes for QNX (BlackBerry 10 and QNX 6.5),
+applied by tools/dropbear.sh to a copy of third_party/dropbear (upstream at
+tag DROPBEAR_2026.94) before it is built with the qnx/ folder beside this
+file. What each change is for:
+
+- <syslog.h> is included only when syslog is on: BlackBerry 10 has none,
+  and the LOG_ priorities Dropbear uses as log levels are defined here.
+- htole64(), le64toh(), htole32() and le32toh() are macros on QNX 6.5:
+  compat.h no longer declares functions of those names there.
+- vasprintf(), which scp uses, is in neither QNX's C library: compat.c has
+  one.
+- getpass() is missing on BlackBerry 10: compat.c reads the password from
+  the terminal with the echo off, as getpass() does.
+- O_NOFOLLOW is missing on QNX 6.5: it is 0 there.
+- htons() and ntohs() use the compiler's byte swap on QNX: the headers'
+  inline assembly for x86 is rejected by clang for an int argument.
+
+They were made as separate commits on the port's own branch (dropbear-qnx,
+2026-10-10); this file is `git diff DROPBEAR_2026.94` of their result,
+limited to src/.
+
+diff --git a/src/compat.c b/src/compat.c
+index d597d83a..5e293549 100644
+--- a/src/compat.c
++++ b/src/compat.c
+@@ -280,8 +280,66 @@ static char **initshells() {
+ 
+ #endif /* HAVE_GETUSERSHELL */
+ 
++#if defined(__QNX__)
++int vasprintf(char **out, const char *format, va_list args) {
++	va_list again;
++	int len;
++	char *buf;
++
++	va_copy(again, args);
++	len = vsnprintf(NULL, 0, format, again);
++	va_end(again);
++	if (len < 0) {
++		return -1;
++	}
++	buf = malloc((size_t)len + 1);
++	if (buf == NULL) {
++		return -1;
++	}
++	vsnprintf(buf, (size_t)len + 1, format, args);
++	*out = buf;
++	return len;
++}
++#endif
++
++#if defined(__QNX__) && !defined(HAVE_GETPASS)
++/* Reads a password from the terminal with the echo off, as getpass() does:
++ * the prompt goes to the terminal itself and the line comes from it,
++ * whatever standard input and output are. */
++char *getpass(const char *prompt) {
++	static char buf[256];
++	struct termios old, noecho;
++	size_t len = 0;
++	char c;
++	int fd = open("/dev/tty", O_RDWR | O_NOCTTY);
++
++	if (fd < 0) {
++		return NULL;
++	}
++	if (tcgetattr(fd, &old) != 0) {
++		close(fd);
++		return NULL;
++	}
++	noecho = old;
++	noecho.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL);
++	noecho.c_lflag |= ICANON | ISIG;
++	tcsetattr(fd, TCSAFLUSH, &noecho);
++	(void)write(fd, prompt, strlen(prompt));
++	while (read(fd, &c, 1) == 1 && c != '\n' && c != '\r') {
++		if (len < sizeof(buf) - 1) {
++			buf[len++] = c;
++		}
++	}
++	buf[len] = '\0';
++	(void)write(fd, "\n", 1);
++	tcsetattr(fd, TCSAFLUSH, &old);
++	close(fd);
++	return buf;
++}
++#endif
++
+ /* libcrux uses glibc's htole64 etc */
+-#if !(defined(HAVE_HTOLE64) || defined(HAVE_DECL_HTOLE64))
++#if !(defined(HAVE_HTOLE64) || defined(HAVE_DECL_HTOLE64) || defined(htole64))
+ 
+ uint64_t htole64(uint64_t inp) {
+ 	union {
+diff --git a/src/compat.h b/src/compat.h
+index ad1d25b8..e6938db9 100644
+--- a/src/compat.h
++++ b/src/compat.h
+@@ -53,7 +53,31 @@ void endusershell(void);
+ #define DROPBEAR_PATH_DEVNULL "/dev/null"
+ #endif
+ 
+-#if !(defined(HAVE_HTOLE64) || defined(HAVE_DECL_HTOLE64))
++#if defined(__QNX__)
++/* QNX's own htons() and ntohs() are, on x86, inline assembly that clang
++ * does not take for an int argument. */
++#if defined(__LITTLEENDIAN__)
++#undef htons
++#undef ntohs
++#define htons(x) __builtin_bswap16((uint16_t)(x))
++#define ntohs(x) __builtin_bswap16((uint16_t)(x))
++#endif
++/* QNX 6.5 cannot refuse to open through a symbolic link (BlackBerry 10
++ * can): files are opened without that there. */
++#ifndef O_NOFOLLOW
++#define O_NOFOLLOW 0
++#endif
++/* Not in QNX's C library. */
++int vasprintf(char **out, const char *format, va_list args);
++#ifndef HAVE_GETPASS
++/* BlackBerry 10's C library has no getpass() (QNX 6.5's has). */
++char *getpass(const char *prompt);
++#endif
++#endif
++
++/* QNX 6.5 has htole64() and the rest as macros, which the configure check
++ * for the functions does not see. */
++#if !(defined(HAVE_HTOLE64) || defined(HAVE_DECL_HTOLE64) || defined(htole64))
+ 
+ uint64_t htole64(uint64_t inp);
+ uint64_t le64toh(uint64_t inp);
+diff --git a/src/includes.h b/src/includes.h
+index e2ca2a38..09221eb5 100644
+--- a/src/includes.h
++++ b/src/includes.h
+@@ -49,7 +49,20 @@
+ #include <string.h>
+ #include <termios.h>
+ #include <unistd.h>
++#ifndef DISABLE_SYSLOG
+ #include <syslog.h>
++#else
++/* Without syslog (BlackBerry 10 has no <syslog.h>) the priorities are still
++ * the levels of dropbear_log(). */
++#define LOG_EMERG 0
++#define LOG_ALERT 1
++#define LOG_CRIT 2
++#define LOG_ERR 3
++#define LOG_WARNING 4
++#define LOG_NOTICE 5
++#define LOG_INFO 6
++#define LOG_DEBUG 7
++#endif
+ #include <netdb.h>
+ #include <stdarg.h>
+ #include <dirent.h>

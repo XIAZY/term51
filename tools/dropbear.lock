@@ -1,8 +1,8 @@
-# The Dropbear SSH client that goes into the package: built from the local
-# repository dropbear-qnx (beside this one, or where DROPBEAR_QNX says) at
-# this commit, with this toolchain image. The build is reproducible, so the
-# file's sha256 is fixed too. To update, change the lines that changed.
-# When the repository has releases, this becomes a download like BusyBox's.
-commit = 770a0c3c16468f19941a5fc56eb79ab670856c53
+# The Dropbear SSH client that goes into the package: built from upstream at
+# the commit the submodule third_party/dropbear is pinned to, with
+# tools/dropbear/qnx.patch and tools/dropbear/qnx/, in this toolchain image.
+# The build is reproducible, so the file's sha256 is fixed too. A change to
+# the pinned commit, the patch, the settings or the image changes it: update
+# the lines that change together.
 image = ghcr.io/xiazy/blackberry10-toolchain@sha256:60ce49510a37ed92368cca010bbaabf97b12d209b9fab179e8491b266bb2578f
 sha256 = f0c022ef55e05b4afa5512d686b46d597d8a5678bd68c40413ed8dbdd13acb2c

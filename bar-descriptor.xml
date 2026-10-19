@@ -32,7 +32,12 @@
     <!-- The BusyBox shell's start-up file: a prompt that reports the
          directory, which names the tab (shell/ashrc). -->
     <asset path="shell/ashrc">busybox/ashrc</asset>
-    <asset path="third_party/dropbear">dropbear/licences</asset>
+    <!-- Dropbear's licences, from its source (the submodule), and term51's
+         notes on it. -->
+    <asset path="third_party/dropbear/LICENSE">dropbear/licences/LICENSE</asset>
+    <asset path="third_party/dropbear/libtomcrypt/LICENSE">dropbear/licences/libtomcrypt.LICENSE</asset>
+    <asset path="third_party/dropbear/libtommath/LICENSE">dropbear/licences/libtommath.LICENSE</asset>
+    <asset path="third_party/dropbear.README">dropbear/licences/README</asset>
 
     <permission system="true">run_native</permission>
     <env var="LD_LIBRARY_PATH" value="/usr/lib/qt4/lib"/>

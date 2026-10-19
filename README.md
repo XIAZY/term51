@@ -4,6 +4,10 @@ A terminal emulator for BlackBerry 10, written in Go with a Cascades UI.
 The terminal core is [libghostty-vt-go](libghostty-vt-go/), a port of
 libghostty-vt (the terminal emulation core of Ghostty, v1.3.1) to Go, kept
 in this repository with its own history and the rules it was ported by.
+The SSH client the app ships is Dropbear: upstream's 2026.94 release as the
+submodule [third_party/dropbear](third_party/dropbear), with term51's changes
+for QNX in [tools/dropbear](tools/dropbear/) (clone with `--recursive`, or
+the build fetches it).
 
 ## Screenshots
 

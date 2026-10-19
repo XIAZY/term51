@@ -27,12 +27,14 @@ needs no install and does not disturb an installed copy that is running:
    level; `scp -r` fails on the phone.
 2. Start it as `devuser` from that folder:
 
-       on -d -u devuser sh -c 'cd <folder> && LD_LIBRARY_PATH=/usr/lib/qt4/lib \
+       on -d -u devuser sh -c 'cd <folder> && HOME=<folder>/data LD_LIBRARY_PATH=/usr/lib/qt4/lib \
          QML_IMPORT_PATH=/usr/lib/qt4/imports QT_PLUGIN_PATH=/usr/lib/qt4/plugins \
          CASCADES_THEME=dark GRAPHICS_ROOT=/base/usr/lib/graphics/qc \
          /dev/shmem/<name> > <folder>/out.txt 2>&1'
 
-   Without `QML_IMPORT_PATH` it stops at the first `import`.
+   Without `QML_IMPORT_PATH` it stops at the first `import`. Without `HOME`
+   the shells start in root's, which `devuser` cannot enter: the first shell
+   ends at once (exit status 127) and the app with it.
 3. A page with a mistake prints `ui: the page does not load:` with the file,
    line and reason, and the process ends. A page that loads prints nothing
    and the process stays (so run the ssh command with a time limit). It

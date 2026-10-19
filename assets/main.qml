@@ -79,6 +79,7 @@ TabbedPane {
             property bool ctrl: false
             property bool alt: false
             property real inputLeft: 0       // when the input field last lost the focus
+            property real keyPressed: 0      // when a key of the strip or the bar was last pressed
             property bool created: false     // the terminal's window has been asked for
             property string termBackground: "#101418" // the theme's, around the terminal
             property bool bell: true         // a program's bell makes a sound
@@ -223,8 +224,14 @@ TabbedPane {
             // our strip, or Esc, Ctrl or Tab on the system's bar, gives the field
             // the focus back when it lost it during that press. (The phone's own
             // swipe down still puts the rows away.)
+            //
+            // The phone tells of the loss before a bar key's press but can
+            // tell of it after a strip key's, within the same touch: a loss
+            // just before the press is undone here, one just after it when
+            // it happens (the input field's onFocusedChanged).
             function keepRows() {
-                if (Date.now() - page.inputLeft < 500)
+                page.keyPressed = Date.now()
+                if (page.keyPressed - page.inputLeft < 500)
                     input.requestFocus()
             }
 
@@ -279,8 +286,11 @@ TabbedPane {
                     input.submitKey: SubmitKey.EnterKey
                     input.submitKeyFocusBehavior: SubmitKeyFocusBehavior.Keep
                     onFocusedChanged: {
-                        if (!focused)
+                        if (!focused) {
                             page.inputLeft = Date.now()
+                            if (page.inputLeft - page.keyPressed < 500)
+                                input.requestFocus()
+                        }
                     }
                     input.onSubmitted: page.send("key", { down: true, key: 13, keycap: 13, unicode: "", shift: false, ctrl: false, alt: false })
                     onTextChanging: {

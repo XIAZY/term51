@@ -196,9 +196,8 @@ TabbedPane {
                     title: "Settings"
                     imageSource: "asset:///images/settings.png"
                     ActionBar.placement: ActionBarPlacement.InOverflow
-                    // The sheet's fields can take the focus only from a field
-                    // that gives it up (the input field refuses focusable
-                    // controls).
+                    // The input field lets go first: it would take the focus
+                    // back from the sheet's fields otherwise.
                     onTriggered: { page.letGoOfFocus(); settingsSheet.open() }
                 },
                 ActionItem {
@@ -223,10 +222,9 @@ TabbedPane {
 
             // The input field gives up the focus only when this page lets
             // it go (a tap on the terminal with the rows up, the settings
-            // sheet); a loss to anything else, which is only the system's bar
-            // and its menu now (see the input field), is undone at the moment
-            // it happens, before the on-screen rows begin to move. The phone's
-            // swipe down puts the rows away without taking the focus.
+            // sheet); a loss to anything else (see the input field for why
+            // a touch hardly ever takes it) is undone at the moment it
+            // happens.
             function letGoOfFocus() {
                 if (input.focused) {
                     page.letGo = true
@@ -278,16 +276,15 @@ TabbedPane {
                     // which no other key did.
                     focusPolicy: FocusPolicy.None
                     navigation.focusPolicy: NavigationFocusPolicy.NotFocusable
-                    // It keeps the focus when a control that can take the
-                    // focus is touched, and gives it up when one that cannot
-                    // is, or by the phone's swipe down. The keys of our strip,
-                    // the selection's bar and its handles take the focus by
-                    // touch, so touching them leaves the rows up; the system's
-                    // bar and the terminal cannot, so they take it. (By the
-                    // phone's default rule, scrolling took it too, and a quick
-                    // press on a key with the finger sliding a little counts
-                    // as one.)
-                    focusRetentionPolicyFlags: FocusRetentionPolicy.LoseToNonFocusable
+                    // A touch takes the focus from it only when it lands on a
+                    // control that takes the focus itself, which nothing on
+                    // this page does: our key strip, the system's bar (its
+                    // buttons work without the focus), the terminal and the
+                    // selection leave it, and the on-screen rows, where they
+                    // are. By the phone's default rule any touch elsewhere
+                    // took it, a quick press with the finger sliding a little
+                    // as well (as scrolling), and the rows went down with it.
+                    focusRetentionPolicyFlags: FocusRetentionPolicy.LoseToFocusable
                     verticalAlignment: VerticalAlignment.Bottom
                     horizontalAlignment: HorizontalAlignment.Fill
                     inputMode: TextFieldInputMode.Text
@@ -536,8 +533,7 @@ TabbedPane {
                     // characters that a shell needs all the time and the
                     // keyboard only has behind its symbol key. (Esc, Ctrl and
                     // Tab are on the system's bar; the arrows are the arrow
-                    // pad's.) Its keys take the focus by touch, which the input
-                    // field refuses, so they leave it where it is. Alt and Ctrl are
+                    // pad's.) Nothing on it takes the focus. Alt and Ctrl are
                     // sticky: they apply to the next key, one of these
                     // characters included, and Alt stays lit until then.
                     Container {

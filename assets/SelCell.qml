@@ -5,7 +5,6 @@ import bb.cascades 1.4
 // press counts when the finger comes up inside the cell.
 Container {
     id: cell
-    focusPolicy: FocusPolicy.Touch // a touch leaves the on-screen rows up (KeyCell)
     property alias imageSource: icon.imageSource
     property bool down: false
     signal pressed()
@@ -16,7 +15,6 @@ Container {
 
     ImageView {
         id: icon
-        touchPropagationMode: TouchPropagationMode.PassThrough
         filterColor: cell.down ? ui.palette.primary : Color.White
         preferredWidth: 81
         preferredHeight: 81

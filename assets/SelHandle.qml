@@ -6,6 +6,7 @@ import bb.cascades 1.4
 // with the selection's end while it is dragged), and when it is let go.
 Container {
     id: grab
+    focusPolicy: FocusPolicy.Touch // a touch leaves the on-screen rows up (KeyCell)
     property bool held: false
     property real downX: 0
     property real downY: 0
@@ -19,6 +20,7 @@ Container {
 
     ImageView {
         imageSource: "asset:///images/handle.png"
+        touchPropagationMode: TouchPropagationMode.PassThrough
         preferredWidth: 44
         preferredHeight: 44
         horizontalAlignment: HorizontalAlignment.Center

@@ -18,10 +18,16 @@ Container {
 
     layout: DockLayout {}
     verticalAlignment: VerticalAlignment.Fill
+    // It takes the focus by touch, which the input field refuses to give
+    // up to such a control: a touch here leaves the on-screen rows as they
+    // are. Its children let touches through, so that the cell itself is
+    // what a finger touches.
+    focusPolicy: FocusPolicy.Touch
     background: armed ? ui.palette.primary : Color.Transparent
 
     Container { // the light of a press
         id: light
+        touchPropagationMode: TouchPropagationMode.PassThrough
         background: ui.palette.primary
         opacity: 0
         horizontalAlignment: HorizontalAlignment.Fill
@@ -30,6 +36,7 @@ Container {
     }
     Label {
         id: label
+        touchPropagationMode: TouchPropagationMode.PassThrough
         textStyle.fontSize: symbol ? FontSize.Large : FontSize.Small
         textStyle.color: cell.armed ? ui.palette.textOnPrimary : ui.palette.textOnPlain
         horizontalAlignment: HorizontalAlignment.Center

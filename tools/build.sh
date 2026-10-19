@@ -6,7 +6,6 @@
 set -eu
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
-common=$(cd "$(git -C "$repo" rev-parse --git-common-dir)/.." && pwd)
 goqnx=${GOQNX:?set GOQNX to a go-qnx checkout built with src/make.bash}
 image=${BB10_BUILDER_IMAGE:-ghcr.io/xiazy/blackberry10-toolchain:latest}
 [ -x "$goqnx/bin/go" ] || { echo "error: no Go toolchain in $goqnx (run src/make.bash there)" >&2; exit 1; }

@@ -5,8 +5,9 @@ emulation core of [Ghostty](https://github.com/ghostty-org/ghostty); the
 port follows its Zig source at tag v1.3.1 (commit 332b2aef) file by file
 and function by function. It is MIT licensed, like the original, and it is
 the terminal core of term51, the repository it is part of. It was written
-in the first week of October 2026 and signed off on the 6th; the rules it
-was written by are below, and they still govern every change to it.
+in the first week of October 2026 and signed off on the 6th. It is frozen
+at v0.1.0 by the project owner's decision: a change to the port needs his
+word, and is then held to the rules below, which the port was written by.
 
 It is a library, not a terminal: it parses what programs write, keeps the
 screen, scrollback, modes and colours, reflows on resize, and encodes keys
@@ -28,7 +29,9 @@ was made, and every change since has been held to them. The details, and
 every place the port has to differ from upstream, are in `docs/mapping.md`.
 
 1. **Faithful, but in the form a Go user expects.** The same features and
-   behaviour as upstream. One Go file per Zig file with the same name, one
+   behaviour as upstream, within the scope set by the owner: libghostty-vt
+   without Kitty graphics, tmux control mode and search, which are compiled
+   out upstream too and are left for later. One Go file per Zig file with the same name, one
    Go function per Zig function in the same order with the same control
    flow, and upstream's comments carried over. No redesign and no
    optimisation during the port; the speed work came after it, on its own
@@ -48,14 +51,19 @@ every place the port has to differ from upstream, are in `docs/mapping.md`.
 4. **The recorded corpus is the judge.** About 190,000 cases recorded from
    the pinned upstream library compare the terminal's full state, byte for
    byte, with what upstream produced, also with the same input fed in pieces
-   at every byte boundary. The port reproduces upstream's defects on purpose;
-   deliberate fixes come after everything passes and are listed separately.
+   at every byte boundary. A case that fails upstream's own integrity checks
+   in a Debug build is never recorded as an expected result. The port
+   reproduces upstream's defects on purpose; deliberate fixes come after
+   everything passes and are listed separately.
 5. **Standard library only.** No cgo and no dependencies. Where the Go
    standard library has a direct equivalent of a component, it is used
    behind a wrapper that keeps upstream's name, and upstream's tests for that
    component run against the wrapper; if they fail, the difference goes to
-   the project lead before anything changes. Unicode width and grapheme
-   tables are generated from the Unicode version Go ships.
+   the project lead before anything changes. The parser, the stream, the
+   terminal, the screen, the page list and the style set are never swapped
+   for a library equivalent. Unicode width and grapheme tables are
+   generated from the Unicode version Go ships, and every upstream test
+   whose expectation changes with Go's Unicode version is listed.
 6. **Errors are upstream's errors.** Each Zig error is one Go sentinel with
    the same name, returned bare and never wrapped, so `err.Error()` is Zig's
    error name.

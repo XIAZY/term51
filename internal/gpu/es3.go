@@ -6,13 +6,17 @@ package gpu
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
-// One frame: the bytes lo <= i < hi of the table are new. Returns 0 when
-// the swap failed.
-static int t51_frame3(EGLDisplay dpy, EGLSurface surf, const unsigned char *table, int lo, int hi, int cells) {
+// One frame: the bytes lo <= i < hi of the table are new. With read, the
+// w by h pixels drawn are read into it before they are shown. Returns 0
+// when the swap failed.
+static int t51_frame3(EGLDisplay dpy, EGLSurface surf, const unsigned char *table, int lo, int hi, int cells,
+		unsigned char *read, int w, int h) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (hi > lo)
 		glBufferSubData(GL_ARRAY_BUFFER, lo, hi - lo, table + lo);
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, cells);
+	if (read)
+		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, read);
 	return eglSwapBuffers(dpy, surf);
 }
 */
@@ -81,7 +85,8 @@ func (p *es3) sheet(sheet []byte, x, y, w, h int) {
 }
 
 func (p *es3) frame(table []byte, lo, hi int) error {
-	if C.t51_frame3(p.s.dpy, p.s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(p.cells)) == 0 {
+	read, w, h := p.s.readTarget()
+	if C.t51_frame3(p.s.dpy, p.s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(p.cells), read, w, h) == 0 {
 		return p.s.fail("eglSwapBuffers", nil)
 	}
 	return nil

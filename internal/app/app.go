@@ -79,6 +79,13 @@ type App struct {
 	// sheet. It is set before Run, and tells the app of its changes
 	// through PowerShellChanged.
 	PowerShell PowerShell
+
+	// ReadBack asks for the pixels of the next frame, which a screen that
+	// can (gpu.Screen.ReadNext) writes to the folder ReadBackDir: for
+	// comparing what the two OpenGL ES versions draw on the phone. Set
+	// before Run; nil asks for nothing.
+	ReadBack    <-chan struct{}
+	ReadBackDir string
 }
 
 // PowerShell is what the app asks of the downloadable PowerShell: on the

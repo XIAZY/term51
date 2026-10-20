@@ -89,6 +89,16 @@ type screen struct {
 	opens      int             // how many times the app opened it
 	es         int             // the OpenGL ES version the app asked for when it did
 	closed     int             // how many times the app closed it
+	readBack   chan struct{}   // the app's ReadBack
+	readDir    string          // where the app last asked for a frame's pixels
+	read       [][2]int        // the bytes of the table each frame read back drew anew
+}
+
+// ReadNext asks for the next frame's pixels, as gpu.Screen's does.
+func (s *screen) ReadNext(dir string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.readDir = dir
 }
 
 // Drawing names what the screen draws with, as gpu.Screen's does: a phone
@@ -199,6 +209,10 @@ func (s *screen) Frame(table []byte, lo, hi int) error {
 	defer s.mu.Unlock()
 	copy(s.table[lo:hi], table[lo:hi])
 	s.frames++
+	if s.readDir != "" {
+		s.read = append(s.read, [2]int{lo, hi})
+		s.readDir = ""
+	}
 	return nil
 }
 
@@ -285,6 +299,8 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 		return nil
 	})
 	a.PowerShell = &fakePowerShell{a: a, st: pwsh.State{Phase: pwsh.Absent}}
+	scr.readBack = make(chan struct{})
+	a.ReadBack, a.ReadBackDir = scr.readBack, "data"
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	// The page's place for the terminal: 40 by 8 cells and a few pixels over.
@@ -975,6 +991,29 @@ func TestBusyBoxShellWithoutItsTools(t *testing.T) {
 // The page is told what the screen draws with and that the phone has
 // OpenGL ES 3.0; choosing 2.0 on the settings sheet makes the screen again,
 // asking for 2.0, and draws the terminal on it at once.
+// Reading the pixels back draws the whole screen again, as it is, in the
+// frame that is read: what is compared is the whole screen.
+func TestReadingBack(t *testing.T) {
+	a, p, done := startApp(t)
+	scr := p.scr
+	scr.readBack <- struct{}{}
+	wait(t, "a frame read back", func() bool {
+		scr.mu.Lock()
+		defer scr.mu.Unlock()
+		return len(scr.read) == 1
+	})
+	scr.mu.Lock()
+	read, size := scr.read[0], len(scr.table)
+	scr.mu.Unlock()
+	if read != [2]int{0, size} {
+		t.Errorf("the frame read back drew bytes %d to %d of the table anew; want all %d", read[0], read[1], size)
+	}
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
 func TestChoosingTheDrawing(t *testing.T) {
 	a, p, done := startApp(t)
 	scr := p.scr

@@ -26,9 +26,11 @@ static void t51_point(GLuint corners, GLuint records, int first) {
 
 // One frame: the bytes lo <= i < hi of the record buffer are new, in
 // vertices; the grid is drawn in n chunks, chunk i being the chunks[2i+1]
-// cells from cell chunks[2i]. Returns 0 when the swap failed.
+// cells from cell chunks[2i]. With read, the w by h pixels drawn are read
+// into it before they are shown. Returns 0 when the swap failed.
 static int t51_frame2(EGLDisplay dpy, EGLSurface surf, GLuint corners, GLuint records,
-		const unsigned char *vertices, int lo, int hi, const int *chunks, int n) {
+		const unsigned char *vertices, int lo, int hi, const int *chunks, int n,
+		unsigned char *read, int w, int h) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (hi > lo) {
 		glBindBuffer(GL_ARRAY_BUFFER, records);
@@ -38,6 +40,8 @@ static int t51_frame2(EGLDisplay dpy, EGLSurface surf, GLuint corners, GLuint re
 		t51_point(corners, records, chunks[2 * i]);
 		glDrawElements(GL_TRIANGLES, chunks[2 * i + 1] * 6, GL_UNSIGNED_SHORT, 0);
 	}
+	if (read)
+		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, read);
 	return eglSwapBuffers(dpy, surf);
 }
 */
@@ -63,15 +67,21 @@ type es2 struct {
 // es2Attributes are es2.vert's attributes, in the order of their places.
 var es2Attributes = []string{"a_cell", "a_corner", "a_what", "a_fg", "a_bg", "a_line"}
 
-// newES2 sets up the buffers and the character sheet; the program is
-// current. It fails when the GPU lacks the precision es2.frag needs.
-func newES2(s *Screen) (*es2, error) {
+// checkES2 fails when the GPU lacks the precision es2.frag needs: full
+// precision for the place in the character sheet.
+func checkES2() error {
 	var span [2]C.GLint
 	var bits C.GLint
 	C.glGetShaderPrecisionFormat(C.GL_FRAGMENT_SHADER, C.GL_HIGH_FLOAT, &span[0], &bits)
 	if bits < 16 {
-		return nil, fmt.Errorf("gpu: this phone's GPU has %d bits of precision in fragment shaders; the character sheet needs 16", int(bits))
+		return fmt.Errorf("gpu: this phone's GPU has %d bits of precision in fragment shaders; the character sheet needs 16", int(bits))
 	}
+	return nil
+}
+
+// newES2 sets up the buffers and the character sheet; the program is
+// current.
+func newES2(s *Screen) *es2 {
 	p := &es2{s: s, packed: make([]byte, SheetSize*SheetSize)}
 	for i := range es2Attributes {
 		C.glEnableVertexAttribArray(C.GLuint(i))
@@ -101,7 +111,7 @@ func newES2(s *Screen) (*es2, error) {
 	C.glTexParameteri(C.GL_TEXTURE_2D, C.GL_TEXTURE_WRAP_S, C.GL_CLAMP_TO_EDGE)
 	C.glTexParameteri(C.GL_TEXTURE_2D, C.GL_TEXTURE_WRAP_T, C.GL_CLAMP_TO_EDGE)
 	C.glPixelStorei(C.GL_UNPACK_ALIGNMENT, 1)
-	return p, nil
+	return p
 }
 
 func (p *es2) grid(cols, rows int) {
@@ -126,8 +136,9 @@ func (p *es2) sheet(sheet []byte, x, y, w, h int) {
 
 func (p *es2) frame(table []byte, lo, hi int) error {
 	vlo, vhi := Expand(p.vertices, table, lo, hi)
+	read, w, h := p.s.readTarget()
 	if C.t51_frame2(p.s.dpy, p.s.surf, p.corners, p.records, (*C.uchar)(unsafe.Pointer(&p.vertices[0])),
-		C.int(vlo), C.int(vhi), &p.chunks[0], C.int(len(p.chunks)/2)) == 0 {
+		C.int(vlo), C.int(vhi), &p.chunks[0], C.int(len(p.chunks)/2), read, w, h) == 0 {
 		return p.s.fail("eglSwapBuffers", nil)
 	}
 	return nil

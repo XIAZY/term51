@@ -11,9 +11,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"syscall"
 	"time"
 
 	_ "golang.org/x/crypto/x509roots/fallback" // root certificates: the phone has none where Go looks
@@ -99,6 +101,17 @@ func main() {
 		}
 	}
 	link(store.State())
+	// kill -USR1 reads the next frame back into the data folder, for
+	// comparing what OpenGL ES 3.0 and 2.0 draw.
+	usr1 := make(chan os.Signal, 1)
+	signal.Notify(usr1, syscall.SIGUSR1)
+	readBack := make(chan struct{})
+	go func() {
+		for range usr1 {
+			readBack <- struct{}{}
+		}
+	}()
+	a.ReadBack, a.ReadBackDir = readBack, places.Home
 	ended := make(chan struct{})
 	go func() {
 		err := a.Run()

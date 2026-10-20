@@ -51,6 +51,8 @@ import "C"
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"unsafe"
 )
 
@@ -81,6 +83,8 @@ type Screen struct {
 	has3    bool // the phone has OpenGL ES 3.0
 	prog    *program
 	drawing pipeline
+	readDir string // where the next frame writes what it drew; "" for none
+	read    []byte // that frame's pixels
 }
 
 // fail is an error naming the step, with what the three libraries say.
@@ -98,8 +102,16 @@ func (s *Screen) fail(what string, errno error) error {
 // es is the OpenGL ES version to draw with, 3 or 2, or 0 for 3.0 where the
 // phone has it and 2.0 where it does not. A phone without 3.0 draws with
 // 2.0 whatever es says, so that the window never stays blank.
-func Open(group, id string, w, h int, es int) (*Screen, error) {
+func Open(group, id string, w, h int, es int) (_ *Screen, err error) {
 	s := new(Screen)
+	// A window that could not be opened leaves nothing behind: no child
+	// window in the page's group, which would confuse the next open, and
+	// no EGL.
+	defer func() {
+		if err != nil {
+			s.Close()
+		}
+	}()
 	cgroup, cid := C.CString(group), C.CString(id)
 	defer C.free(unsafe.Pointer(cgroup))
 	defer C.free(unsafe.Pointer(cid))
@@ -158,19 +170,21 @@ func Open(group, id string, w, h int, es int) (*Screen, error) {
 	if maxTex < SheetSize {
 		return nil, fmt.Errorf("gpu: this phone's GPU takes textures of at most %d pixels across; the character sheet is %d", int(maxTex), SheetSize)
 	}
-	var err error
 	if s.es == 3 {
 		if s.prog, err = link(es3Vertex, es3Fragment, es3Attributes); err != nil {
 			return nil, err
 		}
 		s.drawing = newES3(s)
 	} else {
+		// Before linking: without full precision the two shaders' u_cell
+		// differ, and the link would fail with the driver's words instead.
+		if err := checkES2(); err != nil {
+			return nil, err
+		}
 		if s.prog, err = link(es2Vertex, es2Fragment, es2Attributes); err != nil {
 			return nil, err
 		}
-		if s.drawing, err = newES2(s); err != nil {
-			return nil, err
-		}
+		s.drawing = newES2(s)
 	}
 	log.Printf("gpu: drawing with %s", s.Drawing())
 
@@ -295,15 +309,55 @@ func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
 // the largest font has a row in the phone's smallest window (the one with
 // the on-screen keyboard rows up).
 func (s *Screen) Frame(table []byte, lo, hi int) error {
-	return s.drawing.frame(table, lo, hi)
+	err := s.drawing.frame(table, lo, hi)
+	if s.readDir != "" {
+		name := filepath.Join(s.readDir, fmt.Sprintf("gpu-readback-es%d-%dx%d.rgba", s.es, s.w, s.h))
+		if werr := os.WriteFile(name, s.read, 0o644); werr != nil {
+			log.Printf("gpu: %v", werr)
+		} else {
+			log.Printf("gpu: wrote %s", name)
+		}
+		s.readDir, s.read = "", nil
+	}
+	return err
 }
 
-// Close removes the window.
+// ReadNext makes the next frame write the pixels it drew to the folder dir,
+// for comparing what the two OpenGL ES versions draw: raw RGBA, 4 bytes a
+// pixel, the bottom row first, in gpu-readback-es<version>-<w>x<h>.rgba.
+func (s *Screen) ReadNext(dir string) {
+	s.readDir = dir
+}
+
+// readTarget is where the frame being drawn reads its pixels to, and their
+// size; nil when it reads none.
+func (s *Screen) readTarget() (*C.uchar, C.int, C.int) {
+	if s.readDir == "" {
+		return nil, 0, 0
+	}
+	// Made here, at the window's size now, which a resize since ReadNext
+	// may have changed.
+	s.read = make([]byte, s.w*s.h*4)
+	return (*C.uchar)(unsafe.Pointer(&s.read[0])), C.int(s.w), C.int(s.h)
+}
+
+// Close removes the window, and whatever of it Open had made when it
+// failed.
 func (s *Screen) Close() {
-	C.eglMakeCurrent(s.dpy, nil, nil, nil)
-	C.eglDestroySurface(s.dpy, s.surf)
-	C.eglDestroyContext(s.dpy, s.glctx)
-	C.eglTerminate(s.dpy)
-	C.screen_destroy_window(s.win)
-	C.screen_destroy_context(s.ctx)
+	if s.dpy != 0 {
+		C.eglMakeCurrent(s.dpy, nil, nil, nil)
+		if s.surf != nil {
+			C.eglDestroySurface(s.dpy, s.surf)
+		}
+		if s.glctx != nil {
+			C.eglDestroyContext(s.dpy, s.glctx)
+		}
+		C.eglTerminate(s.dpy)
+	}
+	if s.win != nil {
+		C.screen_destroy_window(s.win)
+	}
+	if s.ctx != nil {
+		C.screen_destroy_context(s.ctx)
+	}
 }

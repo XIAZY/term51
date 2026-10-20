@@ -767,6 +767,15 @@ func (a *App) Run() error {
 		case <-pending:
 			pending = nil
 			post()
+		case <-a.ReadBack:
+			r, ok := scr.(interface{ ReadNext(dir string) })
+			if !ok || cur < 0 {
+				break
+			}
+			// The whole screen is drawn again, as it is, and read back.
+			r.ReadNext(a.ReadBackDir)
+			table = cells.Table{}
+			post()
 		case <-nameDue.C:
 			if cur < 0 {
 				break

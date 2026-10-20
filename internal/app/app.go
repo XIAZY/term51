@@ -44,7 +44,16 @@ type Screen interface {
 
 // OpenScreen creates the window for the page's ForeignWindowControl, which
 // has the given window group and id, w by h pixels.
-type OpenScreen func(group, id string, w, h int) (Screen, error)
+// es is the OpenGL ES version to draw with, 3 or 2, or 0 for whichever the
+// phone has (settings.DrawingES).
+type OpenScreen func(group, id string, w, h int, es int) (Screen, error)
+
+// drawingScreen is a Screen that says what it draws with, for the settings
+// sheet (gpu.Screen does).
+type drawingScreen interface {
+	Drawing() string
+	HasES3() bool
+}
 
 // Command is a command from QML: a name and its arguments.
 type Command struct {

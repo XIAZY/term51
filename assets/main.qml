@@ -148,6 +148,8 @@ TabbedPane {
                     if (s.bell !== undefined) page.bell = s.bell
                     if (s.settings !== undefined) page.termBackground = s.settings["theme.background"]
                     if (s.pwsh !== undefined) settingsSheet.pwsh(s.pwsh)
+                    if (s.drawing !== undefined) settingsSheet.drawing = s.drawing
+                    if (s.es3 !== undefined) settingsSheet.es3 = s.es3
                     if (s.tabs !== undefined) pane.syncTabs(s.tabs, s.rang, s.current)
                 })
                 bridge.event.connect(function(json) {

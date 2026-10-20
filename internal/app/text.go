@@ -363,6 +363,7 @@ func (a *App) Run() error {
 	// fit makes the window, the grid and the shells fit the place the page
 	// last reported (want).
 	var want Command
+	var winGroup, winID string // the page's window group and the window's id, from "window"
 	fit := func() error {
 		c := want
 		w, h := num(c.Args["w"]), num(c.Args["h"])
@@ -371,15 +372,24 @@ func (a *App) Run() error {
 		}
 		winW, winH = w, h
 		if scr == nil {
-			group, _ := c.Args["group"].(string)
-			id, _ := c.Args["id"].(string)
-			s, err := a.open(group, id, w, h)
+			if group, ok := c.Args["group"].(string); ok {
+				winGroup = group
+			}
+			if id, ok := c.Args["id"].(string); ok {
+				winID = id
+			}
+			s, err := a.open(winGroup, winID, w, h, a.cfg.DrawingES())
 			if err != nil {
 				log.Printf("app: %v", err)
 				a.notice("The screen could not be opened: " + err.Error())
 				return nil
 			}
 			scr = s
+			// What the screen draws with, for the settings sheet: its
+			// choice means nothing on a phone without OpenGL ES 3.0.
+			if d, ok := s.(drawingScreen); ok {
+				a.state(map[string]any{"drawing": d.Drawing(), "es3": d.HasES3()})
+			}
 			if err := font(); err != nil {
 				return err
 			}
@@ -624,7 +634,15 @@ func (a *App) Run() error {
 						t.sess.SetScrollProgram(a.cfg.ScrollProgram)
 					}
 				}
-				if redraw {
+				switch {
+				case a.cfg.Drawing != before.Drawing && scr != nil:
+					// The screen is made again, drawing as now chosen.
+					scr.Close()
+					scr = nil
+					if err := fit(); err != nil {
+						return err
+					}
+				case redraw:
 					grid()
 				}
 				// Also after a refused value, so that the sheet shows

@@ -10,6 +10,8 @@ Sheet {
     property variant values        // name -> value, as last told by Go
     property bool filling: false   // the controls are being set from values
     property int cols: 0           // the terminal's columns, for the text size
+    property string drawing: ""    // what the screen draws with, as Go tells
+    property bool es3: true        // the phone has OpenGL ES 3.0, as Go tells
 
     // The PowerShell that can be downloaded (internal/pwsh in Go): where it
     // is, as Go tells with every change.
@@ -59,6 +61,7 @@ Sheet {
         cursor.selectedIndex = { "block": 0, "bar": 1, "underline": 2 }[v["cursor"]]
         bell.checked = v["bell"] == "true"
         scrollProgram.checked = v["scrollProgram"] == "true"
+        drawingChoice.selectedIndex = { "auto": 0, "es3": 1, "es2": 2 }[v["drawing"]]
         // A shell that is neither of the two (the path of a program, from
         // the settings file) leaves the list without a choice.
         var shells = { "system": 0, "busybox": 1, "powershell": 2 }
@@ -168,6 +171,29 @@ Sheet {
                     id: scrollProgram
                     text: "A drag scrolls the program (vi, less, tmux, pi), as a mouse wheel does"
                     onFlipped: sheet.set("scrollProgram", on)
+                }
+
+                Header { title: "Drawing"; subtitle: "Applies at once" }
+                Container {
+                    leftPadding: ui.du(3)
+                    rightPadding: ui.du(3)
+                    topPadding: ui.du(2)
+                    bottomPadding: ui.du(2)
+                    // On a phone without OpenGL ES 3.0 there is nothing to
+                    // choose: the screen draws with 2.0 whatever is chosen.
+                    SegmentedControl {
+                        id: drawingChoice
+                        enabled: sheet.es3
+                        Option { text: "Automatic"; value: "auto" }
+                        Option { text: "ES 3.0"; value: "es3" }
+                        Option { text: "ES 2.0"; value: "es2" }
+                        onSelectedValueChanged: sheet.set("drawing", selectedValue)
+                    }
+                    Label {
+                        text: sheet.es3 ? "Drawing with " + sheet.drawing : "OpenGL ES 2.0 (this phone has no 3.0)"
+                        visible: sheet.drawing != ""
+                        textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                    }
                 }
 
                 Header { title: "Shell"; subtitle: "For tabs opened from now on" }

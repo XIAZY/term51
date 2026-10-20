@@ -72,8 +72,8 @@ func main() {
 	// thread, with the UI still up or just going down, it left a thread
 	// waiting for the phone's input service for ever and a process that
 	// could not be killed (found on the phone, 2026-10-07).
-	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int) (app.Screen, error) {
-		return gpu.Open(group, id, w, h)
+	a := app.New(cfg, ui.Publisher{}, func(group, id string, w, h int, es int) (app.Screen, error) {
+		return gpu.Open(group, id, w, h, es)
 	}, phoneFonts(), func(s settings.Settings) error { return settings.Save(settingsFile, s) })
 	a.Bundled = bundled(root, places)
 	// PowerShell is not in the package: the settings sheet downloads it

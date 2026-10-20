@@ -8,9 +8,9 @@
 # Dropbear's source is its submodule third_party/dropbear (upstream, pinned),
 # which tools/dropbear.sh patches and builds in the image its lock names.
 # What the build needs besides, each pinned:
-# - Go with the QNX port: XIAZY/go-qnx at GO_QNX_COMMIT, built here with
-#   src/make.bash from a stock Go (it has no releases); kept in the cache
-#   between runs.
+# - Go with the QNX port: the go-qnx release in tools/go-qnx.lock, which
+#   tools/build.sh fetches and checks by its sha256; kept in the cache
+#   between runs, keyed by the lock.
 # - BusyBox: the release in tools/busybox.lock, which tools/busybox.sh fetches.
 name: build
 
@@ -29,9 +29,6 @@ env:
   # tag), the same as tools/dropbear.lock's; tools/build.sh takes it as
   # BB10_BUILDER_IMAGE.
   BB10_BUILDER_IMAGE: ghcr.io/xiazy/blackberry10-toolchain@sha256:60ce49510a37ed92368cca010bbaabf97b12d209b9fab179e8491b266bb2578f
-  GO_QNX_COMMIT: 90f0964dba0281fc83d1d241613f30d4e5a716c7
-  # The Go that builds go-qnx: at least its src/cmd/dist minBootstrap.
-  GO_BOOTSTRAP: 1.24.6
 
 jobs:
   bar:
@@ -42,28 +39,11 @@ jobs:
           path: term51
           submodules: true
       - name: Restore Go with the QNX port
-        id: goqnx
         uses: actions/cache@v4
         with:
-          path: go-qnx
-          key: go-qnx-${{ env.GO_QNX_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
-      - uses: actions/checkout@v4
-        if: steps.goqnx.outputs.cache-hit != 'true'
-        with:
-          repository: XIAZY/go-qnx
-          ref: ${{ env.GO_QNX_COMMIT }}
-          path: go-qnx
-      - uses: actions/setup-go@v5
-        if: steps.goqnx.outputs.cache-hit != 'true'
-        with:
-          go-version: ${{ env.GO_BOOTSTRAP }}
-          cache: false
-      - name: Build Go with the QNX port
-        if: steps.goqnx.outputs.cache-hit != 'true'
-        run: cd go-qnx/src && GOROOT_BOOTSTRAP="$(go env GOROOT)" ./make.bash
+          path: term51/build/go-qnx
+          key: go-qnx-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('term51/tools/go-qnx.lock') }}
       - name: Build the package
-        env:
-          GOQNX: ${{ github.workspace }}/go-qnx
         run: term51/tools/build.sh
       - name: Check what the package carries
         run: |

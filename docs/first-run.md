@@ -6,7 +6,9 @@ its own that sits in the page (`internal/gpu`, `internal/cells`,
 is tested on the development machine with real shells; the page itself can
 only be seen on the phone.
 
-Build with `GOQNX=<go-qnx> tools/build.sh`; install with
+Build with `tools/build.sh` (it fetches Go for QNX by its checksum, see
+`tools/go-qnx.lock`; `GOQNX=<go-qnx>` uses a checkout of your own instead);
+install with
 `tools/install.sh <ssh-host>` (the app must be closed: the phone does not
 replace an open app). The settings are `~/.config/term51/settings.conf`,
 where `~` is the app's home, the `data` folder of its sandbox

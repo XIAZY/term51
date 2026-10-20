@@ -22,6 +22,29 @@ A shell tab on a BlackBerry Passport, with the key strip above the phone's
 keyboard; the tab list, where each tab is named by its folder and the program
 in the foreground; Settings; and pi, a coding agent, running in a tab.
 
+## Installing
+
+The [latest release](https://github.com/XIAZY/term51/releases/latest) has the
+package, `io.github.xiazy.term51.bar`, with its SHA-256 in the release notes.
+It is an unsigned development-mode package.
+
+- **On a phone rooted with bb10mt:** from a computer with ssh and scp, run
+  [`tools/install.sh`](tools/install.sh) `root@<phone> io.github.xiazy.term51.bar`.
+  The script stands alone, so a copy of it is enough: it copies the package
+  over ssh and installs it with the phone's own installer, with no Development
+  Mode, Java or BlackBerry SDK. To upgrade, close term51 first; the phone does
+  not replace an open app.
+- **In Development Mode:** BlackBerry's tools for installing development
+  packages should take it, since it is unsigned, but this way has not been
+  tried yet.
+
+In the app, Settings, Shell, chooses the shell for new tabs: the phone's own,
+BusyBox's ash from the app, or PowerShell. Settings, PowerShell, Download,
+fetches PowerShell from the latest release of
+[powershell-qnx](https://github.com/XIAZY/powershell-qnx), checked by its
+SHA-256, into the app's own storage. The Dropbear SSH client is on every
+shell's PATH as `ssh` and `scp`.
+
 ## Using term51
 
 **Scrolling.** A vertical drag does what a mouse wheel does in a desktop

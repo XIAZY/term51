@@ -2,7 +2,7 @@
 # https://github.com/XIAZY/go-qnx and the sha256 of its file for each machine
 # the build runs on. The files carry upstream Go's names but not its bytes
 # (go-qnx is upstream Go plus the QNX port), so they are known by their
-# checksums. To update, change the tag and all three file lines together.
+# checksums. To update, change the tag and both file lines together.
 tag = go1.27.2
 amd64 = go1.27.2.linux-amd64.tar.gz 732674419dd012d65c2c94816b4ffa133caafec6a5bc1850cb85677a5fab7c7e
 arm64 = go1.27.2.linux-arm64.tar.gz ddec8d5b37eb84bae566f5a096fb3acd7ecd727362b1fe501001304c2fd154ed

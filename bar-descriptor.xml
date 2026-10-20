@@ -2,8 +2,8 @@
 <qnx xmlns="http://www.qnx.com/schemas/application/1.0">
     <id>io.github.xiazy.term51</id>
     <name>term51</name>
-    <versionNumber>0.0.1</versionNumber>
-    <buildId>1</buildId>
+    <versionNumber>0.0.2</versionNumber>
+    <buildId>2</buildId>
     <description>Terminal emulator for BlackBerry 10.</description>
     <author>AlphaToad</author>
 

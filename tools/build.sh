@@ -1,12 +1,14 @@
 #!/bin/sh
 # Development build: runs tools/build-inside.sh in the BB10 builder image with
-# a go-qnx toolchain (GOQNX, built with src/make.bash). The terminal library
-# is part of this repository (libghostty-vt-go/, where go.mod's replace
-# directive points), so nothing else is mounted.
+# Go with the QNX port: the go-qnx release in tools/go-qnx.lock, which
+# tools/go-qnx.sh fetches, or a go-qnx checkout built with src/make.bash
+# where GOQNX says. The terminal library is part of this repository
+# (libghostty-vt-go/, where go.mod's replace directive points), so nothing
+# else is mounted.
 set -eu
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
-goqnx=${GOQNX:?set GOQNX to a go-qnx checkout built with src/make.bash}
+goqnx=${GOQNX:-$("$repo/tools/go-qnx.sh")}
 image=${BB10_BUILDER_IMAGE:-ghcr.io/xiazy/blackberry10-toolchain:latest}
 [ -x "$goqnx/bin/go" ] || { echo "error: no Go toolchain in $goqnx (run src/make.bash there)" >&2; exit 1; }
 mkdir -p "$repo/build"

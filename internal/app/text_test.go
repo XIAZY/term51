@@ -86,7 +86,34 @@ type screen struct {
 	frames     int
 	resizes    int
 	shapes     map[string]rune // a slot's pixels -> the character, for text
+	opens      int             // how many times the app opened it
+	es         int             // the OpenGL ES version the app asked for when it did
+	closed     int             // how many times the app closed it
+	readBack   chan struct{}   // the app's ReadBack
+	readDir    string          // where the app last asked for a frame's pixels
+	read       [][2]int        // the bytes of the table each frame read back drew anew
 }
+
+// ReadNext asks for the next frame's pixels, as gpu.Screen's does.
+func (s *screen) ReadNext(dir string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.readDir = dir
+}
+
+// Drawing names what the screen draws with, as gpu.Screen's does: a phone
+// with OpenGL ES 3.0, which draws with 2.0 when asked to.
+func (s *screen) Drawing() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.es == 2 {
+		return "OpenGL ES 2.0"
+	}
+	return "OpenGL ES 3.0"
+}
+
+// HasES3 is true: the test phone has OpenGL ES 3.0.
+func (s *screen) HasES3() bool { return true }
 
 // testDPI makes the default 7 point font 14 pixels.
 const testDPI = 144
@@ -182,10 +209,18 @@ func (s *screen) Frame(table []byte, lo, hi int) error {
 	defer s.mu.Unlock()
 	copy(s.table[lo:hi], table[lo:hi])
 	s.frames++
+	if s.readDir != "" {
+		s.read = append(s.read, [2]int{lo, hi})
+		s.readDir = ""
+	}
 	return nil
 }
 
-func (s *screen) Close() {}
+func (s *screen) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.closed++
+}
 
 // size is the grid as last set.
 func (s *screen) size() (cols, rows int) {
@@ -250,7 +285,11 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 	scr := newScreen(t, fonts, cfg.FontPt*testDPI/72)
 	p := &page{state: map[string]any{}, scr: scr}
 	debugPage = p
-	a := New(cfg, p, func(group, id string, w, h int) (Screen, error) {
+	a := New(cfg, p, func(group, id string, w, h int, es int) (Screen, error) {
+		scr.mu.Lock()
+		scr.opens++
+		scr.es = es
+		scr.mu.Unlock()
 		scr.Resize(w, h)
 		return scr, nil
 	}, fonts, func(s settings.Settings) error {
@@ -260,6 +299,8 @@ func startApp(t *testing.T) (*App, *page, chan error) {
 		return nil
 	})
 	a.PowerShell = &fakePowerShell{a: a, st: pwsh.State{Phase: pwsh.Absent}}
+	scr.readBack = make(chan struct{})
+	a.ReadBack, a.ReadBackDir = scr.readBack, "data"
 	done := make(chan error, 1)
 	go func() { done <- a.Run() }()
 	// The page's place for the terminal: 40 by 8 cells and a few pixels over.
@@ -940,6 +981,59 @@ func TestBusyBoxShellWithoutItsTools(t *testing.T) {
 	})
 	if tabs, _ := p.get("tabs").([]any); len(tabs) != 1 {
 		t.Errorf("%d tabs, want the one there was", len(tabs))
+	}
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
+// The page is told what the screen draws with and that the phone has
+// OpenGL ES 3.0; choosing 2.0 on the settings sheet makes the screen again,
+// asking for 2.0, and draws the terminal on it at once.
+// Reading the pixels back draws the whole screen again, as it is, in the
+// frame that is read: what is compared is the whole screen.
+func TestReadingBack(t *testing.T) {
+	a, p, done := startApp(t)
+	scr := p.scr
+	scr.readBack <- struct{}{}
+	wait(t, "a frame read back", func() bool {
+		scr.mu.Lock()
+		defer scr.mu.Unlock()
+		return len(scr.read) == 1
+	})
+	scr.mu.Lock()
+	read, size := scr.read[0], len(scr.table)
+	scr.mu.Unlock()
+	if read != [2]int{0, size} {
+		t.Errorf("the frame read back drew bytes %d to %d of the table anew; want all %d", read[0], read[1], size)
+	}
+	a.Quit()
+	if err := <-done; err != nil {
+		t.Errorf("Run returned %v", err)
+	}
+}
+
+func TestChoosingTheDrawing(t *testing.T) {
+	a, p, done := startApp(t)
+	scr := p.scr
+	wait(t, "the drawing told", func() bool { return p.get("drawing") == "OpenGL ES 3.0" && p.get("es3") == true })
+	scr.mu.Lock()
+	es, opens, frames := scr.es, scr.opens, scr.frames
+	scr.mu.Unlock()
+	if es != 0 || opens != 1 {
+		t.Errorf("opened %d times, asking for ES %d; want once, 0 (whichever the phone has)", opens, es)
+	}
+
+	a.Send(Command{Name: "set", Args: map[string]any{"name": "drawing", "value": "es2"}})
+	wait(t, "the screen made again", func() bool { return p.get("drawing") == "OpenGL ES 2.0" })
+	wait(t, "the terminal drawn on it", func() bool {
+		scr.mu.Lock()
+		defer scr.mu.Unlock()
+		return scr.frames > frames && scr.closed == 1 && scr.opens == 2 && scr.es == 2
+	})
+	if !strings.Contains(p.screen(), "$") {
+		t.Errorf("the prompt is not on the new screen:\n%s", p.screen())
 	}
 	a.Quit()
 	if err := <-done; err != nil {

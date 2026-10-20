@@ -44,7 +44,16 @@ type Screen interface {
 
 // OpenScreen creates the window for the page's ForeignWindowControl, which
 // has the given window group and id, w by h pixels.
-type OpenScreen func(group, id string, w, h int) (Screen, error)
+// es is the OpenGL ES version to draw with, 3 or 2, or 0 for whichever the
+// phone has (settings.DrawingES).
+type OpenScreen func(group, id string, w, h int, es int) (Screen, error)
+
+// drawingScreen is a Screen that says what it draws with, for the settings
+// sheet (gpu.Screen does).
+type drawingScreen interface {
+	Drawing() string
+	HasES3() bool
+}
 
 // Command is a command from QML: a name and its arguments.
 type Command struct {
@@ -70,6 +79,13 @@ type App struct {
 	// sheet. It is set before Run, and tells the app of its changes
 	// through PowerShellChanged.
 	PowerShell PowerShell
+
+	// ReadBack asks for the pixels of the next frame, which a screen that
+	// can (gpu.Screen.ReadNext) writes to the folder ReadBackDir: for
+	// comparing what the two OpenGL ES versions draw on the phone. Set
+	// before Run; nil asks for nothing.
+	ReadBack    <-chan struct{}
+	ReadBackDir string
 }
 
 // PowerShell is what the app asks of the downloadable PowerShell: on the

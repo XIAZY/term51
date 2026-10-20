@@ -1,9 +1,9 @@
 //go:build qnx
 
 // Package gpu is the screen: a window of our own inside the Cascades page,
-// drawn with OpenGL ES 3.0. It knows nothing of the terminal. It is given a
-// table with one record per cell and a sheet of character shapes, and draws
-// every cell from them in one draw call.
+// drawn with OpenGL. It knows nothing of the terminal. It is given a table
+// with one record per cell and a sheet of character shapes, and draws every
+// cell from them.
 //
 // The cell table: cols*rows records of 16 bytes, row by row from the top
 // left, little-endian:
@@ -24,12 +24,19 @@
 // n / (SheetSize/cellW). Its value is how much of the text colour a pixel
 // gets.
 //
+// The window draws with OpenGL ES 3.0 where the phone has it (the Passport)
+// and with 2.0 where it does not (the Classic, Q10 and Z10); Open picks.
+// What differs between the two is how the table reaches the GPU and is
+// drawn, which is a pipeline (es3.go, es2.go) with its own pair of shaders
+// (shaders.go); the window, EGL, the program's uniforms and everything the
+// app sees are shared.
+//
 // Go crosses into C once per frame (Frame), and once more only when part of
-// the sheet is new (Sheet). The frame is the one piece written in C
-// (t51_frame below), so that it is one crossing and not four. Everything
-// else, which runs once or on a resize, is Go calling the window system's,
-// EGL's and OpenGL's functions directly. Everything must be called from one
-// goroutine locked to its thread: an OpenGL context belongs to a thread.
+// the sheet is new (Sheet). The frame is the one piece written in C, so that
+// it is one crossing and not many. Everything else, which runs once or on a
+// resize, is Go calling the window system's, EGL's and OpenGL's functions
+// directly. Everything must be called from one goroutine locked to its
+// thread: an OpenGL context belongs to a thread.
 package gpu
 
 /*
@@ -37,105 +44,47 @@ package gpu
 #include <stdlib.h>
 #include <screen/screen.h>
 #include <EGL/egl.h>
-#include <GLES3/gl3.h>
-
-// One frame: the bytes lo <= i < hi of the table are new. Returns 0 when
-// the swap failed.
-static int t51_frame(EGLDisplay dpy, EGLSurface surf, const unsigned char *table, int lo, int hi, int cells) {
-	glClear(GL_COLOR_BUFFER_BIT);
-	if (hi > lo)
-		glBufferSubData(GL_ARRAY_BUFFER, lo, hi - lo, table + lo);
-	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, cells);
-	return eglSwapBuffers(dpy, surf);
-}
+#include <GLES2/gl2.h>
 */
 import "C"
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"unsafe"
 )
-
-// SheetSize is the width and height of the character sheet in pixels.
-const SheetSize = 2048
-
-// RecordSize is the size of one cell's record in the table.
-const RecordSize = 16
-
-const vertexShader = `#version 300 es
-layout(location = 0) in vec2 a_corner; // of the cell: 0,0 1,0 0,1 1,1
-layout(location = 1) in uvec2 a_what;  // slot, flags
-layout(location = 2) in vec4 a_fg;
-layout(location = 3) in vec4 a_bg;
-layout(location = 4) in vec4 a_line;
-uniform ivec2 u_grid;      // columns, rows
-uniform vec2 u_cell;       // a cell in pixels
-uniform vec2 u_view;       // the window in pixels
-uniform int u_sheet_cols;  // slots per row of the sheet
-out vec4 v_fg;
-out vec4 v_bg;
-out vec4 v_line;
-out vec2 v_local;          // the pixel inside the cell
-flat out ivec2 v_origin;   // the slot's corner in the sheet
-flat out uint v_slot;
-flat out uint v_flags;
-void main() {
-	vec2 at = vec2(float(gl_InstanceID % u_grid.x), float(gl_InstanceID / u_grid.x));
-	vec2 p = (at + a_corner) * u_cell / u_view * 2.0 - 1.0;
-	gl_Position = vec4(p.x, -p.y, 0.0, 1.0); // record 0 is the top left
-	v_fg = a_fg;
-	v_bg = a_bg;
-	v_line = a_line;
-	v_local = a_corner * u_cell;
-	int slot = int(a_what.x);
-	v_origin = ivec2(slot % u_sheet_cols, slot / u_sheet_cols) * ivec2(u_cell);
-	v_slot = a_what.x;
-	v_flags = a_what.y;
-}
-`
-
-const fragmentShader = `#version 300 es
-precision mediump float;
-uniform mediump sampler2D u_sheet;
-uniform vec2 u_cell;
-uniform float u_thick;     // the thickness of lines, in pixels
-in vec4 v_fg;
-in vec4 v_bg;
-in vec4 v_line;
-in vec2 v_local;
-flat in ivec2 v_origin;
-flat in uint v_slot;
-flat in uint v_flags;
-out vec4 o_col;
-void main() {
-	float a = 0.0;
-	if (v_slot != 0u)
-		a = texelFetch(u_sheet, v_origin + ivec2(v_local), 0).r;
-	float x = v_local.x, y = v_local.y, t = u_thick, line = 0.0;
-	if ((v_flags & 2u) != 0u && y >= floor(u_cell.y * 0.55) && y < floor(u_cell.y * 0.55) + t) a = 1.0; // strikethrough
-	if ((v_flags & 1u) != 0u && y >= u_cell.y - 2.0 * t && y < u_cell.y - t) line = 1.0;                // underline
-	if ((v_flags & 4u) != 0u && x < 2.0 * t) line = 1.0;                                                 // cursor bar
-	if ((v_flags & 8u) != 0u && y >= u_cell.y - 2.0 * t) line = 1.0;                                     // cursor underline
-	if ((v_flags & 16u) != 0u && (x < t || y < t || x >= u_cell.x - t || y >= u_cell.y - t)) line = 1.0; // hollow cursor box
-	o_col = vec4(mix(mix(v_bg.rgb, v_fg.rgb, a), v_line.rgb, line), 1.0);
-}
-`
 
 // EGL_OPENGL_ES3_BIT_KHR, which the phone's egl.h does not name.
 const eglOpenGLES3Bit = 0x0040
 
+// pipeline is how the cell table reaches the GPU and is drawn: es3 or es2.
+type pipeline interface {
+	// grid makes the GPU's buffers for a grid of cols by rows cells.
+	grid(cols, rows int)
+	// sheet hands over the rectangle x, y, w, h of the character sheet.
+	sheet(sheet []byte, x, y, w, h int)
+	// frame hands over the bytes lo <= i < hi of the table, which changed,
+	// draws it and shows it.
+	frame(table []byte, lo, hi int) error
+}
+
 // Screen is the window and what OpenGL holds for it.
 type Screen struct {
-	ctx    C.screen_context_t
-	win    C.screen_window_t
-	dpy    C.EGLDisplay
-	config C.EGLConfig
-	glctx  C.EGLContext
-	surf   C.EGLSurface
-	w, h   int
-	cells  int
-
-	uGrid, uCell, uView, uSheetCols, uThick C.GLint
+	ctx     C.screen_context_t
+	win     C.screen_window_t
+	dpy     C.EGLDisplay
+	config  C.EGLConfig
+	glctx   C.EGLContext
+	surf    C.EGLSurface
+	w, h    int
+	es      int  // the OpenGL ES version drawing: 3 or 2
+	has3    bool // the phone has OpenGL ES 3.0
+	prog    *program
+	drawing pipeline
+	readDir string // where the next frame writes what it drew; "" for none
+	read    []byte // that frame's pixels
 }
 
 // fail is an error naming the step, with what the three libraries say.
@@ -149,12 +98,44 @@ func (s *Screen) fail(what string, errno error) error {
 
 // Open creates the window, w by h pixels, for the page's ForeignWindowControl
 // with the given window group and id: a child window in the Cascades
-// window's group, EGL, an OpenGL ES 3.0 context, the program and its buffers.
-func Open(group, id string, w, h int) (*Screen, error) {
+// window's group, EGL, an OpenGL ES context, the program and its buffers.
+// es is the OpenGL ES version to draw with, 3 or 2, or 0 for 3.0 where the
+// phone has it and 2.0 where it does not. A phone without 3.0 draws with
+// 2.0 whatever es says, so that the window never stays blank.
+func Open(group, id string, w, h int, es int) (_ *Screen, err error) {
 	s := new(Screen)
+	// A window that could not be opened leaves nothing behind: no child
+	// window in the page's group, which would confuse the next open, and
+	// no EGL.
+	defer func() {
+		if err != nil {
+			s.Close()
+		}
+	}()
 	cgroup, cid := C.CString(group), C.CString(id)
 	defer C.free(unsafe.Pointer(cgroup))
 	defer C.free(unsafe.Pointer(cid))
+
+	s.dpy = C.eglGetDisplay(C.EGLNativeDisplayType(0)) // EGL_DEFAULT_DISPLAY
+	if s.dpy == 0 || C.eglInitialize(s.dpy, nil, nil) == 0 || C.eglBindAPI(C.EGL_OPENGL_ES_API) == 0 {
+		return nil, s.fail("starting EGL", nil)
+	}
+	s.has3 = s.choose(3)
+	if !s.has3 {
+		log.Printf("gpu: this phone has no OpenGL ES 3.0 (EGL %#x)", uint(C.eglGetError()))
+	}
+	switch {
+	case s.has3 && es != 2 && s.context(3):
+	case s.choose(2) && s.context(2):
+	default:
+		return nil, s.fail("finding an OpenGL ES 3.0 or 2.0 setup", nil)
+	}
+	// The window's usage matches: ES 3.0 windows as before this package
+	// also drew with 2.0, ES 2.0 alone where that is all there is.
+	usage := C.int(C.SCREEN_USAGE_OPENGL_ES2)
+	if s.es == 3 {
+		usage |= C.SCREEN_USAGE_OPENGL_ES3
+	}
 
 	if r, err := C.screen_create_context(&s.ctx, C.SCREEN_APPLICATION_CONTEXT); r != 0 {
 		return nil, s.fail("screen_create_context", err)
@@ -172,7 +153,7 @@ func Open(group, id string, w, h int) (*Screen, error) {
 	// hole in the page through which this window shows.
 	for _, p := range []struct{ name, value C.int }{
 		{C.SCREEN_PROPERTY_FORMAT, C.SCREEN_FORMAT_RGBX8888},
-		{C.SCREEN_PROPERTY_USAGE, C.SCREEN_USAGE_OPENGL_ES2 | C.SCREEN_USAGE_OPENGL_ES3},
+		{C.SCREEN_PROPERTY_USAGE, usage},
 		{C.SCREEN_PROPERTY_ZORDER, -5},
 	} {
 		value := p.value
@@ -180,88 +161,32 @@ func Open(group, id string, w, h int) (*Screen, error) {
 			return nil, s.fail("setting the window's properties", err)
 		}
 	}
-
-	s.dpy = C.eglGetDisplay(C.EGLNativeDisplayType(0)) // EGL_DEFAULT_DISPLAY
-	if s.dpy == 0 || C.eglInitialize(s.dpy, nil, nil) == 0 || C.eglBindAPI(C.EGL_OPENGL_ES_API) == 0 {
-		return nil, s.fail("starting EGL", nil)
-	}
-	attribs := []C.EGLint{C.EGL_RED_SIZE, 8, C.EGL_GREEN_SIZE, 8, C.EGL_BLUE_SIZE, 8,
-		C.EGL_SURFACE_TYPE, C.EGL_WINDOW_BIT, C.EGL_RENDERABLE_TYPE, eglOpenGLES3Bit, C.EGL_NONE}
-	var n C.EGLint
-	if C.eglChooseConfig(s.dpy, &attribs[0], &s.config, 1, &n) == 0 || n == 0 {
-		return nil, s.fail("eglChooseConfig", nil)
-	}
-	version := []C.EGLint{C.EGL_CONTEXT_CLIENT_VERSION, 3, C.EGL_NONE}
-	s.glctx = C.eglCreateContext(s.dpy, s.config, nil, &version[0])
-	if s.glctx == nil {
-		return nil, s.fail("creating an OpenGL ES 3.0 context", nil)
-	}
 	if err := s.surface(w, h); err != nil {
 		return nil, err
 	}
 
-	prog := C.glCreateProgram()
-	for _, sh := range []struct {
-		kind C.GLenum
-		src  string
-	}{{C.GL_VERTEX_SHADER, vertexShader}, {C.GL_FRAGMENT_SHADER, fragmentShader}} {
-		id, err := compile(sh.kind, sh.src)
-		if err != nil {
+	var maxTex C.GLint
+	C.glGetIntegerv(C.GL_MAX_TEXTURE_SIZE, &maxTex)
+	if maxTex < SheetSize {
+		return nil, fmt.Errorf("gpu: this phone's GPU takes textures of at most %d pixels across; the character sheet is %d", int(maxTex), SheetSize)
+	}
+	if s.es == 3 {
+		if s.prog, err = link(es3Vertex, es3Fragment, es3Attributes); err != nil {
 			return nil, err
 		}
-		C.glAttachShader(prog, id)
+		s.drawing = newES3(s)
+	} else {
+		// Before linking: without full precision the two shaders' u_cell
+		// differ, and the link would fail with the driver's words instead.
+		if err := checkES2(); err != nil {
+			return nil, err
+		}
+		if s.prog, err = link(es2Vertex, es2Fragment, es2Attributes); err != nil {
+			return nil, err
+		}
+		s.drawing = newES2(s)
 	}
-	C.glLinkProgram(prog)
-	var ok C.GLint
-	C.glGetProgramiv(prog, C.GL_LINK_STATUS, &ok)
-	if ok == 0 {
-		var log [512]C.GLchar
-		C.glGetProgramInfoLog(prog, C.GLsizei(len(log)), nil, &log[0])
-		return nil, fmt.Errorf("gpu: linking the program: %s", C.GoString((*C.char)(&log[0])))
-	}
-	C.glUseProgram(prog)
-	uniform := func(name string) C.GLint {
-		cname := C.CString(name)
-		defer C.free(unsafe.Pointer(cname))
-		return C.glGetUniformLocation(prog, (*C.GLchar)(cname))
-	}
-	s.uGrid, s.uCell, s.uView = uniform("u_grid"), uniform("u_cell"), uniform("u_view")
-	s.uSheetCols, s.uThick = uniform("u_sheet_cols"), uniform("u_thick")
-	C.glUniform1i(uniform("u_sheet"), 0)
-
-	// A cell's four corners, the same for every cell.
-	var vao, quad, buf, tex C.GLuint
-	C.glGenVertexArrays(1, &vao)
-	C.glBindVertexArray(vao)
-	corners := [8]uint8{0, 0, 1, 0, 0, 1, 1, 1}
-	C.glGenBuffers(1, &quad)
-	C.glBindBuffer(C.GL_ARRAY_BUFFER, quad)
-	C.glBufferData(C.GL_ARRAY_BUFFER, C.GLsizeiptr(len(corners)), unsafe.Pointer(&corners[0]), C.GL_STATIC_DRAW)
-	C.glEnableVertexAttribArray(0)
-	C.glVertexAttribPointer(0, 2, C.GL_UNSIGNED_BYTE, C.GL_FALSE, 2, nil)
-
-	// The cell table: one record per instance. Its buffer stays bound.
-	C.glGenBuffers(1, &buf)
-	C.glBindBuffer(C.GL_ARRAY_BUFFER, buf)
-	C.glEnableVertexAttribArray(1)
-	C.glVertexAttribIPointer(1, 2, C.GL_UNSIGNED_SHORT, RecordSize, nil)
-	C.glVertexAttribDivisor(1, 1)
-	for i, offset := range []int{4, 8, 12} { // text, background and line colours
-		at := C.GLuint(i + 2)
-		C.glEnableVertexAttribArray(at)
-		C.glVertexAttribPointer(at, 4, C.GL_UNSIGNED_BYTE, C.GL_TRUE, RecordSize, unsafe.Add(nil, offset))
-		C.glVertexAttribDivisor(at, 1)
-	}
-
-	// The character sheet, empty until Sheet is called.
-	C.glGenTextures(1, &tex)
-	C.glActiveTexture(C.GL_TEXTURE0)
-	C.glBindTexture(C.GL_TEXTURE_2D, tex)
-	C.glTexStorage2D(C.GL_TEXTURE_2D, 1, C.GL_R8, SheetSize, SheetSize)
-	C.glTexParameteri(C.GL_TEXTURE_2D, C.GL_TEXTURE_MIN_FILTER, C.GL_NEAREST)
-	C.glTexParameteri(C.GL_TEXTURE_2D, C.GL_TEXTURE_MAG_FILTER, C.GL_NEAREST)
-	C.glPixelStorei(C.GL_UNPACK_ALIGNMENT, 1)
-	C.glPixelStorei(C.GL_UNPACK_ROW_LENGTH, SheetSize)
+	log.Printf("gpu: drawing with %s", s.Drawing())
 
 	s.viewport()
 	visible := C.int(1)
@@ -271,21 +196,42 @@ func Open(group, id string, w, h int) (*Screen, error) {
 	return s, nil
 }
 
-func compile(kind C.GLenum, src string) (C.GLuint, error) {
-	id := C.glCreateShader(kind)
-	csrc := (*C.GLchar)(C.CString(src))
-	defer C.free(unsafe.Pointer(csrc))
-	C.glShaderSource(id, 1, &csrc, nil)
-	C.glCompileShader(id)
-	var ok C.GLint
-	C.glGetShaderiv(id, C.GL_COMPILE_STATUS, &ok)
-	if ok == 0 {
-		var log [512]C.GLchar
-		C.glGetShaderInfoLog(id, C.GLsizei(len(log)), nil, &log[0])
-		return 0, fmt.Errorf("gpu: compiling a shader: %s", C.GoString((*C.char)(&log[0])))
+// choose finds an EGL setup for OpenGL ES version es (3 or 2); false when
+// the phone has none. A phone without ES 3.0 can refuse the ES 3.0 setup
+// outright (the Classic answers EGL_BAD_ATTRIBUTE); the caller reads that
+// error, so that the next call starts clean.
+func (s *Screen) choose(es int) bool {
+	renderable := C.EGLint(C.EGL_OPENGL_ES2_BIT)
+	if es == 3 {
+		renderable = eglOpenGLES3Bit
 	}
-	return id, nil
+	attribs := []C.EGLint{C.EGL_RED_SIZE, 8, C.EGL_GREEN_SIZE, 8, C.EGL_BLUE_SIZE, 8,
+		C.EGL_SURFACE_TYPE, C.EGL_WINDOW_BIT, C.EGL_RENDERABLE_TYPE, renderable, C.EGL_NONE}
+	var n C.EGLint
+	return C.eglChooseConfig(s.dpy, &attribs[0], &s.config, 1, &n) != 0 && n > 0
 }
+
+// context makes a context of OpenGL ES version es on the setup choose
+// found last; false when the phone refuses it.
+func (s *Screen) context(es int) bool {
+	version := []C.EGLint{C.EGL_CONTEXT_CLIENT_VERSION, C.EGLint(es), C.EGL_NONE}
+	s.glctx = C.eglCreateContext(s.dpy, s.config, nil, &version[0])
+	if s.glctx == nil {
+		log.Printf("gpu: no OpenGL ES %d.0 context (EGL %#x)", es, uint(C.eglGetError()))
+		return false
+	}
+	s.es = es
+	return true
+}
+
+// Drawing names the OpenGL ES version the window draws with.
+func (s *Screen) Drawing() string {
+	return fmt.Sprintf("OpenGL ES %d.0", s.es)
+}
+
+// HasES3 says whether the phone has OpenGL ES 3.0, so that a choice of
+// version means anything.
+func (s *Screen) HasES3() bool { return s.has3 }
 
 // surface makes the window's buffers and the EGL surface on them, for w by h
 // pixels, and makes the context current on it.
@@ -315,7 +261,7 @@ func (s *Screen) surface(w, h int) error {
 
 func (s *Screen) viewport() {
 	C.glViewport(0, 0, C.GLsizei(s.w), C.GLsizei(s.h))
-	C.glUniform2f(s.uView, C.GLfloat(s.w), C.GLfloat(s.h))
+	s.prog.view(s.w, s.h)
 }
 
 // Resize gives the window a new size in pixels: its buffers and the EGL
@@ -346,20 +292,15 @@ func (s *Screen) DPI() int {
 // colour of the window outside the grid. The next Frame must hand over the
 // whole table.
 func (s *Screen) Grid(cols, rows, cellW, cellH int, r, g, b uint8) {
-	s.cells = cols * rows
-	C.glUniform2i(s.uGrid, C.GLint(cols), C.GLint(rows))
-	C.glUniform2f(s.uCell, C.GLfloat(cellW), C.GLfloat(cellH))
-	C.glUniform1i(s.uSheetCols, C.GLint(SheetSize/cellW))
-	C.glUniform1f(s.uThick, C.GLfloat(max(cellH/14, 1)))
-	C.glBufferData(C.GL_ARRAY_BUFFER, C.GLsizeiptr(s.cells*RecordSize), nil, C.GL_DYNAMIC_DRAW)
+	s.prog.grid(cols, rows, cellW, cellH)
+	s.drawing.grid(cols, rows)
 	C.glClearColor(C.GLfloat(r)/255, C.GLfloat(g)/255, C.GLfloat(b)/255, 1)
 }
 
 // Sheet hands over the rectangle x, y, w, h of the character sheet; sheet is
 // the whole picture, SheetSize*SheetSize bytes.
 func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
-	C.glTexSubImage2D(C.GL_TEXTURE_2D, 0, C.GLint(x), C.GLint(y), C.GLsizei(w), C.GLsizei(h),
-		C.GL_RED, C.GL_UNSIGNED_BYTE, unsafe.Pointer(&sheet[y*SheetSize+x]))
+	s.drawing.sheet(sheet, x, y, w, h)
 }
 
 // Frame draws the table and shows it; the bytes lo <= i < hi of table have
@@ -368,18 +309,55 @@ func (s *Screen) Sheet(sheet []byte, x, y, w, h int) {
 // the largest font has a row in the phone's smallest window (the one with
 // the on-screen keyboard rows up).
 func (s *Screen) Frame(table []byte, lo, hi int) error {
-	if C.t51_frame(s.dpy, s.surf, (*C.uchar)(unsafe.Pointer(&table[0])), C.int(lo), C.int(hi), C.int(s.cells)) == 0 {
-		return s.fail("eglSwapBuffers", nil)
+	err := s.drawing.frame(table, lo, hi)
+	if s.readDir != "" {
+		name := filepath.Join(s.readDir, fmt.Sprintf("gpu-readback-es%d-%dx%d.rgba", s.es, s.w, s.h))
+		if werr := os.WriteFile(name, s.read, 0o644); werr != nil {
+			log.Printf("gpu: %v", werr)
+		} else {
+			log.Printf("gpu: wrote %s", name)
+		}
+		s.readDir, s.read = "", nil
 	}
-	return nil
+	return err
 }
 
-// Close removes the window.
+// ReadNext makes the next frame write the pixels it drew to the folder dir,
+// for comparing what the two OpenGL ES versions draw: raw RGBA, 4 bytes a
+// pixel, the bottom row first, in gpu-readback-es<version>-<w>x<h>.rgba.
+func (s *Screen) ReadNext(dir string) {
+	s.readDir = dir
+}
+
+// readTarget is where the frame being drawn reads its pixels to, and their
+// size; nil when it reads none.
+func (s *Screen) readTarget() (*C.uchar, C.int, C.int) {
+	if s.readDir == "" {
+		return nil, 0, 0
+	}
+	// Made here, at the window's size now, which a resize since ReadNext
+	// may have changed.
+	s.read = make([]byte, s.w*s.h*4)
+	return (*C.uchar)(unsafe.Pointer(&s.read[0])), C.int(s.w), C.int(s.h)
+}
+
+// Close removes the window, and whatever of it Open had made when it
+// failed.
 func (s *Screen) Close() {
-	C.eglMakeCurrent(s.dpy, nil, nil, nil)
-	C.eglDestroySurface(s.dpy, s.surf)
-	C.eglDestroyContext(s.dpy, s.glctx)
-	C.eglTerminate(s.dpy)
-	C.screen_destroy_window(s.win)
-	C.screen_destroy_context(s.ctx)
+	if s.dpy != 0 {
+		C.eglMakeCurrent(s.dpy, nil, nil, nil)
+		if s.surf != nil {
+			C.eglDestroySurface(s.dpy, s.surf)
+		}
+		if s.glctx != nil {
+			C.eglDestroyContext(s.dpy, s.glctx)
+		}
+		C.eglTerminate(s.dpy)
+	}
+	if s.win != nil {
+		C.screen_destroy_window(s.win)
+	}
+	if s.ctx != nil {
+		C.screen_destroy_context(s.ctx)
+	}
 }

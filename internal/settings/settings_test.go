@@ -432,3 +432,27 @@ func TestHomeBin(t *testing.T) {
 		t.Errorf("a shell without a home folder or the app's tmp: %v", c.Env)
 	}
 }
+
+// What the screen draws with is chosen by the phone by default, and can be
+// set to either version; anything else is refused.
+func TestDrawing(t *testing.T) {
+	s := Default()
+	if s.Drawing != "auto" || s.DrawingES() != 0 || s.Values()["drawing"] != "auto" {
+		t.Errorf("by default: %q, %d", s.Drawing, s.DrawingES())
+	}
+	for _, c := range []struct {
+		value string
+		es    int
+	}{{"es3", 3}, {"es2", 2}, {"auto", 0}} {
+		if err := s.Set("drawing", c.value); err != nil || s.DrawingES() != c.es || s.Values()["drawing"] != c.value {
+			t.Errorf("set %s: %d, %v", c.value, s.DrawingES(), err)
+		}
+	}
+	if err := s.Set("drawing", "vulkan"); err == nil || s.Drawing != "auto" {
+		t.Errorf("an unknown value was taken: %q, %v", s.Drawing, err)
+	}
+	parsed, warnings, err := Parse([]byte("drawing = es2\n"))
+	if err != nil || len(warnings) != 0 || parsed.DrawingES() != 2 {
+		t.Errorf("from a file: %d, %v, %v", parsed.DrawingES(), warnings, err)
+	}
+}

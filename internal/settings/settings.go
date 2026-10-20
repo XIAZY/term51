@@ -65,6 +65,11 @@ type Settings struct {
 	// it (session.Scroll); off, a drag always moves the scrollback.
 	ScrollProgram bool
 
+	// Drawing is what the screen draws with (internal/gpu): "auto", OpenGL
+	// ES 3.0 where the phone has it and 2.0 where it does not; "es3"; or
+	// "es2". A phone without 3.0 draws with 2.0 whatever this says.
+	Drawing string
+
 	Theme Theme
 }
 
@@ -154,6 +159,7 @@ func Default() Settings {
 		Term:            Terms[0],
 		ScrollbackBytes: 8 << 20,
 		Cursor:          "block",
+		Drawing:         "auto",
 		Bell:            true,
 		ScrollProgram:   true,
 		Theme: Theme{
@@ -215,6 +221,9 @@ func (s Settings) Validate() error {
 	}
 	if _, ok := cursors[s.Cursor]; !ok {
 		return bad("cursor", "%q is not one of block, bar, underline", s.Cursor)
+	}
+	if _, ok := drawings[s.Drawing]; !ok {
+		return bad("drawing", "%q is not one of auto, es3, es2", s.Drawing)
 	}
 
 	if _, err := parseColor(s.Theme.Foreground); err != nil {
@@ -313,6 +322,7 @@ var fields = []field{
 		},
 		func(s *Settings) []string { return []string{strconv.FormatUint(s.ScrollbackBytes, 10)} }},
 	textField("cursor", "The cursor's shape while no program asks for one: block, bar or underline.", func(s *Settings) *string { return &s.Cursor }),
+	textField("drawing", "What the screen draws with: auto (OpenGL ES 3.0 where the phone has it, else 2.0), es3 or es2.", func(s *Settings) *string { return &s.Drawing }),
 	boolField("bell", "Make a sound when a program rings the bell.", func(s *Settings) *bool { return &s.Bell }),
 	boolField("scrollProgram", "A drag scrolls the program that fills the screen (vi, less, pi, tmux); off, a drag always moves the scrollback.", func(s *Settings) *bool { return &s.ScrollProgram }),
 
@@ -540,6 +550,14 @@ func (s Settings) SessionTheme() session.Theme {
 	}
 	return t
 }
+
+// drawings are the OpenGL ES version each Drawing asks for; 0 is whichever
+// the phone has, 3.0 first.
+var drawings = map[string]int{"auto": 0, "es3": 3, "es2": 2}
+
+// DrawingES is the OpenGL ES version the screen is to draw with (gpu.Open):
+// 3, 2, or 0 for whichever the phone has, 3.0 first.
+func (s Settings) DrawingES() int { return drawings[s.Drawing] }
 
 // SessionCursor is the cursor's shape as a session takes it.
 func (s Settings) SessionCursor() session.CursorShape { return cursors[s.Cursor] }

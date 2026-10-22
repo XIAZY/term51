@@ -102,9 +102,19 @@ func FromCascades(key, keycap int, text string, pressed, alt, shift, ctrl bool) 
 	r := Raw{Down: pressed, Sym: rune(key), Cap: rune(keycap)}
 	// The text is the better source of the character when there is one
 	// (key is documented as "the unicode of the key", which for a
-	// character is the same value).
-	if c, size := utf8.DecodeRuneInString(text); size > 0 && size == len(text) && c != utf8.RuneError && !isCode(c) && c >= 0x20 && c != 0x7F {
+	// character is the same value). A key that is not a character is
+	// known by its code, whatever the text says: the Q10 gives its Shift
+	// and Alt the code's low byte as text (0xF0E1 as 'á', 0xF0E9 as 'é').
+	if c, size := utf8.DecodeRuneInString(text); size > 0 && size == len(text) && c != utf8.RuneError && !isCode(c) && c >= 0x20 && c != 0x7F && !isCode(r.Sym) && !isCode(r.Cap) {
 		r.Sym = c
+	}
+	// The same low byte in place of the code itself, for a key that is
+	// its own key cap while its modifier is held: a modifier key, not the
+	// accented letter.
+	if r.Sym == r.Cap || r.Cap == 0 {
+		if code, ok := truncatedModifier(r.Sym, shift, alt, ctrl); ok {
+			r.Sym, r.Cap = code, code
+		}
 	}
 	if shift {
 		r.Mods |= ModShift
@@ -116,6 +126,19 @@ func FromCascades(key, keycap int, text string, pressed, alt, shift, ctrl bool) 
 		r.Mods |= ModCtrl
 	}
 	return r
+}
+
+// truncatedModifier reports the modifier key whose code's low byte c is,
+// when that modifier is held.
+func truncatedModifier(c rune, shift, alt, ctrl bool) (rune, bool) {
+	switch {
+	case shift && (c == CodeLeftShift-codeBase || c == CodeRightShift-codeBase):
+	case alt && (c == CodeLeftAlt-codeBase || c == CodeRightAlt-codeBase):
+	case ctrl && (c == CodeLeftCtrl-codeBase || c == CodeRightCtrl-codeBase):
+	default:
+		return 0, false
+	}
+	return c + codeBase, true
 }
 
 // isCode reports whether c is a key code rather than a character.

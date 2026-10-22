@@ -172,3 +172,38 @@ func TestTheKeyBarsStickyModifiers(t *testing.T) {
 		t.Errorf("Escape(): sent %q, %v", b.String(), err)
 	}
 }
+
+func TestFromCascadesModifierKeys(t *testing.T) {
+	tm := term(t, "")
+	cases := []struct {
+		name             string
+		key, keycap      int
+		text             string
+		alt, shift, ctrl bool
+		want             string
+	}{
+		// The Q10 gives its modifier keys the code's low byte as text.
+		{"Shift with its low byte as text", CodeLeftShift, CodeLeftShift, "á", false, true, false, ""},
+		{"right Shift with its low byte as text", CodeRightShift, CodeRightShift, "â", false, true, false, ""},
+		{"Alt with its low byte as text", CodeLeftAlt, CodeLeftAlt, "é", true, false, false, ""},
+		{"right Alt with its low byte as text", CodeRightAlt, CodeRightAlt, "ê", true, false, false, ""},
+		// Or as the key itself.
+		{"Shift as its low byte", 0xE1, 0xE1, "á", false, true, false, ""},
+		{"Alt as its low byte", 0xE9, 0xE9, "é", true, false, false, ""},
+		{"Alt as its low byte, no key cap", 0xE9, 0, "", true, false, false, ""},
+		// The accented letters themselves still type.
+		{"an á from the symbol layer", 0xE1, 'a', "á", true, false, false, "á"},
+		{"an é typed with nothing held", 0xE9, 0xE9, "é", false, false, false, "é"},
+		{"a letter", 'a', 'a', "a", false, false, false, "a"},
+	}
+	for _, c := range cases {
+		var tr Translator
+		r := FromCascades(c.key, c.keycap, c.text, true, c.alt, c.shift, c.ctrl)
+		if got := send(t, &tr, tm, r); got != c.want {
+			t.Errorf("%s: sent %q, want %q", c.name, got, c.want)
+		}
+		if c.want == "" && !IsModifier(r) {
+			t.Errorf("%s: not seen as a modifier", c.name)
+		}
+	}
+}

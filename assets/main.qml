@@ -245,6 +245,14 @@ TabbedPane {
                 var k = event.key
                 if (k == 13 || k == 10 || k == 0xF00D)
                     return true // Enter: handled by the input field
+                // A modifier key whose code comes cut to its low byte (the
+                // Q10's Shift and Alt as á and é) is no character: Go
+                // knows it by its key cap (internal/keys).
+                var c = event.keycap
+                if (c >= 0xF0E1 && c <= 0xF0EA)
+                    return false
+                if ((c == k || c == 0) && (k == 0xE1 || k == 0xE2 || k == 0xE3 || k == 0xE4 || k == 0xE9 || k == 0xEA))
+                    return false
                 return k >= 0x20 && k != 0x7F && k < 0xF000
             }
             keyListeners: KeyListener {

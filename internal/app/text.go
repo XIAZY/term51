@@ -487,7 +487,7 @@ func (a *App) Run() error {
 				// the key bar's sticky modifiers apply.
 				text, _ := c.Args["text"].(string)
 				for _, r := range text {
-					key(keys.FromCascades(int(r), 0, string(r), true, false, false, false))
+					key(keys.FromText(r))
 				}
 			case "key":
 				text, _ := c.Args["unicode"].(string)
@@ -495,7 +495,14 @@ func (a *App) Run() error {
 				alt, _ := c.Args["alt"].(bool)
 				shift, _ := c.Args["shift"].(bool)
 				ctrl, _ := c.Args["ctrl"].(bool)
-				key(keys.FromCascades(num(c.Args["key"]), num(c.Args["keycap"]), text, down, alt, shift, ctrl))
+				raw := keys.FromCascades(num(c.Args["key"]), num(c.Args["keycap"]), text, down, alt, shift, ctrl)
+				if down && keys.Suspect(num(c.Args["key"]), num(c.Args["keycap"]), text) {
+					// What the phone delivers for its modifier keys, for
+					// keyboards that deliver it in a way not yet seen.
+					log.Printf("keys: key %#x keycap %#x text %q alt %v shift %v ctrl %v: sym %#x cap %#x modifier %v",
+						num(c.Args["key"]), num(c.Args["keycap"]), text, alt, shift, ctrl, raw.Sym, raw.Cap, keys.IsModifier(raw))
+				}
+				key(raw)
 			case "bar":
 				a.bar(sess, &tabs[cur].tr, key, c)
 				sticky()

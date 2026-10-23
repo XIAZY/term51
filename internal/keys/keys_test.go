@@ -191,9 +191,17 @@ func TestFromCascadesModifierKeys(t *testing.T) {
 		{"Shift as its low byte", 0xE1, 0xE1, "á", false, true, false, ""},
 		{"Alt as its low byte", 0xE9, 0xE9, "é", true, false, false, ""},
 		{"Alt as its low byte, no key cap", 0xE9, 0, "", true, false, false, ""},
-		// The accented letters themselves still type.
+		// Or as both, with the code in only one of key and key cap.
+		{"Alt as its low byte, its code as the key cap", 0xE9, CodeLeftAlt, "é", true, false, false, ""},
+		{"Alt as its code, its low byte as the key cap", CodeLeftAlt, 0xE9, "é", true, false, false, ""},
+		// The phone need not report Alt as held on the Alt key's own press.
+		{"Alt as its low byte, not reported held", 0xE9, 0xE9, "é", false, false, false, ""},
+		{"Alt as its low byte only in the text", 0, 0, "é", false, false, false, ""},
+		{"Alt with its code in the key cap only", 0, CodeLeftAlt, "é", false, false, false, ""},
+		// The accented letters of a letter's key still type.
 		{"an á from the symbol layer", 0xE1, 'a', "á", true, false, false, "á"},
-		{"an é typed with nothing held", 0xE9, 0xE9, "é", false, false, false, "é"},
+		{"an é with the E key's cap", 0xE9, 'e', "é", false, false, false, "é"},
+		{"an è typed with nothing held", 0xE8, 0xE8, "è", false, false, false, "è"},
 		{"a letter", 'a', 'a', "a", false, false, false, "a"},
 	}
 	for _, c := range cases {
@@ -204,6 +212,16 @@ func TestFromCascadesModifierKeys(t *testing.T) {
 		}
 		if c.want == "" && !IsModifier(r) {
 			t.Errorf("%s: not seen as a modifier", c.name)
+		}
+	}
+}
+
+func TestFromTextTypesAccentedLetters(t *testing.T) {
+	tm := term(t, "")
+	for _, c := range []rune{'é', 'á', 'â', 'ê', 'è', 'à', 'a'} {
+		var tr Translator
+		if got := send(t, &tr, tm, FromText(c)); got != string(c) {
+			t.Errorf("%q from the input field: sent %q", c, got)
 		}
 	}
 }

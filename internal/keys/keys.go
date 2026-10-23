@@ -108,13 +108,8 @@ func FromCascades(key, keycap int, text string, pressed, alt, shift, ctrl bool) 
 	if c, size := utf8.DecodeRuneInString(text); size > 0 && size == len(text) && c != utf8.RuneError && !isCode(c) && c >= 0x20 && c != 0x7F && !isCode(r.Sym) && !isCode(r.Cap) {
 		r.Sym = c
 	}
-	// The same low byte in place of the code itself, for a key that is
-	// its own key cap while its modifier is held: a modifier key, not the
-	// accented letter.
-	if r.Sym == r.Cap || r.Cap == 0 {
-		if code, ok := truncatedModifier(r.Sym, shift, alt, ctrl); ok {
-			r.Sym, r.Cap = code, code
-		}
+	if code, ok := modifierOf(r.Sym, r.Cap); ok {
+		r.Sym, r.Cap = code, code
 	}
 	if shift {
 		r.Mods |= ModShift
@@ -128,17 +123,44 @@ func FromCascades(key, keycap int, text string, pressed, alt, shift, ctrl bool) 
 	return r
 }
 
-// truncatedModifier reports the modifier key whose code's low byte c is,
-// when that modifier is held.
-func truncatedModifier(c rune, shift, alt, ctrl bool) (rune, bool) {
+// FromText makes a Raw from a character typed into the page's input field
+// (the on-screen rows, a letter picked from a held key's accents): always
+// that character, never taken for a modifier key.
+func FromText(c rune) Raw { return Raw{Down: true, Sym: c} }
+
+// modifierOf reports the modifier key an event is, by its code in either
+// the key or the key cap, or by the code's low byte alone (which the Q10
+// delivers for its Shift and Alt: 0xE1 'á', 0xE9 'é') on a key whose cap
+// is no character of its own. The phone does not always report the
+// modifier as held on its own key's press, so the flags are not asked.
+// The cost: an external keyboard with a key of its own for one of these
+// letters (é on a French one) types nothing with it.
+func modifierOf(sym, cap rune) (rune, bool) {
 	switch {
-	case shift && (c == CodeLeftShift-codeBase || c == CodeRightShift-codeBase):
-	case alt && (c == CodeLeftAlt-codeBase || c == CodeRightAlt-codeBase):
-	case ctrl && (c == CodeLeftCtrl-codeBase || c == CodeRightCtrl-codeBase):
-	default:
-		return 0, false
+	case isModifierKey(sym):
+		return sym, true
+	case isModifierKey(cap):
+		return cap, true
 	}
-	return c + codeBase, true
+	if cap != 0 && cap != sym && !isCode(cap) {
+		return 0, false // a character key: 'a' for an á of the symbol layer
+	}
+	switch sym {
+	case CodeLeftShift - codeBase, CodeRightShift - codeBase,
+		CodeLeftAlt - codeBase, CodeRightAlt - codeBase,
+		CodeLeftCtrl - codeBase, CodeRightCtrl - codeBase:
+		return sym + codeBase, true
+	}
+	return 0, false
+}
+
+// Suspect reports whether a Cascades key event is one worth logging: a
+// modifier key, or one of the Latin-1 letters from 0xE0 to 0xEF, where a
+// modifier key's code turns up cut to its low byte.
+func Suspect(key, keycap int, text string) bool {
+	in := func(c rune) bool { return isModifierKey(c) || c >= 0xE0 && c <= 0xEF }
+	c, _ := utf8.DecodeRuneInString(text)
+	return in(rune(key)) || in(rune(keycap)) || text != "" && in(c)
 }
 
 // isCode reports whether c is a key code rather than a character.

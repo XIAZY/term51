@@ -102,9 +102,14 @@ func FromCascades(key, keycap int, text string, pressed, alt, shift, ctrl bool) 
 	r := Raw{Down: pressed, Sym: rune(key), Cap: rune(keycap)}
 	// The text is the better source of the character when there is one
 	// (key is documented as "the unicode of the key", which for a
-	// character is the same value).
-	if c, size := utf8.DecodeRuneInString(text); size > 0 && size == len(text) && c != utf8.RuneError && !isCode(c) && c >= 0x20 && c != 0x7F {
+	// character is the same value). A key that is not a character is
+	// known by its code, whatever the text says: the Q10 gives its Shift
+	// and Alt the code's low byte as text (0xF0E1 as 'á', 0xF0E9 as 'é').
+	if c, size := utf8.DecodeRuneInString(text); size > 0 && size == len(text) && c != utf8.RuneError && !isCode(c) && c >= 0x20 && c != 0x7F && !isCode(r.Sym) && !isCode(r.Cap) {
 		r.Sym = c
+	}
+	if code, ok := modifierOf(r.Sym, r.Cap); ok {
+		r.Sym, r.Cap = code, code
 	}
 	if shift {
 		r.Mods |= ModShift
@@ -116,6 +121,46 @@ func FromCascades(key, keycap int, text string, pressed, alt, shift, ctrl bool) 
 		r.Mods |= ModCtrl
 	}
 	return r
+}
+
+// FromText makes a Raw from a character typed into the page's input field
+// (the on-screen rows, a letter picked from a held key's accents): always
+// that character, never taken for a modifier key.
+func FromText(c rune) Raw { return Raw{Down: true, Sym: c} }
+
+// modifierOf reports the modifier key an event is, by its code in either
+// the key or the key cap, or by the code's low byte alone (which the Q10
+// delivers for its Shift and Alt: 0xE1 'á', 0xE9 'é') on a key whose cap
+// is no character of its own. The phone does not always report the
+// modifier as held on its own key's press, so the flags are not asked.
+// The cost: an external keyboard with a key of its own for one of these
+// letters (é on a French one) types nothing with it.
+func modifierOf(sym, cap rune) (rune, bool) {
+	switch {
+	case isModifierKey(sym):
+		return sym, true
+	case isModifierKey(cap):
+		return cap, true
+	}
+	if cap != 0 && cap != sym && !isCode(cap) {
+		return 0, false // a character key: 'a' for an á of the symbol layer
+	}
+	switch sym {
+	case CodeLeftShift - codeBase, CodeRightShift - codeBase,
+		CodeLeftAlt - codeBase, CodeRightAlt - codeBase,
+		CodeLeftCtrl - codeBase, CodeRightCtrl - codeBase:
+		return sym + codeBase, true
+	}
+	return 0, false
+}
+
+// Suspect reports whether a Cascades key event is one worth logging: a
+// modifier key, or one of the Latin-1 letters from 0xE0 to 0xEF, where a
+// modifier key's code turns up cut to its low byte.
+func Suspect(key, keycap int, text string) bool {
+	in := func(c rune) bool { return isModifierKey(c) || c >= 0xE0 && c <= 0xEF }
+	c, _ := utf8.DecodeRuneInString(text)
+	return in(rune(key)) || in(rune(keycap)) || text != "" && in(c)
 }
 
 // isCode reports whether c is a key code rather than a character.
@@ -252,11 +297,12 @@ func IsModifier(r Raw) bool {
 }
 
 // Translator turns Raw events into the library's key events. It holds the
-// sticky modifiers of the on-screen key bar. It is not safe for use from
-// several goroutines.
+// sticky modifiers of the on-screen key bar and the keyboard's tapped Alt
+// and Shift (layer.go). It is not safe for use from several goroutines.
 type Translator struct {
 	stickyCtrl bool
 	stickyAlt  bool
+	layers
 }
 
 // StickyCtrl arms or disarms the key bar's Ctrl for the next key.
@@ -288,6 +334,7 @@ func (t *Translator) Translate(r Raw) (input.KeyEvent, bool) {
 	if sym == 0 {
 		sym = cap
 	}
+	sym = t.layer(r, sym, cap)
 
 	ev := input.KeyEvent{Action: input.KeyActionRelease}
 	if r.Down {

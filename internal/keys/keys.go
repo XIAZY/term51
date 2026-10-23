@@ -297,11 +297,12 @@ func IsModifier(r Raw) bool {
 }
 
 // Translator turns Raw events into the library's key events. It holds the
-// sticky modifiers of the on-screen key bar. It is not safe for use from
-// several goroutines.
+// sticky modifiers of the on-screen key bar and the keyboard's tapped Alt
+// and Shift (layer.go). It is not safe for use from several goroutines.
 type Translator struct {
 	stickyCtrl bool
 	stickyAlt  bool
+	layers
 }
 
 // StickyCtrl arms or disarms the key bar's Ctrl for the next key.
@@ -333,6 +334,7 @@ func (t *Translator) Translate(r Raw) (input.KeyEvent, bool) {
 	if sym == 0 {
 		sym = cap
 	}
+	sym = t.layer(r, sym, cap)
 
 	ev := input.KeyEvent{Action: input.KeyActionRelease}
 	if r.Down {

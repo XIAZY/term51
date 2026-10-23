@@ -142,12 +142,14 @@ func (a *App) Run() error {
 	}
 	// tell publishes what the page shows about the tabs and the key bar.
 	stickyCtrl, stickyAlt := false, false
+	layerAlt, layerShift := keys.LayerOff, keys.LayerOff // the keyboard's tapped Alt and Shift
 	tell := func() {
 		titles, rang := make([]string, len(tabs)), make([]bool, len(tabs))
 		for i, t := range tabs {
 			titles[i], rang[i] = t.name.Name(), t.rang
 		}
 		a.state(map[string]any{"tabs": titles, "rang": rang, "current": cur, "cols": cols, "rows": rows, "cw": cw, "ch": ch, "ctrl": stickyCtrl, "alt": stickyAlt,
+			"layerAlt": int(layerAlt), "layerShift": int(layerShift),
 			// For the page's drawing of the arrow pad: the same numbers the
 			// rule uses.
 			"padThreshold": arrowpad.Threshold, "padAxis": arrowpad.Axis})
@@ -159,6 +161,10 @@ func (a *App) Run() error {
 		if c, al := tabs[cur].tr.Sticky(); c != stickyCtrl || al != stickyAlt {
 			stickyCtrl, stickyAlt = c, al
 			a.state(map[string]any{"ctrl": c, "alt": al})
+		}
+		if al, sh := tabs[cur].tr.Layers(); al != layerAlt || sh != layerShift {
+			layerAlt, layerShift = al, sh
+			a.state(map[string]any{"layerAlt": int(al), "layerShift": int(sh)})
 		}
 	}
 	var lastPost time.Time
@@ -496,7 +502,7 @@ func (a *App) Run() error {
 				shift, _ := c.Args["shift"].(bool)
 				ctrl, _ := c.Args["ctrl"].(bool)
 				raw := keys.FromCascades(num(c.Args["key"]), num(c.Args["keycap"]), text, down, alt, shift, ctrl)
-				if down && keys.Suspect(num(c.Args["key"]), num(c.Args["keycap"]), text) {
+				if (down || keys.IsModifier(raw)) && keys.Suspect(num(c.Args["key"]), num(c.Args["keycap"]), text) {
 					// What the phone delivers for its modifier keys, for
 					// keyboards that deliver it in a way not yet seen.
 					log.Printf("keys: key %#x keycap %#x text %q alt %v shift %v ctrl %v: sym %#x cap %#x modifier %v",

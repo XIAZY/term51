@@ -78,6 +78,8 @@ TabbedPane {
 
             property bool ctrl: false
             property bool alt: false
+            property int layerAlt: 0   // the keyboard's tapped Alt: 0 off, 1 for the next key, 2 locked
+            property int layerShift: 0 // and its Shift
             property bool letGo: false       // the input field is letting go of the focus by our own call
             property bool created: false     // the terminal's window has been asked for
             property string termBackground: "#101418" // the theme's, around the terminal
@@ -132,6 +134,8 @@ TabbedPane {
                     var s = JSON.parse(json)
                     if (s.ctrl !== undefined) page.ctrl = s.ctrl
                     if (s.alt !== undefined) page.alt = s.alt
+                    if (s.layerAlt !== undefined) page.layerAlt = s.layerAlt
+                    if (s.layerShift !== undefined) page.layerShift = s.layerShift
                     if (s.cw !== undefined) page.cellW = s.cw
                     if (s.selected !== undefined) page.selected = s.selected
                     if (s.selBarX !== undefined) page.selBarX = s.selBarX
@@ -668,6 +672,41 @@ TabbedPane {
                             preferredWidth: 81
                             preferredHeight: 81
                             layoutProperties: AbsoluteLayoutProperties { positionX: 0; positionY: 0 }
+                        }
+                    }
+                }
+                // What a tap of the keyboard's own Alt or Shift has armed
+                // (internal/keys, layer.go), in the terminal's top right
+                // corner as the phone shows it in its text fields: grey for
+                // the next key, in the primary colour when locked. It takes
+                // no touches.
+                Container {
+                    visible: page.layerAlt > 0 || page.layerShift > 0
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                    horizontalAlignment: HorizontalAlignment.Right
+                    verticalAlignment: VerticalAlignment.Top
+                    topPadding: 8
+                    rightPadding: 8
+                    touchPropagationMode: TouchPropagationMode.None
+                    Container {
+                        visible: page.layerAlt > 0
+                        background: page.layerAlt == 2 ? ui.palette.primary : Color.create("#606060")
+                        leftPadding: 14; rightPadding: 14; topPadding: 4; bottomPadding: 4
+                        Label {
+                            text: page.layerAlt == 2 ? "ALT" : "alt"
+                            textStyle.fontSize: FontSize.Small
+                            textStyle.color: Color.White
+                        }
+                    }
+                    Container {
+                        visible: page.layerShift > 0
+                        background: page.layerShift == 2 ? ui.palette.primary : Color.create("#606060")
+                        leftPadding: 14; rightPadding: 14; topPadding: 4; bottomPadding: 4
+                        leftMargin: 8
+                        Label {
+                            text: page.layerShift == 2 ? "CAPS" : "shift"
+                            textStyle.fontSize: FontSize.Small
+                            textStyle.color: Color.White
                         }
                     }
                 }
